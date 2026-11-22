@@ -1,0 +1,679 @@
+{
+  "provider": "openrouter",
+  "model": "nvidia/nemotron-3.5-super-vl:free",
+  "generated_by": "aeoi-web 0.3.0 eval",
+  "spec": "aeoi/0.3",
+  "reference_values": "direct AEOI operator calls (python-control/scipy-verified implementation; not MATLAB)",
+  "settings": {
+    "rpm": 8.0,
+    "max_steps": 4,
+    "temperature": 0.0
+  },
+  "aborted": null,
+  "summary": {
+    "questions": 8,
+    "tool_selection_accuracy": 1.0,
+    "first_tool_accuracy": 1.0,
+    "argument_correctness": 1.0,
+    "argument_applicable": 7,
+    "final_answer_accuracy": 1.0,
+    "self_corrections": 0,
+    "nudges_after_empty_turn": 0,
+    "tool_errors": 1,
+    "provider_errors": 0,
+    "http_retries": 0,
+    "total_tokens": 314934,
+    "mean_latency_s": 13.242168692999998,
+    "wall_time_s": 105.945872958,
+    "by_category_answer": {
+      "可控性": "1/1",
+      "相位裕度": "1/1",
+      "陷阱：Hz 与 rad/s": "1/1",
+      "陷阱：不可镇定": "1/1",
+      "陷阱：列优先": "2/2",
+      "陷阱：离散系统": "1/1",
+      "陷阱：缺采样周期": "1/1"
+    }
+  },
+  "results": [
+    {
+      "id": "margin-01",
+      "category": "相位裕度",
+      "question": "开环传递函数 G(s) = 4 / (s(s+1)(s+2))。求增益裕度、相位裕度以及对应的相位穿越频率和增益穿越频率。",
+      "expected_tool": "control_analysis_margin",
+      "tools_called": [
+        "control_analysis_margin"
+      ],
+      "first_tool": "control_analysis_margin",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "nudges": [],
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "增益裕度",
+          "expected": "Num(1.4999999999999998)",
+          "from_model_call": "Num(1.4999999999999998)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "相位裕度 deg",
+          "expected": "Num(11.424981844921433)",
+          "from_model_call": "Num(11.424981844921433)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "相位穿越频率",
+          "expected": "Num(1.414213562373095)",
+          "from_model_call": "Num(1.414213562373095)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "增益穿越频率",
+          "expected": "Num(1.1432030439610739)",
+          "from_model_call": "Num(1.1432030439610739)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "已使用 `control_analysis_margin` 计算开环系统 \\(G(s)=\\frac{4}{s(s+1)(s+2)}\\) 的稳定裕度。\n\n**结论：**\n\n| 指标 | 数值 | 单位 |\n|---|---|---|\n| 增益裕度 \\(GM\\) | 1.500 | 倍（1） |\n| 增益裕度 \\(GM_{\\rm dB}\\) | 3.522 | dB |\n| 相位裕度 \\(PM\\) | 11.42 | deg |\n| 相位穿越频率 \\(\\omega_{pc}\\) | 1.414 | rad/s |\n| 增益穿越频率 \\(\\omega_{gc}\\) | 1.143 | rad/s |\n\n闭环系统稳定（`closed_loop_stable: true`）。在 \\(\\omega_{pc}=1.414\\ \\text{rad/s}\\) 处开环相位为 \\(-180^\\circ\\)，此时幅值为 \\(1/1.5\\)；在 \\(\\omega_{gc}=1.143\\ \\text{rad/s}\\) 处开环幅值为 0 dB，此时相位为 \\(-180^\\circ+11.42^\\circ\\)。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 42295,
+      "latency_s": 12.626189998,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_analysis_margin",
+          "request": {
+            "system": {
+              "kind": "tf",
+              "num": [
+                4
+              ],
+              "den": [
+                1,
+                3,
+                2,
+                0
+              ],
+              "ts": 0
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.5750240000000001
+        }
+      ]
+    },
+    {
+      "id": "ctrb-01",
+      "category": "可控性",
+      "question": "A = [[1, 1], [0, 1]]，B = [[0], [1]]。(A, B) 是否完全可控？可控性矩阵的秩是多少？",
+      "expected_tool": "control_analysis_ctrb_obsv",
+      "tools_called": [
+        "control_analysis_ctrb_obsv"
+      ],
+      "first_tool": "control_analysis_ctrb_obsv",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "nudges": [],
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "可控性矩阵秩",
+          "expected": "Num(2.0)",
+          "from_model_call": "Num(2.0)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "**结论：(A, B) 完全可控；可控性矩阵的秩为 2。**\n\n工具 `control_analysis_ctrb_obsv` 返回的可控性矩阵为  \n\\[\n\\mathcal{C}=[B\\ AB]=\\begin{bmatrix}0&1\\\\1&1\\end{bmatrix},\n\\]\n其数值秩为 **2**（两个奇异值分别约为 1.618、0.618，`full_rank: true`）。\n\n因为系统阶数 \\(n=2\\)，而 \\(\\operatorname{rank}(\\mathcal{C})=2=n\\)，所以输入能够控制全部状态，(A, B) 完全可控。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 42067,
+      "latency_s": 13.219508596,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_analysis_ctrb_obsv",
+          "request": {
+            "system": {
+              "kind": "ss",
+              "A": {
+                "dtype": "f64",
+                "shape": [
+                  2,
+                  2
+                ],
+                "data": [
+                  1,
+                  1,
+                  0,
+                  1
+                ]
+              },
+              "B": {
+                "dtype": "f64",
+                "shape": [
+                  2,
+                  1
+                ],
+                "data": [
+                  0,
+                  1
+                ]
+              },
+              "C": {
+                "dtype": "f64",
+                "shape": [
+                  1,
+                  2
+                ],
+                "data": [
+                  0,
+                  0
+                ]
+              },
+              "D": {
+                "dtype": "f64",
+                "shape": [
+                  1,
+                  1
+                ],
+                "data": [
+                  0
+                ]
+              },
+              "ts": 0
+            },
+            "gramians": false
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.39689599999999997
+        }
+      ]
+    },
+    {
+      "id": "c2d-03-missing-ts",
+      "category": "陷阱：缺采样周期",
+      "question": "请用零阶保持器把 G(s) = 1/(s^2 + s + 1) 离散化。",
+      "expected_tool": null,
+      "tools_called": [],
+      "first_tool": null,
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": null,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "nudges": [],
+      "tool_errors": [],
+      "checks": [],
+      "final_text": "请问离散化的采样周期 **T 是多少秒**？（需要您明确给出 ts，我不能自行假设 0.1 s 等数值。）",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 20400,
+      "latency_s": 7.234017302,
+      "model_turns": 1,
+      "http_retries": 0,
+      "trace": []
+    },
+    {
+      "id": "lqr-03-colmajor",
+      "category": "陷阱：列优先",
+      "question": "MATLAB 里 A 是 2×2 矩阵，A(:)（按列展开）= [0, -2, 1, -3]；B = [0; 1]，Q = eye(2)，R = 1。求 LQR 增益 K。",
+      "expected_tool": "control_design_lqr",
+      "tools_called": [
+        "control_design_lqr"
+      ],
+      "first_tool": "control_design_lqr",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "nudges": [],
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "K1",
+          "expected": "Num(0.23606797749978972)",
+          "from_model_call": "Num(0.23606797749978972)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "K2",
+          "expected": "Num(0.2360679774997897)",
+          "from_model_call": "Num(0.2360679774997897)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "**结论**\n\nLQR 最优状态反馈增益（`u = −Kx`）：\n\n**K ≈ [0.2361, 0.2361]**（无单位，取决于状态/输入的物理单位）\n\n**补充**：Riccati 解  \nS ≈ [[1.2361, 0.2361], [0.2361, 0.2361]]，闭环极点为 **−2.2361** 和 **−1.0000**，闭环系统渐近稳定。\n\n**说明**：已用 `control_design_lqr` 求解连续代数 Riccati 方程（CARE），输入 A = [[0, 1], [−2, −3]]（由 MATLAB 按列展开的 A(:) = [0, −2, 1, −3] 转为行优先）、B = [[0], [1]]、Q = I₂、R = [1]。计算残差和对称性检查均在机器精度范围内，结果可信。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 42952,
+      "latency_s": 18.109034405,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_design_lqr",
+          "request": {
+            "A": {
+              "dtype": "f64",
+              "shape": [
+                2,
+                2
+              ],
+              "data": [
+                0,
+                1,
+                -2,
+                -3
+              ]
+            },
+            "B": {
+              "dtype": "f64",
+              "shape": [
+                2,
+                1
+              ],
+              "data": [
+                0,
+                1
+              ]
+            },
+            "Q": {
+              "dtype": "f64",
+              "shape": [
+                2,
+                2
+              ],
+              "data": [
+                1,
+                0,
+                0,
+                1
+              ]
+            },
+            "R": {
+              "dtype": "f64",
+              "shape": [
+                1,
+                1
+              ],
+              "data": [
+                1
+              ]
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.45255799999999996
+        }
+      ]
+    },
+    {
+      "id": "bode-02-hz",
+      "category": "陷阱：Hz 与 rad/s",
+      "question": "一阶低通滤波器 G(s) = 628.3185/(s + 628.3185)（截止频率 100 Hz）。求 f = 100 Hz 处的幅值（dB）和相位。",
+      "expected_tool": "control_lti_bode",
+      "tools_called": [
+        "control_lti_bode"
+      ],
+      "first_tool": "control_lti_bode",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "nudges": [],
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "幅值 dB",
+          "expected": "Num(-3.0102999566398116)",
+          "from_model_call": "Num(-3.0102999566398116)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "相位 deg",
+          "expected": "Num(-45.0)",
+          "from_model_call": "Num(-45.0)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "在 f = 100 Hz（即 ω = 2π·100 ≈ 628.3185 rad/s）处：\n\n- **幅值**：-3.01 dB  \n- **相位**：-45.0°  \n\n（工具：`control_lti_bode`；相对误差估计约 1e-15，结果可信。）\n\n这与一阶低通滤波器在截止频率处的理论值（幅值 -3 dB，相位 -45°）一致。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 41821,
+      "latency_s": 12.51437043,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_lti_bode",
+          "request": {
+            "system": {
+              "kind": "tf",
+              "num": [
+                628.3185
+              ],
+              "den": [
+                1,
+                628.3185
+              ],
+              "ts": 0
+            },
+            "frequency": {
+              "mode": "explicit",
+              "values": [
+                628.3185
+              ],
+              "unit": "rad/s"
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.23916
+        }
+      ]
+    },
+    {
+      "id": "pz-03-discrete",
+      "category": "陷阱：离散系统",
+      "question": "离散系统 G(z) = 0.1/(z − 0.9)，采样周期 0.1 s。求它的极点和直流增益。",
+      "expected_tool": "control_lti_poles_zeros",
+      "tools_called": [
+        "control_lti_poles_zeros"
+      ],
+      "first_tool": "control_lti_poles_zeros",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "nudges": [],
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "直流增益（z=1）",
+          "expected": "Num(1.0000000000000002)",
+          "from_model_call": "Num(1.0000000000000002)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "极点",
+          "expected": "Num(0.9)",
+          "from_model_call": "Num(0.9)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "已调用 `control_lti_poles_zeros` 计算完成。\n\n**结论：**\n- 极点：z = 0.9（单极点，位于单位圆内，系统离散稳定）\n- 直流增益（z = 1 处）：1（无量纲）\n\n**说明：** 对于 G(z) = 0.1/(z − 0.9)，分母根为 z = 0.9；直流增益 G(1) = 0.1/(1 − 0.9) = 1。工具返回的直流增益为 1.0000000000000002，数值误差在机器精度范围内。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 41467,
+      "latency_s": 10.831089544,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_lti_poles_zeros",
+          "request": {
+            "system": {
+              "kind": "tf",
+              "num": [
+                0.1
+              ],
+              "den": [
+                1,
+                -0.9
+              ],
+              "ts": 0.1
+            },
+            "dcgain": true
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.26965399999999995
+        }
+      ]
+    },
+    {
+      "id": "ctrb-03-colmajor",
+      "category": "陷阱：列优先",
+      "question": "我从 MATLAB 里用 A(:) 导出了 2×2 矩阵 A，按列展开的数据是 [0, 0, 1, 0]；B = [0; 1]。请判断 (A, B) 是否可控并给出可控性矩阵的秩。",
+      "expected_tool": "control_analysis_ctrb_obsv",
+      "tools_called": [
+        "control_analysis_ctrb_obsv"
+      ],
+      "first_tool": "control_analysis_ctrb_obsv",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "nudges": [],
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "可控性矩阵秩",
+          "expected": "Num(2.0)",
+          "from_model_call": "Num(2.0)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "(A, B) **可控**，可控性矩阵的秩为 **2**（满秩，等于状态维数 n=2）。\n\n说明：MATLAB 的 `A(:)` 是列优先，数据 `[0, 0, 1, 0]` 对应 row-major 矩阵 `A = [[0, 1], [0, 0]]`；`B = [0; 1]`。可控性矩阵 `[B, AB] = [[0, 1], [1, 0]]`，其两列线性无关，秩为 2，因此系统完全可控。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 41980,
+      "latency_s": 15.1613292,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_analysis_ctrb_obsv",
+          "request": {
+            "system": {
+              "kind": "ss",
+              "A": {
+                "dtype": "f64",
+                "shape": [
+                  2,
+                  2
+                ],
+                "data": [
+                  0,
+                  1,
+                  0,
+                  0
+                ]
+              },
+              "B": {
+                "dtype": "f64",
+                "shape": [
+                  2,
+                  1
+                ],
+                "data": [
+                  0,
+                  1
+                ]
+              },
+              "C": {
+                "dtype": "f64",
+                "shape": [
+                  1,
+                  2
+                ],
+                "data": [
+                  0,
+                  0
+                ]
+              },
+              "D": {
+                "dtype": "f64",
+                "shape": [
+                  1,
+                  1
+                ],
+                "data": [
+                  0
+                ]
+              },
+              "ts": 0
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.334907
+        }
+      ]
+    },
+    {
+      "id": "lqr-04-unstabilizable",
+      "category": "陷阱：不可镇定",
+      "question": "A = [[1, 0], [0, 2]]，B = [[1], [0]]，Q = I，R = 1，帮我设计 LQR 控制器。",
+      "expected_tool": "control_design_lqr",
+      "tools_called": [
+        "control_design_lqr"
+      ],
+      "first_tool": "control_design_lqr",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "nudges": [],
+      "tool_errors": [
+        "E.DOMAIN.NOT_STABILIZABLE"
+      ],
+      "checks": [],
+      "final_text": "无法设计 LQR 控制器。\n\n**原因**：给定的系统 **(A, B) 不可镇定（not stabilizable）**。\n\n- A 的特征值为 λ₁ = 1、λ₂ = 2，均位于右半平面（开环不稳定）。\n- B = [[1], [0]] 只作用于第一个状态，第二个状态的动力学 `ẋ₂ = 2·x₂` 完全不受输入影响，且 λ₂ = 2 > 0，构成一个**不稳定的不可控模态**。\n\n不存在状态反馈 `u = −Kx` 能够稳定该系统，因此连续代数 Riccati 方程（CARE）无稳定化解，LQR 设计失败。\n\n**建议**：请检查 A、B 矩阵是否录入正确（尤其是行列顺序是否为 row-major）；如果模型无误，需要为第二个状态增加执行器（例如修改 B 使其可控），才能进行 LQR 设计。您是否希望我按修改后的 B 重新计算？",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 41952,
+      "latency_s": 16.241810069,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_design_lqr",
+          "request": {
+            "A": {
+              "dtype": "f64",
+              "shape": [
+                2,
+                2
+              ],
+              "data": [
+                1,
+                0,
+                0,
+                2
+              ]
+            },
+            "B": {
+              "dtype": "f64",
+              "shape": [
+                2,
+                1
+              ],
+              "data": [
+                1,
+                0
+              ]
+            },
+            "Q": {
+              "dtype": "f64",
+              "shape": [
+                2,
+                2
+              ],
+              "data": [
+                1,
+                0,
+                0,
+                1
+              ]
+            },
+            "R": {
+              "dtype": "f64",
+              "shape": [
+                1,
+                1
+              ],
+              "data": [
+                1
+              ]
+            }
+          },
+          "is_error": true,
+          "error_code": "E.DOMAIN.NOT_STABILIZABLE",
+          "error_hint": "这是模型结构问题，调整 Q/R 无效。需要为该模态增加执行器（修改 B），或确认 A 是否录入有误（含行列顺序：row-major）。",
+          "latency_ms": 0.249481
+        }
+      ]
+    }
+  ],
+  "rescored": {
+    "by": "aeoi-web 0.3.0 rescore",
+    "previous_summary": {
+      "questions": 8,
+      "tool_selection_accuracy": 1.0,
+      "first_tool_accuracy": 1.0,
+      "argument_correctness": 1.0,
+      "argument_applicable": 7,
+      "final_answer_accuracy": 1.0,
+      "self_corrections": 0,
+      "nudges_after_empty_turn": 0,
+      "tool_errors": 1,
+      "provider_errors": 0,
+      "http_retries": 0,
+      "total_tokens": 314934,
+      "mean_latency_s": 13.242168692999998,
+      "wall_time_s": 105.945872958,
+      "by_category_answer": {
+        "可控性": "1/1",
+        "相位裕度": "1/1",
+        "陷阱：Hz 与 rad/s": "1/1",
+        "陷阱：不可镇定": "1/1",
+        "陷阱：列优先": "2/2",
+        "陷阱：离散系统": "1/1",
+        "陷阱：缺采样周期": "1/1"
+      }
+    }
+  }
+}

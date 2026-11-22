@@ -111,9 +111,12 @@ async fn post_json(client: &reqwest::Client, url: &str, headers: &[(&str, String
                 }
                 // a daily quota (or any server delay far beyond our cap) will not clear by retrying
                 let sd = server_delay(&parsed, retry_after.as_deref());
-                let per_day = parsed.to_string().contains("PerDay");
+                // Gemini: quotaId …PerDay…; OpenRouter: "Rate limit exceeded: free-models-per-day"
+                let body = parsed.to_string().to_ascii_lowercase();
+                let per_day = body.contains("perday") || body.contains("per-day") || body.contains("per day");
                 if st.map(|s| s.as_u16()) == Some(429) && (per_day || sd.map(|d| d > policy.max_delay * 3).unwrap_or(false)) {
                     let msg: String = parsed["error"]["message"].as_str().unwrap_or("").lines().filter(|l| l.contains("Quota exceeded") || l.contains("retry in")).collect::<Vec<_>>().join(" ");
+                    let msg = if msg.is_empty() { parsed["error"]["message"].as_str().unwrap_or("").chars().take(200).collect() } else { msg };
                     return Err(format!("{QUOTA_EXHAUSTED}: {msg}"));
                 }
                 let backoff = policy.base_delay.mul_f64(2f64.powi(attempt as i32)).min(policy.max_delay);

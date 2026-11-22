@@ -68,7 +68,7 @@ fn slim(v: &Value) -> Value {
     }
 }
 
-/// Name of the binding-level grounding argument (spec M-5): for every top-level input marked
+/// Name of the binding-level grounding argument (spec F-5): for every top-level input marked
 /// `x-aeoi-provenance: "user"` the model must copy the user's own words that state the value.
 pub const USER_QUOTE: &str = "_user_quote";
 
@@ -90,7 +90,7 @@ pub fn llm_surface(schema: &Value) -> Value {
                 out["properties"][f.as_str()]["description"] = json!(d);
             }
         }
-        out["properties"][USER_QUOTE] = json!({"type": "object", "description": "来源证明（AEOI M-5）：以下参数必须是用户明确给出的，不能由模型假设。绑定层会核对引用确实出现在用户消息中且数值一致，否则返回 E.VALIDATION.UNGROUNDED_INPUT", "properties": qp, "required": fields});
+        out["properties"][USER_QUOTE] = json!({"type": "object", "description": "来源证明（AEOI F-5）：以下参数必须是用户明确给出的，不能由模型假设。绑定层会核对引用确实出现在用户消息中且数值一致，否则返回 E.VALIDATION.UNGROUNDED_INPUT", "properties": qp, "required": fields});
         if let Some(r) = out["required"].as_array_mut() {
             r.push(json!(USER_QUOTE));
         }

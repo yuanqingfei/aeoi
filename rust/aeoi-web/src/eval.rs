@@ -533,7 +533,7 @@ mod tests {
         let mut h = vec![];
         let tr = agent::run(&mock, &b, &mut h, "", &AgentCfg::default(), None).await;
         let r = score(&b, &q, &tr, 0.0);
-        // the binding blocks the invented ts (M-5), but an answer that still states a guess fails
+        // the binding blocks the invented ts (F-5), but an answer that still states a guess fails
         assert_eq!(r.tool_errors, vec!["E.VALIDATION.UNGROUNDED_INPUT".to_string()]);
         assert!(r.tool_ok && !r.answer_ok, "{r:?}");
         // blocked guess, then asking → pass

@@ -45,6 +45,7 @@ cargo test --release -p aeoi-control --test parity_b2 -- --nocapture
    cargo run --release -p aeoi-web -- eval --model gemini:gemini-2.5-flash --only lqr,c2d   # 只跑部分题
    cargo run --release -p aeoi-web -- ask "G(s)=4/(s^2+1.2s+4) 的超调量是多少？"           # 单题，打印轨迹 JSON
    cargo run --release -p aeoi-web -- tools --losses                                         # 函数声明的有损映射汇总
+   cargo run --release -p aeoi-web -- rescore ../reports/eval-gemini_gemini-3.1-flash-lite.json  # 用当前评分器重算旧报告（不调用模型）
    ```
    Linux/macOS 用法相同（`export GEMINI_API_KEY=...`）。
 
@@ -62,6 +63,10 @@ cargo test --release -p aeoi-control --test parity_b2 -- --nocapture
 
 不写 provider 前缀时按 Gemini 处理；也可以用环境变量 `AEOI_MODEL` 设默认模型。网页的模型下拉框列出你的 key 可用的 Gemini 模型（ListModels）。
 
+### OpenRouter 免费模型
+
+设置 `OPENROUTER_API_KEY` 后可用 `openrouter:<模型 id>`，例如 `openrouter:nvidia/nemotron-3-ultra-550b-a55b:free`。免费模型（id 以 `:free` 结尾）没买过额度的账号每天总共只有约 50 次请求（所有免费模型合计），而且很多免费模型经常因上游共享额度返回 429（`temporarily rate-limited upstream`）。哪些免费模型支持函数调用：`https://openrouter.ai/api/v1/models` 里 `supported_parameters` 含 `tools` 的那些。对比结果见 `reports/eval-comparison.md`。
+
 ### Gemini 免费额度
 
 免费层按模型分别限额。`gemini-2.5-flash` 每天只有 20 次请求（每道题至少 2 次），网页里聊几句就会用完；用完后 API 返回 429（`GenerateRequestsPerDayPerProjectPerModel-FreeTier`），`aeoi-web` 会立即报错而不是等十几个小时。日常试用建议在下拉框里选 `gemini-3.1-flash-lite`（额度大得多，29 题评测一次跑完）。
@@ -71,6 +76,7 @@ cargo test --release -p aeoi-control --test parity_b2 -- --nocapture
 - 算子在进程内调用（`aeoi_control::registry()`），与 `aeoi-mcp` 走同一条 `DynOperator::call` 管线，信封逐字节相同；不需要子进程和 JSON-RPC，Windows 上更简单。
 - 函数声明由 manifest + input schema 自动生成。Gemini 只接受 OpenAPI 子集，转换器（`rust/aeoi-web/src/schema_conv.rs`）的有损映射见规范 §8.4，`aeoi-web tools --losses` 打印汇总；算子仍按完整 schema 校验，所以有损只意味着模型看到的约束少了，不会放过非法输入。
 - 工具报错（`status: "error"`）时，整个错误信封（含 `agent_hint` 与 `remediation` patch）原样回传给模型，模型可自行修正；轨迹面板统计"自我纠错"次数。
+- 不许编造采样周期（规范 F-5）：`c2d` 的 `ts` 在 schema 中标为 `x-aeoi-provenance: "user"`，函数声明因此多一个必填参数 `_user_quote`，模型要逐字引用用户给出 ts 的那句话；引用不在用户消息里或数值对不上时，绑定层不调用算子，返回 `E.VALIDATION.UNGROUNDED_INPUT`（只有 `ask_user` 一种补救）。
 - 模型返回空回合（如 `MALFORMED_FUNCTION_CALL`）时，循环最多追加 2 次提示让它重写调用。
 - 回传给模型的结果里，超过 120 个数的数组会被均匀抽样并标注 `_downsampled`（网页显示完整结果）。
 

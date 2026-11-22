@@ -20,7 +20,7 @@ pub struct ToolDef {
     /// Gemini OpenAPI-subset schema.
     pub gemini_schema: Value,
     pub losses: Vec<Loss>,
-    /// Inputs that must be grounded in the user's words (`x-aeoi-provenance: "user"`, spec M-5).
+    /// Inputs that must be grounded in the user's words (`x-aeoi-provenance: "user"`, spec F-5).
     pub user_fields: Vec<String>,
 }
 
@@ -100,7 +100,7 @@ impl Bridge {
     }
 
     /// Like [`Bridge::call`]; with `user_text` (everything the user said in this conversation) the
-    /// M-5 grounding check runs first: each `x-aeoi-provenance: "user"` input must be quoted in
+    /// F-5 grounding check runs first: each `x-aeoi-provenance: "user"` input must be quoted in
     /// `_user_quote`, the quote must occur in the user's text, and it must state the same number.
     /// Without `user_text` (direct UI calls) the quote is only stripped.
     pub fn call_grounded(&self, name: &str, args: &Value, user_text: Option<&str>) -> (Value, f64) {
@@ -140,7 +140,7 @@ fn squash(s: &str) -> String {
     crate::answer::normalize(s).chars().filter(|c| !c.is_whitespace() && !"$*`\\{}".contains(*c)).collect::<String>().to_lowercase()
 }
 
-/// Spec M-5 grounding check (binding level). Returns an error envelope when a user-provenance
+/// Spec F-5 grounding check (binding level). Returns an error envelope when a user-provenance
 /// input is not backed by the user's own words.
 pub fn check_grounding(t: &ToolDef, args: &Value, quotes: Option<&Value>, user_text: &str) -> Option<Value> {
     for f in &t.user_fields {
@@ -165,7 +165,7 @@ pub fn check_grounding(t: &ToolDef, args: &Value, quotes: Option<&Value>, user_t
         if let Some(p) = problem {
             let e = aeoi_core::OpError::new(
                 "E.VALIDATION.UNGROUNDED_INPUT",
-                format!("{p}。{f} 是有物理含义、不能假设的输入（规范 M-5），必须由用户明确给出。"),
+                format!("{p}。{f} 是有物理含义、不能假设的输入（规范 F-5），必须由用户明确给出。"),
                 format!("不要猜测 {f}。请向用户询问 {f} 的取值（含单位），得到回答后再调用；不要换一个“常用值”重试。"),
             )
             .detail("source", json!("aeoi-web bridge"))

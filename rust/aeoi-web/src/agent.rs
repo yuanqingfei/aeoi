@@ -85,7 +85,7 @@ pub fn count_self_corrections(steps: &[ToolStep]) -> usize {
 /// Marker of harness-generated user turns (nudges); they never count as the user's own words.
 pub const NUDGE_PREFIX: &str = "（系统提示）";
 
-/// Everything the user actually said in this conversation (for the M-5 grounding check).
+/// Everything the user actually said in this conversation (for the F-5 grounding check).
 pub fn user_text(history: &[Msg]) -> String {
     history.iter().filter_map(|m| if let Msg::User(t) = m { (!t.starts_with(NUDGE_PREFIX)).then_some(t.as_str()) } else { None }).collect::<Vec<_>>().join("\n")
 }
