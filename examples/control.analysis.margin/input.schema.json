@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.analysis.margin/0.3.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "system"
+  ],
+  "properties": {
+    "system": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+    }
+  }
+}

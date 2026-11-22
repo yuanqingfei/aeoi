@@ -1,0 +1,135 @@
+{
+  "spec": "aeoi/0.3",
+  "id": "control.analysis.margin",
+  "version": "0.3.0",
+  "title": "Gain / phase / stability margins",
+  "description": "计算 SISO 开环系统（负单位反馈）的增益裕度、相位裕度、稳定裕度（到 −1 点的最小距离）及对应交越频率；交越点由多项式求根精确求得，并用密集对数网格的符号变化做漏检复查。",
+  "category": "analysis",
+  "tags": [
+    "frequency-domain",
+    "robustness",
+    "lti"
+  ],
+  "applicability": {
+    "preconditions": [
+      "SISO",
+      "system 为 proper",
+      "离散系统：频率范围 (0, π/ts)"
+    ],
+    "not_for": [
+      "MIMO（v0.3 不支持，用 disk margin 类算子）",
+      "带时滞的系统"
+    ],
+    "siso_only": true
+  },
+  "provenance": {
+    "algorithm": "先转为 tf G=n/d（ss 用 ss2tf）。连续：令 s=jω，n(jω)=n_r(ω)+j n_i(ω)、d 同理，均为实系数多项式；相位交越 Im G=0 ⇔ n_i d_r − n_r d_i = 0；增益交越 |G|=1 ⇔ n_r²+n_i² − d_r²−d_i² = 0；稳定裕度极值 ⇔ d/dω(|n+d|²/|d|²) = 0 且二阶导 > 0。各多项式用平衡伴随矩阵求根并 Newton 修正，取 |Im r| ≤ 1e-6·max(1,|r|) 的实根，再在原 G 上用 Newton 迭代精化。离散：双线性代换 z=(1+w)/(1−w) 把单位圆映为虚轴，在 w=jν 上重复上述步骤，ω = (2/ts)·atan ν。复查：在覆盖全部零极点频率的 4000 点对数网格上检测 |G|−1 与 Im G 的符号变化，漏检者用二分法精化后补入并给出 W.NUMERICAL.CROSSING_RECOVERED。选择规则（与 python-control stability_margins 相同）：GM 取 |log GM| 最小者（相位交越且 Re G ≤ 0），PM = mod(∠G, 360°) − 180° 取 |PM| 最小者，SM 取最小值",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "G. F. Franklin, J. D. Powell, A. Emami-Naeini, Feedback Control of Dynamic Systems, ch.6（裕度定义）"
+      },
+      {
+        "type": "paper",
+        "cite": "B. N. Parlett, C. Reinsch, Balancing a matrix for calculation of eigenvalues and eigenvectors, Numer. Math. 13, 1969",
+        "doi": "10.1007/BF02165404"
+      },
+      {
+        "type": "software",
+        "cite": "python-control stability_margins 文档（仅作选择规则对照）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献；MATLAB 仅作为黑盒参考（公开 API），v0.2 的 parity 参考为 python-control/scipy"
+    }
+  },
+  "backend": {
+    "library": "aeoi-control (pure Rust) + nalgebra 0.33",
+    "routine": "margin::compute",
+    "version": "0.3.0",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T3",
+  "sparse_support": {
+    "/system/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_states": 100,
+    "scan_points": 4000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/control.analysis.margin/0.3.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ZERO_DENOMINATOR",
+    "E.VALIDATION.NOT_CONJUGATE",
+    "E.VALIDATION.SPARSE_STRUCTURE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.DOMAIN.IMPROPER_SYSTEM",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.DOMAIN.MIMO_NOT_SUPPORTED"
+  ],
+  "warnings": [
+    "W.NUMERICAL.CROSSING_RECOVERED",
+    "W.DOMAIN.CLOSED_LOOP_UNSTABLE",
+    "W.VALIDATION.LEADING_ZEROS_STRIPPED",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "control_analysis_margin",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  }
+}

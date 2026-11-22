@@ -32,6 +32,7 @@ pub mod bode;
 pub mod convert;
 pub mod ctrb_obsv;
 pub mod lqr;
+pub mod margin;
 pub mod poles_zeros;
 pub mod step;
 
@@ -46,6 +47,7 @@ pub fn registry() -> Vec<Box<dyn DynOperator>> {
         Box::new(convert::Convert::new()),
         Box::new(poles_zeros::PolesZeros::new()),
         Box::new(ctrb_obsv::CtrbObsv::new()),
+        Box::new(margin::Margin::new()),
     ]
 }
 

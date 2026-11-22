@@ -1,0 +1,120 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.analysis.margin",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-margin-003-nonsym",
+  "result": {
+    "gain_margin": {
+      "unit": "1",
+      "value": "Inf"
+    },
+    "gain_margin_db": {
+      "unit": "dB",
+      "value": "Inf"
+    },
+    "phase_margin": {
+      "unit": "deg",
+      "value": 77.80948435480713
+    },
+    "stability_margin": {
+      "unit": "1",
+      "value": "Inf"
+    },
+    "phase_crossover_frequency": {
+      "unit": "rad/s",
+      "value": "NaN"
+    },
+    "gain_crossover_frequency": {
+      "unit": "rad/s",
+      "value": 16.351390920722732
+    },
+    "stability_margin_frequency": {
+      "unit": "rad/s",
+      "value": "NaN"
+    },
+    "crossings": {
+      "phase": [],
+      "gain": [
+        {
+          "w_rad_s": 16.351390920722732,
+          "phase_margin_deg": 77.80948435480713
+        }
+      ],
+      "stability": []
+    },
+    "closed_loop_stable": true
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "gain_crossing_max_abs_ln_mag": 0.0,
+      "phase_crossing_max_abs_sin_arg": 0.0,
+      "definition": "增益交越处 |ln|G(jω)||、相位交越处 |Im G|/|G| 的最大值（理想为 0）"
+    },
+    "condition": {
+      "tf_from": "ss",
+      "num_degree": 2,
+      "den_degree": 3,
+      "grid_audit_recovered": 0
+    },
+    "error_estimate": {
+      "basis": "交越频率为多项式实根（伴随矩阵特征值 + Newton），再在 G 上做割线修正；残差见 residual。相切/近重根时交越频率误差可达 O(√u)"
+    },
+    "checks": {
+      "closed_loop_stable": true,
+      "grid_audit_clean": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "closed_loop_poles": {
+        "dtype": "c128",
+        "shape": [
+          3
+        ],
+        "data": [
+          [
+            -9.509032271738812,
+            5.67324676194156
+          ],
+          [
+            -9.509032271738812,
+            -5.67324676194156
+          ],
+          [
+            -1.9819354565223863,
+            0.0
+          ]
+        ]
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T3",
+    "input_hash": "sha256:2dd0f76899a3e0c86bbdb118b5a512cbd5e2e065e4fe05766d0240e22a55528a",
+    "output_hash": "sha256:d426ccfd3e6e9cf7459c08cc409ed39706b6d9ea9c3b83965b78a17bfd025fb9",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.37715699999999996
+  }
+}

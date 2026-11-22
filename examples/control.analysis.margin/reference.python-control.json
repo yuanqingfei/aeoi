@@ -1,0 +1,31 @@
+{
+  "request.json": {
+    "gm": 1.4999999999999998,
+    "pm": 11.424981844921433,
+    "sm": 0.17020817530521024,
+    "wpc": 1.414213562373095,
+    "wgc": 1.1432030439610739,
+    "wms": 1.2021253965135135
+  },
+  "request.nonsymmetric.json": {
+    "gm": "Inf",
+    "pm": 77.80948435480707,
+    "sm": "Inf",
+    "wpc": "NaN",
+    "wgc": 16.351390920722725,
+    "wms": "NaN",
+    "all_w180": [],
+    "all_wc": [
+      16.351390920722725
+    ],
+    "all_ws": []
+  },
+  "hand_check": "phase −180° at ω = √2 where |L| = 4/(√2·√3·√6) = 2/3 ⇒ GM = 1.5 (3.52 dB)",
+  "reference_env": {
+    "engine": "python-control",
+    "python_control": "0.10.2",
+    "scipy": "1.18.1",
+    "numpy": "2.5.5",
+    "note": "python-control/scipy reference values (NOT MATLAB output)"
+  }
+}

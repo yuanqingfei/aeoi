@@ -1,0 +1,24 @@
+# Parity test spec — control.analysis.margin 0.3.0 (AEOI v0.3-draft)
+operator: control.analysis.margin
+references:
+  - {engine: python-control, version: "0.10.2 (scipy 1.18.1, numpy 2.5.5)", role: dev_reference, status: active,
+     generator: gen_golden_pycontrol_b2.py, golden_store: "golden/python-control/control.analysis.margin/0.3.0/*.json",
+     note: "python-control/scipy reference values, NOT MATLAB output"}
+  - {engine: MATLAB, role: ground_truth, status: planned, note: "no generator script yet for batch 2"}
+runner: "cargo test --release -p aeoi-control --test parity_b2"
+tolerance_class: T3
+compare:
+  "gain margin": "rel ≤ 1e-9"
+  "phase margin": "abs ≤ 1e-8 deg"
+  "crossover frequencies": "rel ≤ 1e-9"
+  "stability margin": "rel ≤ 1e-9; discrete: or ours lower than python-control's optimizer value (reference verified consistent ≤ 1e-9, gap ≤ 1e-6)"
+  "SM frequency": "continuous rel ≤ 1e-6 (flat minimum); discrete rel ≤ 1e-3 (python-control uses scipy L-BFGS-B)"
+  "crossing sets": "every python-control crossing must be found (extra crossings allowed and reported)"
+case_families:   # n = golden cases
+  - {name: discrete_tf, n: 8}
+  - {name: memory_order_nonsymmetric, n: 1, note: "non-symmetric matrices; the column-major (A(:)) request must deviate > 1e3 × tolerance"}
+  - {name: mimo, n: 1, expect: E.DOMAIN.MIMO_NOT_SUPPORTED}
+  - {name: random_tf, n: 20}
+  - {name: ss_siso, n: 5}
+  - {name: type1_loop, n: 10}
+pass_rule: "all cases within tolerance; expected-error cases return the same code; expected warnings present; every emitted code declared in the manifest; outputs validate against envelope+output schema"

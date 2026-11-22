@@ -1,0 +1,43 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.analysis.margin",
+ "operator_version": "0.3.0",
+ "case_family": "discrete_tf",
+ "request": {
+  "system": {
+   "kind": "tf",
+   "num": [
+    0.2750220192890195
+   ],
+   "den": [
+    1.0,
+    0.448729534653959
+   ],
+   "ts": 0.1,
+   "time_unit": "s"
+  }
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261122,
+  "note": "python-control/scipy reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected": {
+  "gm": "Inf",
+  "pm": "Inf",
+  "sm": 0.5011123639348576,
+  "wpc": "NaN",
+  "wgc": "NaN",
+  "wms": 31.415926973338284,
+  "all_w180": [],
+  "all_wc": [],
+  "all_ws": [
+   31.415926973338284
+  ]
+ }
+}

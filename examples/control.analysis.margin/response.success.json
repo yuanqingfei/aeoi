@@ -1,0 +1,131 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.analysis.margin",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-margin-001",
+  "result": {
+    "gain_margin": {
+      "unit": "1",
+      "value": 1.4999999999999998
+    },
+    "gain_margin_db": {
+      "unit": "dB",
+      "value": 3.521825181113623
+    },
+    "phase_margin": {
+      "unit": "deg",
+      "value": 11.424981844921433
+    },
+    "stability_margin": {
+      "unit": "1",
+      "value": 0.17020817530521032
+    },
+    "phase_crossover_frequency": {
+      "unit": "rad/s",
+      "value": 1.414213562373095
+    },
+    "gain_crossover_frequency": {
+      "unit": "rad/s",
+      "value": 1.1432030439610739
+    },
+    "stability_margin_frequency": {
+      "unit": "rad/s",
+      "value": 1.2021253965135141
+    },
+    "crossings": {
+      "phase": [
+        {
+          "w_rad_s": 1.414213562373095,
+          "gain_margin": 1.4999999999999998,
+          "gain_margin_db": 3.521825181113623
+        }
+      ],
+      "gain": [
+        {
+          "w_rad_s": 1.1432030439610739,
+          "phase_margin_deg": 11.424981844921433
+        }
+      ],
+      "stability": [
+        {
+          "w_rad_s": 1.2021253965135141,
+          "stability_margin": 0.17020817530521032
+        }
+      ]
+    },
+    "closed_loop_stable": true
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "gain_crossing_max_abs_ln_mag": 2.2204460492503128e-16,
+      "phase_crossing_max_abs_sin_arg": 1.0467283057891834e-16,
+      "definition": "增益交越处 |ln|G(jω)||、相位交越处 |Im G|/|G| 的最大值（理想为 0）"
+    },
+    "condition": {
+      "tf_from": "tf",
+      "num_degree": 0,
+      "den_degree": 3,
+      "grid_audit_recovered": 0
+    },
+    "error_estimate": {
+      "basis": "交越频率为多项式实根（伴随矩阵特征值 + Newton），再在 G 上做割线修正；残差见 residual。相切/近重根时交越频率误差可达 O(√u)"
+    },
+    "checks": {
+      "closed_loop_stable": true,
+      "grid_audit_clean": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "closed_loop_poles": {
+        "dtype": "c128",
+        "shape": [
+          3
+        ],
+        "data": [
+          [
+            -2.7963219032594417,
+            0.0
+          ],
+          [
+            -0.10183904837027921,
+            1.1916707956047328
+          ],
+          [
+            -0.10183904837027921,
+            -1.1916707956047328
+          ]
+        ]
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T3",
+    "input_hash": "sha256:ee06efb23272488856dcdb3d7a1c46976cf73839392c5a606da3d599a5cb88de",
+    "output_hash": "sha256:6cb2fc3c7c0667751b2821236fc15af6715c6049ba2739e24b6a41ae58840c1b",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.340081
+  }
+}
