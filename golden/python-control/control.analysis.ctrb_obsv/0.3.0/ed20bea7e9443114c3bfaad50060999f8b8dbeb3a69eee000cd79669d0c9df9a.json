@@ -1,0 +1,106 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.analysis.ctrb_obsv",
+ "operator_version": "0.3.0",
+ "case_family": "uncontrollable",
+ "request": {
+  "system": {
+   "kind": "ss",
+   "A": {
+    "dtype": "f64",
+    "shape": [
+     2,
+     2
+    ],
+    "data": [
+     -0.43307972661246347,
+     -0.10144121574549717,
+     -0.10144121574549715,
+     -0.2203166824911346
+    ]
+   },
+   "B": {
+    "dtype": "f64",
+    "shape": [
+     2,
+     1
+    ],
+    "data": [
+     -0.40733175345553263,
+     1.017417336054314
+    ]
+   },
+   "C": {
+    "dtype": "f64",
+    "shape": [
+     1,
+     2
+    ],
+    "data": [
+     -1.6255366099830006,
+     -1.5533903171225951
+    ]
+   },
+   "D": {
+    "dtype": "f64",
+    "shape": [
+     1,
+     1
+    ],
+    "data": [
+     0.0
+    ]
+   },
+   "ts": 0.0,
+   "time_unit": "s"
+  }
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261122,
+  "note": "python-control/scipy reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected": {
+  "ctrb": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    -0.40733175345553263,
+    0.07319907293720279,
+    1.017417336054314,
+    -0.18283378390617994
+   ]
+  },
+  "ctrb_rank": 1,
+  "ctrb_sv": [
+   1.1134825952359257,
+   1.1922789142837506e-16
+  ],
+  "obsv": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    -1.6255366099830006,
+    -1.5533903171225951,
+    0.8615647529461881,
+    0.5071342112377913
+   ]
+  },
+  "obsv_rank": 2,
+  "obsv_sv": [
+   2.451717813599675,
+   0.2096412219252128
+  ]
+ }
+}

@@ -1,0 +1,171 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.analysis.ctrb_obsv",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-ctrb_obsv-003-nonsym",
+  "result": {
+    "ctrb": {
+      "matrix": {
+        "dtype": "f64",
+        "shape": [
+          3,
+          3
+        ],
+        "data": [
+          0.0,
+          1.0,
+          2.0,
+          1.0,
+          2.0,
+          -22.3,
+          2.0,
+          -22.8,
+          109.20000000000002
+        ]
+      },
+      "rank": 3,
+      "singular_values": {
+        "dtype": "f64",
+        "shape": [
+          3
+        ],
+        "data": [
+          113.77821776266732,
+          3.1548896151689294,
+          0.5777839277470139
+        ]
+      },
+      "full_rank": true
+    },
+    "obsv": {
+      "matrix": {
+        "dtype": "f64",
+        "shape": [
+          3,
+          3
+        ],
+        "data": [
+          1.0,
+          0.5,
+          0.0,
+          0.25,
+          1.0,
+          0.5,
+          -2.5,
+          -5.15,
+          -2.0
+        ]
+      },
+      "rank": 3,
+      "singular_values": {
+        "dtype": "f64",
+        "shape": [
+          3
+        ],
+        "data": [
+          6.222882140270602,
+          0.7804113359320448,
+          0.04118270328628747
+        ]
+      },
+      "full_rank": true
+    },
+    "gramians": {
+      "controllability": {
+        "dtype": "f64",
+        "shape": [
+          3,
+          3
+        ],
+        "data": [
+          1.0969387755102094,
+          -5.967448757360216e-16,
+          -1.1802721088435406,
+          -5.967448757360216e-16,
+          0.6318027210884352,
+          -0.4999999999999986,
+          -1.1802721088435406,
+          -0.4999999999999986,
+          2.4136054421768702
+        ]
+      },
+      "observability": {
+        "dtype": "f64",
+        "shape": [
+          3,
+          3
+        ],
+        "data": [
+          1.7325042517006857,
+          1.1147959183673497,
+          0.1762329931972793,
+          1.1147959183673497,
+          0.7191751700680287,
+          0.11479591836734715,
+          0.1762329931972793,
+          0.11479591836734715,
+          0.019132653061224518
+        ]
+      }
+    },
+    "minimal": true
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "controllability_rel_residual": 1.8534303948730277e-16,
+      "observability_rel_residual": 3.693934606021644e-17,
+      "separation_min": 0.7272252746202555,
+      "definition": "‖A W + W Aᵀ + BBᵀ‖_F / (2‖A‖_F‖W‖_F + ‖BBᵀ‖_F)（离散：‖A W Aᵀ − W + BBᵀ‖_F / (‖A‖²‖W‖+‖W‖+‖BBᵀ‖)），可观同理"
+    },
+    "condition": {
+      "ctrb_rank_tolerance": 7.579151823655693e-14,
+      "obsv_rank_tolerance": 4.145272218994257e-15,
+      "ctrb_sv_gap_at_rank": null,
+      "obsv_sv_gap_at_rank": null,
+      "pbh_ctrb_min_rel_sv": 0.03315985386592323,
+      "pbh_obsv_min_rel_sv": 0.004095208831130304,
+      "pbh_threshold": 1e-10,
+      "ctrb_condition": 196.92174236540166,
+      "realization": "given ss"
+    },
+    "error_estimate": {
+      "basis": "秩为整数判定（T0）；Krylov 矩阵元素为精确的矩阵乘积（T1）；Gramian 见 residual"
+    },
+    "checks": {
+      "pbh_agrees_ctrb": true,
+      "pbh_agrees_obsv": true,
+      "asymptotically_stable": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:d00e1360a61133b97b0e831a1549821e5941f191a9ea8787072c90eeab66ce7e",
+    "output_hash": "sha256:d1fcd80dd14c9bae027555cd5604daa7f5dec128834eef5d8e3cbb24764c701c",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.274102
+  }
+}

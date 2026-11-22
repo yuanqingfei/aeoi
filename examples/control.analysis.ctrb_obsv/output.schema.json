@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.analysis.ctrb_obsv/0.3.0/output",
+  "type": "object",
+  "required": [
+    "ctrb",
+    "obsv",
+    "gramians",
+    "minimal"
+  ],
+  "properties": {
+    "ctrb": {
+      "type": "object",
+      "required": [
+        "matrix",
+        "rank",
+        "singular_values",
+        "full_rank"
+      ],
+      "properties": {
+        "matrix": {
+          "$ref": "aeoi://schemas/common/0.3/Matrix"
+        },
+        "rank": {
+          "type": "integer"
+        },
+        "singular_values": {
+          "$ref": "aeoi://schemas/common/0.3/Matrix"
+        },
+        "full_rank": {
+          "type": "boolean"
+        }
+      },
+      "description": "[n, n·m]"
+    },
+    "obsv": {
+      "type": "object",
+      "required": [
+        "matrix",
+        "rank",
+        "singular_values",
+        "full_rank"
+      ],
+      "properties": {
+        "matrix": {
+          "$ref": "aeoi://schemas/common/0.3/Matrix"
+        },
+        "rank": {
+          "type": "integer"
+        },
+        "singular_values": {
+          "$ref": "aeoi://schemas/common/0.3/Matrix"
+        },
+        "full_rank": {
+          "type": "boolean"
+        }
+      },
+      "description": "[n·p, n]"
+    },
+    "gramians": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "required": [
+            "controllability",
+            "observability"
+          ],
+          "properties": {
+            "controllability": {
+              "$ref": "aeoi://schemas/common/0.3/Matrix"
+            },
+            "observability": {
+              "$ref": "aeoi://schemas/common/0.3/Matrix"
+            }
+          }
+        }
+      ]
+    },
+    "minimal": {
+      "type": "boolean",
+      "description": "ctrb 与 obsv 同时满秩"
+    }
+  }
+}

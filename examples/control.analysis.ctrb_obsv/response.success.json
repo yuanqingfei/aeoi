@@ -1,0 +1,149 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.analysis.ctrb_obsv",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-co-001",
+  "result": {
+    "ctrb": {
+      "matrix": {
+        "dtype": "f64",
+        "shape": [
+          2,
+          2
+        ],
+        "data": [
+          0.0,
+          4.0,
+          4.0,
+          -4.8
+        ]
+      },
+      "rank": 2,
+      "singular_values": {
+        "dtype": "f64",
+        "shape": [
+          2
+        ],
+        "data": [
+          7.06476151587624,
+          2.26476151587624
+        ]
+      },
+      "full_rank": true
+    },
+    "obsv": {
+      "matrix": {
+        "dtype": "f64",
+        "shape": [
+          2,
+          2
+        ],
+        "data": [
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "rank": 2,
+      "singular_values": {
+        "dtype": "f64",
+        "shape": [
+          2
+        ],
+        "data": [
+          1.0,
+          1.0
+        ]
+      },
+      "full_rank": true
+    },
+    "gramians": {
+      "controllability": {
+        "dtype": "f64",
+        "shape": [
+          2,
+          2
+        ],
+        "data": [
+          1.666666666666666,
+          1.8041124150158794e-16,
+          1.8041124150158794e-16,
+          6.666666666666664
+        ]
+      },
+      "observability": {
+        "dtype": "f64",
+        "shape": [
+          2,
+          2
+        ],
+        "data": [
+          0.5666666666666668,
+          0.125,
+          0.125,
+          0.10416666666666666
+        ]
+      }
+    },
+    "minimal": true
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "controllability_rel_residual": 7.119997686835877e-17,
+      "observability_rel_residual": 2.5816843116640615e-17,
+      "separation_min": 1.1999999999999995,
+      "definition": "‖A W + W Aᵀ + BBᵀ‖_F / (2‖A‖_F‖W‖_F + ‖BBᵀ‖_F)（离散：‖A W Aᵀ − W + BBᵀ‖_F / (‖A‖²‖W‖+‖W‖+‖BBᵀ‖)），可观同理"
+    },
+    "condition": {
+      "ctrb_rank_tolerance": 3.13738435936461e-15,
+      "obsv_rank_tolerance": 4.440892098500626e-16,
+      "ctrb_sv_gap_at_rank": null,
+      "obsv_sv_gap_at_rank": null,
+      "pbh_ctrb_min_rel_sv": 0.2442208482397884,
+      "pbh_obsv_min_rel_sv": 0.0998330718720949,
+      "pbh_threshold": 1e-10,
+      "ctrb_condition": 3.119428454762873,
+      "realization": "given ss"
+    },
+    "error_estimate": {
+      "basis": "秩为整数判定（T0）；Krylov 矩阵元素为精确的矩阵乘积（T1）；Gramian 见 residual"
+    },
+    "checks": {
+      "pbh_agrees_ctrb": true,
+      "pbh_agrees_obsv": true,
+      "asymptotically_stable": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:6da5768803cb1a03a779b6e10dbf4d62d7825c430bfe6c21d6b2ae1067dd1c53",
+    "output_hash": "sha256:4b88f480e4dff3988e44cce0b2f28f372d9420e371da7be0103ae969bdd37258",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.269598
+  }
+}
