@@ -134,10 +134,16 @@ impl<T: Operator> DynOperator for T {
         // 1. JSON Schema
         let viol = m.validator.violations(args, 20);
         if !viol.is_empty() {
-            let e = OpError::new("E.VALIDATION.SCHEMA", format!("输入不符合 {} 的 inputSchema（{} 处违规）。", m.id, viol.len()), "按 details.violations 中的 JSON Pointer 逐项修正后重试；注意所有对象都禁止多余字段。")
-                .detail("violations", Value::Array(viol.iter().map(|(p, msg)| json!({"path": p, "message": msg})).collect()))
-                .detail("path", Value::from(viol[0].0.clone()))
-                .remedy(ask_user("ask", "若无法确定字段含义，向用户确认"));
+            // spec E-9 (v0.4): resolve oneOf failures to leaf violations; offer lossless patches
+            let diag = crate::schema::diagnose(&m.input_schema, args);
+            let leaf = if diag.violations.is_empty() { viol.clone() } else { diag.violations };
+            let mut e = OpError::new("E.VALIDATION.SCHEMA", format!("输入不符合 {} 的 inputSchema（{} 处违规）：{}", m.id, leaf.len(), leaf[0].1), "按 details.violations 中的 JSON Pointer 逐项修正后重试；注意所有对象都禁止多余字段。")
+                .detail("violations", Value::Array(leaf.iter().map(|(p, msg)| json!({"path": p, "message": msg})).collect()))
+                .detail("path", Value::from(leaf[0].0.clone()));
+            if !diag.patches.is_empty() {
+                e = e.remedy(crate::error::modify_input("nested_array_to_dense", "把嵌套数组形式的矩阵改写为 row-major DenseMatrix（无损，数值不变）", "high", false, Value::Array(diag.patches)));
+            }
+            let e = e.remedy(ask_user("ask", "若无法确定字段含义，向用户确认"));
             return error_envelope(m, &request_id, &e, &[], t0);
         }
         // 2-4. semantic validation (also resolves b64/ref/sparse)

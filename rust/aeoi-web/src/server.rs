@@ -145,7 +145,7 @@ mod tests {
         let tools: Value = c.get(format!("http://{addr}/api/tools")).send().await.unwrap().json().await.unwrap();
         assert_eq!(tools.as_array().unwrap().len(), 12);
         let r: Value = c.post(format!("http://{addr}/api/call")).json(&json!({"tool":"control_lti_poles_zeros","args":{"system":{"kind":"tf","num":[1],"den":[1,3,2],"ts":0}}})).send().await.unwrap().json().await.unwrap();
-        assert_eq!(r["response"]["status"], "success", "{r}");
+        assert_eq!(r["response"]["status"], "ok", "{r}");
         // unknown provider → 400 JSON, not a hang
         let bad = c.post(format!("http://{addr}/api/chat")).json(&json!({"session_id":"s","model":"groq:x","message":"hi"})).send().await.unwrap();
         if std::env::var("GROQ_API_KEY").is_err() {

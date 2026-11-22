@@ -9,6 +9,8 @@ use aeoi_core::{DynOperator, HostCtx};
 use serde_json::{json, Map, Value};
 use std::time::Instant;
 
+static CALLS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
 pub struct ToolDef {
     pub name: String,
     pub operator_id: String,
@@ -100,7 +102,7 @@ impl Bridge {
                     let mut a = args.clone();
                     let exec = a.as_object_mut().unwrap().entry("exec").or_insert_with(|| json!({}));
                     if let Some(e) = exec.as_object_mut() {
-                        e.entry("request_id").or_insert_with(|| json!(format!("web-{}", t0.elapsed().as_nanos() ^ (std::process::id() as u128))));
+                        e.entry("request_id").or_insert_with(|| json!(format!("web-{}", CALLS.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1)));
                     }
                     op.call(&a, &self.host)
                 }
