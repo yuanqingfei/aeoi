@@ -1,0 +1,51 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.lti.c2d",
+ "operator_version": "0.3.0",
+ "case_family": "tf_foh",
+ "request": {
+  "system": {
+   "kind": "tf",
+   "num": [
+    0.7645954969589898
+   ],
+   "den": [
+    1.0,
+    16.276889926150094,
+    111.85963820141085,
+    349.69740815398575,
+    416.5904792122658
+   ],
+   "ts": 0.0,
+   "time_unit": "s"
+  },
+  "ts": 0.06963704499795259,
+  "method": "foh"
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261122,
+  "note": "python-control/scipy reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected": {
+  "num": [
+   1.240289008164197e-07,
+   2.6690792713779388e-06,
+   5.607106343674673e-06,
+   1.8284948146707336e-06,
+   5.824936682996551e-08
+  ],
+  "den": [
+   1.0,
+   -2.9701776208944533,
+   3.3359653458960583,
+   -1.6820956869279664,
+   0.3219128197500165
+  ]
+ }
+}

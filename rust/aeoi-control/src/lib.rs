@@ -29,6 +29,7 @@ macro_rules! operator_struct {
 }
 
 pub mod bode;
+pub mod c2d;
 pub mod convert;
 pub mod ctrb_obsv;
 pub mod lqr;
@@ -48,6 +49,7 @@ pub fn registry() -> Vec<Box<dyn DynOperator>> {
         Box::new(poles_zeros::PolesZeros::new()),
         Box::new(ctrb_obsv::CtrbObsv::new()),
         Box::new(margin::Margin::new()),
+        Box::new(c2d::C2d::new()),
     ]
 }
 

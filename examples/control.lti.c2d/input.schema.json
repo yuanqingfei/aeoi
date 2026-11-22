@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.lti.c2d/0.3.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "system",
+    "ts"
+  ],
+  "properties": {
+    "system": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem"
+    },
+    "ts": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "采样周期，unit s"
+    },
+    "method": {
+      "enum": [
+        "zoh",
+        "foh",
+        "tustin"
+      ],
+      "default": "zoh"
+    },
+    "prewarp_frequency": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "rad/s，仅 tustin"
+    },
+    "output_kind": {
+      "enum": [
+        "same",
+        "tf",
+        "ss",
+        "zpk"
+      ],
+      "default": "same"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+# Parity test spec — control.lti.c2d 0.3.0 (AEOI v0.3-draft)
+operator: control.lti.c2d
+references:
+  - {engine: python-control, version: "0.10.2 (scipy 1.18.1, numpy 2.5.5)", role: dev_reference, status: active,
+     generator: gen_golden_pycontrol_b2.py, golden_store: "golden/python-control/control.lti.c2d/0.3.0/*.json",
+     note: "python-control/scipy reference values, NOT MATLAB output"}
+  - {engine: MATLAB, role: ground_truth, status: planned, note: "no generator script yet for batch 2"}
+runner: "cargo test --release -p aeoi-control --test parity_b2"
+tolerance_class: T2
+compare:
+  "discrete ss matrices": "rel_fro ≤ 1e-10·κ, κ = cond(I − αA) (tustin) or e^{‖A‖₁·ts} (zoh/foh)"
+  "discrete tf coefficients": "as convert, times κ"
+case_families:   # n = golden cases
+  - {name: already_discrete, n: 1, expect: E.DOMAIN.NOT_CONTINUOUS}
+  - {name: memory_order_nonsymmetric, n: 1, note: "non-symmetric matrices; the column-major (A(:)) request must deviate > 1e3 × tolerance"}
+  - {name: prewarp_with_zoh, n: 1, expect: E.VALIDATION.OPTION_CONFLICT}
+  - {name: ss_foh, n: 8}
+  - {name: ss_tustin, n: 8}
+  - {name: ss_zoh, n: 8}
+  - {name: tf_foh, n: 5}
+  - {name: tf_tustin, n: 5}
+  - {name: tf_zoh, n: 5}
+  - {name: tustin_prewarp, n: 5}
+pass_rule: "all cases within tolerance; expected-error cases return the same code; expected warnings present; every emitted code declared in the manifest; outputs validate against envelope+output schema"

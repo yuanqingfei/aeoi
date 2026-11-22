@@ -1,0 +1,48 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.lti.c2d",
+ "operator_version": "0.3.0",
+ "case_family": "tf_tustin",
+ "request": {
+  "system": {
+   "kind": "tf",
+   "num": [
+    0.8940812094004131
+   ],
+   "den": [
+    1.0,
+    6.2058695545169185,
+    13.706485023303866,
+    32.72097010353776
+   ],
+   "ts": 0.0,
+   "time_unit": "s"
+  },
+  "ts": 0.04384748870626165,
+  "method": "tustin"
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261122,
+  "note": "python-control/scipy reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected": {
+  "num": [
+   8.242884359410674e-06,
+   2.472865307678873e-05,
+   2.4728653079897356e-05,
+   8.242884358633518e-06
+  ],
+  "den": [
+   1.0,
+   -2.737064136074443,
+   2.5008037308965596,
+   -0.7613262554533499
+  ]
+ }
+}

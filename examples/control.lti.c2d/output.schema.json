@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.lti.c2d/0.3.0/output",
+  "type": "object",
+  "required": [
+    "system",
+    "method"
+  ],
+  "properties": {
+    "system": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "离散系统，ts = 输入 ts"
+    },
+    "method": {
+      "enum": [
+        "zoh",
+        "foh",
+        "tustin"
+      ]
+    },
+    "effective_ts_for_formula": {
+      "type": "number",
+      "description": "tustin 预畸变时为 T_w，否则 = ts"
+    }
+  }
+}

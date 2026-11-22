@@ -1,0 +1,116 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.lti.c2d",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-c2d-003-nonsym",
+  "result": {
+    "system": {
+      "kind": "ss",
+      "A": {
+        "dtype": "f64",
+        "shape": [
+          3,
+          3
+        ],
+        "data": [
+          1.0016187366923026,
+          0.09850897330823144,
+          0.004099565648539075,
+          0.02465709276288126,
+          0.9573434276880805,
+          0.07391157941699697,
+          -0.4656071310040929,
+          -0.8228424515948015,
+          0.511824168361829
+        ]
+      },
+      "B": {
+        "dtype": "f64",
+        "shape": [
+          3,
+          1
+        ],
+        "data": [
+          0.005249022000451664,
+          0.1067081046053096,
+          0.10254207552184842
+        ]
+      },
+      "C": {
+        "dtype": "f64",
+        "shape": [
+          1,
+          3
+        ],
+        "data": [
+          1.0,
+          0.5,
+          0.0
+        ]
+      },
+      "D": {
+        "dtype": "f64",
+        "shape": [
+          1,
+          1
+        ],
+        "data": [
+          0.0
+        ]
+      },
+      "ts": 0.1,
+      "time_unit": "s"
+    },
+    "method": "zoh",
+    "effective_ts_for_formula": 0.1
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "pole_mapping_max_rel": 6.358389842764979e-15,
+      "definition": "eig(A_d) 与 exp(λ·ts)（λ ∈ eig(A)）逐个最近匹配的最大相对差（以 max(1,|·|) 归一）"
+    },
+    "condition": {
+      "norm1_A_ts": 1.1800000000000002,
+      "expm_squarings": 0,
+      "cond_I_minus_alpha_A": null,
+      "realization": "given ss"
+    },
+    "error_estimate": {
+      "basis": "expm（Padé-13 + scaling & squaring）后向误差 ≤ u（Higham 2005）；tustin 的误差 ≈ u·cond(I−αA)。极点映射残差为后验旁证"
+    },
+    "checks": {
+      "pole_mapping_consistent": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:85b8d504588dda7c405a2036363f1d29efce9dab13683b95fec0bd86ccfaa4a1",
+    "output_hash": "sha256:69ba707081b55c4c5a39abbd1081613d904b19f01fa6562129e0b770d2aec861",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.18908799999999998
+  }
+}

@@ -1,0 +1,192 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.lti.c2d",
+ "operator_version": "0.3.0",
+ "case_family": "memory_order_nonsymmetric",
+ "request": {
+  "system": {
+   "kind": "ss",
+   "A": {
+    "dtype": "f64",
+    "shape": [
+     3,
+     3
+    ],
+    "data": [
+     0.0,
+     1.0,
+     0.0,
+     0.5,
+     0.0,
+     1.0,
+     -6.0,
+     -10.8,
+     -6.0
+    ]
+   },
+   "B": {
+    "dtype": "f64",
+    "shape": [
+     3,
+     1
+    ],
+    "data": [
+     0.0,
+     1.0,
+     2.0
+    ]
+   },
+   "C": {
+    "dtype": "f64",
+    "shape": [
+     1,
+     3
+    ],
+    "data": [
+     1.0,
+     0.5,
+     0.0
+    ]
+   },
+   "D": {
+    "dtype": "f64",
+    "shape": [
+     1,
+     1
+    ],
+    "data": [
+     0.0
+    ]
+   },
+   "ts": 0.0,
+   "time_unit": "s"
+  },
+  "ts": 0.1,
+  "method": "zoh"
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261122,
+  "note": "python-control/scipy reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    3,
+    3
+   ],
+   "data": [
+    1.0016187366923024,
+    0.09850897330823144,
+    0.004099565648539075,
+    0.024657092762881253,
+    0.9573434276880803,
+    0.07391157941699697,
+    -0.4656071310040929,
+    -0.8228424515948016,
+    0.5118241683618289
+   ]
+  },
+  "B": {
+   "dtype": "f64",
+   "shape": [
+    3,
+    1
+   ],
+   "data": [
+    0.005249022000451662,
+    0.10670810460530956,
+    0.10254207552184842
+   ]
+  },
+  "C": {
+   "dtype": "f64",
+   "shape": [
+    1,
+    3
+   ],
+   "data": [
+    1.0,
+    0.5,
+    0.0
+   ]
+  },
+  "D": {
+   "dtype": "f64",
+   "shape": [
+    1,
+    1
+   ],
+   "data": [
+    0.0
+   ]
+  }
+ },
+ "column_major_mistake_request": {
+  "system": {
+   "kind": "ss",
+   "A": {
+    "dtype": "f64",
+    "shape": [
+     3,
+     3
+    ],
+    "data": [
+     0.0,
+     0.5,
+     -6.0,
+     1.0,
+     0.0,
+     -10.8,
+     0.0,
+     1.0,
+     -6.0
+    ]
+   },
+   "B": {
+    "dtype": "f64",
+    "shape": [
+     3,
+     1
+    ],
+    "data": [
+     0.0,
+     1.0,
+     2.0
+    ]
+   },
+   "C": {
+    "dtype": "f64",
+    "shape": [
+     1,
+     3
+    ],
+    "data": [
+     1.0,
+     0.5,
+     0.0
+    ]
+   },
+   "D": {
+    "dtype": "f64",
+    "shape": [
+     1,
+     1
+    ],
+    "data": [
+     0.0
+    ]
+   },
+   "ts": 0.0,
+   "time_unit": "s"
+  },
+  "ts": 0.1,
+  "method": "zoh"
+ }
+}
