@@ -291,7 +291,7 @@ DESC={
  "control.math.lyap":{"A":"系数矩阵 A，[n,n]","Q":"右端矩阵 Q，[n,n]，对称","type":"continuous：A X + X Aᵀ + Q = 0；discrete：A X Aᵀ − X + Q = 0"},
  "control.lti.convert":{"system":SYS_D,"to":"目标表示：tf（传递函数）、ss（状态空间，可控标准型）、zpk（零极点增益，仅 SISO）"},
  "control.lti.poles_zeros":{"system":SYS_D,"dcgain":"是否计算直流增益（连续 s=0，离散 z=1），默认 true"},
- "control.analysis.ctrb_obsv":{"system":SYS_D,"gramians":"是否额外计算可控/可观 Gramian（要求系统稳定），默认 false"},
+ "control.analysis.ctrb_obsv":{"system":SYS_D+"。只判断可控性时 C、D 不影响结果，可取 C = [[1, 0, …, 0]]（1×n）、D = [[0]]；只判断可观性时可取 B = [[1], [0], …]（n×1）","gramians":"是否额外计算可控/可观 Gramian（要求系统稳定），默认 false"},
  "control.analysis.margin":{"system":"开环 SISO 系统 L(s)（单位负反馈）；tf/ss/zpk，ts>0 为离散"},
  "control.lti.c2d":{"system":"待离散化的连续系统（ts 必须为 0）","ts":"采样周期 T（单位 s，> 0）。用户未给出时必须询问，不得假设","method":"离散化方法：zoh（零阶保持，默认）、foh（一阶保持/三角保持）、tustin（双线性，可配合 prewarp_frequency）","output_kind":"输出表示：same（与输入相同，默认）、tf、ss、zpk"},
 }

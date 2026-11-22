@@ -44,6 +44,8 @@ pub struct Transcript {
     pub tools: Vec<ToolStep>,
     pub stopped: String,
     pub self_corrections: usize,
+    /// Empty model turns answered with a corrective nudge (reason, e.g. MALFORMED_FUNCTION_CALL).
+    pub nudges: Vec<String>,
     pub total_tokens: u64,
     pub error: Option<String>,
 }
@@ -85,6 +87,7 @@ pub async fn run(provider: &dyn Provider, bridge: &Bridge, history: &mut Vec<Msg
     let mut tr = Transcript { provider: provider.name().into(), model: provider.model().into(), question: question.into(), ..Default::default() };
     history.push(Msg::User(question.to_string()));
     let mut step = 0;
+    let mut nudges = 0;
     loop {
         if step >= cfg.max_steps {
             tr.stopped = "max_steps".into();
@@ -116,6 +119,17 @@ pub async fn run(provider: &dyn Provider, bridge: &Bridge, history: &mut Vec<Msg
         tr.total_tokens += resp.usage.total_tokens.unwrap_or(0);
         emit(&tx, json!({"type": "model", "turn": turn}));
         tr.turns.push(turn);
+        if resp.calls.is_empty() && resp.text.is_none() && nudges < 2 {
+            // Empty turn — typically Gemini `MALFORMED_FUNCTION_CALL` (the model tried to emit a call
+            // that does not fit the declared parameters). Tell it so and let it try again.
+            nudges += 1;
+            let why = resp.finish_reason.clone().unwrap_or_else(|| "EMPTY".into());
+            let nudge = format!("（系统提示）上一轮没有产生有效输出（{why}）。如果要调用工具，请严格按该工具的 parameters 构造参数：矩阵写成 {{\"dtype\":\"f64\",\"shape\":[行,列],\"data\":[...]}}，必填字段齐全；如果缺少必要信息，请直接用中文向用户提问。");
+            emit(&tx, json!({"type": "nudge", "step": step, "reason": why}));
+            tr.nudges.push(why);
+            history.push(Msg::User(nudge));
+            continue;
+        }
         history.push(Msg::Assistant { text: resp.text.clone(), calls: resp.calls.clone(), raw: resp.raw.clone() });
         if resp.calls.is_empty() {
             tr.final_text = resp.text.clone();
@@ -211,6 +225,21 @@ mod tests {
         let tr = run(&mock, &bridge, &mut h, "x", &AgentCfg { max_steps: 3, ..Default::default() }, None).await;
         assert_eq!(tr.stopped, "max_steps");
         assert_eq!(tr.turns.len(), 3);
+    }
+
+    #[tokio::test]
+    async fn empty_turn_gets_nudged() {
+        let mut empty = MockProvider::text("x");
+        empty.text = None;
+        empty.finish_reason = Some("MALFORMED_FUNCTION_CALL".into());
+        let mock = MockProvider::new(vec![empty, MockProvider::text("请提供 C 矩阵")]);
+        let bridge = Bridge::new();
+        let mut h = vec![];
+        let tr = run(&mock, &bridge, &mut h, "q", &AgentCfg::default(), None).await;
+        assert_eq!(tr.stopped, "answered");
+        assert_eq!(tr.nudges, vec!["MALFORMED_FUNCTION_CALL".to_string()]);
+        assert_eq!(tr.final_text.as_deref(), Some("请提供 C 矩阵"));
+        assert!(matches!(&h[1], Msg::User(t) if t.contains("MALFORMED_FUNCTION_CALL")));
     }
 
     #[test]

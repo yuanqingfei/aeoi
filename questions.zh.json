@@ -1,0 +1,1486 @@
+{
+ "version": 1,
+ "notes": "期望值由 reference.args 直接调用算子得到（python-control 校验过的 AEOI 实现），不是手抄常数。",
+ "questions": [
+  {
+   "id": "margin-01",
+   "category": "相位裕度",
+   "question": "开环传递函数 G(s) = 4 / (s(s+1)(s+2))。求增益裕度、相位裕度以及对应的相位穿越频率和增益穿越频率。",
+   "expected_tool": "control_analysis_margin",
+   "reference": {
+    "tool": "control_analysis_margin",
+    "args": {
+     "system": {
+      "kind": "tf",
+      "num": [
+       4.0
+      ],
+      "den": [
+       1,
+       3,
+       2,
+       0
+      ],
+      "ts": 0.0
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "增益裕度",
+     "pointer": "/result/gain_margin"
+    },
+    {
+     "name": "相位裕度 deg",
+     "pointer": "/result/phase_margin"
+    },
+    {
+     "name": "相位穿越频率",
+     "pointer": "/result/phase_crossover_frequency"
+    },
+    {
+     "name": "增益穿越频率",
+     "pointer": "/result/gain_crossover_frequency"
+    }
+   ]
+  },
+  {
+   "id": "margin-02",
+   "category": "相位裕度",
+   "question": "单位负反馈系统的开环传递函数 L(s) = 10 / (s(0.1s+1)(0.5s+1))，相位裕度是多少度？增益裕度是多少 dB？",
+   "expected_tool": "control_analysis_margin",
+   "reference": {
+    "tool": "control_analysis_margin",
+    "args": {
+     "system": {
+      "kind": "tf",
+      "num": [
+       10.0
+      ],
+      "den": [
+       0.05,
+       0.6,
+       1,
+       0
+      ],
+      "ts": 0.0
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "相位裕度 deg",
+     "pointer": "/result/phase_margin"
+    },
+    {
+     "name": "增益裕度 dB",
+     "pointer": "/result/gain_margin_db"
+    }
+   ]
+  },
+  {
+   "id": "margin-03",
+   "category": "相位裕度",
+   "question": "G(s) = 2/(s+1)^2 的增益裕度和相位裕度分别是多少？",
+   "expected_tool": "control_analysis_margin",
+   "reference": {
+    "tool": "control_analysis_margin",
+    "args": {
+     "system": {
+      "kind": "tf",
+      "num": [
+       2.0
+      ],
+      "den": [
+       1,
+       2,
+       1
+      ],
+      "ts": 0.0
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "增益裕度（无穷）",
+     "pointer": "/result/gain_margin"
+    },
+    {
+     "name": "相位裕度 deg",
+     "pointer": "/result/phase_margin"
+    }
+   ]
+  },
+  {
+   "id": "step-01",
+   "category": "阶跃响应",
+   "question": "G(s) = 4/(s^2 + 1.2 s + 4)，用 dt = 0.01 s 仿真 10 s 的单位阶跃响应，给出超调量、峰值时间和 2% 调节时间。",
+   "expected_tool": "control_lti_step",
+   "reference": {
+    "tool": "control_lti_step",
+    "args": {
+     "system": {
+      "kind": "tf",
+      "num": [
+       4.0
+      ],
+      "den": [
+       1,
+       1.2,
+       4
+      ],
+      "ts": 0.0
+     },
+     "time": {
+      "mode": "uniform",
+      "t_final": 10,
+      "dt": 0.01,
+      "unit": "s"
+     },
+     "step_info": {
+      "enabled": true
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "超调 %",
+     "pointer": "/result/info/overshoot",
+     "rel_tol": 0.001
+    },
+    {
+     "name": "峰值时间 s",
+     "pointer": "/result/info/peak_time",
+     "rel_tol": 0.02
+    },
+    {
+     "name": "调节时间 s",
+     "pointer": "/result/info/settling_time",
+     "rel_tol": 0.02
+    }
+   ]
+  },
+  {
+   "id": "step-02",
+   "category": "阶跃响应",
+   "question": "一阶系统 G(s) = 1/(s+1) 的单位阶跃响应，10%–90% 上升时间和稳态值是多少？",
+   "expected_tool": "control_lti_step",
+   "reference": {
+    "tool": "control_lti_step",
+    "args": {
+     "system": {
+      "kind": "tf",
+      "num": [
+       1.0
+      ],
+      "den": [
+       1,
+       1
+      ],
+      "ts": 0.0
+     },
+     "time": {
+      "mode": "uniform",
+      "t_final": 10,
+      "dt": 0.001,
+      "unit": "s"
+     },
+     "step_info": {
+      "enabled": true
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "上升时间 s",
+     "pointer": "/result/info/rise_time",
+     "rel_tol": 0.02
+    },
+    {
+     "name": "稳态值",
+     "pointer": "/result/info/steady_state",
+     "rel_tol": 0.001
+    }
+   ]
+  },
+  {
+   "id": "step-03",
+   "category": "阶跃响应",
+   "question": "自然频率 ωn = 2 rad/s、阻尼比 ζ = 0.5 的标准二阶系统，单位阶跃响应的超调量是多少？",
+   "expected_tool": "control_lti_step",
+   "reference": {
+    "tool": "control_lti_step",
+    "args": {
+     "system": {
+      "kind": "tf",
+      "num": [
+       4.0
+      ],
+      "den": [
+       1,
+       2,
+       4
+      ],
+      "ts": 0.0
+     },
+     "time": {
+      "mode": "uniform",
+      "t_final": 10,
+      "dt": 0.001,
+      "unit": "s"
+     },
+     "step_info": {
+      "enabled": true
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "超调 %",
+     "pointer": "/result/info/overshoot",
+     "rel_tol": 0.02
+    }
+   ]
+  },
+  {
+   "id": "impulse-01",
+   "category": "冲激响应",
+   "question": "G(s) = 1/(s^2 + 2s + 5) 的单位冲激响应峰值大约是多少？出现在什么时刻附近？请画出冲激响应。",
+   "expected_tool": "control_lti_impulse",
+   "reference": {
+    "tool": "control_lti_impulse",
+    "args": {
+     "system": {
+      "kind": "tf",
+      "num": [
+       1.0
+      ],
+      "den": [
+       1,
+       2,
+       5
+      ],
+      "ts": 0.0
+     },
+     "time": {
+      "mode": "uniform",
+      "t_final": 6,
+      "dt": 0.001,
+      "unit": "s"
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "冲激响应峰值",
+     "pointer": "/result/y",
+     "reduce": "max",
+     "rel_tol": 0.01
+    }
+   ]
+  },
+  {
+   "id": "pz-01",
+   "category": "零极点",
+   "question": "G(s) = (s+3)/(s^2 + 1.2 s + 4) 的零点、极点、直流增益和极点阻尼比是多少？",
+   "expected_tool": "control_lti_poles_zeros",
+   "reference": {
+    "tool": "control_lti_poles_zeros",
+    "args": {
+     "system": {
+      "kind": "tf",
+      "num": [
+       1.0,
+       3.0
+      ],
+      "den": [
+       1,
+       1.2,
+       4
+      ],
+      "ts": 0.0
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "直流增益",
+     "pointer": "/result/dcgain",
+     "index": 0
+    },
+    {
+     "name": "阻尼比",
+     "pointer": "/result/damping_ratio",
+     "index": 0
+    },
+    {
+     "name": "零点",
+     "pointer": "/result/zeros",
+     "component": "re",
+     "index": 0
+    },
+    {
+     "name": "极点实部",
+     "pointer": "/result/poles",
+     "component": "re",
+     "index": 0
+    }
+   ]
+  },
+  {
+   "id": "pz-02",
+   "category": "零极点",
+   "question": "状态空间模型 A = [[0, 1], [-2, -3]]，B = [[0], [1]]，C = [[1, 0]]，D = [[0]]。求极点，并判断系统是否稳定。",
+   "expected_tool": "control_lti_poles_zeros",
+   "reference": {
+    "tool": "control_lti_poles_zeros",
+    "args": {
+     "system": {
+      "kind": "ss",
+      "A": {
+       "dtype": "f64",
+       "shape": [
+        2,
+        2
+       ],
+       "data": [
+        0.0,
+        1.0,
+        -2.0,
+        -3.0
+       ]
+      },
+      "B": {
+       "dtype": "f64",
+       "shape": [
+        2,
+        1
+       ],
+       "data": [
+        0.0,
+        1.0
+       ]
+      },
+      "C": {
+       "dtype": "f64",
+       "shape": [
+        1,
+        2
+       ],
+       "data": [
+        1.0,
+        0.0
+       ]
+      },
+      "D": {
+       "dtype": "f64",
+       "shape": [
+        1,
+        1
+       ],
+       "data": [
+        0.0
+       ]
+      },
+      "ts": 0.0
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "极点（最小实部）",
+     "pointer": "/result/poles",
+     "component": "re",
+     "reduce": "min"
+    },
+    {
+     "name": "极点（最大实部）",
+     "pointer": "/result/poles",
+     "component": "re",
+     "reduce": "max"
+    }
+   ]
+  },
+  {
+   "id": "pz-03-discrete",
+   "category": "陷阱：离散系统",
+   "question": "离散系统 G(z) = 0.1/(z − 0.9)，采样周期 0.1 s。求它的极点和直流增益。",
+   "expected_tool": "control_lti_poles_zeros",
+   "reference": {
+    "tool": "control_lti_poles_zeros",
+    "args": {
+     "system": {
+      "kind": "tf",
+      "num": [
+       0.1
+      ],
+      "den": [
+       1,
+       -0.9
+      ],
+      "ts": 0.1
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "直流增益（z=1）",
+     "pointer": "/result/dcgain",
+     "index": 0
+    },
+    {
+     "name": "极点",
+     "pointer": "/result/poles",
+     "component": "re",
+     "index": 0
+    }
+   ]
+  },
+  {
+   "id": "ctrb-01",
+   "category": "可控性",
+   "question": "A = [[1, 1], [0, 1]]，B = [[0], [1]]。(A, B) 是否完全可控？可控性矩阵的秩是多少？",
+   "expected_tool": "control_analysis_ctrb_obsv",
+   "reference": {
+    "tool": "control_analysis_ctrb_obsv",
+    "args": {
+     "system": {
+      "kind": "ss",
+      "A": {
+       "dtype": "f64",
+       "shape": [
+        2,
+        2
+       ],
+       "data": [
+        1.0,
+        1.0,
+        0.0,
+        1.0
+       ]
+      },
+      "B": {
+       "dtype": "f64",
+       "shape": [
+        2,
+        1
+       ],
+       "data": [
+        0.0,
+        1.0
+       ]
+      },
+      "C": {
+       "dtype": "f64",
+       "shape": [
+        1,
+        2
+       ],
+       "data": [
+        1.0,
+        0.0
+       ]
+      },
+      "D": {
+       "dtype": "f64",
+       "shape": [
+        1,
+        1
+       ],
+       "data": [
+        0.0
+       ]
+      },
+      "ts": 0.0
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "可控性矩阵秩",
+     "pointer": "/result/ctrb/rank",
+     "rel_tol": 0
+    }
+   ]
+  },
+  {
+   "id": "ctrb-02",
+   "category": "可控性",
+   "question": "A = diag(1, 2)，B = [[1], [0]]，C = [[1, 1]]。判断可控性与可观性，并给出可控性矩阵的秩。",
+   "expected_tool": "control_analysis_ctrb_obsv",
+   "reference": {
+    "tool": "control_analysis_ctrb_obsv",
+    "args": {
+     "system": {
+      "kind": "ss",
+      "A": {
+       "dtype": "f64",
+       "shape": [
+        2,
+        2
+       ],
+       "data": [
+        1.0,
+        0.0,
+        0.0,
+        2.0
+       ]
+      },
+      "B": {
+       "dtype": "f64",
+       "shape": [
+        2,
+        1
+       ],
+       "data": [
+        1.0,
+        0.0
+       ]
+      },
+      "C": {
+       "dtype": "f64",
+       "shape": [
+        1,
+        2
+       ],
+       "data": [
+        1.0,
+        1.0
+       ]
+      },
+      "D": {
+       "dtype": "f64",
+       "shape": [
+        1,
+        1
+       ],
+       "data": [
+        0.0
+       ]
+      },
+      "ts": 0.0
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "可控性矩阵秩",
+     "pointer": "/result/ctrb/rank",
+     "rel_tol": 0
+    },
+    {
+     "name": "可观性矩阵秩",
+     "pointer": "/result/obsv/rank",
+     "rel_tol": 0
+    }
+   ]
+  },
+  {
+   "id": "ctrb-03-colmajor",
+   "category": "陷阱：列优先",
+   "question": "我从 MATLAB 里用 A(:) 导出了 2×2 矩阵 A，按列展开的数据是 [0, 0, 1, 0]；B = [0; 1]。请判断 (A, B) 是否可控并给出可控性矩阵的秩。",
+   "expected_tool": "control_analysis_ctrb_obsv",
+   "reference": {
+    "tool": "control_analysis_ctrb_obsv",
+    "args": {
+     "system": {
+      "kind": "ss",
+      "A": {
+       "dtype": "f64",
+       "shape": [
+        2,
+        2
+       ],
+       "data": [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+       ]
+      },
+      "B": {
+       "dtype": "f64",
+       "shape": [
+        2,
+        1
+       ],
+       "data": [
+        0.0,
+        1.0
+       ]
+      },
+      "C": {
+       "dtype": "f64",
+       "shape": [
+        1,
+        2
+       ],
+       "data": [
+        1.0,
+        0.0
+       ]
+      },
+      "D": {
+       "dtype": "f64",
+       "shape": [
+        1,
+        1
+       ],
+       "data": [
+        0.0
+       ]
+      },
+      "ts": 0.0
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "可控性矩阵秩",
+     "pointer": "/result/ctrb/rank",
+     "rel_tol": 0
+    }
+   ]
+  },
+  {
+   "id": "convert-01",
+   "category": "模型转换",
+   "question": "把 G(s) = (s+2)/(s^2 + 3s + 2) 转换成零极点增益（zpk）形式（不要约分）。",
+   "expected_tool": "control_lti_convert",
+   "reference": {
+    "tool": "control_lti_convert",
+    "args": {
+     "system": {
+      "kind": "tf",
+      "num": [
+       1.0,
+       2.0
+      ],
+      "den": [
+       1,
+       3,
+       2
+      ],
+      "ts": 0.0
+     },
+     "to": "zpk"
+    }
+   },
+   "checks": [
+    {
+     "name": "增益 k",
+     "pointer": "/result/system/k"
+    },
+    {
+     "name": "最小极点",
+     "pointer": "/result/system/p",
+     "component": "re",
+     "reduce": "min"
+    }
+   ]
+  },
+  {
+   "id": "convert-02",
+   "category": "模型转换",
+   "question": "把 G(s) = 4/(s^2 + 1.2s + 4) 转成状态空间形式，给出 A、B、C、D。",
+   "expected_tool": "control_lti_convert",
+   "reference": {
+    "tool": "control_lti_convert",
+    "args": {
+     "system": {
+      "kind": "tf",
+      "num": [
+       4.0
+      ],
+      "den": [
+       1,
+       1.2,
+       4
+      ],
+      "ts": 0.0
+     },
+     "to": "ss"
+    }
+   },
+   "checks": [
+    {
+     "name": "A 中的 −1.2",
+     "pointer": "/result/system/A",
+     "index": 0
+    },
+    {
+     "name": "A 中的 −4",
+     "pointer": "/result/system/A",
+     "index": 1
+    }
+   ]
+  },
+  {
+   "id": "c2d-01",
+   "category": "离散化",
+   "question": "G(s) = 1/(s+1)，采样周期 T = 0.1 s，用零阶保持（ZOH）离散化，给出离散传递函数 G(z)。",
+   "expected_tool": "control_lti_c2d",
+   "reference": {
+    "tool": "control_lti_c2d",
+    "args": {
+     "system": {
+      "kind": "tf",
+      "num": [
+       1.0
+      ],
+      "den": [
+       1,
+       1
+      ],
+      "ts": 0.0
+     },
+     "ts": 0.1,
+     "method": "zoh",
+     "output_kind": "tf"
+    }
+   },
+   "checks": [
+    {
+     "name": "分母 z^0 系数",
+     "pointer": "/result/system/den",
+     "index": 1,
+     "rel_tol": 1e-06,
+     "allow_sign_flip": true
+    },
+    {
+     "name": "分子系数",
+     "pointer": "/result/system/num",
+     "reduce": "maxabs",
+     "rel_tol": 1e-06
+    }
+   ]
+  },
+  {
+   "id": "c2d-02",
+   "category": "离散化",
+   "question": "用 Tustin（双线性）方法、采样周期 0.5 s 把 G(s) = 2/(s+2) 离散化，给出 G(z) 的分子分母系数。",
+   "expected_tool": "control_lti_c2d",
+   "reference": {
+    "tool": "control_lti_c2d",
+    "args": {
+     "system": {
+      "kind": "tf",
+      "num": [
+       2.0
+      ],
+      "den": [
+       1,
+       2
+      ],
+      "ts": 0.0
+     },
+     "ts": 0.5,
+     "method": "tustin",
+     "output_kind": "tf"
+    }
+   },
+   "checks": [
+    {
+     "name": "分母 z^0 系数",
+     "pointer": "/result/system/den",
+     "index": 1,
+     "rel_tol": 1e-06,
+     "normalize_by": "/result/system/den/0",
+     "allow_sign_flip": true
+    },
+    {
+     "name": "分子首项",
+     "pointer": "/result/system/num",
+     "index": 0,
+     "rel_tol": 1e-06,
+     "normalize_by": "/result/system/den/0"
+    }
+   ]
+  },
+  {
+   "id": "c2d-03-missing-ts",
+   "category": "陷阱：缺采样周期",
+   "question": "请用零阶保持器把 G(s) = 1/(s^2 + s + 1) 离散化。",
+   "expected_tool": null,
+   "checks": [],
+   "expect": "clarify",
+   "clarify_keywords": [
+    "采样周期",
+    "采样时间",
+    "采样间隔",
+    "采样频率",
+    "ts",
+    "T ="
+   ],
+   "forbidden_tools": [
+    "control_lti_c2d"
+   ]
+  },
+  {
+   "id": "lqr-01",
+   "category": "LQR",
+   "question": "双积分器 A = [[0, 1], [0, 0]]，B = [[0], [1]]，Q = I，R = 1，求 LQR 最优反馈增益 K（u = −Kx）。",
+   "expected_tool": "control_design_lqr",
+   "reference": {
+    "tool": "control_design_lqr",
+    "args": {
+     "A": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       2
+      ],
+      "data": [
+       0.0,
+       1.0,
+       0.0,
+       0.0
+      ]
+     },
+     "B": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       1
+      ],
+      "data": [
+       0.0,
+       1.0
+      ]
+     },
+     "Q": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       2
+      ],
+      "data": [
+       1.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     },
+     "R": {
+      "dtype": "f64",
+      "shape": [
+       1,
+       1
+      ],
+      "data": [
+       1.0
+      ]
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "K1",
+     "pointer": "/result/K",
+     "index": 0
+    },
+    {
+     "name": "K2",
+     "pointer": "/result/K",
+     "index": 1
+    }
+   ]
+  },
+  {
+   "id": "lqr-02",
+   "category": "LQR",
+   "question": "A = [[0, 1], [-1, -1]]，B = [[0], [1]]，Q = diag(10, 1)，R = 0.1，求连续 LQR 增益 K 和闭环极点。",
+   "expected_tool": "control_design_lqr",
+   "reference": {
+    "tool": "control_design_lqr",
+    "args": {
+     "A": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       2
+      ],
+      "data": [
+       0.0,
+       1.0,
+       -1.0,
+       -1.0
+      ]
+     },
+     "B": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       1
+      ],
+      "data": [
+       0.0,
+       1.0
+      ]
+     },
+     "Q": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       2
+      ],
+      "data": [
+       10.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     },
+     "R": {
+      "dtype": "f64",
+      "shape": [
+       1,
+       1
+      ],
+      "data": [
+       0.1
+      ]
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "K1",
+     "pointer": "/result/K",
+     "index": 0
+    },
+    {
+     "name": "K2",
+     "pointer": "/result/K",
+     "index": 1
+    }
+   ]
+  },
+  {
+   "id": "lqr-03-colmajor",
+   "category": "陷阱：列优先",
+   "question": "MATLAB 里 A 是 2×2 矩阵，A(:)（按列展开）= [0, -2, 1, -3]；B = [0; 1]，Q = eye(2)，R = 1。求 LQR 增益 K。",
+   "expected_tool": "control_design_lqr",
+   "reference": {
+    "tool": "control_design_lqr",
+    "args": {
+     "A": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       2
+      ],
+      "data": [
+       0.0,
+       1.0,
+       -2.0,
+       -3.0
+      ]
+     },
+     "B": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       1
+      ],
+      "data": [
+       0.0,
+       1.0
+      ]
+     },
+     "Q": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       2
+      ],
+      "data": [
+       1.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     },
+     "R": {
+      "dtype": "f64",
+      "shape": [
+       1,
+       1
+      ],
+      "data": [
+       1.0
+      ]
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "K1",
+     "pointer": "/result/K",
+     "index": 0
+    },
+    {
+     "name": "K2",
+     "pointer": "/result/K",
+     "index": 1
+    }
+   ]
+  },
+  {
+   "id": "lqr-04-unstabilizable",
+   "category": "陷阱：不可镇定",
+   "question": "A = [[1, 0], [0, 2]]，B = [[1], [0]]，Q = I，R = 1，帮我设计 LQR 控制器。",
+   "expected_tool": "control_design_lqr",
+   "reference": {
+    "tool": "control_design_lqr",
+    "args": {
+     "A": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       2
+      ],
+      "data": [
+       1.0,
+       0.0,
+       0.0,
+       2.0
+      ]
+     },
+     "B": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       1
+      ],
+      "data": [
+       1.0,
+       0.0
+      ]
+     },
+     "Q": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       2
+      ],
+      "data": [
+       1.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     },
+     "R": {
+      "dtype": "f64",
+      "shape": [
+       1,
+       1
+      ],
+      "data": [
+       1.0
+      ]
+     }
+    }
+   },
+   "checks": [],
+   "expect": "explain_error",
+   "expect_error_code": "E.DOMAIN.NOT_STABILIZABLE",
+   "answer_keywords": [
+    "镇定",
+    "不可控",
+    "无法稳定",
+    "不能稳定",
+    "无法使"
+   ]
+  },
+  {
+   "id": "dlqr-01",
+   "category": "LQR",
+   "question": "离散系统 x[k+1] = A x[k] + B u[k]，A = [[1, 0.1], [0, 1]]，B = [[0.005], [0.1]]，Q = I，R = 1。求离散 LQR 增益 K。",
+   "expected_tool": "control_design_dlqr",
+   "reference": {
+    "tool": "control_design_dlqr",
+    "args": {
+     "A": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       2
+      ],
+      "data": [
+       1.0,
+       0.1,
+       0.0,
+       1.0
+      ]
+     },
+     "B": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       1
+      ],
+      "data": [
+       0.005,
+       0.1
+      ]
+     },
+     "Q": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       2
+      ],
+      "data": [
+       1.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     },
+     "R": {
+      "dtype": "f64",
+      "shape": [
+       1,
+       1
+      ],
+      "data": [
+       1.0
+      ]
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "K1",
+     "pointer": "/result/K",
+     "index": 0
+    },
+    {
+     "name": "K2",
+     "pointer": "/result/K",
+     "index": 1
+    }
+   ]
+  },
+  {
+   "id": "place-01",
+   "category": "极点配置",
+   "question": "双积分器 A = [[0, 1], [0, 0]]，B = [[0], [1]]，用状态反馈 u = −Kx 把闭环极点配置到 −2 ± 2j，求 K。",
+   "expected_tool": "control_design_place",
+   "reference": {
+    "tool": "control_design_place",
+    "args": {
+     "A": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       2
+      ],
+      "data": [
+       0.0,
+       1.0,
+       0.0,
+       0.0
+      ]
+     },
+     "B": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       1
+      ],
+      "data": [
+       0.0,
+       1.0
+      ]
+     },
+     "poles": [
+      [
+       -2,
+       2
+      ],
+      [
+       -2,
+       -2
+      ]
+     ]
+    }
+   },
+   "checks": [
+    {
+     "name": "K1",
+     "pointer": "/result/K",
+     "index": 0
+    },
+    {
+     "name": "K2",
+     "pointer": "/result/K",
+     "index": 1
+    }
+   ]
+  },
+  {
+   "id": "place-02",
+   "category": "极点配置",
+   "question": "A = [[0, 1, 0], [0, 0, 1], [-6, -11, -6]]，B = [[0], [0], [1]]，期望闭环极点 −2、−3、−4，求状态反馈增益 K。",
+   "expected_tool": "control_design_place",
+   "reference": {
+    "tool": "control_design_place",
+    "args": {
+     "A": {
+      "dtype": "f64",
+      "shape": [
+       3,
+       3
+      ],
+      "data": [
+       0.0,
+       1.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0,
+       -6.0,
+       -11.0,
+       -6.0
+      ]
+     },
+     "B": {
+      "dtype": "f64",
+      "shape": [
+       3,
+       1
+      ],
+      "data": [
+       0.0,
+       0.0,
+       1.0
+      ]
+     },
+     "poles": [
+      [
+       -2,
+       0
+      ],
+      [
+       -3,
+       0
+      ],
+      [
+       -4,
+       0
+      ]
+     ]
+    }
+   },
+   "checks": [
+    {
+     "name": "K1",
+     "pointer": "/result/K",
+     "index": 0
+    },
+    {
+     "name": "K2",
+     "pointer": "/result/K",
+     "index": 1
+    },
+    {
+     "name": "K3",
+     "pointer": "/result/K",
+     "index": 2
+    }
+   ]
+  },
+  {
+   "id": "lyap-01",
+   "category": "Lyapunov",
+   "question": "求解连续 Lyapunov 方程 A X + X Aᵀ + Q = 0，其中 A = [[-1, 2], [0, -3]]，Q = I。",
+   "expected_tool": "control_math_lyap",
+   "reference": {
+    "tool": "control_math_lyap",
+    "args": {
+     "A": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       2
+      ],
+      "data": [
+       -1.0,
+       2.0,
+       0.0,
+       -3.0
+      ]
+     },
+     "Q": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       2
+      ],
+      "data": [
+       1.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     },
+     "type": "continuous"
+    }
+   },
+   "checks": [
+    {
+     "name": "X11",
+     "pointer": "/result/X",
+     "index": 0
+    },
+    {
+     "name": "X12",
+     "pointer": "/result/X",
+     "index": 1
+    },
+    {
+     "name": "X22",
+     "pointer": "/result/X",
+     "index": 3
+    }
+   ]
+  },
+  {
+   "id": "lyap-02",
+   "category": "Lyapunov",
+   "question": "离散 Lyapunov 方程 A X Aᵀ − X + Q = 0，A = diag(0.5, 0.8)，Q = I，求 X。",
+   "expected_tool": "control_math_lyap",
+   "reference": {
+    "tool": "control_math_lyap",
+    "args": {
+     "A": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       2
+      ],
+      "data": [
+       0.5,
+       0.0,
+       0.0,
+       0.8
+      ]
+     },
+     "Q": {
+      "dtype": "f64",
+      "shape": [
+       2,
+       2
+      ],
+      "data": [
+       1.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     },
+     "type": "discrete"
+    }
+   },
+   "checks": [
+    {
+     "name": "X11",
+     "pointer": "/result/X",
+     "index": 0
+    },
+    {
+     "name": "X22",
+     "pointer": "/result/X",
+     "index": 3
+    }
+   ]
+  },
+  {
+   "id": "bode-01",
+   "category": "频率响应",
+   "question": "G(s) = 10/(s+10) 在 ω = 10 rad/s 处的幅值（dB）和相位（度）是多少？顺便画出 0.1–1000 rad/s 的 Bode 图。",
+   "expected_tool": "control_lti_bode",
+   "reference": {
+    "tool": "control_lti_bode",
+    "args": {
+     "system": {
+      "kind": "tf",
+      "num": [
+       10.0
+      ],
+      "den": [
+       1,
+       10
+      ],
+      "ts": 0.0
+     },
+     "frequency": {
+      "mode": "explicit",
+      "values": [
+       10.0
+      ],
+      "unit": "rad/s"
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "幅值 dB",
+     "pointer": "/result/magnitude",
+     "at_w": 10.0
+    },
+    {
+     "name": "相位 deg",
+     "pointer": "/result/phase",
+     "at_w": 10.0,
+     "allow_sign_flip": true
+    }
+   ]
+  },
+  {
+   "id": "bode-02-hz",
+   "category": "陷阱：Hz 与 rad/s",
+   "question": "一阶低通滤波器 G(s) = 628.3185/(s + 628.3185)（截止频率 100 Hz）。求 f = 100 Hz 处的幅值（dB）和相位。",
+   "expected_tool": "control_lti_bode",
+   "reference": {
+    "tool": "control_lti_bode",
+    "args": {
+     "system": {
+      "kind": "tf",
+      "num": [
+       628.3185307179587
+      ],
+      "den": [
+       1,
+       628.3185307179587
+      ],
+      "ts": 0.0
+     },
+     "frequency": {
+      "mode": "explicit",
+      "values": [
+       100.0
+      ],
+      "unit": "Hz"
+     }
+    }
+   },
+   "checks": [
+    {
+     "name": "幅值 dB",
+     "pointer": "/result/magnitude",
+     "at_w": 628.3185307179587
+    },
+    {
+     "name": "相位 deg",
+     "pointer": "/result/phase",
+     "at_w": 628.3185307179587,
+     "allow_sign_flip": true
+    }
+   ]
+  }
+ ]
+}

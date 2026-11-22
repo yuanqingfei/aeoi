@@ -164,6 +164,7 @@ pub struct QResult {
     pub args_ok: Option<bool>,
     pub answer_ok: bool,
     pub self_corrections: usize,
+    pub nudges: Vec<String>,
     pub tool_errors: Vec<String>,
     pub checks: Vec<Value>,
     pub final_text: Option<String>,
@@ -218,13 +219,15 @@ pub fn score(bridge: &Bridge, q: &Value, tr: &Transcript, latency_s: f64) -> QRe
             } else {
                 let refenv = refenv.expect("reference");
                 assert!(!is_error(&refenv), "reference call failed for {}: {}", q["id"], refenv["error"]);
-                let last_ok = tr.tools.iter().rev().find(|t| exp.contains(&t.tool) && !t.is_error);
-                let mut all_args = last_ok.is_some();
+                // successful calls of the expected tool, newest first; per check use the newest call
+                // in which the quantity exists (e.g. a bode call that actually contains ω = 10)
+                let oks: Vec<_> = tr.tools.iter().rev().filter(|t| exp.contains(&t.tool) && !t.is_error).collect();
+                let mut all_args = !oks.is_empty();
                 let mut all_ans = true;
                 for c in q["checks"].as_array().cloned().unwrap_or_default() {
                     let want = extract(&refenv, &c).unwrap_or_else(|| panic!("check {} of {} not extractable from reference", c["name"], q["id"]));
                     let rel = c["rel_tol"].as_f64().unwrap_or(1e-3);
-                    let got = last_ok.and_then(|t| extract(&t.response, &c));
+                    let got = oks.iter().find_map(|t| extract(&t.response, &c));
                     let arg_pass = got.as_ref().map(|g| close(g, &want, rel)).unwrap_or(false);
                     let ans_pass = if c["in_answer"] == false { true } else { answer_has(&final_text, &want, &c) };
                     all_args &= arg_pass;
@@ -248,6 +251,7 @@ pub fn score(bridge: &Bridge, q: &Value, tr: &Transcript, latency_s: f64) -> QRe
         args_ok,
         answer_ok,
         self_corrections: tr.self_corrections,
+        nudges: tr.nudges.clone(),
         tool_errors: tr.tools.iter().filter_map(|t| t.error_code.clone()).collect(),
         checks: checks_out,
         final_text: tr.final_text.clone(),
@@ -314,7 +318,7 @@ pub async fn run_eval_with(provider: &dyn Provider, bridge: &Bridge, questions: 
         let tr = agent::run(&paced, bridge, &mut hist, q["question"].as_str().unwrap_or(""), &AgentCfg { max_steps: opts.max_steps, ..Default::default() }, None).await;
         let r = score(bridge, q, &tr, t0.elapsed().as_secs_f64());
         eprintln!(
-            "[{}/{}] {:<24} tool={} first={} args={} answer={} selfcorr={} errs={:?} tokens={} {:.1}s{}",
+            "[{}/{}] {:<24} tool={} first={} args={} answer={} selfcorr={} errs={:?} nudges={} tokens={} {:.1}s{}",
             i + 1,
             qs.len(),
             r.id,
@@ -324,6 +328,7 @@ pub async fn run_eval_with(provider: &dyn Provider, bridge: &Bridge, questions: 
             ok(r.answer_ok),
             r.self_corrections,
             r.tool_errors,
+            r.nudges.len(),
             r.total_tokens,
             r.latency_s,
             r.provider_error.as_ref().map(|e| format!(" PROVIDER_ERROR: {e}")).unwrap_or_default()
@@ -380,6 +385,7 @@ pub fn summarize(provider: &dyn Provider, results: &[QResult], wall_s: f64, opts
             "argument_applicable": arg_app.len(),
             "final_answer_accuracy": frac(&|r| r.answer_ok),
             "self_corrections": results.iter().map(|r| r.self_corrections).sum::<usize>(),
+            "nudges_after_empty_turn": results.iter().map(|r| r.nudges.len()).sum::<usize>(),
             "tool_errors": results.iter().map(|r| r.tool_errors.len()).sum::<usize>(),
             "provider_errors": results.iter().filter(|r| r.provider_error.is_some()).count(),
             "http_retries": results.iter().map(|r| r.http_retries).sum::<u32>(),

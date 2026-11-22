@@ -1,0 +1,2362 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3.1-flash-lite",
+  "generated_by": "aeoi-web 0.3.0 eval",
+  "spec": "aeoi/0.3",
+  "reference_values": "direct AEOI operator calls (python-control/scipy-verified implementation; not MATLAB)",
+  "settings": {
+    "rpm": 10.0,
+    "max_steps": 8,
+    "temperature": 0.0
+  },
+  "aborted": null,
+  "summary": {
+    "questions": 29,
+    "tool_selection_accuracy": 0.9310344827586207,
+    "first_tool_accuracy": 0.9310344827586207,
+    "argument_correctness": 0.9285714285714286,
+    "argument_applicable": 28,
+    "final_answer_accuracy": 0.896551724137931,
+    "self_corrections": 1,
+    "tool_errors": 2,
+    "provider_errors": 0,
+    "http_retries": 0,
+    "total_tokens": 984207,
+    "mean_latency_s": 20.796159790965515,
+    "wall_time_s": 603.172501688,
+    "by_category_answer": {
+      "LQR": "3/3",
+      "Lyapunov": "2/2",
+      "冲激响应": "1/1",
+      "可控性": "1/2",
+      "极点配置": "2/2",
+      "模型转换": "2/2",
+      "相位裕度": "3/3",
+      "离散化": "1/2",
+      "阶跃响应": "3/3",
+      "陷阱：Hz 与 rad/s": "1/1",
+      "陷阱：不可镇定": "1/1",
+      "陷阱：列优先": "2/2",
+      "陷阱：离散系统": "1/1",
+      "陷阱：缺采样周期": "0/1",
+      "零极点": "2/2",
+      "频率响应": "1/1"
+    }
+  },
+  "results": [
+    {
+      "id": "margin-01",
+      "category": "相位裕度",
+      "question": "开环传递函数 G(s) = 4 / (s(s+1)(s+2))。求增益裕度、相位裕度以及对应的相位穿越频率和增益穿越频率。",
+      "expected_tool": "control_analysis_margin",
+      "tools_called": [
+        "control_analysis_margin"
+      ],
+      "first_tool": "control_analysis_margin",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "增益裕度",
+          "expected": "Num(1.4999999999999998)",
+          "from_model_call": "Num(1.4999999999999998)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "相位裕度 deg",
+          "expected": "Num(11.424981844921433)",
+          "from_model_call": "Num(11.424981844921433)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "相位穿越频率",
+          "expected": "Num(1.414213562373095)",
+          "from_model_call": "Num(1.414213562373095)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "增益穿越频率",
+          "expected": "Num(1.1432030439610739)",
+          "from_model_call": "Num(1.1432030439610739)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "对于开环传递函数 $G(s) = \\frac{4}{s(s+1)(s+2)}$，其稳定性裕度分析结果如下：\n\n*   **增益裕度 (Gain Margin)**：$1.5$（即 $3.522 \\text{ dB}$）\n*   **相位裕度 (Phase Margin)**：$11.42^\\circ$\n*   **相位穿越频率 (Phase Crossover Frequency)**：$1.414 \\text{ rad/s}$\n*   **增益穿越频率 (Gain Crossover Frequency)**：$1.143 \\text{ rad/s}$\n\n该系统在单位负反馈下是闭环稳定的。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 33359,
+      "latency_s": 18.269802444,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_analysis_margin",
+          "request": {
+            "system": {
+              "kind": "tf",
+              "ts": 0,
+              "den": [
+                1,
+                3,
+                2,
+                0
+              ],
+              "num": [
+                4
+              ]
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.438407
+        }
+      ]
+    },
+    {
+      "id": "margin-02",
+      "category": "相位裕度",
+      "question": "单位负反馈系统的开环传递函数 L(s) = 10 / (s(0.1s+1)(0.5s+1))，相位裕度是多少度？增益裕度是多少 dB？",
+      "expected_tool": "control_analysis_margin",
+      "tools_called": [
+        "control_analysis_margin"
+      ],
+      "first_tool": "control_analysis_margin",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "相位裕度 deg",
+          "expected": "Num(3.9430652653655898)",
+          "from_model_call": "Num(3.9430652653655898)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "增益裕度 dB",
+          "expected": "Num(1.5836249209524964)",
+          "from_model_call": "Num(1.5836249209524964)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "该单位负反馈系统的开环传递函数为 $L(s) = \\frac{10}{s(0.1s+1)(0.5s+1)}$。\n\n根据计算结果：\n*   **相位裕度**为 **3.943 deg**。\n*   **增益裕度**为 **1.584 dB**（对应增益倍数为 1.2）。\n\n该系统在单位负反馈下是闭环稳定的。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 33330,
+      "latency_s": 120.198650428,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_analysis_margin",
+          "request": {
+            "system": {
+              "ts": 0,
+              "den": [
+                0.05,
+                0.6,
+                1,
+                0
+              ],
+              "num": [
+                10
+              ],
+              "kind": "tf"
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.833678
+        }
+      ]
+    },
+    {
+      "id": "margin-03",
+      "category": "相位裕度",
+      "question": "G(s) = 2/(s+1)^2 的增益裕度和相位裕度分别是多少？",
+      "expected_tool": "control_analysis_margin",
+      "tools_called": [
+        "control_analysis_margin"
+      ],
+      "first_tool": "control_analysis_margin",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "增益裕度（无穷）",
+          "expected": "Inf(1.0)",
+          "from_model_call": "Inf(1.0)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "相位裕度 deg",
+          "expected": "Num(90.0)",
+          "from_model_call": "Num(90.0)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "对于系统 $G(s) = \\frac{2}{(s+1)^2}$，其增益裕度和相位裕度如下：\n\n*   **增益裕度 (Gain Margin)**：$\\infty$ (无穷大)\n*   **相位裕度 (Phase Margin)**：$90^\\circ$\n\n**解释**：\n该系统在所有频率下都不会出现相位达到 $-180^\\circ$ 的情况（相位渐近趋于 $-180^\\circ$ 但永远不会达到），因此增益裕度为无穷大。在增益交越频率 $\\omega_c = 1 \\text{ rad/s}$ 处，相位裕度为 $90^\\circ$。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 33078,
+      "latency_s": 8.690139193,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_analysis_margin",
+          "request": {
+            "system": {
+              "den": [
+                1,
+                2,
+                1
+              ],
+              "ts": 0,
+              "num": [
+                2
+              ],
+              "kind": "tf"
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.334351
+        }
+      ]
+    },
+    {
+      "id": "step-01",
+      "category": "阶跃响应",
+      "question": "G(s) = 4/(s^2 + 1.2 s + 4)，用 dt = 0.01 s 仿真 10 s 的单位阶跃响应，给出超调量、峰值时间和 2% 调节时间。",
+      "expected_tool": "control_lti_step",
+      "tools_called": [
+        "control_lti_step"
+      ],
+      "first_tool": "control_lti_step",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "超调 %",
+          "expected": "Num(37.23177192599603)",
+          "from_model_call": "Num(37.23177192599603)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "峰值时间 s",
+          "expected": "Num(1.6500000000000001)",
+          "from_model_call": "Num(1.6500000000000001)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "调节时间 s",
+          "expected": "Num(5.62)",
+          "from_model_call": "Num(5.62)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "对于系统 $G(s) = \\frac{4}{s^2 + 1.2s + 4}$，在采样周期 $dt = 0.01\\text{ s}$ 下，其单位阶跃响应的特性指标如下：\n\n*   **超调量 (Overshoot)**：$37.23\\%$\n*   **峰值时间 (Peak Time)**：$1.65\\text{ s}$\n*   **2% 调节时间 (Settling Time)**：$5.62\\text{ s}$\n\n以上结果通过 `control_lti_step` 工具计算得出。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 37147,
+      "latency_s": 53.888190266,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_lti_step",
+          "request": {
+            "step_info": {
+              "settling_threshold": 0.02,
+              "enabled": true
+            },
+            "system": {
+              "den": [
+                1,
+                1.2,
+                4
+              ],
+              "ts": 0,
+              "kind": "tf",
+              "num": [
+                4
+              ]
+            },
+            "time": {
+              "mode": "uniform",
+              "t_final": 10,
+              "dt": 0.01,
+              "unit": "s"
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 1.0165840000000002
+        }
+      ]
+    },
+    {
+      "id": "step-02",
+      "category": "阶跃响应",
+      "question": "一阶系统 G(s) = 1/(s+1) 的单位阶跃响应，10%–90% 上升时间和稳态值是多少？",
+      "expected_tool": "control_lti_step",
+      "tools_called": [
+        "control_lti_step"
+      ],
+      "first_tool": "control_lti_step",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "上升时间 s",
+          "expected": "Num(2.197)",
+          "from_model_call": "Num(2.191)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "稳态值",
+          "expected": "Num(1.0)",
+          "from_model_call": "Num(1.0)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "对于一阶系统 $G(s) = \\frac{1}{s+1}$，其单位阶跃响应的特性如下：\n\n*   **10%–90% 上升时间**：约为 **2.191 s**。\n*   **稳态值**：为 **1**。\n\n该结果通过 `control_lti_step` 工具计算得出。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 37215,
+      "latency_s": 8.299964033,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_lti_step",
+          "request": {
+            "step_info": {
+              "enabled": true,
+              "rise_time_limits": [
+                0.1,
+                0.9
+              ]
+            },
+            "time": {
+              "unit": "s",
+              "mode": "auto"
+            },
+            "system": {
+              "den": [
+                1,
+                1
+              ],
+              "kind": "tf",
+              "ts": 0,
+              "num": [
+                1
+              ]
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.48853399999999997
+        }
+      ]
+    },
+    {
+      "id": "step-03",
+      "category": "阶跃响应",
+      "question": "自然频率 ωn = 2 rad/s、阻尼比 ζ = 0.5 的标准二阶系统，单位阶跃响应的超调量是多少？",
+      "expected_tool": "control_lti_step",
+      "tools_called": [
+        "control_lti_step"
+      ],
+      "first_tool": "control_lti_step",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "超调 %",
+          "expected": "Num(16.303352169752404)",
+          "from_model_call": "Num(16.303332635916277)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "对于自然频率 $\\omega_n = 2 \\text{ rad/s}$、阻尼比 $\\zeta = 0.5$ 的标准二阶系统，其单位阶跃响应的超调量为 **16.3%**。\n\n该结果通过对系统传递函数 $G(s) = \\frac{\\omega_n^2}{s^2 + 2\\zeta\\omega_n s + \\omega_n^2} = \\frac{4}{s^2 + 2s + 4}$ 进行阶跃响应分析得出。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 37244,
+      "latency_s": 14.546423889,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_lti_step",
+          "request": {
+            "step_info": {
+              "enabled": true
+            },
+            "time": {
+              "mode": "auto",
+              "unit": "s"
+            },
+            "system": {
+              "den": [
+                1,
+                2,
+                4
+              ],
+              "kind": "tf",
+              "num": [
+                4
+              ],
+              "ts": 0
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.741132
+        }
+      ]
+    },
+    {
+      "id": "impulse-01",
+      "category": "冲激响应",
+      "question": "G(s) = 1/(s^2 + 2s + 5) 的单位冲激响应峰值大约是多少？出现在什么时刻附近？请画出冲激响应。",
+      "expected_tool": "control_lti_impulse",
+      "tools_called": [
+        "control_lti_impulse"
+      ],
+      "first_tool": "control_lti_impulse",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "冲激响应峰值",
+          "expected": "Num(0.2570990736186212)",
+          "from_model_call": "Num(0.25709095869857057)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "对于系统 $G(s) = \\frac{1}{s^2 + 2s + 5}$，其单位冲激响应的峰值约为 **0.257**（无量纲），出现在 **0.75 s** 附近。\n\n### 分析说明\n*   **计算方法**：通过 `control_lti_impulse` 工具计算了系统在 $0 \\sim 10\\text{ s}$ 时间范围内的响应（采样间隔 $0.01\\text{ s}$）。\n*   **响应特征**：该系统是一个欠阻尼二阶系统，其极点位于 $-1 \\pm 2j$。冲激响应表现为衰减的正弦振荡，首个峰值出现在 $t \\approx 0.75\\text{ s}$ 处，幅值约为 $0.257$。\n\n### 冲激响应曲线\n由于无法直接在此处生成图像文件，您可以根据以下数据点理解响应趋势：\n*   $t=0\\text{ s}$ 时，$y=0$。\n*   $t \\approx 0.75\\text{ s}$ 时，达到峰值 $y \\approx 0.257$。\n*   随后系统进入衰减振荡，并在 $t \\approx 2.5\\text{ s}$ 附近出现负向峰值（约 $-0.053$），之后逐渐趋于 $0$。\n\n如果您需要更高精度的峰值位置或特定时间点的响应值，请告知，我可以调整采样网格重新计算。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 37374,
+      "latency_s": 37.93354684,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_lti_impulse",
+          "request": {
+            "time": {
+              "unit": "s",
+              "mode": "uniform",
+              "dt": 0.01,
+              "t_final": 10
+            },
+            "system": {
+              "ts": 0,
+              "kind": "tf",
+              "den": [
+                1,
+                2,
+                5
+              ],
+              "num": [
+                1
+              ]
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.94987
+        }
+      ]
+    },
+    {
+      "id": "pz-01",
+      "category": "零极点",
+      "question": "G(s) = (s+3)/(s^2 + 1.2 s + 4) 的零点、极点、直流增益和极点阻尼比是多少？",
+      "expected_tool": "control_lti_poles_zeros",
+      "tools_called": [
+        "control_lti_poles_zeros"
+      ],
+      "first_tool": "control_lti_poles_zeros",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "直流增益",
+          "expected": "Num(0.75)",
+          "from_model_call": "Num(0.75)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "阻尼比",
+          "expected": "Num(0.3)",
+          "from_model_call": "Num(0.3)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "零点",
+          "expected": "Num(-3.0)",
+          "from_model_call": "Num(-3.0)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "极点实部",
+          "expected": "Num(-0.6)",
+          "from_model_call": "Num(-0.6)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "对于传递函数 $G(s) = \\frac{s+3}{s^2 + 1.2s + 4}$，其分析结果如下：\n\n*   **零点**：$s = -3$\n*   **极点**：$s = -0.6 \\pm 1.908j$\n*   **直流增益**：$0.75$\n*   **极点阻尼比**：$0.3$\n\n该系统是稳定的，极点的自然频率为 $2 \\text{ rad/s}$。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 32930,
+      "latency_s": 29.730129069,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_lti_poles_zeros",
+          "request": {
+            "system": {
+              "ts": 0,
+              "kind": "tf",
+              "num": [
+                1,
+                3
+              ],
+              "den": [
+                1,
+                1.2,
+                4
+              ]
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.644918
+        }
+      ]
+    },
+    {
+      "id": "pz-02",
+      "category": "零极点",
+      "question": "状态空间模型 A = [[0, 1], [-2, -3]]，B = [[0], [1]]，C = [[1, 0]]，D = [[0]]。求极点，并判断系统是否稳定。",
+      "expected_tool": "control_lti_poles_zeros",
+      "tools_called": [
+        "control_lti_poles_zeros"
+      ],
+      "first_tool": "control_lti_poles_zeros",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "极点（最小实部）",
+          "expected": "Num(-1.9999999999999996)",
+          "from_model_call": "Num(-1.9999999999999996)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "极点（最大实部）",
+          "expected": "Num(-0.9999999999999998)",
+          "from_model_call": "Num(-0.9999999999999998)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "该状态空间系统的极点为 **-2** 和 **-1**。\n\n由于所有极点的实部均小于 0，该系统是**渐近稳定**的。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 32999,
+      "latency_s": 10.276193075,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_lti_poles_zeros",
+          "request": {
+            "system": {
+              "kind": "ss",
+              "B": {
+                "data": [
+                  0,
+                  1
+                ],
+                "shape": [
+                  2,
+                  1
+                ],
+                "dtype": "f64"
+              },
+              "C": {
+                "dtype": "f64",
+                "data": [
+                  1,
+                  0
+                ],
+                "shape": [
+                  1,
+                  2
+                ]
+              },
+              "A": {
+                "dtype": "f64",
+                "data": [
+                  0,
+                  1,
+                  -2,
+                  -3
+                ],
+                "shape": [
+                  2,
+                  2
+                ]
+              },
+              "ts": 0,
+              "D": {
+                "shape": [
+                  1,
+                  1
+                ],
+                "data": [
+                  0
+                ],
+                "dtype": "f64"
+              }
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.835433
+        }
+      ]
+    },
+    {
+      "id": "pz-03-discrete",
+      "category": "陷阱：离散系统",
+      "question": "离散系统 G(z) = 0.1/(z − 0.9)，采样周期 0.1 s。求它的极点和直流增益。",
+      "expected_tool": "control_lti_poles_zeros",
+      "tools_called": [
+        "control_lti_poles_zeros"
+      ],
+      "first_tool": "control_lti_poles_zeros",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "直流增益（z=1）",
+          "expected": "Num(1.0000000000000002)",
+          "from_model_call": "Num(1.0000000000000002)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "极点",
+          "expected": "Num(0.9)",
+          "from_model_call": "Num(0.9)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "该离散系统 $G(z) = \\frac{0.1}{z - 0.9}$（采样周期 $T_s = 0.1\\text{ s}$）的计算结果如下：\n\n*   **极点**：$z = 0.9$\n*   **直流增益**：$1$\n\n该结果通过 `control_lti_poles_zeros` 工具计算得出。对于离散系统，直流增益是在 $z=1$ 处计算的。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 32872,
+      "latency_s": 12.85701526,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_lti_poles_zeros",
+          "request": {
+            "system": {
+              "kind": "tf",
+              "ts": 0.1,
+              "num": [
+                0.1
+              ],
+              "den": [
+                1,
+                -0.9
+              ]
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.32456500000000005
+        }
+      ]
+    },
+    {
+      "id": "ctrb-01",
+      "category": "可控性",
+      "question": "A = [[1, 1], [0, 1]]，B = [[0], [1]]。(A, B) 是否完全可控？可控性矩阵的秩是多少？",
+      "expected_tool": "control_analysis_ctrb_obsv",
+      "tools_called": [],
+      "first_tool": null,
+      "tool_ok": false,
+      "first_tool_ok": false,
+      "args_ok": false,
+      "answer_ok": false,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "可控性矩阵秩",
+          "expected": "Num(2.0)",
+          "from_model_call": null,
+          "args_pass": false,
+          "answer_pass": false
+        }
+      ],
+      "final_text": null,
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 16020,
+      "latency_s": 7.32052993,
+      "model_turns": 1,
+      "http_retries": 0,
+      "trace": []
+    },
+    {
+      "id": "ctrb-02",
+      "category": "可控性",
+      "question": "A = diag(1, 2)，B = [[1], [0]]，C = [[1, 1]]。判断可控性与可观性，并给出可控性矩阵的秩。",
+      "expected_tool": "control_analysis_ctrb_obsv",
+      "tools_called": [
+        "control_analysis_ctrb_obsv"
+      ],
+      "first_tool": "control_analysis_ctrb_obsv",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "可控性矩阵秩",
+          "expected": "Num(1.0)",
+          "from_model_call": "Num(1.0)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "可观性矩阵秩",
+          "expected": "Num(2.0)",
+          "from_model_call": "Num(2.0)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "该系统（$A = \\text{diag}(1, 2)$，$B = [1, 0]^T$，$C = [1, 1]$）的分析结果如下：\n\n*   **可控性**：系统**不可控**。\n*   **可观性**：系统**完全可观**。\n*   **可控性矩阵的秩**：为 **1**。\n\n**分析说明**：\n通过计算可控性矩阵 $\\mathcal{C} = [B \\quad AB] = \\begin{bmatrix} 1 & 1 \\\\ 0 & 0 \\end{bmatrix}$，其秩为 1，小于系统维数 2，因此系统不可控。可观性矩阵 $\\mathcal{O} = \\begin{bmatrix} C \\\\ CA \\end{bmatrix} = \\begin{bmatrix} 1 & 1 \\\\ 1 & 2 \\end{bmatrix}$，其行列式不为 0（秩为 2），因此系统完全可观。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 33334,
+      "latency_s": 12.920797972999999,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_analysis_ctrb_obsv",
+          "request": {
+            "system": {
+              "ts": 0,
+              "kind": "ss",
+              "D": {
+                "shape": [
+                  1,
+                  1
+                ],
+                "dtype": "f64",
+                "data": [
+                  0
+                ]
+              },
+              "B": {
+                "dtype": "f64",
+                "shape": [
+                  2,
+                  1
+                ],
+                "data": [
+                  1,
+                  0
+                ]
+              },
+              "A": {
+                "data": [
+                  1,
+                  0,
+                  0,
+                  2
+                ],
+                "shape": [
+                  2,
+                  2
+                ],
+                "dtype": "f64"
+              },
+              "C": {
+                "dtype": "f64",
+                "shape": [
+                  1,
+                  2
+                ],
+                "data": [
+                  1,
+                  1
+                ]
+              }
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.44970699999999997
+        }
+      ]
+    },
+    {
+      "id": "ctrb-03-colmajor",
+      "category": "陷阱：列优先",
+      "question": "我从 MATLAB 里用 A(:) 导出了 2×2 矩阵 A，按列展开的数据是 [0, 0, 1, 0]；B = [0; 1]。请判断 (A, B) 是否可控并给出可控性矩阵的秩。",
+      "expected_tool": "control_analysis_ctrb_obsv",
+      "tools_called": [
+        "control_analysis_ctrb_obsv",
+        "control_analysis_ctrb_obsv"
+      ],
+      "first_tool": "control_analysis_ctrb_obsv",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 1,
+      "tool_errors": [
+        "E.VALIDATION.SHAPE"
+      ],
+      "checks": [
+        {
+          "name": "可控性矩阵秩",
+          "expected": "Num(2.0)",
+          "from_model_call": "Num(2.0)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "系统 $(A, B)$ 是**可控的**。\n\n根据计算结果：\n*   **可控性矩阵**为：$\\begin{bmatrix} 0 & 1 \\\\ 1 & 0 \\end{bmatrix}$\n*   **可控性矩阵的秩**为：**2**\n\n由于系统维数为 2，且可控性矩阵的秩等于系统维数，因此该系统是完全可控的。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 50148,
+      "latency_s": 18.13374712,
+      "model_turns": 3,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_analysis_ctrb_obsv",
+          "request": {
+            "system": {
+              "B": {
+                "dtype": "f64",
+                "shape": [
+                  2,
+                  1
+                ],
+                "data": [
+                  0,
+                  1
+                ]
+              },
+              "D": {
+                "shape": [
+                  1,
+                  1
+                ],
+                "dtype": "f64",
+                "data": [
+                  0
+                ]
+              },
+              "kind": "ss",
+              "ts": 0,
+              "A": {
+                "dtype": "f64",
+                "shape": [
+                  2,
+                  2
+                ],
+                "data": [
+                  0,
+                  1,
+                  0,
+                  0
+                ]
+              },
+              "C": {
+                "dtype": "f64",
+                "shape": [
+                  1,
+                  2
+                ],
+                "data": [
+                  1,
+                  0,
+                  0,
+                  1
+                ]
+              }
+            }
+          },
+          "is_error": true,
+          "error_code": "E.VALIDATION.SHAPE",
+          "error_hint": "检查 shape 与 data；注意 data 必须按 row-major 展平。",
+          "latency_ms": 0.203039
+        },
+        {
+          "step": 2,
+          "tool": "control_analysis_ctrb_obsv",
+          "request": {
+            "system": {
+              "ts": 0,
+              "B": {
+                "data": [
+                  0,
+                  1
+                ],
+                "shape": [
+                  2,
+                  1
+                ],
+                "dtype": "f64"
+              },
+              "kind": "ss",
+              "C": {
+                "data": [
+                  1,
+                  0
+                ],
+                "shape": [
+                  1,
+                  2
+                ],
+                "dtype": "f64"
+              },
+              "A": {
+                "shape": [
+                  2,
+                  2
+                ],
+                "dtype": "f64",
+                "data": [
+                  0,
+                  1,
+                  0,
+                  0
+                ]
+              },
+              "D": {
+                "dtype": "f64",
+                "shape": [
+                  1,
+                  1
+                ],
+                "data": [
+                  0
+                ]
+              }
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.26638999999999996
+        }
+      ]
+    },
+    {
+      "id": "convert-01",
+      "category": "模型转换",
+      "question": "把 G(s) = (s+2)/(s^2 + 3s + 2) 转换成零极点增益（zpk）形式（不要约分）。",
+      "expected_tool": "control_lti_convert",
+      "tools_called": [
+        "control_lti_convert"
+      ],
+      "first_tool": "control_lti_convert",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "增益 k",
+          "expected": "Num(1.0)",
+          "from_model_call": "Num(1.0)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "最小极点",
+          "expected": "Num(-2.0)",
+          "from_model_call": "Num(-2.0)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "传递函数 $G(s) = \\frac{s+2}{s^2 + 3s + 2}$ 转换后的零极点增益（zpk）形式为：\n\n*   **增益 (k)**: 1\n*   **零点 (z)**: -2\n*   **极点 (p)**: -2, -1\n\n注：工具在转换过程中自动识别了零极点。根据您的要求，系统已按原多项式结构处理。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 32933,
+      "latency_s": 11.660548066,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_lti_convert",
+          "request": {
+            "to": "zpk",
+            "system": {
+              "den": [
+                1,
+                3,
+                2
+              ],
+              "kind": "tf",
+              "ts": 0,
+              "num": [
+                0,
+                1,
+                2
+              ]
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.465126
+        }
+      ]
+    },
+    {
+      "id": "convert-02",
+      "category": "模型转换",
+      "question": "把 G(s) = 4/(s^2 + 1.2s + 4) 转成状态空间形式，给出 A、B、C、D。",
+      "expected_tool": "control_lti_convert",
+      "tools_called": [
+        "control_lti_convert"
+      ],
+      "first_tool": "control_lti_convert",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "A 中的 −1.2",
+          "expected": "Num(-1.2)",
+          "from_model_call": "Num(-1.2)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "A 中的 −4",
+          "expected": "Num(-4.0)",
+          "from_model_call": "Num(-4.0)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "传递函数 $G(s) = \\frac{4}{s^2 + 1.2s + 4}$ 的状态空间实现（可控标准型）如下：\n\n**状态空间矩阵：**\n\n*   **A** = $\\begin{bmatrix} -1.2 & -4 \\\\ 1 & 0 \\end{bmatrix}$\n*   **B** = $\\begin{bmatrix} 1 \\\\ 0 \\end{bmatrix}$\n*   **C** = $\\begin{bmatrix} 0 & 4 \\end{bmatrix}$\n*   **D** = $[0]$\n\n该结果通过 `control_lti_convert` 工具计算得出。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 32968,
+      "latency_s": 11.323476894,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_lti_convert",
+          "request": {
+            "to": "ss",
+            "system": {
+              "num": [
+                4
+              ],
+              "den": [
+                1,
+                1.2,
+                4
+              ],
+              "kind": "tf",
+              "ts": 0
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.216685
+        }
+      ]
+    },
+    {
+      "id": "c2d-01",
+      "category": "离散化",
+      "question": "G(s) = 1/(s+1)，采样周期 T = 0.1 s，用零阶保持（ZOH）离散化，给出离散传递函数 G(z)。",
+      "expected_tool": "control_lti_c2d",
+      "tools_called": [
+        "control_lti_c2d"
+      ],
+      "first_tool": "control_lti_c2d",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": false,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "分母 z^0 系数",
+          "expected": "Num(-0.9048374180359595)",
+          "from_model_call": "Num(-0.9048374180359595)",
+          "args_pass": true,
+          "answer_pass": false
+        },
+        {
+          "name": "分子系数",
+          "expected": "Num(0.09516258196404048)",
+          "from_model_call": "Num(0.09516258196404048)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "对于连续系统 $G(s) = \\frac{1}{s+1}$，在采样周期 $T = 0.1\\text{ s}$ 下，使用零阶保持（ZOH）离散化后的离散传递函数 $G(z)$ 为：\n\n$$G(z) = \\frac{0.09516}{z - 0.9048}$$\n\n该结果通过 `control_lti_c2d` 工具计算得出。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 32905,
+      "latency_s": 10.373285539,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_lti_c2d",
+          "request": {
+            "method": "zoh",
+            "ts": 0.1,
+            "output_kind": "tf",
+            "system": {
+              "kind": "tf",
+              "ts": 0,
+              "num": [
+                1
+              ],
+              "den": [
+                1,
+                1
+              ]
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.520375
+        }
+      ]
+    },
+    {
+      "id": "c2d-02",
+      "category": "离散化",
+      "question": "用 Tustin（双线性）方法、采样周期 0.5 s 把 G(s) = 2/(s+2) 离散化，给出 G(z) 的分子分母系数。",
+      "expected_tool": "control_lti_c2d",
+      "tools_called": [
+        "control_lti_c2d"
+      ],
+      "first_tool": "control_lti_c2d",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "分母 z^0 系数",
+          "expected": "Num(-0.3333333333333333)",
+          "from_model_call": "Num(-0.3333333333333333)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "分子首项",
+          "expected": "Num(0.3333333333333333)",
+          "from_model_call": "Num(0.3333333333333333)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "使用 Tustin（双线性）方法，采样周期 $T_s = 0.5\\text{ s}$，将连续系统 $G(s) = \\frac{2}{s+2}$ 离散化后，得到的离散传递函数 $G(z)$ 为：\n\n$$G(z) = \\frac{0.3333z + 0.3333}{z - 0.3333}$$\n\n**系数结果：**\n*   **分子系数**：`[0.3333, 0.3333]`\n*   **分母系数**：`[1.0, -0.3333]`\n\n（注：以上数值保留了 4 位有效数字。）",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 32984,
+      "latency_s": 14.636404134,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_lti_c2d",
+          "request": {
+            "method": "tustin",
+            "system": {
+              "den": [
+                1,
+                2
+              ],
+              "kind": "tf",
+              "num": [
+                2
+              ],
+              "ts": 0
+            },
+            "ts": 0.5
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.252749
+        }
+      ]
+    },
+    {
+      "id": "c2d-03-missing-ts",
+      "category": "陷阱：缺采样周期",
+      "question": "请用零阶保持器把 G(s) = 1/(s^2 + s + 1) 离散化。",
+      "expected_tool": null,
+      "tools_called": [
+        "control_lti_c2d"
+      ],
+      "first_tool": "control_lti_c2d",
+      "tool_ok": false,
+      "first_tool_ok": false,
+      "args_ok": null,
+      "answer_ok": false,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [],
+      "final_text": "使用零阶保持器（ZOH）将 $G(s) = \\frac{1}{s^2 + s + 1}$ 离散化（采样周期 $T_s = 0.1\\,\\text{s}$），得到的离散传递函数为：\n\n$$G(z) = \\frac{0.004833z + 0.004675}{z^2 - 1.895z + 0.9048}$$\n\n该结果通过 `control_lti_c2d` 工具计算得出。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 32948,
+      "latency_s": 20.785643323,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_lti_c2d",
+          "request": {
+            "method": "zoh",
+            "ts": 0.1,
+            "system": {
+              "ts": 0,
+              "den": [
+                1,
+                1,
+                1
+              ],
+              "kind": "tf",
+              "num": [
+                1
+              ]
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.316676
+        }
+      ]
+    },
+    {
+      "id": "lqr-01",
+      "category": "LQR",
+      "question": "双积分器 A = [[0, 1], [0, 0]]，B = [[0], [1]]，Q = I，R = 1，求 LQR 最优反馈增益 K（u = −Kx）。",
+      "expected_tool": "control_design_lqr",
+      "tools_called": [
+        "control_design_lqr"
+      ],
+      "first_tool": "control_design_lqr",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "K1",
+          "expected": "Num(1.0)",
+          "from_model_call": "Num(1.0)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "K2",
+          "expected": "Num(1.7320508075688772)",
+          "from_model_call": "Num(1.7320508075688772)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "对于双积分器系统，在状态权重 $Q = I$ 和输入权重 $R = 1$ 的条件下，通过求解连续时间代数 Riccati 方程（CARE），得到的最优状态反馈增益矩阵 $K$ 为：\n\n**$K = [1, 1.732]$**\n\n即控制律为 $u = -x_1 - 1.732x_2$。\n\n*注：计算结果保留了 4 位有效数字。*",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 33503,
+      "latency_s": 51.890697392999996,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_design_lqr",
+          "request": {
+            "R": {
+              "data": [
+                1
+              ],
+              "dtype": "f64",
+              "shape": [
+                1,
+                1
+              ]
+            },
+            "Q": {
+              "dtype": "f64",
+              "shape": [
+                2,
+                2
+              ],
+              "data": [
+                1,
+                0,
+                0,
+                1
+              ]
+            },
+            "A": {
+              "dtype": "f64",
+              "data": [
+                0,
+                1,
+                0,
+                0
+              ],
+              "shape": [
+                2,
+                2
+              ]
+            },
+            "B": {
+              "shape": [
+                2,
+                1
+              ],
+              "dtype": "f64",
+              "data": [
+                0,
+                1
+              ]
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.947736
+        }
+      ]
+    },
+    {
+      "id": "lqr-02",
+      "category": "LQR",
+      "question": "A = [[0, 1], [-1, -1]]，B = [[0], [1]]，Q = diag(10, 1)，R = 0.1，求连续 LQR 增益 K 和闭环极点。",
+      "expected_tool": "control_design_lqr",
+      "tools_called": [
+        "control_design_lqr"
+      ],
+      "first_tool": "control_design_lqr",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "K1",
+          "expected": "Num(9.049875621120892)",
+          "from_model_call": "Num(9.049875621120892)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "K2",
+          "expected": "Num(4.394418526796172)",
+          "from_model_call": "Num(4.394418526796172)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "对于给定的连续时间系统，通过求解代数 Riccati 方程（CARE），得到的最优状态反馈增益 $K$ 和闭环极点如下：\n\n### 1. 最优状态反馈增益 $K$\n$$K = \\begin{bmatrix} 9.050 & 4.394 \\end{bmatrix}$$\n即控制律为 $u = -Kx = -(9.050x_1 + 4.394x_2)$。\n\n### 2. 闭环极点\n闭环系统特征方程的根为：\n$$\\lambda_{1,2} = -2.697 \\pm 1.666i$$\n\n*注：计算基于 `control_design_lqr` 工具，结果已通过 CARE 残差检查，数值精度良好。*",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 33676,
+      "latency_s": 7.311624388,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_design_lqr",
+          "request": {
+            "B": {
+              "shape": [
+                2,
+                1
+              ],
+              "dtype": "f64",
+              "data": [
+                0,
+                1
+              ]
+            },
+            "A": {
+              "shape": [
+                2,
+                2
+              ],
+              "dtype": "f64",
+              "data": [
+                0,
+                1,
+                -1,
+                -1
+              ]
+            },
+            "Q": {
+              "dtype": "f64",
+              "shape": [
+                2,
+                2
+              ],
+              "data": [
+                10,
+                0,
+                0,
+                1
+              ]
+            },
+            "R": {
+              "dtype": "f64",
+              "shape": [
+                1,
+                1
+              ],
+              "data": [
+                0.1
+              ]
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.36138400000000004
+        }
+      ]
+    },
+    {
+      "id": "lqr-03-colmajor",
+      "category": "陷阱：列优先",
+      "question": "MATLAB 里 A 是 2×2 矩阵，A(:)（按列展开）= [0, -2, 1, -3]；B = [0; 1]，Q = eye(2)，R = 1。求 LQR 增益 K。",
+      "expected_tool": "control_design_lqr",
+      "tools_called": [
+        "control_design_lqr"
+      ],
+      "first_tool": "control_design_lqr",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "K1",
+          "expected": "Num(0.23606797749978972)",
+          "from_model_call": "Num(0.23606797749978972)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "K2",
+          "expected": "Num(0.2360679774997897)",
+          "from_model_call": "Num(0.2360679774997897)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "根据您提供的系统参数，计算得到的最优状态反馈增益矩阵 $K$ 为：\n\n**$K = [0.2361, 0.2361]$**\n\n该结果通过调用 `control_design_lqr` 工具计算得出。系统闭环极点位于 $-2.2361$ 和 $-1.0000$。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 33540,
+      "latency_s": 18.140154455,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_design_lqr",
+          "request": {
+            "A": {
+              "shape": [
+                2,
+                2
+              ],
+              "data": [
+                0,
+                1,
+                -2,
+                -3
+              ],
+              "dtype": "f64"
+            },
+            "B": {
+              "data": [
+                0,
+                1
+              ],
+              "dtype": "f64",
+              "shape": [
+                2,
+                1
+              ]
+            },
+            "R": {
+              "data": [
+                1
+              ],
+              "dtype": "f64",
+              "shape": [
+                1,
+                1
+              ]
+            },
+            "Q": {
+              "shape": [
+                2,
+                2
+              ],
+              "dtype": "f64",
+              "data": [
+                1,
+                0,
+                0,
+                1
+              ]
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.7896869999999999
+        }
+      ]
+    },
+    {
+      "id": "lqr-04-unstabilizable",
+      "category": "陷阱：不可镇定",
+      "question": "A = [[1, 0], [0, 2]]，B = [[1], [0]]，Q = I，R = 1，帮我设计 LQR 控制器。",
+      "expected_tool": "control_design_lqr",
+      "tools_called": [
+        "control_design_lqr"
+      ],
+      "first_tool": "control_design_lqr",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [
+        "E.DOMAIN.NOT_STABILIZABLE"
+      ],
+      "checks": [],
+      "final_text": "您提供的系统无法设计 LQR 控制器。\n\n**原因分析：**\n根据计算结果，该系统是**不可镇定**的。具体来说，系统矩阵 $A = \\begin{bmatrix} 1 & 0 \\\\ 0 & 2 \\end{bmatrix}$ 存在特征值 $\\lambda = 2$，而输入矩阵 $B = \\begin{bmatrix} 1 \\\\ 0 \\end{bmatrix}$ 无法控制该特征值对应的模态（即第二个状态变量 $x_2$ 完全不受输入 $u$ 的影响）。\n\n由于该模态不稳定（$\\text{Re}(\\lambda) > 0$）且不可控，因此不存在能够使闭环系统稳定的状态反馈增益 $K$。\n\n**建议：**\n1. **检查模型：** 请确认 $A$ 矩阵和 $B$ 矩阵的定义是否正确。\n2. **增加执行器：** 如果系统确实需要控制 $x_2$ 模态，您需要增加额外的输入通道（即修改 $B$ 矩阵），使得系统满足可控性条件。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 33031,
+      "latency_s": 11.961664575,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_design_lqr",
+          "request": {
+            "A": {
+              "data": [
+                1,
+                0,
+                0,
+                2
+              ],
+              "dtype": "f64",
+              "shape": [
+                2,
+                2
+              ]
+            },
+            "R": {
+              "dtype": "f64",
+              "shape": [
+                1,
+                1
+              ],
+              "data": [
+                1
+              ]
+            },
+            "Q": {
+              "dtype": "f64",
+              "shape": [
+                2,
+                2
+              ],
+              "data": [
+                1,
+                0,
+                0,
+                1
+              ]
+            },
+            "B": {
+              "dtype": "f64",
+              "data": [
+                1,
+                0
+              ],
+              "shape": [
+                2,
+                1
+              ]
+            }
+          },
+          "is_error": true,
+          "error_code": "E.DOMAIN.NOT_STABILIZABLE",
+          "error_hint": "这是模型结构问题，调整 Q/R 无效。需要为该模态增加执行器（修改 B），或确认 A 是否录入有误（含行列顺序：row-major）。",
+          "latency_ms": 0.361743
+        }
+      ]
+    },
+    {
+      "id": "dlqr-01",
+      "category": "LQR",
+      "question": "离散系统 x[k+1] = A x[k] + B u[k]，A = [[1, 0.1], [0, 1]]，B = [[0.005], [0.1]]，Q = I，R = 1。求离散 LQR 增益 K。",
+      "expected_tool": "control_design_dlqr",
+      "tools_called": [
+        "control_design_dlqr"
+      ],
+      "first_tool": "control_design_dlqr",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "K1",
+          "expected": "Num(0.9170745631140953)",
+          "from_model_call": "Num(0.9170745631140953)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "K2",
+          "expected": "Num(1.6355961850466318)",
+          "from_model_call": "Num(1.6355961850466318)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "对于给定的离散系统，使用 `control_design_dlqr` 计算得到的最优状态反馈增益矩阵 $K$ 为：\n\n$$K = \\begin{bmatrix} 0.9171 & 1.6356 \\end{bmatrix}$$\n\n该增益使得闭环系统在状态反馈 $u[k] = -K x[k]$ 下达到最优控制性能。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 33580,
+      "latency_s": 15.230921187,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_design_dlqr",
+          "request": {
+            "A": {
+              "data": [
+                1,
+                0.1,
+                0,
+                1
+              ],
+              "shape": [
+                2,
+                2
+              ],
+              "dtype": "f64"
+            },
+            "Q": {
+              "data": [
+                1,
+                0,
+                0,
+                1
+              ],
+              "dtype": "f64",
+              "shape": [
+                2,
+                2
+              ]
+            },
+            "B": {
+              "dtype": "f64",
+              "shape": [
+                2,
+                1
+              ],
+              "data": [
+                0.005,
+                0.1
+              ]
+            },
+            "R": {
+              "data": [
+                1
+              ],
+              "shape": [
+                1,
+                1
+              ],
+              "dtype": "f64"
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 1.023601
+        }
+      ]
+    },
+    {
+      "id": "place-01",
+      "category": "极点配置",
+      "question": "双积分器 A = [[0, 1], [0, 0]]，B = [[0], [1]]，用状态反馈 u = −Kx 把闭环极点配置到 −2 ± 2j，求 K。",
+      "expected_tool": "control_design_place",
+      "tools_called": [
+        "control_design_place"
+      ],
+      "first_tool": "control_design_place",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "K1",
+          "expected": "Num(8.000000000000002)",
+          "from_model_call": "Num(8.000000000000002)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "K2",
+          "expected": "Num(4.000000000000002)",
+          "from_model_call": "Num(4.000000000000002)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "对于双积分器系统 $A = \\begin{bmatrix} 0 & 1 \\\\ 0 & 0 \\end{bmatrix}$，$B = \\begin{bmatrix} 0 \\\\ 1 \\end{bmatrix}$，通过状态反馈 $u = -Kx$ 将闭环极点配置到 $-2 \\pm 2j$，计算得到的反馈增益矩阵为：\n\n**$K = [8, 4]$**\n\n该结果通过 `control_design_place` 工具计算得出，闭环极点已精确配置至目标位置。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 33077,
+      "latency_s": 21.736645272,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_design_place",
+          "request": {
+            "B": {
+              "data": [
+                0,
+                1
+              ],
+              "dtype": "f64",
+              "shape": [
+                2,
+                1
+              ]
+            },
+            "poles": [
+              [
+                -2,
+                2
+              ],
+              [
+                -2,
+                -2
+              ]
+            ],
+            "A": {
+              "shape": [
+                2,
+                2
+              ],
+              "dtype": "f64",
+              "data": [
+                0,
+                1,
+                0,
+                0
+              ]
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.56981
+        }
+      ]
+    },
+    {
+      "id": "place-02",
+      "category": "极点配置",
+      "question": "A = [[0, 1, 0], [0, 0, 1], [-6, -11, -6]]，B = [[0], [0], [1]]，期望闭环极点 −2、−3、−4，求状态反馈增益 K。",
+      "expected_tool": "control_design_place",
+      "tools_called": [
+        "control_design_place"
+      ],
+      "first_tool": "control_design_place",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "K1",
+          "expected": "Num(18.000000000000203)",
+          "from_model_call": "Num(18.000000000000203)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "K2",
+          "expected": "Num(15.000000000000146)",
+          "from_model_call": "Num(15.000000000000146)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "K3",
+          "expected": "Num(3.000000000000023)",
+          "from_model_call": "Num(3.000000000000023)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "根据极点配置算法（`control_design_place`），为使系统闭环极点位于 $-2, -3, -4$，计算得到的状态反馈增益矩阵 $K$ 为：\n\n**$K = [18.0, 15.0, 3.0]$**\n\n该结果通过配置状态反馈 $u = -Kx$ 实现，闭环极点已精确配置至期望位置。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 33209,
+      "latency_s": 6.940409461,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_design_place",
+          "request": {
+            "B": {
+              "data": [
+                0,
+                0,
+                1
+              ],
+              "dtype": "f64",
+              "shape": [
+                3,
+                1
+              ]
+            },
+            "A": {
+              "dtype": "f64",
+              "data": [
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                -6,
+                -11,
+                -6
+              ],
+              "shape": [
+                3,
+                3
+              ]
+            },
+            "poles": [
+              [
+                -2,
+                0
+              ],
+              [
+                -3,
+                0
+              ],
+              [
+                -4,
+                0
+              ]
+            ]
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.36949200000000004
+        }
+      ]
+    },
+    {
+      "id": "lyap-01",
+      "category": "Lyapunov",
+      "question": "求解连续 Lyapunov 方程 A X + X Aᵀ + Q = 0，其中 A = [[-1, 2], [0, -3]]，Q = I。",
+      "expected_tool": "control_math_lyap",
+      "tools_called": [
+        "control_math_lyap"
+      ],
+      "first_tool": "control_math_lyap",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "X11",
+          "expected": "Num(0.6666666666666667)",
+          "from_model_call": "Num(0.6666666666666667)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "X12",
+          "expected": "Num(0.08333333333333333)",
+          "from_model_call": "Num(0.08333333333333333)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "X22",
+          "expected": "Num(0.16666666666666666)",
+          "from_model_call": "Num(0.16666666666666666)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "连续 Lyapunov 方程 $AX + XA^T + Q = 0$ 的解 $X$ 为：\n\n$$X = \\begin{bmatrix} 0.6667 & 0.0833 \\\\ 0.0833 & 0.1667 \\end{bmatrix}$$\n\n该结果通过求解连续 Lyapunov 方程得到，其中 $A = \\begin{bmatrix} -1 & 2 \\\\ 0 & -3 \\end{bmatrix}$，$Q = \\begin{bmatrix} 1 & 0 \\\\ 0 & 1 \\end{bmatrix}$。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 33069,
+      "latency_s": 14.263538113,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_math_lyap",
+          "request": {
+            "type": "continuous",
+            "A": {
+              "dtype": "f64",
+              "data": [
+                -1,
+                2,
+                0,
+                -3
+              ],
+              "shape": [
+                2,
+                2
+              ]
+            },
+            "Q": {
+              "data": [
+                1,
+                0,
+                0,
+                1
+              ],
+              "dtype": "f64",
+              "shape": [
+                2,
+                2
+              ]
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.648687
+        }
+      ]
+    },
+    {
+      "id": "lyap-02",
+      "category": "Lyapunov",
+      "question": "离散 Lyapunov 方程 A X Aᵀ − X + Q = 0，A = diag(0.5, 0.8)，Q = I，求 X。",
+      "expected_tool": "control_math_lyap",
+      "tools_called": [
+        "control_math_lyap"
+      ],
+      "first_tool": "control_math_lyap",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "X11",
+          "expected": "Num(1.3333333333333333)",
+          "from_model_call": "Num(1.3333333333333333)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "X22",
+          "expected": "Num(2.7777777777777786)",
+          "from_model_call": "Num(2.7777777777777786)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "对于离散 Lyapunov 方程 $A X A^T - X + Q = 0$，其中 $A = \\text{diag}(0.5, 0.8)$，$Q = I$（单位矩阵），求解得到的矩阵 $X$ 为：\n\n$$X = \\begin{bmatrix} 1.3333 & 0 \\\\ 0 & 2.7778 \\end{bmatrix}$$\n\n**计算说明：**\n*   该结果通过调用 `control_math_lyap` 工具计算得出。\n*   由于 $A$ 是对角矩阵，方程退化为标量形式 $a_{ii}^2 x_{ii} - x_{ii} + q_{ii} = 0$，即 $x_{ii} = \\frac{q_{ii}}{1 - a_{ii}^2}$。\n    *   $x_{11} = \\frac{1}{1 - 0.5^2} = \\frac{1}{0.75} = 1.3333$\n    *   $x_{22} = \\frac{1}{1 - 0.8^2} = \\frac{1}{0.36} \\approx 2.7778$",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 33173,
+      "latency_s": 10.21853073,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_math_lyap",
+          "request": {
+            "type": "discrete",
+            "Q": {
+              "dtype": "f64",
+              "data": [
+                1,
+                0,
+                0,
+                1
+              ],
+              "shape": [
+                2,
+                2
+              ]
+            },
+            "A": {
+              "dtype": "f64",
+              "shape": [
+                2,
+                2
+              ],
+              "data": [
+                0.5,
+                0,
+                0,
+                0.8
+              ]
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.334111
+        }
+      ]
+    },
+    {
+      "id": "bode-01",
+      "category": "频率响应",
+      "question": "G(s) = 10/(s+10) 在 ω = 10 rad/s 处的幅值（dB）和相位（度）是多少？顺便画出 0.1–1000 rad/s 的 Bode 图。",
+      "expected_tool": "control_lti_bode",
+      "tools_called": [
+        "control_lti_bode",
+        "control_lti_bode"
+      ],
+      "first_tool": "control_lti_bode",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": false,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "幅值 dB",
+          "expected": "Num(-3.0102999566398116)",
+          "from_model_call": null,
+          "args_pass": false,
+          "answer_pass": true
+        },
+        {
+          "name": "相位 deg",
+          "expected": "Num(-45.0)",
+          "from_model_call": null,
+          "args_pass": false,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "对于传递函数 $G(s) = \\frac{10}{s+10}$，在频率 $\\omega = 10 \\text{ rad/s}$ 处：\n\n*   **幅值**：$-3.01 \\text{ dB}$\n*   **相位**：$-45.00^\\circ$\n\n该结果通过 `control_lti_bode` 工具计算得出。\n\n### Bode 图数据概览 (0.1–1000 rad/s)\n系统在 $0.1 \\text{ rad/s}$ 处的幅值约为 $0 \\text{ dB}$，相位接近 $0^\\circ$；随着频率增加，在转折频率 $\\omega_c = 10 \\text{ rad/s}$ 处，幅值下降至 $-3.01 \\text{ dB}$，相位滞后 $45^\\circ$；在 $1000 \\text{ rad/s}$ 高频段，幅值衰减至约 $-40 \\text{ dB}$，相位趋近于 $-90^\\circ$。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 39338,
+      "latency_s": 11.840062711,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_lti_bode",
+          "request": {
+            "frequency": {
+              "mode": "explicit",
+              "values": [
+                10
+              ],
+              "unit": "rad/s"
+            },
+            "system": {
+              "num": [
+                10
+              ],
+              "kind": "tf",
+              "ts": 0,
+              "den": [
+                1,
+                10
+              ]
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.455996
+        },
+        {
+          "step": 1,
+          "tool": "control_lti_bode",
+          "request": {
+            "system": {
+              "num": [
+                10
+              ],
+              "ts": 0,
+              "den": [
+                1,
+                10
+              ],
+              "kind": "tf"
+            },
+            "frequency": {
+              "max": 1000,
+              "unit": "rad/s",
+              "n": 100,
+              "min": 0.1,
+              "mode": "logspace"
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.134922
+        }
+      ]
+    },
+    {
+      "id": "bode-02-hz",
+      "category": "陷阱：Hz 与 rad/s",
+      "question": "一阶低通滤波器 G(s) = 628.3185/(s + 628.3185)（截止频率 100 Hz）。求 f = 100 Hz 处的幅值（dB）和相位。",
+      "expected_tool": "control_lti_bode",
+      "tools_called": [
+        "control_lti_bode"
+      ],
+      "first_tool": "control_lti_bode",
+      "tool_ok": true,
+      "first_tool_ok": true,
+      "args_ok": true,
+      "answer_ok": true,
+      "self_corrections": 0,
+      "tool_errors": [],
+      "checks": [
+        {
+          "name": "幅值 dB",
+          "expected": "Num(-3.0102999566398116)",
+          "from_model_call": "Num(-3.0103001689627007)",
+          "args_pass": true,
+          "answer_pass": true
+        },
+        {
+          "name": "相位 deg",
+          "expected": "Num(-45.0)",
+          "from_model_call": "Num(-45.000001400571)",
+          "args_pass": true,
+          "answer_pass": true
+        }
+      ],
+      "final_text": "对于一阶低通滤波器 $G(s) = \\frac{628.3185}{s + 628.3185}$，在频率 $f = 100\\text{ Hz}$ 处：\n\n*   **幅值**：$-3.010\\text{ dB}$\n*   **相位**：$-45.00^\\circ$\n\n该结果通过 `control_lti_bode` 工具计算得出。在截止频率（$100\\text{ Hz}$）处，一阶低通滤波器的幅值衰减为 $-3\\text{ dB}$，相位滞后为 $-45^\\circ$，计算结果与理论值一致。",
+      "stopped": "answered",
+      "provider_error": null,
+      "total_tokens": 33223,
+      "latency_s": 11.709898177,
+      "model_turns": 2,
+      "http_retries": 0,
+      "trace": [
+        {
+          "step": 1,
+          "tool": "control_lti_bode",
+          "request": {
+            "frequency": {
+              "values": [
+                100
+              ],
+              "unit": "Hz",
+              "mode": "explicit"
+            },
+            "system": {
+              "ts": 0,
+              "den": [
+                1,
+                628.3185
+              ],
+              "kind": "tf",
+              "num": [
+                628.3185
+              ]
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "error_hint": null,
+          "latency_ms": 0.290781
+        }
+      ]
+    }
+  ]
+}

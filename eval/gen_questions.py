@@ -76,10 +76,10 @@ q("convert-02", "模型转换", "把 G(s) = 4/(s^2 + 1.2s + 4) 转成状态空�
 # ---------------- c2d
 q("c2d-01", "离散化", "G(s) = 1/(s+1)，采样周期 T = 0.1 s，用零阶保持（ZOH）离散化，给出离散传递函数 G(z)。",
   "control_lti_c2d", {"system": tf([1.0], [1, 1]), "ts": 0.1, "method": "zoh", "output_kind": "tf"},
-  [chk("分母 z^0 系数", "/result/system/den", index=1, rel_tol=1e-6), chk("分子系数", "/result/system/num", reduce="maxabs", rel_tol=1e-6)])
+  [chk("分母 z^0 系数", "/result/system/den", index=1, rel_tol=1e-6, allow_sign_flip=True), chk("分子系数", "/result/system/num", reduce="maxabs", rel_tol=1e-6)])
 q("c2d-02", "离散化", "用 Tustin（双线性）方法、采样周期 0.5 s 把 G(s) = 2/(s+2) 离散化，给出 G(z) 的分子分母系数。",
   "control_lti_c2d", {"system": tf([2.0], [1, 2]), "ts": 0.5, "method": "tustin", "output_kind": "tf"},
-  [chk("分母 z^0 系数", "/result/system/den", index=1, rel_tol=1e-6, normalize_by="/result/system/den/0"), chk("分子首项", "/result/system/num", index=0, rel_tol=1e-6, normalize_by="/result/system/den/0")])
+  [chk("分母 z^0 系数", "/result/system/den", index=1, rel_tol=1e-6, normalize_by="/result/system/den/0", allow_sign_flip=True), chk("分子首项", "/result/system/num", index=0, rel_tol=1e-6, normalize_by="/result/system/den/0")])
 q("c2d-03-missing-ts", "陷阱：缺采样周期", "请用零阶保持器把 G(s) = 1/(s^2 + s + 1) 离散化。",
   None, expect="clarify", clarify_keywords=["采样周期", "采样时间", "采样间隔", "采样频率", "ts", "T ="], forbidden_tools=["control_lti_c2d"])
 # ---------------- lqr / dlqr

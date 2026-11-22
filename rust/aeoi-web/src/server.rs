@@ -49,6 +49,7 @@ async fn config(State(st): State<Arc<AppState>>) -> Json<Value> {
     if !models.contains(&d) {
         models.insert(0, d.clone());
     }
+    models.push("mock:demo".into());
     Json(json!({
         "default_model": d,
         "models": models,
@@ -146,6 +147,12 @@ mod tests {
         assert_eq!(tools.as_array().unwrap().len(), 12);
         let r: Value = c.post(format!("http://{addr}/api/call")).json(&json!({"tool":"control_lti_poles_zeros","args":{"system":{"kind":"tf","num":[1],"den":[1,3,2],"ts":0}}})).send().await.unwrap().json().await.unwrap();
         assert_eq!(r["response"]["status"], "ok", "{r}");
+        // offline demo provider streams the full event sequence
+        let sse = c.post(format!("http://{addr}/api/chat")).json(&json!({"session_id":"t","model":"mock:demo","message":"演示"})).send().await.unwrap().text().await.unwrap();
+        for ev in ["\"type\":\"start\"", "\"type\":\"tool\"", "\"type\":\"final\"", "\"type\":\"done\"", "nested_array_to_dense"] {
+            assert!(sse.contains(ev), "missing {ev} in SSE stream");
+        }
+        assert!(sse.contains("\"self_corrections\":1"));
         // unknown provider → 400 JSON, not a hang
         let bad = c.post(format!("http://{addr}/api/chat")).json(&json!({"session_id":"s","model":"groq:x","message":"hi"})).send().await.unwrap();
         if std::env::var("GROQ_API_KEY").is_err() {

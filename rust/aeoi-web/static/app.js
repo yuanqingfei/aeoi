@@ -87,6 +87,7 @@ async function send(text) {
         if (ev.type === "thinking") pending.innerHTML = `<span class="spinner"></span> 第 ${ev.step} 步：等待模型…`;
         else if (ev.type === "model") { tokens += ev.turn.usage.total_tokens || 0; renderModelTurn(ev.turn); if (ev.turn.tool_calls.length) pending.innerHTML = `<span class="spinner"></span> 调用 ${ev.turn.tool_calls.map(esc).join(", ")}…`; }
         else if (ev.type === "tool") { toolsN++; renderTool(ev.step); }
+        else if (ev.type === "nudge") { $("#trace").insertAdjacentHTML("beforeend", `<div class="card"><h4><span class="badge warn">空回合</span> 模型第 ${ev.step} 步没有输出（${esc(ev.reason)}），已提示其按 schema 重试或向用户提问</h4></div>`); }
         else if (ev.type === "final") { gotFinal = true; pending.innerHTML = md(ev.text || "（模型没有给出文本回答）"); }
         else if (ev.type === "error") { pending.className = "msg err"; pending.innerHTML = "模型调用失败：" + esc(ev.message); gotFinal = true; }
         else if (ev.type === "stopped") { pending.className = "msg err"; pending.innerHTML = `达到最多步数（${ev.max_steps}）仍未得到最终回答。可调大“最多步数”后重试。`; gotFinal = true; }
@@ -204,10 +205,53 @@ function channels(q) {
   }
   return out;
 }
-function drawPlot(id, kind, r, tool) {
+// Plotly comes from a CDN; wait for it a little, then fall back to a built-in SVG plot (offline use).
+function whenPlotly(timeoutMs) {
+  return new Promise((res) => {
+    const t0 = performance.now();
+    (function poll() { if (window.Plotly) return res(true); if (performance.now() - t0 > timeoutMs) return res(false); setTimeout(poll, 100); })();
+  });
+}
+function svgPlot(el, panels) {
+  // panels: [{title, xlog, xlabel, ylabel, series:[{x, y}]}]
+  const W = el.clientWidth || 600, H = 200, m = { l: 56, r: 10, t: 18, b: 30 };
+  const colors = ["#2f5bd8", "#d9534f", "#2a9d58", "#e0a800", "#7a3fd8"];
+  let html = "";
+  for (const p of panels) {
+    const xs = p.series.flatMap((s) => s.x).map((x) => (p.xlog ? Math.log10(x) : x)), ys = p.series.flatMap((s) => s.y).filter(Number.isFinite);
+    let [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    if (y1 - y0 < 1e-12) { y0 -= 1; y1 += 1; }
+    const X = (x) => m.l + ((p.xlog ? Math.log10(x) : x) - x0) / (x1 - x0 || 1) * (W - m.l - m.r);
+    const Y = (y) => H - m.b - (y - y0) / (y1 - y0) * (H - m.t - m.b);
+    const paths = p.series.map((s, i) => `<path fill="none" stroke="${colors[i % 5]}" stroke-width="1.5" d="${s.x.map((x, k) => (k ? "L" : "M") + X(x).toFixed(1) + "," + Y(s.y[k]).toFixed(1)).join("")}"/>`).join("");
+    const fmt = (v) => +v.toPrecision(3);
+    const xt = p.xlog ? [x0, x1].map((v) => "1e" + fmt(v)) : [fmt(x0), fmt(x1)];
+    html += `<svg width="${W}" height="${H}" style="display:block"><text x="${m.l}" y="12" font-size="11" font-weight="600">${esc(p.title)}</text>
+      <rect x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}" fill="none" stroke="#ccd3e0"/>${paths}
+      <text x="${m.l - 4}" y="${m.t + 8}" font-size="10" text-anchor="end">${fmt(y1)}</text><text x="${m.l - 4}" y="${H - m.b}" font-size="10" text-anchor="end">${fmt(y0)}</text>
+      <text x="${m.l}" y="${H - 14}" font-size="10">${xt[0]}</text><text x="${W - m.r}" y="${H - 14}" font-size="10" text-anchor="end">${xt[1]}</text>
+      <text x="${(W + m.l) / 2}" y="${H - 3}" font-size="10" text-anchor="middle">${esc(p.xlabel)}</text>
+      <text x="12" y="${(H - m.b + m.t) / 2}" font-size="10" transform="rotate(-90 12 ${(H - m.b + m.t) / 2})" text-anchor="middle">${esc(p.ylabel)}</text></svg>`;
+  }
+  el.style.height = "auto";
+  el.innerHTML = html + '<div class="muted">（Plotly 未能从 CDN 加载，使用内置简易图）</div>';
+}
+async function drawPlot(id, kind, r, tool) {
   const el = document.getElementById(id);
   if (!el) return;
-  if (!window.Plotly) { el.outerHTML = '<div class="muted">（Plotly 未加载：离线环境无法访问 CDN，图形不可用；数值见下表）</div>'; return; }
+  if (!(await whenPlotly(6000))) {
+    if (kind === "bode") {
+      const w = r.w.value.data;
+      svgPlot(el, [
+        { title: "Bode 幅值", xlog: true, xlabel: `ω (${r.w.unit})`, ylabel: "dB", series: channels(r.magnitude).map((c) => ({ x: w, y: c.y })) },
+        { title: "Bode 相位", xlog: true, xlabel: `ω (${r.w.unit})`, ylabel: "deg", series: channels(r.phase).map((c) => ({ x: w, y: c.y })) },
+      ]);
+    } else {
+      const t = r.t.value.data;
+      svgPlot(el, [{ title: tool.includes("impulse") ? "冲激响应" : "阶跃响应", xlog: false, xlabel: `t (${r.t.unit})`, ylabel: "y", series: channels(r.y).map((c) => ({ x: t, y: c.y })) }]);
+    }
+    return;
+  }
   const layout = { margin: { l: 55, r: 15, t: 28, b: 40 }, font: { size: 11 }, showlegend: false };
   if (kind === "bode") {
     const w = r.w.value.data;
@@ -250,6 +294,10 @@ async function init() {
       <details><summary>Gemini parameters（OpenAPI 子集）</summary><pre>${esc(JSON.stringify(t.gemini_schema, null, 2))}</pre></details>
       <details><summary>JSON Schema（OpenAI 兼容 provider）</summary><pre>${esc(JSON.stringify(t.json_schema, null, 2))}</pre></details>
       <details><summary>有损映射明细</summary><pre>${esc(t.lossy_mappings.map((l) => l.path + "  " + l.what).join("\n"))}</pre></details></div>`).join("");
+  // deep link: /?model=mock:demo&ask=... preselects a model and sends a question (demos, smoke tests)
+  const qp = new URLSearchParams(location.search);
+  if (qp.get("model")) $("#model-custom").value = qp.get("model");
+  if (qp.get("ask")) setTimeout(() => send(qp.get("ask")), 0);
   for (const ex of EXAMPLES) { const b = document.createElement("button"); b.textContent = ex.length > 28 ? ex.slice(0, 28) + "…" : ex; b.title = ex; b.onclick = () => { $("#input").value = ex; $("#input").focus(); }; $("#examples").appendChild(b); }
 }
 

@@ -230,7 +230,10 @@ impl Gemini {
             raw,
             usage: Usage { prompt_tokens: u["promptTokenCount"].as_u64(), completion_tokens: u["candidatesTokenCount"].as_u64(), thought_tokens: u["thoughtsTokenCount"].as_u64(), total_tokens: u["totalTokenCount"].as_u64() },
             model_version: v["modelVersion"].as_str().map(|s| s.to_string()),
-            finish_reason: cand["finishReason"].as_str().map(|s| s.to_string()),
+            finish_reason: cand["finishReason"].as_str().map(|s| match cand["finishMessage"].as_str() {
+                Some(m) => format!("{s}: {}", m.chars().take(300).collect::<String>()),
+                None => s.to_string(),
+            }),
             retries: 0,
         })
     }
@@ -393,6 +396,24 @@ impl MockProvider {
     }
 }
 
+impl MockProvider {
+    /// Offline demo script (`mock:demo`): a bad first call (nested-array matrix → schema error with
+    /// a lossless patch), the corrected call, a step + bode call, then a final answer. Lets the UI be
+    /// exercised without any API key.
+    pub fn demo() -> MockProvider {
+        let sys = json!({"kind": "tf", "num": [4.0], "den": [1.0, 1.2, 4.0], "ts": 0.0});
+        MockProvider::new(vec![
+            MockProvider::calls(vec![("control_design_lqr", json!({"A": [[0, 1], [0, 0]], "B": [[0], [1]], "Q": [[1, 0], [0, 1]], "R": [[1]]}))]),
+            MockProvider::calls(vec![("control_design_lqr", json!({"A": {"dtype": "f64", "shape": [2, 2], "data": [0, 1, 0, 0]}, "B": {"dtype": "f64", "shape": [2, 1], "data": [0, 1]}, "Q": {"dtype": "f64", "shape": [2, 2], "data": [1, 0, 0, 1]}, "R": {"dtype": "f64", "shape": [1, 1], "data": [1]}}))]),
+            MockProvider::calls(vec![
+                ("control_lti_step", json!({"system": sys, "time": {"mode": "uniform", "t_final": 10, "dt": 0.01, "unit": "s"}, "step_info": {"enabled": true}})),
+                ("control_lti_bode", json!({"system": sys, "frequency": {"mode": "logspace", "min": 0.1, "max": 100, "n": 200, "unit": "rad/s"}})),
+            ]),
+            MockProvider::text("（离线演示，未调用真实模型）\n- LQR 增益 **K = [1, 1.732]**\n- G(s)=4/(s²+1.2s+4)：超调 **37.2%**，峰值时间 1.65 s，调节时间 5.62 s\n- Bode 图见右侧轨迹面板。"),
+        ])
+    }
+}
+
 impl Provider for MockProvider {
     fn name(&self) -> &str {
         "mock"
@@ -427,6 +448,7 @@ pub fn make(spec: &str) -> Result<Box<dyn Provider>, String> {
     let (p, m) = split_spec(spec);
     match p.as_str() {
         "gemini" => Ok(Box::new(Gemini::from_env(&m)?)),
+        "mock" => Ok(Box::new(MockProvider::demo())),
         _ => Ok(Box::new(OpenAiCompat::from_env(&p, &m)?)),
     }
 }
