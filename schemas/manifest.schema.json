@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "aeoi://schemas/manifest/0.2",
+  "$id": "aeoi://schemas/manifest/0.3",
   "type": "object",
   "required": [
     "spec",
@@ -19,7 +19,7 @@
   ],
   "properties": {
     "spec": {
-      "const": "aeoi/0.2"
+      "const": "aeoi/0.3"
     },
     "id": {
       "type": "string",

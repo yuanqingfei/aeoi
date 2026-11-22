@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "aeoi-control"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "aeoi-core",
  "base64",
@@ -15,7 +15,7 @@ dependencies = [
 
 [[package]]
 name = "aeoi-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "base64",
  "jsonschema",
@@ -27,7 +27,7 @@ dependencies = [
 
 [[package]]
 name = "aeoi-mcp"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "aeoi-control",
  "aeoi-core",

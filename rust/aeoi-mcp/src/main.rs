@@ -86,7 +86,7 @@ impl Server {
                             "title": format!("AEOI manifest: {}", o.meta().id), "mimeType": "application/json"}))
             .collect::<Vec<Value>>());
         for s in ["common", "envelope", "error", "manifest"] {
-            r.push(json!({"uri": format!("aeoi://schemas/{s}/0.2"), "name": format!("{s}.schema.json"), "mimeType": "application/schema+json"}));
+            r.push(json!({"uri": format!("aeoi://schemas/{s}/0.3"), "name": format!("{s}.schema.json"), "mimeType": "application/schema+json"}));
         }
         json!({"resources": r})
     }
@@ -127,7 +127,7 @@ impl Server {
                     "protocolVersion": v,
                     "capabilities": {"tools": {"listChanged": false}, "resources": {"listChanged": false, "subscribe": false}},
                     "serverInfo": {"name": "aeoi-mcp", "title": "AEOI engineering operators (control)", "version": env!("CARGO_PKG_VERSION")},
-                    "instructions": "Tools return AEOI envelopes (spec aeoi/0.2) in structuredContent. Matrices are row-major. \
+                    "instructions": "Tools return AEOI envelopes (spec aeoi/0.3) in structuredContent. Matrices are row-major. \
                                      On status=error, read error.remediation (RFC 6902 patches) before retrying; \
                                      check trust.accuracy_grade and warnings before relying on a result.",
                 }))

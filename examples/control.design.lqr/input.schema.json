@@ -11,19 +11,19 @@
   ],
   "properties": {
     "A": {
-      "$ref": "aeoi://schemas/common/0.2/Matrix"
+      "$ref": "aeoi://schemas/common/0.3/Matrix"
     },
     "B": {
-      "$ref": "aeoi://schemas/common/0.2/Matrix"
+      "$ref": "aeoi://schemas/common/0.3/Matrix"
     },
     "Q": {
-      "$ref": "aeoi://schemas/common/0.2/Matrix"
+      "$ref": "aeoi://schemas/common/0.3/Matrix"
     },
     "R": {
-      "$ref": "aeoi://schemas/common/0.2/Matrix"
+      "$ref": "aeoi://schemas/common/0.3/Matrix"
     },
     "N": {
-      "$ref": "aeoi://schemas/common/0.2/Matrix"
+      "$ref": "aeoi://schemas/common/0.3/Matrix"
     },
     "symmetry_tolerance": {
       "type": "number",
@@ -32,7 +32,7 @@
       "description": "相对容差 ‖X−Xᵀ‖_F ≤ tol·‖X‖_F；超出即 E.VALIDATION.NOT_SYMMETRIC，范围内（但非精确对称）对称化并给 W.VALIDATION.SYMMETRIZED"
     },
     "exec": {
-      "$ref": "aeoi://schemas/common/0.2/ExecOptions"
+      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
     }
   },
   "x-aeoi-shape-constraints": [

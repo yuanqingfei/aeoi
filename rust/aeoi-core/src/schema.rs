@@ -112,7 +112,7 @@ mod tests {
     fn inline_has_no_refs() {
         let s = inline(doc("envelope"));
         assert!(!serde_json::to_string(&s).unwrap().contains("$ref"));
-        let m = inline(&serde_json::json!({"$ref": "aeoi://schemas/common/0.2/Matrix"}));
+        let m = inline(&serde_json::json!({"$ref": "aeoi://schemas/common/0.3/Matrix"}));
         assert!(!serde_json::to_string(&m).unwrap().contains("$ref"));
         let v = Validator::new(&m);
         assert!(v.violations(&serde_json::json!({"dtype":"f64","shape":[1],"data":[1]}), 5).is_empty());

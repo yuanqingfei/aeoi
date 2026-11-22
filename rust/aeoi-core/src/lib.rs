@@ -11,7 +11,7 @@ pub mod operator;
 pub mod poly;
 pub mod sysalg;
 
-pub const SPEC: &str = "aeoi/0.2";
+pub const SPEC: &str = "aeoi/0.3";
 
 pub use error::{OpError, Warning};
 pub use host::{ExecCtx, HostCtx};

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "aeoi://schemas/common/0.2",
+  "$id": "aeoi://schemas/common/0.3",
   "$defs": {
     "NonFinite": { "enum": ["NaN", "Inf", "-Inf"] },
     "Complex": {
