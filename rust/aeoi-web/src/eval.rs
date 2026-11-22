@@ -298,6 +298,12 @@ pub struct EvalOpts {
 }
 
 pub async fn run_eval(provider: &dyn Provider, bridge: &Bridge, questions: &Value, opts: &EvalOpts) -> Value {
+    run_eval_with(provider, bridge, questions, opts, |_| {}).await
+}
+
+/// Like [`run_eval`], calling `checkpoint(partial_report)` after every question (so an interrupted
+/// run still leaves a report). Stops early when the provider reports an exhausted daily quota.
+pub async fn run_eval_with(provider: &dyn Provider, bridge: &Bridge, questions: &Value, opts: &EvalOpts, mut checkpoint: impl FnMut(&Value)) -> Value {
     let paced = Paced { inner: provider, min_interval: Duration::from_secs_f64(60.0 / opts.rpm.max(0.1)), last: std::sync::Mutex::new(None) };
     let mut results = vec![];
     let qs: Vec<Value> = questions["questions"].as_array().cloned().unwrap_or_default().into_iter().filter(|q| opts.only.as_ref().map(|o| o.iter().any(|id| q["id"].as_str().unwrap_or("").starts_with(id.as_str()))).unwrap_or(true)).take(opts.limit.unwrap_or(usize::MAX)).collect();
@@ -322,7 +328,17 @@ pub async fn run_eval(provider: &dyn Provider, bridge: &Bridge, questions: &Valu
             r.latency_s,
             r.provider_error.as_ref().map(|e| format!(" PROVIDER_ERROR: {e}")).unwrap_or_default()
         );
+        let quota = r.provider_error.as_deref().map(|e| e.starts_with(crate::provider::QUOTA_EXHAUSTED)).unwrap_or(false);
+        if quota {
+            // the failed question is not the model's fault: don't score it
+            let skipped: Vec<String> = qs[i..].iter().map(|q| q["id"].as_str().unwrap_or("").to_string()).collect();
+            eprintln!("配额用尽，停止评测；未运行 {} 题：{}", skipped.len(), skipped.join(", "));
+            let mut rep = summarize(provider, &results, t_all.elapsed().as_secs_f64(), opts);
+            rep["aborted"] = json!({"reason": r.provider_error, "not_run": skipped});
+            return rep;
+        }
         results.push(r);
+        checkpoint(&summarize(provider, &results, t_all.elapsed().as_secs_f64(), opts));
     }
     summarize(provider, &results, t_all.elapsed().as_secs_f64(), opts)
 }
@@ -355,6 +371,7 @@ pub fn summarize(provider: &dyn Provider, results: &[QResult], wall_s: f64, opts
         "spec": aeoi_core::SPEC,
         "reference_values": "direct AEOI operator calls (python-control/scipy-verified implementation; not MATLAB)",
         "settings": {"rpm": opts.rpm, "max_steps": opts.max_steps, "temperature": 0.0},
+        "aborted": null,
         "summary": {
             "questions": results.len(),
             "tool_selection_accuracy": frac(&|r| r.tool_ok),

@@ -1,9 +1,9 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.3-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.3.1-draft
 
-> 状态：Draft v0.3 · 2026-11-21 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.3.1 · 2026-11-22 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
 > 定位：叠加在 MCP 之上的"工程计算语义层"。MCP 负责传输与工具调用；AEOI 规定工程算子如何描述自己、如何表达带物理意义的输入输出、如何报告结果可信度、如何报错、如何复现、如何证明与参考实现一致。
 > 冻结条件：用 5–10 个真实控制算子跑通后再升级为 v1.0。v0.x 期间任何条款都可能被修改。
-> v0.3 相对 v0.2 的改动及原因见第 13 章 Changelog（v0.2 相对 v0.1 的改动也在其中）。v0.3 的 Rust 参考实现（第 11 章）共 12 个控制算子 + MCP stdio server，全部测试通过：v0.2 的 `control.lti.bode`、`control.lti.step`、`control.design.lqr`，以及 v0.3 新增的 `control.lti.convert`、`control.lti.poles_zeros`、`control.analysis.ctrb_obsv`、`control.analysis.margin`、`control.lti.c2d`、`control.lti.impulse`、`control.math.lyap`、`control.design.place`、`control.design.dlqr`。
+> v0.3.1 相对 v0.3 的改动（面向 LLM 函数调用的可消费性，线协议标识仍为 `aeoi/0.3`，向后兼容）及 v0.3、v0.2 的改动见第 13 章 Changelog。v0.3.1 新增 LLM 端到端测试台 `aeoi-web`（8.4、11 章）。v0.3 的 Rust 参考实现（第 11 章）共 12 个控制算子 + MCP stdio server，全部测试通过：v0.2 的 `control.lti.bode`、`control.lti.step`、`control.design.lqr`，以及 v0.3 新增的 `control.lti.convert`、`control.lti.poles_zeros`、`control.analysis.ctrb_obsv`、`control.analysis.margin`、`control.lti.c2d`、`control.lti.impulse`、`control.math.lyap`、`control.design.place`、`control.design.dlqr`。
 
 ## 0. 约定
 
@@ -231,6 +231,17 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
 - O-2 互相矛盾的选项组合 MUST 返回 `E.VALIDATION.OPTION_CONFLICT`，remediation 给出去掉冲突项的 patch（例：`prewarp_frequency` 只对 `tustin` 有意义）。MUST NOT 静默忽略选项。
 - O-3 方程约定 MUST 写清符号：`lyap` 连续为 A X + X Aᵀ + Q = 0，离散为 A X Aᵀ − X + Q = 0（= python-control `lyap(A, Q)` / `dlyap(A, Q)`，= scipy `solve_continuous_lyapunov(A, −Q)` / `solve_discrete_lyapunov(A, Q)`）；`dlqr` 的 u = −Kx，代价 Σ xᵀQx + uᵀRu + 2xᵀNu。
 
+### 3.11 面向 LLM 函数调用的可消费性（v0.3.1 新增）
+
+用云端 LLM（Gemini 函数调用）端到端调用 12 个算子时发现：规范里对"人/程序"足够的信息，模型不一定看得到——函数调用接口只接受 JSON Schema 的子集，未知关键字会被丢弃；`oneOf` 校验失败时 jsonschema 只给出"不符合任何分支"，模型无从修正。以下条款为规范性要求（M = model-facing）：
+
+- M-1 input schema 的每个顶层属性 MUST 有 `description`，写明物理含义、维数（如 `[n,m]`）、单位与默认值；枚举 SHOULD 逐值说明含义（如 `c2d.method`、`lyap.type` 写出方程）。参考实现由 `write_manifests.py` 统一补齐。
+- M-2 只存在于扩展关键字中的约束（`x-aeoi-shape-constraints` 等）MUST 同时写进 description，因为函数调用子集会丢弃未知关键字。
+- M-3 `E.VALIDATION.SCHEMA` 的 `details.violations` MUST 是叶子级违规：`oneOf` 失败时 MUST 按判别字段（`kind`、`mode` 等字符串常量）选出调用方意图的分支，判别字段缺失或取值无效时直接报告该字段及可选值；无判别字段时取违规最少的分支递归诊断。MUST NOT 只返回"is not valid under any of the schemas listed in the 'oneOf' keyword"。`message` SHOULD 带上第一条违规原文。
+- M-4 无损的表示修正 SHOULD 作为 `modify_input` remediation 给出，`confidence: "high"`、`requires_user_confirmation: false`：参考实现把矩形嵌套数组 `[[…],[…]]` 改写为 row-major `DenseMatrix`（数值不变，补丁 id `nested_array_to_dense`）。有歧义的修正（一维数组是行向量还是列向量）MUST NOT 自动给补丁。
+- M-5 有物理含义且无法安全默认的输入（采样周期 `ts`、频率单位 `rad/s`/`Hz`）MUST 是必填字段，缺失时只给 `ask_user`，MUST NOT 由算子或绑定层代填。
+- M-6 绑定层把算子暴露给 LLM 时 MAY 收窄输入面（只保留 `DenseMatrix` 编码，隐藏 `exec`、`time_unit`、`*_names` 等宿主侧或可选字段），MUST 公开有损映射清单（8.4），算子 MUST 仍按完整 input schema 校验。回传给模型的结果 MAY 对长数组抽样并用 `_downsampled` 标注原始形状与保留的下标；展示给用户的信封 MUST 保持原样（B-1）。
+
 ## 4. 结果信封与可信度元数据
 
 ### 4.1 规则
@@ -425,7 +436,7 @@ pub trait Operator: Send + Sync + 'static {
 
 调用管线（`DynOperator` blanket impl，算子只实现上面 4 个方法）：
 
-1. JSON Schema 校验（`jsonschema` crate，Draft 2020-12）→ 失败返回 `E.VALIDATION.SCHEMA`，`details.violations` 带最多 20 条 JSON Pointer
+1. JSON Schema 校验（`jsonschema` crate，Draft 2020-12）→ 失败返回 `E.VALIDATION.SCHEMA`，`details.violations` 带最多 20 条 JSON Pointer；`oneOf` 失败按 M-3 递归诊断到叶子，可无损修正的嵌套数组矩阵附 M-4 补丁（v0.3.1）
 2. `validate()`（在 `catch_unwind` 内）→ 解析 + 语义校验 + 规模上限，得到 `Input` 与 warnings
 3. 计算 `input_hash`（3.7）
 4. `dry_run` 时返回 `estimate()` 后停止
@@ -438,12 +449,47 @@ pub trait Operator: Send + Sync + 'static {
 | 绑定 | crate | 状态 |
 |---|---|---|
 | MCP server | `aeoi-mcp` | **已实现**（stdio，换行分隔 JSON-RPC 2.0；手写最小实现，不依赖 `rmcp`，以保持依赖少、兼容 Rust 1.85）。Streamable HTTP 未实现 |
+| LLM 函数调用 | `aeoi-web` | **已实现（v0.3.1）**：Gemini（必选）与 OpenAI 兼容 provider；进程内调用；网页测试台 + 评测 CLI（8.4） |
 | CLI | `aeoi-call`（在 `aeoi-control` 中） | **已实现**：`aeoi-call <op-id|tool_name> <request.json|-> [--data-root DIR]` |
 | Python | `aeoi-py`（PyO3 + maturin） | 计划：`aeoi.call(id, args) -> dict`；NumPy 便捷层 MUST 遵守内存序规则；MUST 释放 GIL |
 | C ABI | `aeoi-capi`（cdylib） | 计划：`aeoi_call(const char* id, const char* json_args, char** json_envelope)` + `aeoi_free` |
 
 - B-1 所有绑定 MUST 返回同一信封结构；绑定层 MUST NOT 自行改写数值或错误码。
 - B-2 Python 绑定 MUST 释放 GIL 执行长计算。
+
+### 8.4 LLM 函数调用绑定（`aeoi-web`，v0.3.1 新增）
+
+`aeoi-web` 是端到端测试台：云端 LLM 通过函数调用使用 12 个算子，网页显示对话与逐步轨迹，CLI 跑评测。
+
+**调用方式**：进程内调用 `aeoi_control::registry()` 的 `DynOperator::call`。这与 `aeoi-mcp` 是同一条管线（schema 校验 → validate → execute → 信封），信封逐字节相同；不经过 stdio 子进程与 JSON-RPC 帧，Windows 上部署更简单，延迟就是算子本身的耗时（亚毫秒到毫秒）。MCP 路径已由 `aeoi-mcp` 的端到端测试覆盖。
+
+**函数声明**：`name` = `manifest.mcp.tool_name`；`description` = `[id] description` + 前提条件 + 不适用范围（+ "仅 SISO"）；`parameters` 由 input schema 两步生成：
+
+1. 收窄与精简（所有 provider，M-6）：`Matrix` 只保留 `DenseMatrix` 分支并固定 `dtype: "f64"`、`shape` 为二维；去掉 `exec`、`time_unit`、`state_names`/`input_names`/`output_names`、`structure`；`x-aeoi-shape-constraints` 并入 description（M-2）。OpenAI 兼容 provider 直接使用这一步的 JSON Schema。
+2. Gemini OpenAPI 子集转换（`schema_conv::to_gemini`）：
+
+| JSON Schema | Gemini `parameters` | 是否有损 |
+|---|---|---|
+| `type`、`description`、`properties`、`required`、`items`、`minItems`/`maxItems`、`minimum`/`maximum`、`minLength`/`maxLength`、`pattern` | 原样 | 否 |
+| 字符串 `enum` / 字符串 `const` | `type: string` + `enum`（`const` 变为单值 enum） | 否 |
+| 非字符串 `const`/`enum` | 写进 description（"必须等于 …"） | 是 |
+| `type: [T, "null"]` | `type: T` + `nullable: true` | 否 |
+| `oneOf` | `anyOf`（判别字段的单值 enum 仍能区分分支） | 是（互斥性） |
+| `prefixItems`（复数 `[re, im]`） | 同构 `items` + `minItems = maxItems = 2` | 是（逐位类型） |
+| `exclusiveMinimum`/`exclusiveMaximum` | `minimum`/`maximum` + description "必须 > x" | 是（边界值本身） |
+| `default` | 写进 description（"默认 …"） | 是 |
+| `additionalProperties: false` | 不表达 | 是（由算子 schema 兜底） |
+| 只有 `additionalProperties` 的自由映射 | 整个字段对模型隐藏 | 是 |
+| 数/复数/布尔/非有限值的标量联合 | 收窄为 `number` | 是 |
+| 其他关键字（`$schema`、`title`、扩展关键字） | 丢弃 | 是 |
+
+12 个工具的有损映射次数可用 `aeoi-web tools --losses` 打印（当前：`additionalProperties:false` 46 处、`oneOf→anyOf` 27 处、`default` 19 处、`prefixItems` 17 处、`exclusiveMinimum` 15 处）。所有声明合计约 38 KB JSON；Gemini 2.5 Flash 上每次请求约 1.7 万输入 token，其中大部分是工具声明。
+
+**Agent 循环**：系统提示词（`rust/aeoi-web/src/system_prompt.zh.md`）用中文说明 row-major、tf 降幂、`ts` 含义、`rad/s` 与 `Hz`、`"Inf"`/`null`、remediation 的使用规则与工具选择提示。循环为"模型 → 工具调用（可并行多个）→ 信封 → 模型"，最多 `max_steps` 个模型回合（默认 8）。错误信封（含 `agent_hint` 与 `remediation`）原样回传；Gemini 的 `thoughtSignature` 按原样回传；超过 120 个数的数组按 M-6 抽样。"自我纠错"= 某工具报错后同一工具随后调用成功。
+
+**评测**：`eval/questions.zh.json` 29 道中文题，覆盖 12 个算子，其中 7 道是陷阱题（MATLAB 列优先数据 ×2、缺采样周期、Hz 与 rad/s、离散系统误当连续、不可镇定系统）。期望值不手抄：评测时用题目里的 `reference.args` 直接调用算子得到（算子已与 python-control/scipy 对照，见第 11 章；**不是 MATLAB**）。四个指标：工具选择（期望工具出现在调用中；澄清题要求不带猜测地调用）、参数正确性（模型最后一次成功调用的关键输出与参考调用一致）、最终回答（回答文本中能找到期望数值，默认相对 2%；澄清题要求提出问题；报错题要求解释原因）、自我纠错次数。单元测试另外验证每道陷阱题的"典型错误"确实会得到不同的数值。
+
+{{EVAL_RESULTS}}
 
 ## 9. 治理
 
@@ -1068,10 +1114,16 @@ rust/                         cargo workspace（resolver 3，Rust 1.85，纯 Rus
 │   ├── src/convert.rs poles_zeros.rs ctrb_obsv.rs margin.rs c2d.rs
 │   │       lyap.rs place.rs dlqr.rs                                 v0.3
 │   └── tests/parity.rs parity_b2.rs examples.rs analytic_b2.rs
-└── aeoi-mcp/                 MCP stdio server + tests/e2e.rs
+├── aeoi-mcp/                 MCP stdio server + tests/e2e.rs
+└── aeoi-web/                 （v0.3.1）LLM 端到端测试台：axum 网页 + 评测 CLI（8.4）
+    ├── src/provider.rs       Provider trait；Gemini（generateContent + 函数调用）、OpenAI 兼容（OpenRouter/Groq/Ollama/OpenAI）、Mock
+    ├── src/schema_conv.rs    input schema → LLM 函数参数（收窄 + Gemini OpenAPI 子集），记录有损映射
+    ├── src/tools.rs agent.rs 工具桥（进程内调用）与 Agent 循环；system_prompt.zh.md
+    ├── src/eval.rs           评测（eval/questions.zh.json，期望值来自直接调用算子）
+    └── static/               index.html、app.js、style.css（编译期嵌入；Plotly 走 CDN）
 ```
 
-依赖：nalgebra 0.33、serde_json（`preserve_order`、`float_roundtrip`）、jsonschema 0.18（`draft202012`）、sha2、base64。schema 文件在编译期通过 `include_str!` 嵌入，与 `schemas/` 目录同源。
+依赖：nalgebra 0.33、serde_json（`preserve_order`、`float_roundtrip`）、jsonschema 0.18（`draft202012`）、sha2、base64。`aeoi-web` 另用 axum 0.8、tokio、reqwest 0.12（rustls + ring，无 OpenSSL/aws-lc，Windows MSVC 可直接构建）。schema 文件在编译期通过 `include_str!` 嵌入，与 `schemas/` 目录同源。
 
 ### 11.2 运行
 
@@ -1090,13 +1142,16 @@ python3 gen_golden_pycontrol_b2.py        # v0.3 算子的 golden（seed 2026112
 python3 make_examples_b2.py               # v0.3 算子的示例请求、python-control 参考值与 parity.yaml
 python3 build_spec.py                     # spec-src.md → spec-v0.3.md（内联示例文件）
 python3 validate_examples.py              # 独立的 Python jsonschema 校验
+cd rust && cargo run --release -p aeoi-web                              # 网页测试台 http://127.0.0.1:8787/（需 GEMINI_API_KEY）
+cargo run --release -p aeoi-web -- eval --model gemini:gemini-2.5-flash  # LLM 评测，写 reports/eval-<model>.json
+cargo run --release -p aeoi-web -- tools --losses                       # 函数声明有损映射汇总
 ```
 
 MCP 客户端配置示例：`{"command": "/path/to/aeoi-mcp", "args": ["--data-root", "/path/to/shared"]}`。
 
-### 11.3 测试结果（2026-11-21，x86_64-linux，cpu_features avx/avx2/fma/avx512f）
+### 11.3 测试结果（2026-11-22，x86_64-linux，cpu_features avx/avx2/fma/avx512f）
 
-全部通过（`cargo test --release`）：aeoi-core 单元测试 22 个，aeoi-control 单元测试 12 个，v0.3 解析解测试 9 个（`analytic_b2.rs`：非方系统零点、Tustin 标量闭式解、离散 SM 的 Nyquist 端点、标量 DLQR = 黄金比例等），示例测试 5 个（12 个算子的示例请求 vs python-control/scipy 参考值与已发布响应的 `output_hash`），parity 测试 2 个（v0.2：264 例；v0.3：353 例），MCP 端到端测试 1 个（12 个工具，每个算子的成功与错误请求）。独立 Python 校验器（`validate_examples.py`）136 项 + 364 个 golden 请求全部通过。
+全部通过（`cargo test --release`）：aeoi-core 单元测试 22 个，aeoi-control 单元测试 12 个，v0.3 解析解测试 9 个（`analytic_b2.rs`：非方系统零点、Tustin 标量闭式解、离散 SM 的 Nyquist 端点、标量 DLQR = 黄金比例等），示例测试 5 个（12 个算子的示例请求 vs python-control/scipy 参考值与已发布响应的 `output_hash`），parity 测试 2 个（v0.2：264 例；v0.3：353 例），MCP 端到端测试 1 个（12 个工具，每个算子的成功与错误请求），aeoi-web 测试 19 个（v0.3.1：schema 转换、工具桥、Mock provider 驱动的 Agent 循环与评测打分、陷阱题判别性、HTTP 端点）。独立 Python 校验器（`validate_examples.py`）136 项 + 364 个 golden 请求全部通过。
 
 v0.2 算子的 parity（参考 = python-control 0.10.2 / scipy 1.18.1，**不是 MATLAB**）：
 
@@ -1163,6 +1218,13 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
   - `lyap` 的 error_estimate 在 A 非正规时可能偏乐观；规模上限由 manifest `limits` 控制，未做大规模（n > 100）测试。
   - `ctrb_obsv` 的 Krylov 矩阵在 n 较大时本身病态，秩判定以 PBH 交叉检查兜底（`W.NUMERICAL.RANK_AMBIGUOUS`）。
   - nalgebra 0.33 的实 Schur QR 没有特殊移位，个别矩阵会不收敛（实现中遇到：`margin` 的偶多项式伴随矩阵导致死循环）；参考实现用带迭代上限与确定性回退的 `schur_robust` 规避，回退路径只在少数矩阵上被触发过。
+- **aeoi-web（v0.3.1）的限制**：
+  - 评测只覆盖 29 道题；回答正确性用"文本中出现期望数值（相对 2%）"判定，可能把恰好出现的数字算作正确，也可能漏判用分数或根式表达的正确回答。
+  - Gemini 免费额度很小（`gemini-2.5-flash` 每天 20 次请求），每题至少 2 次请求，一个模型一天跑不完全部题；评测遇到每日配额用尽时停止并在报告 `aborted` 中列出未运行的题。
+  - 工具声明约 1.7 万 token/请求；未做按问题筛选工具。
+  - OpenAI 兼容 provider 只做了 Mock 层面的请求/响应格式测试，没有用真实 OpenRouter/Groq/Ollama 端点跑过。
+  - 模型文本不流式输出；会话只保存在内存；Plotly 从 CDN 加载，离线时不画图。
+  - Windows 上未实际构建运行（依赖均为纯 Rust 或跨平台 crate，但没有在 Windows 机器上验证）。
 - 只在一台 x86_64-linux 机器上测试，跨平台（aarch64、无 AVX-512）的 `platform_bitwise` 行为未验证。
 - b64/ref 编码只测试了 f64；c128/i64/bool 的二进制解码路径已实现但没有测试。`reject` 稀疏策略已定义但算子都未使用。
 
@@ -1189,10 +1251,25 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 2. 为 `lqr` 实现基于平衡 + 有序 Schur（或广义特征值）的求解路径，修复病态 R 的精度差距
 3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；剩余：`lsim`、`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
-5. Agent 回归评测：同一组工程任务，对比"Agent + AEOI 工具"与"Agent + 裸 scipy"的正确率与自我修复率
-6. 根据以上反馈修订，冻结 v1.0
+5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；下一步扩充题库、加入"Agent + 裸 scipy"对照组，并用多个模型（含本地 Ollama）比较
+6. 用 Tauri 打包 `aeoi-web` 为桌面应用（复用 axum 服务与静态页面）
+7. 根据以上反馈修订，冻结 v1.0
 
 ## 13. Changelog
+
+### v0.3.1-draft（2026-11-22）
+
+起因：新增 LLM 端到端测试台 `aeoi-web`（8.4），用 Gemini 函数调用实际驱动 12 个算子后，发现规范里有几处对 LLM 不够清楚。线协议标识保持 `aeoi/0.3`，所有改动向后兼容（只增加描述、改进错误详情）；已发布示例的成功响应与 `output_hash` 不变。
+
+| # | 改动 | 原因 |
+|---|---|---|
+| 1 | 新增 3.11 M-1：input schema 每个顶层属性 MUST 有 description（含义、维数、单位、默认值、枚举逐值说明）；12 个算子的 input schema 已补齐（如 `lqr.A` "状态矩阵 A，[n,n]"、`c2d.ts` "用户未给出时必须询问"、`lyap.type` 写出方程） | v0.3 的 `A`、`B`、`Q`、`R`、`system`、`method`、`type` 等没有描述；模型只能从字段名猜维数与方程约定 |
+| 2 | M-2：`x-aeoi-shape-constraints` 等扩展关键字 MUST 同时写进 description | Gemini 的函数参数只接受 OpenAPI 子集，扩展关键字被丢弃，维数约束对模型不可见 |
+| 3 | M-3：`E.VALIDATION.SCHEMA` 的 violations MUST 是叶子级；`oneOf` 失败按判别字段（`kind`/`mode`）或最少违规分支递归诊断；`message` 带首条违规（参考实现 `aeoi_core::schema::diagnose`） | 模型把 tf 的 `ts` 漏掉、把矩阵写成嵌套数组时，原错误只有"is not valid under any of the schemas listed in the 'oneOf' keyword"并附上整段输入，模型无从修正 |
+| 4 | M-4：嵌套数组矩阵 → row-major DenseMatrix 的无损补丁（`modify_input`，`requires_user_confirmation: false`）；一维数组不自动补丁 | 嵌套数组是 LLM 最常见的矩阵写法；补丁可直接应用、数值不变；向量方向有歧义，不能代填 |
+| 5 | M-5：有物理含义且无法安全默认的输入（`ts`、频率单位）MUST 必填，缺失时只给 `ask_user` | 评测中的"缺采样周期"陷阱：算子或绑定层若代填默认值，会把猜测包装成结果 |
+| 6 | M-6 与 8.4：LLM 绑定层可收窄输入面（DenseMatrix only、隐藏 exec 等），MUST 公开有损映射；回传模型的长数组可抽样并标注 `_downsampled`，用户可见信封不变 | 给出 Gemini OpenAPI 子集的完整映射表；控制 token（上千点的时间响应原样回传会占用数千 token） |
+| 7 | 8.2 管线第 1 步、8.3 绑定表、第 11 章（结构、运行、测试、限制）、12.2 下一步（评测、Tauri）更新 | 反映 `aeoi-web` 与上述改动 |
 
 ### v0.3-draft（2026-11-21）
 
@@ -1281,13 +1358,16 @@ ai-operator-spec/
 ├── golden/python-control/<op>/<ver>/<sha256>.json + INDEX.json   264（0.2.0）+ 353（0.3.0）个 python-control 参考用例（NOT MATLAB）
 ├── reports/parity-python-control.json / parity-python-control-b2.json   parity 测试报告（cargo test 生成）
 ├── reports/mcp-session.jsonl        脚本化 MCP 会话记录（12 个工具）
-├── rust/                            cargo workspace：aeoi-core、aeoi-control、aeoi-mcp（第 11 章）
+├── rust/                            cargo workspace：aeoi-core、aeoi-control、aeoi-mcp、aeoi-web（第 11 章、8.4）
+├── eval/questions.zh.json + gen_questions.py   LLM 评测题库（29 题）
+├── reports/eval-<model>.json         LLM 评测报告（aeoi-web eval 生成）
 ├── matlab/gen_golden_bode.m         MATLAB golden 生成脚本（已修正内存序；未在 MATLAB 中运行）
 ├── write_manifests.py               examples/*/manifest 与 schema 的源
 ├── gen_golden_pycontrol.py / gen_golden_pycontrol_b2.py   python-control golden 生成器（v0.2 / v0.3 算子）
 ├── make_examples_b2.py              v0.3 算子的示例请求、参考值与 parity.yaml
 ├── regen_examples.py                用 Rust 输出生成示例响应
 ├── build_spec.py                    spec-src.md → spec-v0.3.md
+├── eval/gen_questions.py            生成 eval/questions.zh.json（LLM 评测题库）
 ├── validate_examples.py             独立 Python jsonschema 校验
 ├── mcp_session_demo.py              脚本化 MCP 会话
 ├── compute_examples.py / computed_values.json   v0.1 的 python-control 计算（examples 测试仍用其作对照）

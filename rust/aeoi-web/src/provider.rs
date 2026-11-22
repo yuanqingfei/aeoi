@@ -45,6 +45,9 @@ pub struct ChatResponse {
     pub retries: u32,
 }
 
+/// Prefix of provider errors that mean "no point retrying today" (e.g. Gemini free-tier requests/day).
+pub const QUOTA_EXHAUSTED: &str = "QUOTA_EXHAUSTED";
+
 pub type BoxFut<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
 pub trait Provider: Send + Sync {
@@ -106,9 +109,17 @@ async fn post_json(client: &reqwest::Client, url: &str, headers: &[(&str, String
                     let msg = parsed["error"]["message"].as_str().map(|s| s.to_string()).unwrap_or_else(|| parsed.to_string().chars().take(400).collect());
                     return Err(format!("HTTP {}: {}", st.map(|s| s.as_u16().to_string()).unwrap_or("-".into()), msg));
                 }
+                // a daily quota (or any server delay far beyond our cap) will not clear by retrying
+                let sd = server_delay(&parsed, retry_after.as_deref());
+                let per_day = parsed.to_string().contains("PerDay");
+                if st.map(|s| s.as_u16()) == Some(429) && (per_day || sd.map(|d| d > policy.max_delay * 3).unwrap_or(false)) {
+                    let msg: String = parsed["error"]["message"].as_str().unwrap_or("").lines().filter(|l| l.contains("Quota exceeded") || l.contains("retry in")).collect::<Vec<_>>().join(" ");
+                    return Err(format!("{QUOTA_EXHAUSTED}: {msg}"));
+                }
                 let backoff = policy.base_delay.mul_f64(2f64.powi(attempt as i32)).min(policy.max_delay);
-                let wait = server_delay(&parsed, retry_after.as_deref()).map(|d| d.max(backoff).min(policy.max_delay)).unwrap_or(backoff);
-                eprintln!("[provider] HTTP {:?}, retry {}/{} in {:.1}s", st.map(|s| s.as_u16()), attempt + 1, policy.max_retries, wait.as_secs_f64());
+                let wait = sd.map(|d| d.max(backoff).min(policy.max_delay)).unwrap_or(backoff);
+                let why: String = parsed["error"]["message"].as_str().unwrap_or("").chars().take(160).collect();
+                eprintln!("[provider] HTTP {:?} {why} — retry {}/{} in {:.1}s", st.map(|s| s.as_u16()), attempt + 1, policy.max_retries, wait.as_secs_f64());
                 tokio::time::sleep(wait).await;
                 attempt += 1;
             }

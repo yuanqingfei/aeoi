@@ -93,12 +93,13 @@ async fn main() {
                 limit: flag(&args, "--limit").and_then(|s| s.parse().ok()),
             };
             let b = Bridge::new();
-            let report = eval::run_eval(p.as_ref(), &b, &qs, &opts).await;
             let out = flag(&args, "--out").map(PathBuf::from).unwrap_or_else(|| reports_dir().join(format!("eval-{}.json", sanitize(&model.replace(':', "_")))));
             if let Some(d) = out.parent() {
                 let _ = std::fs::create_dir_all(d);
             }
-            std::fs::write(&out, serde_json::to_string_pretty(&report).unwrap() + "\n").expect("write report");
+            let write = |r: &Value| std::fs::write(&out, serde_json::to_string_pretty(r).unwrap() + "\n").expect("write report");
+            let report = eval::run_eval_with(p.as_ref(), &b, &qs, &opts, |partial| write(partial)).await;
+            write(&report);
             eprintln!("\n{}", serde_json::to_string_pretty(&report["summary"]).unwrap());
             eprintln!("报告已写入 {}", out.display());
         }
