@@ -1,0 +1,111 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.design.dlqr",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-dlqr-001",
+  "result": {
+    "K": {
+      "dtype": "f64",
+      "shape": [
+        1,
+        2
+      ],
+      "data": [
+        0.9170745631140953,
+        1.6355961850466318
+      ]
+    },
+    "S": {
+      "dtype": "f64",
+      "shape": [
+        2,
+        2
+      ],
+      "data": [
+        17.834931322188975,
+        10.012492197250403,
+        10.012492197250403,
+        17.85658646032884
+      ]
+    },
+    "closed_loop_poles": {
+      "dtype": "c128",
+      "shape": [
+        2
+      ],
+      "data": [
+        [
+          0.9159275043398831,
+          0.045853692377174946
+        ],
+        [
+          0.9159275043398831,
+          -0.045853692377174946
+        ]
+      ]
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": true,
+      "converged": true,
+      "iterations": 9,
+      "criterion": "SDA：‖H_{k+1}−H_k‖_F/‖H_{k+1}‖_F ≤ 1e-15 或停滞",
+      "final_value": 0.0,
+      "newton_hewer_steps": 0,
+      "sda_residual_fro": 2.0411201962889075e-15
+    },
+    "residual": {
+      "dare_abs_fro": 2.0411201962889075e-15,
+      "dare_rel": 7.053279481530721e-17,
+      "dare_rel_scaled": 1.9366556644389042e-17,
+      "definition": "dare_rel = ‖AᵀSA − S − (AᵀSB+N)(R+BᵀSB)⁻¹(BᵀSA+Nᵀ) + Q‖_F / ‖S‖_F；dare_rel_scaled 分母为 ‖Q‖+‖S‖(1+‖A‖²)+(‖A‖‖S‖‖B‖+‖N‖)²/‖R‖"
+    },
+    "condition": {
+      "cond_R": 1.0,
+      "cond_S": 3.5564061396358535,
+      "pbh_min_sv_rel_unstable_modes": 0.06862231995825939,
+      "closed_loop_spectral_radius": 0.9170745631140944,
+      "unit_circle_unobservable_pbh_min": 0.4993761694389223,
+      "sep_closed_loop_eig": 0.1589742456890928
+    },
+    "error_estimate": {
+      "S_abs_fro": 1.283931360983302e-14,
+      "S_rel": 4.436743480654644e-16,
+      "basis": "启发式：‖Res‖_F / min|λ_iλ̄_j − 1|（λ ∈ eig(A_cl)），A_cl 非正规时偏乐观；非严格上界"
+    },
+    "checks": {
+      "S_symmetric": true,
+      "S_psd": true,
+      "closed_loop_stable": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:63b84365b05506fa48c549a624cd87063f8141c372ff2032a82a610296214af1",
+    "output_hash": "sha256:2ba88e6c6340c1954eba51085c802ae5b720418c9edb3f5af707dd573a2aade3",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.20335899999999998
+  }
+}

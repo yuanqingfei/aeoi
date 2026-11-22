@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.design.dlqr/0.3.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "A",
+    "B",
+    "Q",
+    "R"
+  ],
+  "properties": {
+    "A": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix"
+    },
+    "B": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix"
+    },
+    "Q": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix"
+    },
+    "R": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix"
+    },
+    "N": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix"
+    },
+    "symmetry_tolerance": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "default": 1e-10,
+      "description": "相对容差 ‖X−Xᵀ‖_F ≤ tol·‖X‖_F；超出即 E.VALIDATION.NOT_SYMMETRIC，范围内（但非精确对称）对称化并给 W.VALIDATION.SYMMETRIZED"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+    }
+  },
+  "x-aeoi-shape-constraints": [
+    "A: [n,n]",
+    "B: [n,m]",
+    "Q: [n,n]",
+    "R: [m,m]",
+    "N: [n,m]，缺省为 0"
+  ]
+}

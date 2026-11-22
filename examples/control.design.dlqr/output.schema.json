@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.design.dlqr/0.3.0/output",
+  "type": "object",
+  "required": [
+    "K",
+    "S",
+    "closed_loop_poles"
+  ],
+  "properties": {
+    "K": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "description": "[m,n]，u=−Kx"
+    },
+    "S": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "description": "[n,n] 对称半正定"
+    },
+    "closed_loop_poles": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "description": "c128 向量 [n]，eig(A−BK)，按实部升序、虚部降序；全部 |λ|<1"
+    }
+  }
+}

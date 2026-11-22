@@ -1,0 +1,146 @@
+{
+  "spec": "aeoi/0.3",
+  "id": "control.design.dlqr",
+  "version": "0.3.0",
+  "title": "Discrete-time LQR",
+  "description": "求解离散代数 Riccati 方程 (DARE)，返回最优状态反馈增益 K（u_k=−Kx_k）、Riccati 解 S 与闭环极点，使 J=Σ(xᵀQx+uᵀRu+2xᵀNu) 最小。",
+  "category": "design",
+  "tags": [
+    "optimal-control",
+    "riccati",
+    "lti",
+    "discrete-time"
+  ],
+  "applicability": {
+    "preconditions": [
+      "R 对称正定",
+      "Q 对称；[[Q,N],[Nᵀ,R]] 对称半正定",
+      "(A,B) 可镇定（|λ| ≥ 1 的模态可控）",
+      "辛矩阵束在单位圆上无特征值（等价于 (Q−NR⁻¹Nᵀ, A−BR⁻¹Nᵀ) 在单位圆上无不可观模态）"
+    ],
+    "not_for": [
+      "连续系统（用 control.design.lqr）",
+      "有约束的 MPC"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "消去交叉项（Ā=A−BR⁻¹Nᵀ，Q̄=Q−NR⁻¹Nᵀ，G=BR⁻¹Bᵀ）后用结构保持倍增算法 SDA：A_{k+1}=A_k(I+G_kH_k)⁻¹A_k，G_{k+1}=G_k+A_k(I+G_kH_k)⁻¹G_kA_kᵀ，H_{k+1}=H_k+A_kᵀH_k(I+G_kH_k)⁻¹A_k，H_0=Q̄，H_k→S（二次收敛）；随后至多 3 步 Newton–Hewer 修正（闭环离散 Lyapunov 方程用 Bartels–Stewart 求解），残差不降即停。K=(R+BᵀSB)⁻¹(BᵀSA+Nᵀ)",
+    "references": [
+      {
+        "type": "paper",
+        "cite": "E. K.-W. Chu, H.-Y. Fan, W.-W. Lin, A structure-preserving doubling algorithm for continuous-time algebraic Riccati equations, Linear Algebra Appl. 396, 2005",
+        "doi": "10.1016/j.laa.2004.10.010"
+      },
+      {
+        "type": "paper",
+        "cite": "G. A. Hewer, An iterative technique for the computation of the steady state gains for the discrete optimal regulator, IEEE TAC 16(4), 1971",
+        "doi": "10.1109/TAC.1971.1099755"
+      },
+      {
+        "type": "textbook",
+        "cite": "P. Lancaster, L. Rodman, Algebraic Riccati Equations, Oxford 1995"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献；MATLAB 仅作为黑盒参考（公开 API），v0.2 的 parity 参考为 python-control/scipy"
+    }
+  },
+  "backend": {
+    "library": "aeoi-control (pure Rust) + nalgebra 0.33",
+    "routine": "dlqr::solve_dare (SDA + Newton–Hewer)",
+    "version": "0.3.0",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T2",
+  "sparse_support": {
+    "/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/Q": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/R": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/N": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_states": 200,
+    "max_sda_iterations": 100
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/control.design.dlqr/0.3.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.NOT_SYMMETRIC",
+    "E.VALIDATION.SPARSE_STRUCTURE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.DOMAIN.R_NOT_POSITIVE_DEFINITE",
+    "E.DOMAIN.WEIGHT_NOT_PSD",
+    "E.DOMAIN.NOT_STABILIZABLE",
+    "E.DOMAIN.SYMPLECTIC_UNIT_CIRCLE_EIG",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.NUMERICAL.SINGULAR",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC"
+  ],
+  "warnings": [
+    "W.NUMERICAL.LARGE_RESIDUAL",
+    "W.NUMERICAL.NEAR_UNCONTROLLABLE",
+    "W.NUMERICAL.ILL_CONDITIONED",
+    "W.VALIDATION.SYMMETRIZED",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "control_design_dlqr",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.design.dlqr",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-dlqr-003-nonsym",
+  "result": {
+    "K": {
+      "dtype": "f64",
+      "shape": [
+        2,
+        3
+      ],
+      "data": [
+        0.23409234379340282,
+        0.9549531343093275,
+        0.01591767688970552,
+        0.6136030699803019,
+        0.018510547751412715,
+        0.06895095347450939
+      ]
+    },
+    "S": {
+      "dtype": "f64",
+      "shape": [
+        3,
+        3
+      ],
+      "data": [
+        5.109166002026939,
+        5.099451108857844,
+        -1.6655736726206352,
+        5.099451108857844,
+        9.89572344442712,
+        -2.372486804561948,
+        -1.6655736726206352,
+        -2.372486804561948,
+        3.8396282598951292
+      ]
+    },
+    "closed_loop_poles": {
+      "dtype": "c128",
+      "shape": [
+        3
+      ],
+      "data": [
+        [
+          0.1211958931427529,
+          0.0
+        ],
+        [
+          0.2874572061989327,
+          0.0
+        ],
+        [
+          0.45114271392879,
+          0.0
+        ]
+      ]
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": true,
+      "converged": true,
+      "iterations": 6,
+      "criterion": "SDA：‖H_{k+1}−H_k‖_F/‖H_{k+1}‖_F ≤ 1e-15 或停滞",
+      "final_value": 0.0,
+      "newton_hewer_steps": 0,
+      "sda_residual_fro": 5.3854400208818836e-15
+    },
+    "residual": {
+      "dare_abs_fro": 5.3854400208818836e-15,
+      "dare_rel": 3.7378513895170916e-16,
+      "dare_rel_scaled": 4.4987100820764616e-18,
+      "definition": "dare_rel = ‖AᵀSA − S − (AᵀSB+N)(R+BᵀSB)⁻¹(BᵀSA+Nᵀ) + Q‖_F / ‖S‖_F；dare_rel_scaled 分母为 ‖Q‖+‖S‖(1+‖A‖²)+(‖A‖‖S‖‖B‖+‖N‖)²/‖R‖"
+    },
+    "condition": {
+      "cond_R": 1.0,
+      "cond_S": 7.527957510570749,
+      "pbh_min_sv_rel_unstable_modes": null,
+      "closed_loop_spectral_radius": 0.45114271392879,
+      "unit_circle_unobservable_pbh_min": "Inf",
+      "sep_closed_loop_eig": 0.7964702516689659
+    },
+    "error_estimate": {
+      "S_abs_fro": 6.761633607277796e-15,
+      "S_rel": 4.69302071443924e-16,
+      "basis": "启发式：‖Res‖_F / min|λ_iλ̄_j − 1|（λ ∈ eig(A_cl)），A_cl 非正规时偏乐观；非严格上界"
+    },
+    "checks": {
+      "S_symmetric": true,
+      "S_psd": true,
+      "closed_loop_stable": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:b2b24fa4c1b698143ccb98cc0d83a4151e5106401d77ce87561f37823e6064f1",
+    "output_hash": "sha256:410ea071d18bc21ac20da624191c99db62f920e16e85303adea789ade936094a",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.19921899999999998
+  }
+}
