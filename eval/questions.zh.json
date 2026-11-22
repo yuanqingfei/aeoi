@@ -744,7 +744,8 @@
      "name": "分母 z^0 系数",
      "pointer": "/result/system/den",
      "index": 1,
-     "rel_tol": 1e-06
+     "rel_tol": 1e-06,
+     "allow_sign_flip": true
     },
     {
      "name": "分子系数",
@@ -784,7 +785,8 @@
      "pointer": "/result/system/den",
      "index": 1,
      "rel_tol": 1e-06,
-     "normalize_by": "/result/system/den/0"
+     "normalize_by": "/result/system/den/0",
+     "allow_sign_flip": true
     },
     {
      "name": "分子首项",

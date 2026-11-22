@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generates eval/questions.zh.json (the AEOI LLM eval set). Expected values are NOT stored here:
 the harness computes them by calling the operator directly with `reference.args`."""
-import json, math
+import json, math, os
 
 def M(rows):
     r = len(rows); c = len(rows[0])
@@ -122,5 +122,5 @@ q("bode-02-hz", "陷阱：Hz 与 rad/s", f"一阶低通滤波器 G(s) = {wc:.4f}
   [chk("幅值 dB", "/result/magnitude", at_w=wc), chk("相位 deg", "/result/phase", at_w=wc, allow_sign_flip=True)])
 
 json.dump({"version": 1, "notes": "期望值由 reference.args 直接调用算子得到（python-control 校验过的 AEOI 实现），不是手抄常数。", "questions": Q},
-          open("questions.zh.json", "w"), ensure_ascii=False, indent=1)
+          open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "questions.zh.json"), "w"), ensure_ascii=False, indent=1)
 print(len(Q), "questions")
