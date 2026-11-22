@@ -93,11 +93,76 @@ impl Lti {
     }
 }
 
+/// Deterministic Householder reflector H = I − 2vvᵀ/(vᵀv) used to perturb the QR iteration path.
+fn reflector(n: usize, t: usize) -> DMatrix<f64> {
+    let v = nalgebra::DVector::from_fn(n, |k, _| 1.0 + (((k * 7 + t * 13) % 17) as f64) / 17.0);
+    DMatrix::identity(n, n) - (&v * v.transpose()) * (2.0 / v.norm_squared())
+}
+
+/// Real Schur form A = Q T Qᵀ with a bounded number of QR iterations. nalgebra's implicit double-shift
+/// QR has no exceptional shifts and can cycle forever (e.g. companion matrices of even polynomials);
+/// on non-convergence retry on deterministic similarity transforms / shifts (spec M-7: still deterministic).
+/// The first attempt is bit-identical to nalgebra's `complex_eigenvalues`.
+pub fn schur_robust(a: &DMatrix<f64>) -> Option<(DMatrix<f64>, DMatrix<f64>)> {
+    use nalgebra::linalg::Schur;
+    let n = a.nrows();
+    let maxit = 100 * n.max(10);
+    if let Some(s) = Schur::try_new(a.clone(), f64::EPSILON, maxit) {
+        return Some(s.unpack());
+    }
+    let scale = a.amax().max(f64::MIN_POSITIVE);
+    for t in 1..=6 {
+        let h = reflector(n, t);
+        let sigma = if t % 2 == 0 { 0.0 } else { scale * (0.1 + 0.07 * t as f64) };
+        let b = &h * a * &h + DMatrix::<f64>::identity(n, n) * sigma;
+        if let Some(s) = Schur::try_new(b, f64::EPSILON, maxit) {
+            let (q, tt) = s.unpack();
+            return Some((&h * q, tt - DMatrix::<f64>::identity(n, n) * sigma));
+        }
+    }
+    None
+}
+
+/// Eigenvalues of a real matrix (complex pairs exactly conjugate). NaN entries if the QR iteration
+/// fails to converge even after the fallbacks of `schur_robust`.
 pub fn eigenvalues(a: &DMatrix<f64>) -> Vec<C64> {
-    if a.nrows() == 0 {
+    let n = a.nrows();
+    if n == 0 {
         return vec![];
     }
-    a.clone().complex_eigenvalues().iter().cloned().collect()
+    match schur_robust(a) {
+        Some((_, t)) => quasi_triangular_eigs(&t),
+        None => vec![C64::new(f64::NAN, f64::NAN); n],
+    }
+}
+
+/// Eigenvalues of a real quasi-upper-triangular matrix (same formulas as nalgebra's do_complex_eigenvalues).
+fn quasi_triangular_eigs(t: &DMatrix<f64>) -> Vec<C64> {
+    let n = t.nrows();
+    let mut out = Vec::with_capacity(n);
+    let mut i = 0;
+    while i < n {
+        if i == n - 1 || t[(i + 1, i)] == 0.0 {
+            out.push(C64::new(t[(i, i)], 0.0));
+            i += 1;
+        } else {
+            let (hmm, hmn, hnm, hnn) = (t[(i, i)], t[(i, i + 1)], t[(i + 1, i)], t[(i + 1, i + 1)]);
+            let val = (hmm - hnn) * 0.5;
+            let discr = hnm * hmn + val * val;
+            let half_tra = (hnn + hmm) * 0.5;
+            if discr >= 0.0 {
+                let sq = discr.sqrt();
+                out.push(C64::new(half_tra + sq, 0.0));
+                out.push(C64::new(half_tra - sq, 0.0));
+            } else {
+                let sq = (-discr).sqrt();
+                out.push(C64::new(half_tra, sq));
+                out.push(C64::new(half_tra, -sq));
+            }
+            i += 2;
+        }
+    }
+    out
 }
 
 /// scipy.signal.tf2ss-style controllable canonical form.
@@ -177,7 +242,7 @@ fn degree(p: &[f64]) -> isize {
     }
 }
 
-fn parse_complex_list(v: &Value, path: &str) -> Result<Vec<C64>, OpError> {
+pub fn parse_complex_list(v: &Value, path: &str) -> Result<Vec<C64>, OpError> {
     v.as_array()
         .unwrap_or(&vec![])
         .iter()
@@ -192,7 +257,7 @@ fn parse_complex_list(v: &Value, path: &str) -> Result<Vec<C64>, OpError> {
         .collect()
 }
 
-fn check_conjugate(v: &[C64], path: &str) -> Result<(), OpError> {
+pub fn check_conjugate(v: &[C64], path: &str) -> Result<(), OpError> {
     let mut used = vec![false; v.len()];
     for i in 0..v.len() {
         if used[i] {

@@ -1,4 +1,4 @@
-//! aeoi-core — AEOI v0.2 core: arrays (dense/b64/ref/sparse), LTI parsing, schema inlining &
+//! aeoi-core — AEOI v0.3 core: arrays (dense/b64/ref/sparse), LTI parsing, schema inlining &
 //! validation, envelopes, structured errors, canonical hashing, and small dense linear-algebra helpers.
 pub mod error;
 pub mod jcs;
@@ -8,6 +8,8 @@ pub mod lti;
 pub mod schema;
 pub mod linalg;
 pub mod operator;
+pub mod poly;
+pub mod sysalg;
 
 pub const SPEC: &str = "aeoi/0.2";
 
