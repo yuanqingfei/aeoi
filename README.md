@@ -73,7 +73,7 @@ cargo test --release -p aeoi-control --test parity_b2 -- --nocapture
 
 ### 浏览器版（GitHub Pages）
 
-不想装 Rust 时可以直接打开 **https://yuanqingfei.github.io/aeoi/** ：12 个算子与工具桥编译成 WebAssembly 在浏览器里运行，Agent 循环也在页面里，没有任何服务器。
+不想装 Rust 时可以直接打开 **https://yuanqingfei.github.io/aeoi/** （会跳转到账号的自定义域名 https://yuanqingfei.me/aeoi/ ）：12 个算子与工具桥编译成 WebAssembly 在浏览器里运行，Agent 循环也在页面里，没有任何服务器。
 
 - 不填 key：选 `mock:demo`，离线演示（4 次工具调用，含一次自我纠错，带 Plotly 图）。
 - 用真实模型：点右上角"API key"填自己的 Gemini 或 OpenRouter key。key **只保存在这个浏览器的 localStorage**，由页面直接发给 Google / OpenRouter（两家都允许跨域调用），不经过 AEOI 的任何服务器，也不在仓库里；"忘记 key"按钮会清除它。公用电脑上请不要保存。
