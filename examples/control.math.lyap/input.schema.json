@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.math.lyap/0.3.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "A",
+    "Q"
+  ],
+  "properties": {
+    "A": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix"
+    },
+    "Q": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix"
+    },
+    "type": {
+      "enum": [
+        "continuous",
+        "discrete"
+      ],
+      "default": "continuous"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+    }
+  },
+  "x-aeoi-shape-constraints": [
+    "A: [n,n]",
+    "Q: [n,n]"
+  ]
+}

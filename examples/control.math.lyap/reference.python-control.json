@@ -1,0 +1,45 @@
+{
+  "request.json": {
+    "X": {
+      "dtype": "f64",
+      "shape": [
+        2,
+        2
+      ],
+      "data": [
+        0.6666666666666666,
+        0.08333333333333333,
+        0.08333333333333333,
+        0.16666666666666666
+      ]
+    }
+  },
+  "request.nonsymmetric.json": {
+    "X": {
+      "dtype": "f64",
+      "shape": [
+        3,
+        3
+      ],
+      "data": [
+        3.486224489795906,
+        -0.49999999999999967,
+        -2.711224489795907,
+        -0.4999999999999998,
+        0.9681122448979588,
+        -0.7499999999999992,
+        -2.711224489795906,
+        -0.7499999999999994,
+        4.3112244897959044
+      ]
+    }
+  },
+  "hand_check": "A X + X Aᵀ + Q = 0 (AEOI convention = scipy solve_continuous_lyapunov(A, −Q) = python-control lyap(A, Q))",
+  "reference_env": {
+    "engine": "python-control",
+    "python_control": "0.10.2",
+    "scipy": "1.18.1",
+    "numpy": "2.5.5",
+    "note": "python-control/scipy reference values (NOT MATLAB output)"
+  }
+}

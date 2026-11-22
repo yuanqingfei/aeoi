@@ -33,6 +33,7 @@ pub mod c2d;
 pub mod convert;
 pub mod ctrb_obsv;
 pub mod lqr;
+pub mod lyap;
 pub mod margin;
 pub mod poles_zeros;
 pub mod step;
@@ -51,6 +52,7 @@ pub fn registry() -> Vec<Box<dyn DynOperator>> {
         Box::new(margin::Margin::new()),
         Box::new(c2d::C2d::new()),
         Box::new(step::Step::impulse()),
+        Box::new(lyap::Lyap::new()),
     ]
 }
 

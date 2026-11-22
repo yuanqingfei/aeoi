@@ -1,0 +1,38 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "control.math.lyap",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-lyap-002",
+  "result": null,
+  "trust": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.DOMAIN.LYAP_SINGULAR",
+    "category": "domain",
+    "retryable": false,
+    "message": "连续 Lyapunov 方程奇异：A 存在特征值对满足 λ_i + λ̄_j ≈ 0（min|λ_i + λ̄_j| = 0.00e0），例如虚轴上的特征值或关于虚轴对称的特征值对。",
+    "agent_hint": "检查 A 是否有位于稳定边界上的特征值（连续：虚轴；离散：单位圆）；若是 Gramian 计算，请先确认系统稳定。",
+    "details": {
+      "path": "/A",
+      "separation_min": 0.0
+    },
+    "remediation": [
+      {
+        "id": "ask",
+        "kind": "ask_user",
+        "description": "向用户确认 A（含 row-major 顺序）与方程类型（continuous/discrete）",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.14468799999999998
+  }
+}

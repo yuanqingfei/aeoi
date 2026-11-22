@@ -1,0 +1,60 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.math.lyap",
+ "operator_version": "0.3.0",
+ "case_family": "discrete_spd",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    0.9098925490838238,
+    0.8418609076164816,
+    -0.36497282684667076,
+    0.3350694952694385
+   ]
+  },
+  "Q": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    3.611000526846423,
+    0.32390638791456755,
+    0.32390638791456755,
+    0.32655393058759946
+   ]
+  },
+  "type": "discrete"
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261122,
+  "note": "python-control/scipy reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected": {
+  "X": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    10.370943116829805,
+    -2.3862718119333053,
+    -2.3862718119333044,
+    2.5814848371226273
+   ]
+  }
+ }
+}

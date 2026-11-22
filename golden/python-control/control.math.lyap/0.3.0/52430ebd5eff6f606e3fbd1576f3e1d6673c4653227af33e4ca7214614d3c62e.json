@@ -1,0 +1,78 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.math.lyap",
+ "operator_version": "0.3.0",
+ "case_family": "unstable_solvable",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    3,
+    3
+   ],
+   "data": [
+    -2.5605283079630796,
+    -2.5517741787876,
+    1.6151085906057854,
+    -2.358215710274961,
+    -2.1673584547218314,
+    -0.6137846698837631,
+    1.2967858249263684,
+    -0.46616195214232353,
+    -1.4070567748347091
+   ]
+  },
+  "Q": {
+   "dtype": "f64",
+   "shape": [
+    3,
+    3
+   ],
+   "data": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  },
+  "type": "continuous"
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261122,
+  "note": "python-control/scipy reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected": {
+  "X": {
+   "dtype": "f64",
+   "shape": [
+    3,
+    3
+   ],
+   "data": [
+    -0.19198092436623657,
+    0.26274055385716805,
+    -0.19882132523061521,
+    0.262740553857168,
+    -0.11897756835112809,
+    0.22527140810135932,
+    -0.19882132523061524,
+    0.22527140810135932,
+    0.09747891260577986
+   ]
+  }
+ },
+ "expected_warnings": [
+  "W.DOMAIN.UNSTABLE_SYSTEM"
+ ]
+}

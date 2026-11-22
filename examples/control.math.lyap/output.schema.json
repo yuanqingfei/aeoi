@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.math.lyap/0.3.0/output",
+  "type": "object",
+  "required": [
+    "X"
+  ],
+  "properties": {
+    "X": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "description": "[n,n]；Q 对称时 X 对称"
+    }
+  }
+}
