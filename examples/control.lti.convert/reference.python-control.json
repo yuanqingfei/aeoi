@@ -1,0 +1,70 @@
+{
+  "request.json": {
+    "A": {
+      "dtype": "f64",
+      "shape": [
+        2,
+        2
+      ],
+      "data": [
+        -1.2,
+        -4.0,
+        1.0,
+        0.0
+      ]
+    },
+    "B": {
+      "dtype": "f64",
+      "shape": [
+        2,
+        1
+      ],
+      "data": [
+        1.0,
+        0.0
+      ]
+    },
+    "C": {
+      "dtype": "f64",
+      "shape": [
+        1,
+        2
+      ],
+      "data": [
+        0.0,
+        4.0
+      ]
+    },
+    "D": {
+      "dtype": "f64",
+      "shape": [
+        1,
+        1
+      ],
+      "data": [
+        0.0
+      ]
+    }
+  },
+  "request.nonsymmetric.json": {
+    "num": [
+      0.500000000000008,
+      5.000000000000023,
+      8.000000000000021
+    ],
+    "den": [
+      1.0,
+      5.999999999999999,
+      10.3,
+      2.9999999999999987
+    ]
+  },
+  "hand_check": "controllable canonical: A = [[-1.2, -4], [1, 0]], B = [1, 0]ᵀ, C = [0, 4], D = 0",
+  "reference_env": {
+    "engine": "python-control",
+    "python_control": "0.10.2",
+    "scipy": "1.18.1",
+    "numpy": "2.5.5",
+    "note": "python-control/scipy reference values (NOT MATLAB output)"
+  }
+}

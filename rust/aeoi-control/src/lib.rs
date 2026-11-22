@@ -1,5 +1,35 @@
-//! aeoi-control — control-system operators conforming to AEOI v0.2.
+//! aeoi-control — control-system operators conforming to AEOI v0.3.
+/// Load manifest + I/O schemas of examples/<dir> at compile time.
+macro_rules! operator_meta {
+    ($dir:literal) => {
+        aeoi_core::OperatorMeta::from_json(
+            include_str!(concat!("../../../examples/", $dir, "/manifest.json")),
+            include_str!(concat!("../../../examples/", $dir, "/input.schema.json")),
+            include_str!(concat!("../../../examples/", $dir, "/output.schema.json")),
+        )
+    };
+}
+/// Boilerplate: operator struct with `new()` and `Default`.
+macro_rules! operator_struct {
+    ($name:ident, $dir:literal) => {
+        pub struct $name {
+            meta: aeoi_core::OperatorMeta,
+        }
+        impl $name {
+            pub fn new() -> Self {
+                $name { meta: operator_meta!($dir) }
+            }
+        }
+        impl Default for $name {
+            fn default() -> Self {
+                Self::new()
+            }
+        }
+    };
+}
+
 pub mod bode;
+pub mod convert;
 pub mod lqr;
 pub mod step;
 
@@ -7,11 +37,29 @@ use aeoi_core::DynOperator;
 
 /// All operators in this crate.
 pub fn registry() -> Vec<Box<dyn DynOperator>> {
-    vec![Box::new(bode::Bode::new()), Box::new(step::Step::new()), Box::new(lqr::Lqr::new())]
+    vec![
+        Box::new(bode::Bode::new()),
+        Box::new(step::Step::new()),
+        Box::new(lqr::Lqr::new()),
+        Box::new(convert::Convert::new()),
+    ]
 }
 
 pub fn find<'a>(reg: &'a [Box<dyn DynOperator>], id: &str) -> Option<&'a dyn DynOperator> {
     reg.iter().find(|o| o.meta().id == id || o.meta().manifest["mcp"]["tool_name"] == id).map(|b| b.as_ref())
+}
+
+/// E.RESOURCE.INPUT_TOO_LARGE if n exceeds manifest limits.max_states.
+pub(crate) fn check_states(meta: &aeoi_core::OperatorMeta, n: usize, path: &str) -> Result<(), aeoi_core::OpError> {
+    let max_n = meta.manifest["limits"]["max_states"].as_u64().unwrap_or(200) as usize;
+    if n > max_n {
+        return Err(aeoi_core::OpError::new("E.RESOURCE.INPUT_TOO_LARGE", format!("状态维数 n = {n} 超过该算子上限 {max_n}。"), "先降阶（如平衡截断）再调用，或拆分问题。").path(path).detail("limit", serde_json::json!(max_n)));
+    }
+    Ok(())
+}
+
+pub(crate) fn mimo_err(path: &str, what: &str, ny: usize, nu: usize) -> aeoi_core::OpError {
+    aeoi_core::OpError::new("E.DOMAIN.MIMO_NOT_SUPPORTED", format!("{what} 只支持 SISO 系统，输入为 {ny}×{nu}。"), "逐通道调用（取出单个输出/输入对应的 SISO 子系统），或改用支持 MIMO 的表示（tf/ss）。").path(path).detail("dims", serde_json::json!([ny, nu]))
 }
 
 pub(crate) const U: f64 = f64::EPSILON / 2.0; // unit roundoff

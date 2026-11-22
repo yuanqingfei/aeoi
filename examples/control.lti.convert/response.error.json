@@ -1,0 +1,62 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "control.lti.convert",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-convert-002",
+  "result": null,
+  "trust": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.DOMAIN.MIMO_NOT_SUPPORTED",
+    "category": "domain",
+    "retryable": true,
+    "message": "zpk 表示（v0.3） 只支持 SISO 系统，输入为 2×2。",
+    "agent_hint": "逐通道调用（取出单个输出/输入对应的 SISO 子系统），或改用支持 MIMO 的表示（tf/ss）。",
+    "details": {
+      "path": "/to",
+      "dims": [
+        2,
+        2
+      ]
+    },
+    "remediation": [
+      {
+        "id": "to_tf",
+        "kind": "modify_input",
+        "description": "改为转换到 tf（MIMO 支持）",
+        "confidence": "high",
+        "requires_user_confirmation": false,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/to",
+            "value": "tf"
+          }
+        ]
+      },
+      {
+        "id": "to_ss",
+        "kind": "modify_input",
+        "description": "改为转换到 ss",
+        "confidence": "high",
+        "requires_user_confirmation": false,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/to",
+            "value": "ss"
+          }
+        ]
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.112819
+  }
+}

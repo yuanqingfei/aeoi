@@ -1,0 +1,75 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.lti.convert",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-convert-003-nonsym",
+  "result": {
+    "system": {
+      "kind": "tf",
+      "num": [
+        0.5000000000000053,
+        5.0000000000000195,
+        8.00000000000004
+      ],
+      "den": [
+        1.0,
+        6.000000000000004,
+        10.30000000000003,
+        3.0000000000000173
+      ],
+      "ts": 0.0,
+      "time_unit": "s"
+    },
+    "realization": "ss2tf_characteristic_polynomial",
+    "minimal": null
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "response_max_rel_discrepancy": 1.0834614708373917e-14,
+      "definition": "在 9 个测试点（连续：jω，ω = 10^[-2..2]×max(1,max|p|)；离散：单位圆上 e^{jθ}）比较转换前后 G 的最大逐元素相对差（以 max|G| 归一），跳过离极点过近的点"
+    },
+    "condition": {
+      "from": "ss",
+      "to": "tf",
+      "output_states": null
+    },
+    "error_estimate": {
+      "response_rel": 1.0834614708373917e-14,
+      "basis": "后验：等于上述响应残差（非严格上界；对根与系数本身的误差不作保证）"
+    },
+    "checks": {
+      "response_consistent": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:ad55d1ddb90942d8426a7834cd0c5c41e2a8c5b606fb190b8a5ce833308b3b39",
+    "output_hash": "sha256:1292c603e7b50714525f57929ccc2bf7ecba369755b54b9740bd741baaf8d718",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.355544
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.lti.convert",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-convert-001",
+  "result": {
+    "system": {
+      "kind": "ss",
+      "A": {
+        "dtype": "f64",
+        "shape": [
+          2,
+          2
+        ],
+        "data": [
+          -1.2,
+          -4.0,
+          1.0,
+          0.0
+        ]
+      },
+      "B": {
+        "dtype": "f64",
+        "shape": [
+          2,
+          1
+        ],
+        "data": [
+          1.0,
+          0.0
+        ]
+      },
+      "C": {
+        "dtype": "f64",
+        "shape": [
+          1,
+          2
+        ],
+        "data": [
+          0.0,
+          4.0
+        ]
+      },
+      "D": {
+        "dtype": "f64",
+        "shape": [
+          1,
+          1
+        ],
+        "data": [
+          0.0
+        ]
+      },
+      "ts": 0.0,
+      "time_unit": "s"
+    },
+    "realization": "controllable_canonical",
+    "minimal": null
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "response_max_rel_discrepancy": 2.5727768029146797e-16,
+      "definition": "在 9 个测试点（连续：jω，ω = 10^[-2..2]×max(1,max|p|)；离散：单位圆上 e^{jθ}）比较转换前后 G 的最大逐元素相对差（以 max|G| 归一），跳过离极点过近的点"
+    },
+    "condition": {
+      "from": "tf",
+      "to": "ss",
+      "output_states": 2
+    },
+    "error_estimate": {
+      "response_rel": 2.5727768029146797e-16,
+      "basis": "后验：等于上述响应残差（非严格上界；对根与系数本身的误差不作保证）"
+    },
+    "checks": {
+      "response_consistent": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:47ab71b6489b0ee84c790c9faf7a6dbded5ea9cf55e55c8d7985b8fe22b519bf",
+    "output_hash": "sha256:84dd5712391abb4cee44a4f7fbe27e6924baec2df209a064a071aa08b1c382d7",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.16304000000000002
+  }
+}

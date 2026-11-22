@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.lti.convert/0.3.0/output",
+  "type": "object",
+  "required": [
+    "system",
+    "realization"
+  ],
+  "properties": {
+    "system": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "转换后的系统；ts 与输入相同"
+    },
+    "realization": {
+      "enum": [
+        "identity",
+        "controllable_canonical",
+        "block_diagonal_controllable_canonical",
+        "ss2tf_characteristic_polynomial",
+        "expanded_product",
+        "polynomial_roots",
+        "invariant_zeros_eigenvalues_markov_gain"
+      ],
+      "description": "所用转换/实现约定"
+    },
+    "minimal": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "v0.3 不判定最小性时为 null"
+    }
+  }
+}

@@ -1,0 +1,88 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.lti.convert",
+ "operator_version": "0.3.0",
+ "case_family": "tf_to_ss_siso",
+ "request": {
+  "system": {
+   "kind": "tf",
+   "num": [
+    2.569163713263422,
+    6.814251526855721
+   ],
+   "den": [
+    2.2589486661428886,
+    10.189031228094622,
+    17.8004255480453,
+    14.642219203126915
+   ],
+   "ts": 0.0,
+   "time_unit": "s"
+  },
+  "to": "ss"
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261122,
+  "note": "python-control/scipy reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    3,
+    3
+   ],
+   "data": [
+    -4.510519154688096,
+    -7.879960184504407,
+    -6.481873369937274,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0
+   ]
+  },
+  "B": {
+   "dtype": "f64",
+   "shape": [
+    3,
+    1
+   ],
+   "data": [
+    1.0,
+    0.0,
+    0.0
+   ]
+  },
+  "C": {
+   "dtype": "f64",
+   "shape": [
+    1,
+    3
+   ],
+   "data": [
+    0.0,
+    1.1373271786871633,
+    3.016558821804005
+   ]
+  },
+  "D": {
+   "dtype": "f64",
+   "shape": [
+    1,
+    1
+   ],
+   "data": [
+    0.0
+   ]
+  }
+ }
+}

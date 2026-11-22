@@ -1,0 +1,57 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.lti.convert",
+ "operator_version": "0.3.0",
+ "case_family": "zpk_to_tf",
+ "request": {
+  "system": {
+   "kind": "zpk",
+   "z": [
+    [
+     5.580091143197311,
+     0.0
+    ]
+   ],
+   "p": [
+    [
+     -3.362294723194397,
+     0.0
+    ],
+    [
+     -3.299230855653587,
+     1.0656249102665118
+    ],
+    [
+     -3.299230855653587,
+     -1.0656249102665118
+    ]
+   ],
+   "k": 4.607348693628221,
+   "ts": 0.0,
+   "time_unit": "s"
+  },
+  "to": "tf"
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261122,
+  "note": "python-control/scipy reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected": {
+  "num": [
+   4.607348693628221,
+   -25.709425638936537
+  ],
+  "den": [
+   1.0,
+   9.96075643450157,
+   34.20645368140559,
+   40.41639878845462
+  ]
+ }
+}
