@@ -34,31 +34,35 @@ fn mcp_stdio_session() {
     let tools = tl["result"]["tools"].as_array().unwrap();
     let names: Vec<&str> = tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
     println!("tools/list: {names:?}");
-    assert_eq!(names.len(), 3);
+    assert_eq!(names.len(), 12);
     for t in tools {
         assert_eq!(t["inputSchema"]["type"], "object");
         assert_eq!(t["outputSchema"]["type"], "object");
     }
-    let cases = [
-        ("control_lti_bode", "control.lti.bode/request.json", false),
-        ("control_lti_step", "control.lti.step/request.json", false),
-        ("control_design_lqr", "control.design.lqr/request.json", false),
-        ("control_design_lqr", "control.design.lqr/request.error.json", true),
+    let ops = [
+        "control.lti.bode", "control.lti.step", "control.design.lqr", "control.lti.convert", "control.lti.poles_zeros",
+        "control.analysis.ctrb_obsv", "control.analysis.margin", "control.lti.c2d", "control.lti.impulse", "control.math.lyap",
+        "control.design.place", "control.design.dlqr",
     ];
-    for (tool, req, expect_err) in cases {
-        let r = rpc("tools/call", json!({"name": tool, "arguments": ex(req)}));
-        let res = &r["result"];
-        println!("tools/call {tool} ({req}): isError={} :: {}", res["isError"], res["content"][0]["text"]);
-        assert_eq!(res["isError"], expect_err);
-        let env = &res["structuredContent"];
-        assert_eq!(env["spec"], "aeoi/0.3");
-        let text_env: Value = serde_json::from_str(res["content"][1]["text"].as_str().unwrap()).unwrap();
-        assert_eq!(&text_env, env);
-        if expect_err {
-            assert_eq!(env["error"]["code"], "E.DOMAIN.NOT_STABILIZABLE");
-            assert!(!env["error"]["remediation"].as_array().unwrap().is_empty());
-        } else {
-            assert!(env["trust"]["accuracy_grade"].is_string());
+    for op in ops {
+        let tool = op.replace('.', "_");
+        assert!(names.contains(&tool.as_str()), "{tool} missing from tools/list");
+        for (req, expect_err) in [("request.json", false), ("request.error.json", true)] {
+            let want = ex(&format!("{op}/{}", if expect_err { "response.error.json" } else { "response.success.json" }));
+            let r = rpc("tools/call", json!({"name": tool, "arguments": ex(&format!("{op}/{req}"))}));
+            let res = &r["result"];
+            println!("tools/call {tool} ({req}): isError={} :: {}", res["isError"], res["content"][0]["text"]);
+            assert_eq!(res["isError"], expect_err);
+            let env = &res["structuredContent"];
+            assert_eq!(env["spec"], "aeoi/0.3");
+            let text_env: Value = serde_json::from_str(res["content"][1]["text"].as_str().unwrap()).unwrap();
+            assert_eq!(&text_env, env);
+            if expect_err {
+                assert_eq!(env["error"]["code"], want["error"]["code"]);
+            } else {
+                assert!(env["trust"]["accuracy_grade"].is_string());
+                assert_eq!(env["reproducibility"]["output_hash"], want["reproducibility"]["output_hash"], "{op}: MCP result differs from the published example");
+            }
         }
     }
     // schema-level error (missing required field) is also an AEOI envelope, not a JSON-RPC error

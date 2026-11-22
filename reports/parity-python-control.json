@@ -1,6 +1,6 @@
 {
   "reference": "python-control 0.10.2 / scipy 1.18.1 / numpy 2.5.5 (NOT MATLAB)",
-  "build": "aeoi-control 0.2.0+nogit nalgebra-0.33 rustc-1.85",
+  "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
   "cpu_features": [
     "avx",
     "avx2",

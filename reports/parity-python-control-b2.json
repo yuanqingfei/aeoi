@@ -1,0 +1,521 @@
+{
+  "reference": "python-control 0.10.2 / scipy 1.18.1 / numpy 2.5.5 (python-control/scipy reference values; not MATLAB)",
+  "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+  "cpu_features": [
+    "avx",
+    "avx2",
+    "fma",
+    "avx512f"
+  ],
+  "results": {
+    "control.lti.convert": {
+      "cases": 76,
+      "passed": 76,
+      "max_error_over_tolerance": 0.0007429109469322877,
+      "kappa_scaled_comparisons": 133,
+      "max_errors": {
+        "tf coefficients (T2·Π(1+|λ|)/‖den‖₁)": 1.9353003238264077e-14,
+        "tf coefficients (T2·Π(1+|λ|)/‖den‖₁) [max err/tol]": 0.00019095246397697935,
+        "tf→ss matrices rel_fro (T1)": 0.0,
+        "tf→ss matrices rel_fro (T1) [max err/tol]": 0.0,
+        "zpk gain k rel (T2)": 7.429109469322877e-14,
+        "zpk gain k rel (T2) [max err/tol]": 0.0007429109469322877,
+        "zpk poles (T2·κ_root)": 7.036990122310263e-14,
+        "zpk poles (T2·κ_root) [max err/tol]": 8.441568565744093e-6,
+        "zpk zeros (T2·κ_root)": 1.1445279420450065e-14,
+        "zpk zeros (T2·κ_root) [max err/tol]": 0.00004329508380754021
+      },
+      "base_tolerances": {
+        "tf coefficients (T2·Π(1+|λ|)/‖den‖₁)": 1e-10,
+        "tf coefficients (T2·Π(1+|λ|)/‖den‖₁) [max err/tol]": 1.0,
+        "tf→ss matrices rel_fro (T1)": 1e-12,
+        "tf→ss matrices rel_fro (T1) [max err/tol]": 1.0,
+        "zpk gain k rel (T2)": 1e-10,
+        "zpk gain k rel (T2) [max err/tol]": 1.0,
+        "zpk poles (T2·κ_root)": 1e-10,
+        "zpk poles (T2·κ_root) [max err/tol]": 1.0,
+        "zpk zeros (T2·κ_root)": 1e-10,
+        "zpk zeros (T2·κ_root) [max err/tol]": 1.0
+      },
+      "families": {
+        "improper": {
+          "cases": 1,
+          "passed": 1
+        },
+        "memory_order_nonsymmetric": {
+          "cases": 1,
+          "passed": 1
+        },
+        "mimo_to_zpk": {
+          "cases": 1,
+          "passed": 1
+        },
+        "ss_to_tf_mimo": {
+          "cases": 8,
+          "passed": 8
+        },
+        "ss_to_tf_siso": {
+          "cases": 15,
+          "passed": 15
+        },
+        "ss_to_zpk_siso": {
+          "cases": 10,
+          "passed": 10
+        },
+        "tf_to_ss_siso": {
+          "cases": 15,
+          "passed": 15
+        },
+        "tf_to_zpk": {
+          "cases": 15,
+          "passed": 15
+        },
+        "zpk_to_tf": {
+          "cases": 10,
+          "passed": 10
+        }
+      },
+      "memory_order_mismatch_ratio": 25479557613.11477,
+      "notes": [],
+      "failures": []
+    },
+    "control.lti.poles_zeros": {
+      "cases": 47,
+      "passed": 47,
+      "max_error_over_tolerance": 0.0000454342550280024,
+      "kappa_scaled_comparisons": 165,
+      "max_errors": {
+        "damping_ratio abs (T2·κ_root)": 3.674838211509268e-14,
+        "damping_ratio abs (T2·κ_root) [max err/tol]": 0.000036410334005109234,
+        "dcgain abs/max(1,|ref|) (T2·κ)": 8.261519081083424e-16,
+        "dcgain abs/max(1,|ref|) (T2·κ) [max err/tol]": 1.1040603837524784e-6,
+        "dcgain ±Inf agreement (T0)": 0.0,
+        "dcgain ±Inf agreement (T0) [max err/tol]": 0.0,
+        "natural_frequency rel (T2·κ_root)": 2.8580406966499337e-12,
+        "natural_frequency rel (T2·κ_root) [max err/tol]": 0.0000454342550280024,
+        "poles (T2·κ_root)": 2.8580406966499337e-12,
+        "poles (T2·κ_root) [max err/tol]": 0.000026164547539919806,
+        "zeros (T2·κ_root)": 2.142619037509804e-12,
+        "zeros (T2·κ_root) [max err/tol]": 0.00003943619915551758
+      },
+      "base_tolerances": {
+        "damping_ratio abs (T2·κ_root)": 1e-10,
+        "damping_ratio abs (T2·κ_root) [max err/tol]": 1.0,
+        "dcgain abs/max(1,|ref|) (T2·κ)": 1e-10,
+        "dcgain abs/max(1,|ref|) (T2·κ) [max err/tol]": 1.0,
+        "dcgain ±Inf agreement (T0)": 0.0,
+        "dcgain ±Inf agreement (T0) [max err/tol]": 1.0,
+        "natural_frequency rel (T2·κ_root)": 1e-10,
+        "natural_frequency rel (T2·κ_root) [max err/tol]": 1.0,
+        "poles (T2·κ_root)": 1e-10,
+        "poles (T2·κ_root) [max err/tol]": 1.0,
+        "zeros (T2·κ_root)": 1e-10,
+        "zeros (T2·κ_root) [max err/tol]": 1.0
+      },
+      "families": {
+        "degenerate": {
+          "cases": 1,
+          "passed": 1
+        },
+        "discrete_ss": {
+          "cases": 8,
+          "passed": 8
+        },
+        "integrator_infinite_dc": {
+          "cases": 2,
+          "passed": 2
+        },
+        "memory_order_nonsymmetric": {
+          "cases": 1,
+          "passed": 1
+        },
+        "siso_tf": {
+          "cases": 15,
+          "passed": 15
+        },
+        "square_ss": {
+          "cases": 15,
+          "passed": 15
+        },
+        "zpk": {
+          "cases": 5,
+          "passed": 5
+        }
+      },
+      "memory_order_mismatch_ratio": 17850000000.000004,
+      "notes": [],
+      "failures": []
+    },
+    "control.analysis.ctrb_obsv": {
+      "cases": 26,
+      "passed": 26,
+      "max_error_over_tolerance": 0.001076976999763892,
+      "kappa_scaled_comparisons": 0,
+      "max_errors": {
+        "ctrb/obsv matrices rel_fro (T1)": 4.959733850454864e-16,
+        "ctrb/obsv matrices rel_fro (T1) [max err/tol]": 0.0004959733850454864,
+        "ctrb/obsv rank (T0)": 0.0,
+        "ctrb/obsv rank (T0) [max err/tol]": 0.0,
+        "gramians rel_fro (T2; max(1e-10, 10·res/min(1,sep)))": 9.129022666831063e-15,
+        "gramians rel_fro (T2; max(1e-10, 10·res/min(1,sep))) [max err/tol]": 0.00009129022666831063,
+        "singular values abs/σ_max (T1)": 1.076976999763892e-15,
+        "singular values abs/σ_max (T1) [max err/tol]": 0.001076976999763892
+      },
+      "base_tolerances": {
+        "ctrb/obsv matrices rel_fro (T1)": 1e-12,
+        "ctrb/obsv matrices rel_fro (T1) [max err/tol]": 1.0,
+        "ctrb/obsv rank (T0)": 0.0,
+        "ctrb/obsv rank (T0) [max err/tol]": 1.0,
+        "gramians rel_fro (T2; max(1e-10, 10·res/min(1,sep)))": 1e-10,
+        "gramians rel_fro (T2; max(1e-10, 10·res/min(1,sep))) [max err/tol]": 1.0,
+        "singular values abs/σ_max (T1)": 1e-12,
+        "singular values abs/σ_max (T1) [max err/tol]": 1.0
+      },
+      "families": {
+        "discrete_gramians": {
+          "cases": 5,
+          "passed": 5
+        },
+        "memory_order_nonsymmetric": {
+          "cases": 1,
+          "passed": 1
+        },
+        "random_stable_gramians": {
+          "cases": 15,
+          "passed": 15
+        },
+        "uncontrollable": {
+          "cases": 4,
+          "passed": 4
+        },
+        "unstable_gramian_undefined": {
+          "cases": 1,
+          "passed": 1
+        }
+      },
+      "memory_order_mismatch_ratio": 10123079485700.09,
+      "notes": [],
+      "failures": []
+    },
+    "control.analysis.margin": {
+      "cases": 45,
+      "passed": 45,
+      "max_error_over_tolerance": 0.11820198366980196,
+      "kappa_scaled_comparisons": 0,
+      "max_errors": {
+        "crossover frequencies rel (T3 1e-9)": 6.275958797915025e-15,
+        "crossover frequencies rel (T3 1e-9) [max err/tol]": 6.275958797915025e-6,
+        "gain_margin rel (T3 1e-9)": 1.942890293094023e-14,
+        "gain_margin rel (T3 1e-9) [max err/tol]": 0.00001942890293094023,
+        "phase_margin abs deg (T3 1e-8)": 1.9895196601282805e-13,
+        "phase_margin abs deg (T3 1e-8) [max err/tol]": 0.000019895196601282805,
+        "stability_margin frequency rel (continuous: 1e-6, flat minimum)": 2.348933016286768e-15,
+        "stability_margin frequency rel (continuous: 1e-6, flat minimum) [max err/tol]": 2.3489330162867683e-9,
+        "stability_margin frequency rel (discrete: 1e-3, optimizer xtol)": 0.00011820198366980196,
+        "stability_margin frequency rel (discrete: 1e-3, optimizer xtol) [max err/tol]": 0.11820198366980196,
+        "stability_margin rel (T3 1e-9; discrete: or a lower consistent minimum)": 4.363315151243322e-15,
+        "stability_margin rel (T3 1e-9; discrete: or a lower consistent minimum) [max err/tol]": 4.363315151243322e-6
+      },
+      "base_tolerances": {
+        "crossover frequencies rel (T3 1e-9)": 1e-9,
+        "crossover frequencies rel (T3 1e-9) [max err/tol]": 1.0,
+        "gain_margin rel (T3 1e-9)": 1e-9,
+        "gain_margin rel (T3 1e-9) [max err/tol]": 1.0,
+        "phase_margin abs deg (T3 1e-8)": 1e-8,
+        "phase_margin abs deg (T3 1e-8) [max err/tol]": 1.0,
+        "stability_margin frequency rel (continuous: 1e-6, flat minimum)": 1e-6,
+        "stability_margin frequency rel (continuous: 1e-6, flat minimum) [max err/tol]": 1.0,
+        "stability_margin frequency rel (discrete: 1e-3, optimizer xtol)": 0.001,
+        "stability_margin frequency rel (discrete: 1e-3, optimizer xtol) [max err/tol]": 1.0,
+        "stability_margin rel (T3 1e-9; discrete: or a lower consistent minimum)": 1e-9,
+        "stability_margin rel (T3 1e-9; discrete: or a lower consistent minimum) [max err/tol]": 1.0
+      },
+      "families": {
+        "discrete_tf": {
+          "cases": 8,
+          "passed": 8
+        },
+        "memory_order_nonsymmetric": {
+          "cases": 1,
+          "passed": 1
+        },
+        "mimo": {
+          "cases": 1,
+          "passed": 1
+        },
+        "random_tf": {
+          "cases": 20,
+          "passed": 20
+        },
+        "ss_siso": {
+          "cases": 5,
+          "passed": 5
+        },
+        "type1_loop": {
+          "cases": 10,
+          "passed": 10
+        }
+      },
+      "memory_order_mismatch_ratio": "Inf",
+      "notes": [],
+      "failures": []
+    },
+    "control.lti.c2d": {
+      "cases": 47,
+      "passed": 47,
+      "max_error_over_tolerance": 0.000013580368338491073,
+      "kappa_scaled_comparisons": 44,
+      "max_errors": {
+        "discrete ss matrices rel_fro (T2·κ: cond(I−αA) | e^{‖A‖₁T})": 5.702864648261072e-16,
+        "discrete ss matrices rel_fro (T2·κ: cond(I−αA) | e^{‖A‖₁T}) [max err/tol]": 5.314944256856361e-6,
+        "discrete tf coefficients (T2·κ·Π(1+|λ|)/‖den‖₁)": 2.7307941590819615e-15,
+        "discrete tf coefficients (T2·κ·Π(1+|λ|)/‖den‖₁) [max err/tol]": 0.000013580368338491073
+      },
+      "base_tolerances": {
+        "discrete ss matrices rel_fro (T2·κ: cond(I−αA) | e^{‖A‖₁T})": 1e-10,
+        "discrete ss matrices rel_fro (T2·κ: cond(I−αA) | e^{‖A‖₁T}) [max err/tol]": 1.0,
+        "discrete tf coefficients (T2·κ·Π(1+|λ|)/‖den‖₁)": 1e-10,
+        "discrete tf coefficients (T2·κ·Π(1+|λ|)/‖den‖₁) [max err/tol]": 1.0
+      },
+      "families": {
+        "already_discrete": {
+          "cases": 1,
+          "passed": 1
+        },
+        "memory_order_nonsymmetric": {
+          "cases": 1,
+          "passed": 1
+        },
+        "prewarp_with_zoh": {
+          "cases": 1,
+          "passed": 1
+        },
+        "ss_foh": {
+          "cases": 8,
+          "passed": 8
+        },
+        "ss_tustin": {
+          "cases": 8,
+          "passed": 8
+        },
+        "ss_zoh": {
+          "cases": 8,
+          "passed": 8
+        },
+        "tf_foh": {
+          "cases": 5,
+          "passed": 5
+        },
+        "tf_tustin": {
+          "cases": 5,
+          "passed": 5
+        },
+        "tf_zoh": {
+          "cases": 5,
+          "passed": 5
+        },
+        "tustin_prewarp": {
+          "cases": 5,
+          "passed": 5
+        }
+      },
+      "memory_order_mismatch_ratio": 848152483.6553116,
+      "notes": [],
+      "failures": []
+    },
+    "control.lti.impulse": {
+      "cases": 28,
+      "passed": 28,
+      "max_error_over_tolerance": 0.00030134072545934856,
+      "kappa_scaled_comparisons": 0,
+      "max_errors": {
+        "y max abs / max|y| (T2)": 3.0134072545934855e-14,
+        "y max abs / max|y| (T2) [max err/tol]": 0.00030134072545934856
+      },
+      "base_tolerances": {
+        "y max abs / max|y| (T2)": 1e-10,
+        "y max abs / max|y| (T2) [max err/tol]": 1.0
+      },
+      "families": {
+        "direct_feedthrough": {
+          "cases": 2,
+          "passed": 2
+        },
+        "discrete_dt_mismatch": {
+          "cases": 1,
+          "passed": 1
+        },
+        "discrete_unit_area": {
+          "cases": 6,
+          "passed": 6
+        },
+        "memory_order_nonsymmetric": {
+          "cases": 1,
+          "passed": 1
+        },
+        "mimo_ss": {
+          "cases": 8,
+          "passed": 8
+        },
+        "siso_tf": {
+          "cases": 10,
+          "passed": 10
+        }
+      },
+      "memory_order_mismatch_ratio": 46454243929.224846,
+      "notes": [],
+      "failures": []
+    },
+    "control.math.lyap": {
+      "cases": 31,
+      "passed": 31,
+      "max_error_over_tolerance": 0.00016248881748000127,
+      "kappa_scaled_comparisons": 0,
+      "max_errors": {
+        "X rel_fro (T2; max(1e-10, 10·trust X_rel))": 1.6248881748000128e-14,
+        "X rel_fro (T2; max(1e-10, 10·trust X_rel)) [max err/tol]": 0.00016248881748000127
+      },
+      "base_tolerances": {
+        "X rel_fro (T2; max(1e-10, 10·trust X_rel))": 1e-10,
+        "X rel_fro (T2; max(1e-10, 10·trust X_rel)) [max err/tol]": 1.0
+      },
+      "families": {
+        "continuous_nonsymmetric_Q": {
+          "cases": 3,
+          "passed": 3
+        },
+        "continuous_spd": {
+          "cases": 12,
+          "passed": 12
+        },
+        "discrete_spd": {
+          "cases": 10,
+          "passed": 10
+        },
+        "memory_order_nonsymmetric": {
+          "cases": 1,
+          "passed": 1
+        },
+        "singular_continuous": {
+          "cases": 1,
+          "passed": 1
+        },
+        "singular_discrete": {
+          "cases": 1,
+          "passed": 1
+        },
+        "unstable_solvable": {
+          "cases": 3,
+          "passed": 3
+        }
+      },
+      "memory_order_mismatch_ratio": 15738598478.5354,
+      "notes": [],
+      "failures": []
+    },
+    "control.design.place": {
+      "cases": 28,
+      "passed": 28,
+      "max_error_over_tolerance": 1.2005314650050706e-6,
+      "kappa_scaled_comparisons": 25,
+      "max_errors": {
+        "SISO K rel_fro (T2·cond(X)·(1+‖K‖_F))": 3.035616563196426e-13,
+        "SISO K rel_fro (T2·cond(X)·(1+‖K‖_F)) [max err/tol]": 2.725154572698407e-7,
+        "achieved poles rel (T2·cond(X)·(1+‖K‖_F))": 4.2724320017260426e-10,
+        "achieved poles rel (T2·cond(X)·(1+‖K‖_F)) [max err/tol]": 1.2005314650050706e-6,
+        "cond(X) ours / scipy-YT (informational)": 1.078614775467472
+      },
+      "base_tolerances": {
+        "SISO K rel_fro (T2·cond(X)·(1+‖K‖_F))": 1e-10,
+        "SISO K rel_fro (T2·cond(X)·(1+‖K‖_F)) [max err/tol]": 1.0,
+        "achieved poles rel (T2·cond(X)·(1+‖K‖_F))": 1e-10,
+        "achieved poles rel (T2·cond(X)·(1+‖K‖_F)) [max err/tol]": 1.0,
+        "cond(X) ours / scipy-YT (informational)": "NaN"
+      },
+      "families": {
+        "memory_order_nonsymmetric": {
+          "cases": 1,
+          "passed": 1
+        },
+        "mimo_ytt": {
+          "cases": 12,
+          "passed": 12
+        },
+        "multiplicity": {
+          "cases": 1,
+          "passed": 1
+        },
+        "not_conjugate": {
+          "cases": 1,
+          "passed": 1
+        },
+        "siso": {
+          "cases": 12,
+          "passed": 12
+        },
+        "uncontrollable": {
+          "cases": 1,
+          "passed": 1
+        }
+      },
+      "memory_order_mismatch_ratio": 431165104.0174323,
+      "notes": [],
+      "failures": []
+    },
+    "control.design.dlqr": {
+      "cases": 25,
+      "passed": 25,
+      "max_error_over_tolerance": 0.0005390017825472817,
+      "kappa_scaled_comparisons": 15,
+      "max_errors": {
+        "K rel_fro (T2; lqr V-6 rule)": 4.8417314167444683e-14,
+        "K rel_fro (T2; lqr V-6 rule) [max err/tol]": 0.0003925193911288741,
+        "S rel_fro (T2; lqr V-6 rule)": 6.648593478999903e-14,
+        "S rel_fro (T2; lqr V-6 rule) [max err/tol]": 0.0005390017825472817,
+        "closed-loop poles (T2·κ_root, lqr rule)": 2.2398749521812533e-14,
+        "closed-loop poles (T2·κ_root, lqr rule) [max err/tol]": 0.00022398749521812533
+      },
+      "base_tolerances": {
+        "K rel_fro (T2; lqr V-6 rule)": 1e-10,
+        "K rel_fro (T2; lqr V-6 rule) [max err/tol]": 1.0,
+        "S rel_fro (T2; lqr V-6 rule)": 1e-10,
+        "S rel_fro (T2; lqr V-6 rule) [max err/tol]": 1.0,
+        "closed-loop poles (T2·κ_root, lqr rule)": 1e-10,
+        "closed-loop poles (T2·κ_root, lqr rule) [max err/tol]": 1.0
+      },
+      "families": {
+        "R_indefinite": {
+          "cases": 1,
+          "passed": 1
+        },
+        "cross_term": {
+          "cases": 5,
+          "passed": 5
+        },
+        "double_integrator": {
+          "cases": 1,
+          "passed": 1
+        },
+        "memory_order_nonsymmetric": {
+          "cases": 1,
+          "passed": 1
+        },
+        "not_stabilizable": {
+          "cases": 1,
+          "passed": 1
+        },
+        "random": {
+          "cases": 15,
+          "passed": 15
+        },
+        "unit_circle_unobservable": {
+          "cases": 1,
+          "passed": 1
+        }
+      },
+      "memory_order_mismatch_ratio": 28304169542.600502,
+      "notes": [],
+      "failures": []
+    }
+  }
+}

@@ -164,3 +164,84 @@ fn transport_encodings_are_equivalent() {
 fn hex(b: &[u8]) -> String {
     b.iter().map(|x| format!("{x:02x}")).collect()
 }
+
+// ------------------------------------------------------------------ batch 2 (spec v0.3)
+fn relf(a: &[f64], b: &[f64]) -> f64 {
+    assert_eq!(a.len(), b.len());
+    let d = fro_diff(a, b);
+    if d == 0.0 {
+        0.0
+    } else {
+        d / fro(b).max(f64::MIN_POSITIVE)
+    }
+}
+fn cset(v: &Value) -> Vec<(f64, f64)> {
+    let arr = if v.get("data").is_some() { &v["data"] } else { v };
+    arr.as_array().unwrap().iter().map(|c| (f(&c[0]), f(&c[1]))).collect()
+}
+
+/// Batch-2 examples: request.json reproduces python-control/scipy reference values (reference.python-control.json,
+/// NOT MATLAB) and the published response bit-for-bit (output_hash); request.error.json returns the published
+/// error code with remediation; request.nonsymmetric.json reproduces its published response.
+#[test]
+fn batch2_examples() {
+    let h = HostCtx::default();
+    let ops = [
+        "control.lti.convert", "control.lti.poles_zeros", "control.analysis.ctrb_obsv", "control.analysis.margin", "control.lti.c2d",
+        "control.lti.impulse", "control.math.lyap", "control.design.place", "control.design.dlqr",
+    ];
+    for op in ops {
+        let dir = format!("examples/{op}");
+        let env = call(op, &read(&format!("{dir}/request.json")), &h);
+        assert!(env["status"] == "ok" || env["status"] == "ok_with_warnings", "{op}: {}", env["error"]);
+        let pub_ = read(&format!("{dir}/response.success.json"));
+        assert_eq!(env["reproducibility"]["output_hash"], pub_["reproducibility"]["output_hash"], "{op}: bitwise determinism on this platform");
+        let rf = &read(&format!("{dir}/reference.python-control.json"))["request.json"];
+        let r = &env["result"];
+        let err: f64 = match op {
+            "control.lti.convert" => ["A", "B", "C", "D"].iter().map(|k| relf(&fvec(&r["system"][*k]["data"]), &fvec(&rf[*k]["data"]))).fold(0.0, f64::max),
+            "control.lti.poles_zeros" => matched_set_err(&cset(&r["poles"]), &cset(&rf["poles"]))
+                .max(matched_set_err(&cset(&r["zeros"]), &cset(&rf["zeros"])))
+                .max((fvec(&r["dcgain"]["value"]["data"])[0] - fvec(&rf["dcgain"])[0]).abs()),
+            "control.analysis.ctrb_obsv" => relf(&fvec(&r["ctrb"]["matrix"]["data"]), &fvec(&rf["ctrb"]["data"]))
+                .max(relf(&fvec(&r["obsv"]["matrix"]["data"]), &fvec(&rf["obsv"]["data"])))
+                .max(relf(&fvec(&r["gramians"]["controllability"]["data"]), &fvec(&rf["Wc"]["data"])))
+                .max(relf(&fvec(&r["gramians"]["observability"]["data"]), &fvec(&rf["Wo"]["data"]))),
+            "control.analysis.margin" => {
+                let g = |k: &str| f(&r[k]["value"]);
+                let e1 = ((g("gain_margin") - f(&rf["gm"])) / f(&rf["gm"])).abs()
+                    .max(((g("phase_crossover_frequency") - f(&rf["wpc"])) / f(&rf["wpc"])).abs())
+                    .max(((g("gain_crossover_frequency") - f(&rf["wgc"])) / f(&rf["wgc"])).abs())
+                    .max(((g("stability_margin") - f(&rf["sm"])) / f(&rf["sm"])).abs())
+                    .max((g("phase_margin") - f(&rf["pm"])).abs() * 0.1);
+                assert!(((g("stability_margin_frequency") - f(&rf["wms"])) / f(&rf["wms"])).abs() <= 1e-6);
+                assert!((g("gain_margin") - 1.5).abs() <= 1e-12 && (g("phase_crossover_frequency") - 2f64.sqrt()).abs() <= 1e-12, "hand check GM = 1.5 at √2");
+                e1
+            }
+            "control.lti.c2d" => ["A", "B", "C", "D"].iter().map(|k| relf(&fvec(&r["system"][*k]["data"]), &fvec(&rf[*k]["data"]))).fold(0.0, f64::max),
+            "control.lti.impulse" => {
+                let y = fvec(&r["y"]["value"]["data"]);
+                let w = fvec(&rf["y"]);
+                maxabs(&y, &w) / w.iter().map(|x| x.abs()).fold(0.0, f64::max)
+            }
+            "control.math.lyap" => relf(&fvec(&r["X"]["data"]), &fvec(&rf["X"]["data"])),
+            "control.design.place" => {
+                let k = fvec(&r["K"]["data"]);
+                assert!(maxabs(&k, &[2.0, 2.0]) <= 1e-12, "hand check K = [2, 2]: {k:?}");
+                relf(&k, &fvec(&rf["K"]["data"]))
+            }
+            "control.design.dlqr" => relf(&fvec(&r["K"]["data"]), &fvec(&rf["K"]["data"])).max(relf(&fvec(&r["S"]["data"]), &fvec(&rf["S"]["data"]))),
+            _ => unreachable!(),
+        };
+        println!("{op} example vs python-control/scipy: max err {err:.3e} (tol 1e-10)");
+        assert!(err <= 1e-10, "{op}: example deviates from python-control/scipy by {err:e}");
+        let e = call(op, &read(&format!("{dir}/request.error.json")), &h);
+        let pe = read(&format!("{dir}/response.error.json"));
+        assert_eq!(e["status"], "error");
+        assert_eq!(e["error"]["code"], pe["error"]["code"], "{op}: error code");
+        assert!(!e["error"]["remediation"].as_array().map(|v| v.is_empty()).unwrap_or(true) || e["error"]["category"] == "validation", "{op}: domain/numerical errors carry remediation");
+        let ns = call(op, &read(&format!("{dir}/request.nonsymmetric.json")), &h);
+        let pns = read(&format!("{dir}/response.nonsymmetric.json"));
+        assert_eq!(ns["reproducibility"]["output_hash"], pns["reproducibility"]["output_hash"], "{op}: nonsymmetric example");
+    }
+}

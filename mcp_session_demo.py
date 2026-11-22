@@ -16,10 +16,15 @@ r = send({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
 print("tools:", [t["name"] for t in r["result"]["tools"]])
 calls = [("control_lti_bode", "control.lti.bode/request.json"), ("control_lti_step", "control.lti.step/request.json"),
          ("control_design_lqr", "control.design.lqr/request.json"), ("control_lti_bode", "control.lti.bode/request.error.json")]
+# batch 2 (spec v0.3): one success call per operator plus two error calls
+for op in ["control.lti.convert", "control.lti.poles_zeros", "control.analysis.ctrb_obsv", "control.analysis.margin", "control.lti.c2d",
+           "control.lti.impulse", "control.math.lyap", "control.design.place", "control.design.dlqr"]:
+    calls.append((op.replace(".", "_"), f"{op}/request.json"))
+calls += [("control_analysis_margin", "control.analysis.margin/request.error.json"), ("control_design_place", "control.design.place/request.error.json")]
 for i, (t, f) in enumerate(calls):
     r = send({"jsonrpc": "2.0", "id": 10 + i, "method": "tools/call", "params": {"name": t, "arguments": ex(f)}})
     env = r["result"]["structuredContent"]
-    extra = env["error"]["code"] if env["error"] else {k: v for k, v in env["result"].items() if k in ("K",)} or env["status"]
+    extra = env["error"]["code"] if env["error"] else {k: v for k, v in env["result"].items() if k in ("K", "gain_margin", "X", "realization")} or env["status"]
     print(f"tools/call {t} {f}: isError={r['result']['isError']} -> {extra}")
 p.stdin.close(); p.wait()
 (root / "reports").mkdir(exist_ok=True)
