@@ -55,7 +55,7 @@ fn slim(v: &Value) -> Value {
                     let sc: Vec<&str> = x.as_array().map(|a| a.iter().filter_map(|s| s.as_str()).collect()).unwrap_or_default();
                     let prev = m.get("description").and_then(|d| d.as_str()).unwrap_or("").to_string();
                     m.insert("description".into(), json!(format!("{}维数约束：{}", if prev.is_empty() { String::new() } else { format!("{prev}；") }, sc.join("，"))));
-                } else if k == "$schema" || k == "$id" {
+                } else if k == "$schema" || k == "$id" || k == "x-aeoi-provenance" {
                     continue;
                 } else {
                     m.insert(k.clone(), slim(x));
@@ -68,9 +68,34 @@ fn slim(v: &Value) -> Value {
     }
 }
 
+/// Name of the binding-level grounding argument (spec M-5): for every top-level input marked
+/// `x-aeoi-provenance: "user"` the model must copy the user's own words that state the value.
+pub const USER_QUOTE: &str = "_user_quote";
+
+/// Top-level input properties that must come from the user (`x-aeoi-provenance: "user"`).
+pub fn user_provenance_fields(schema: &Value) -> Vec<String> {
+    schema["properties"].as_object().map(|p| p.iter().filter(|(_, v)| v["x-aeoi-provenance"] == "user").map(|(k, _)| k.clone()).collect()).unwrap_or_default()
+}
+
 /// Stage 1 (provider-independent).
 pub fn llm_surface(schema: &Value) -> Value {
-    slim(&llm_surface_raw(schema))
+    let mut out = slim(&llm_surface_raw(schema));
+    let fields = user_provenance_fields(schema);
+    if !fields.is_empty() {
+        let mut qp = Map::new();
+        for f in &fields {
+            qp.insert(f.clone(), json!({"type": "string", "description": format!("用户消息里给出 {f} 的原文片段，逐字复制（含数值与单位，如“采样周期 T = 0.1 s”）。用户没有给出时不要调用本工具，先向用户询问")}));
+            if let Some(d) = out["properties"][f.as_str()]["description"].as_str() {
+                let d = format!("{d}【必须来自用户原话，并在 {USER_QUOTE}.{f} 中引用】");
+                out["properties"][f.as_str()]["description"] = json!(d);
+            }
+        }
+        out["properties"][USER_QUOTE] = json!({"type": "object", "description": "来源证明（AEOI M-5）：以下参数必须是用户明确给出的，不能由模型假设。绑定层会核对引用确实出现在用户消息中且数值一致，否则返回 E.VALIDATION.UNGROUNDED_INPUT", "properties": qp, "required": fields});
+        if let Some(r) = out["required"].as_array_mut() {
+            r.push(json!(USER_QUOTE));
+        }
+    }
+    out
 }
 
 fn llm_surface_raw(schema: &Value) -> Value {

@@ -11,6 +11,7 @@
   ],
   "applicability": {
     "preconditions": [
+      "ts（采样周期）必须由用户明确给出；用户没给时不要调用本工具，先询问用户，不得假设 0.1 s 等常用值",
       "system 为连续时间（ts = 0）且 proper",
       "tustin 要求 1 − p·T/2 ≠ 0（无极点位于 s = 2/T）",
       "prewarp_frequency 仅用于 tustin，且 < π/ts"

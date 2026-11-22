@@ -96,7 +96,7 @@
         "unit_pulse"
       ],
       "default": "unit_area",
-      "description": "离散系统的脉冲幅值：unit_area 为 1/ts（缺省），unit_pulse 为 1；连续系统忽略"
+      "description": "离散冲激的幅值约定：unit_area（幅值 1/ts，与连续冲激面积一致，默认）或 unit_pulse（幅值 1，即 Kronecker δ）；连续系统忽略"
     }
   }
 }

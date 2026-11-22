@@ -15,7 +15,8 @@
     "ts": {
       "type": "number",
       "exclusiveMinimum": 0,
-      "description": "采样周期，unit s"
+      "description": "采样周期 T（单位 s，> 0）。必须是用户在对话中明确给出的数值；用户没给时不要调用本工具，先询问用户，绝不假设 0.1、0.01 等常用值",
+      "x-aeoi-provenance": "user"
     },
     "method": {
       "enum": [

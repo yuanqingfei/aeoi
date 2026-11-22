@@ -4,6 +4,7 @@
 //!   aeoi-web eval --model <provider:model> [--rpm 8] [--max-steps 8] [--only id1,id2] [--limit N] [--out file] [--questions file]
 //!   aeoi-web ask "<问题>" [--model ...] [--max-steps 8]       one question, prints the trace as JSON
 //!   aeoi-web tools [--gemini | --json | --losses]               dump function declarations / lossy-mapping report
+//!   aeoi-web rescore <report.json> [--out file]                 re-score a saved eval report (no model calls)
 use aeoi_web::{agent, eval, provider, server, tools::Bridge};
 use serde_json::{json, Value};
 use std::path::PathBuf;
@@ -29,7 +30,7 @@ fn sanitize(s: &str) -> String {
 }
 
 fn usage() -> ! {
-    eprintln!("{}", include_str!("main.rs").lines().skip(2).take(5).map(|l| l.trim_start_matches("//!")).collect::<Vec<_>>().join("\n"));
+    eprintln!("{}", include_str!("main.rs").lines().skip(2).take(6).map(|l| l.trim_start_matches("//!")).collect::<Vec<_>>().join("\n"));
     std::process::exit(2)
 }
 
@@ -102,6 +103,24 @@ async fn main() {
             write(&report);
             eprintln!("\n{}", serde_json::to_string_pretty(&report["summary"]).unwrap());
             eprintln!("报告已写入 {}", out.display());
+        }
+        "rescore" => {
+            let f = args.get(1).cloned().unwrap_or_else(|| usage());
+            let rep: Value = serde_json::from_str(&std::fs::read_to_string(&f).unwrap_or_else(|e| panic!("{f}: {e}"))).expect("report json");
+            let qs: Value = serde_json::from_str(eval::QUESTIONS).unwrap();
+            let out = eval::rescore(&Bridge::new(), &qs, &rep);
+            let dst = flag(&args, "--out").unwrap_or(f);
+            std::fs::write(&dst, serde_json::to_string_pretty(&out).unwrap() + "\n").expect("write report");
+            for r in out["results"].as_array().unwrap() {
+                let o = rep["results"].as_array().unwrap().iter().find(|x| x["id"] == r["id"]).unwrap();
+                for k in ["tool_ok", "args_ok", "answer_ok"] {
+                    if o[k] != r[k] {
+                        eprintln!("{:<24} {k}: {} → {}", r["id"].as_str().unwrap(), o[k], r[k]);
+                    }
+                }
+            }
+            eprintln!("{}", serde_json::to_string_pretty(&out["summary"]).unwrap());
+            eprintln!("报告已写入 {dst}");
         }
         _ => usage(),
     }

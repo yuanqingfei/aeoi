@@ -4,7 +4,7 @@
 //! `DynOperator::call` pipeline the MCP server wraps (schema validation → validate → execute →
 //! envelope), so the envelope is byte-identical, but there is no child process to spawn/supervise
 //! (simpler on Windows), no JSON-RPC framing, and latency is the operator's own.
-use crate::schema_conv::{llm_surface, to_gemini, Loss};
+use crate::schema_conv::{llm_surface, to_gemini, user_provenance_fields, Loss, USER_QUOTE};
 use aeoi_core::{DynOperator, HostCtx};
 use serde_json::{json, Map, Value};
 use std::time::Instant;
@@ -20,6 +20,8 @@ pub struct ToolDef {
     /// Gemini OpenAPI-subset schema.
     pub gemini_schema: Value,
     pub losses: Vec<Loss>,
+    /// Inputs that must be grounded in the user's words (`x-aeoi-provenance: "user"`, spec M-5).
+    pub user_fields: Vec<String>,
 }
 
 pub struct Bridge {
@@ -68,13 +70,19 @@ impl Bridge {
                 let js = llm_surface(&op.meta().input_schema);
                 let mut losses = vec![];
                 let g = to_gemini(&js, &mut losses);
+                let user_fields = user_provenance_fields(&op.meta().input_schema);
+                let mut description = description_for(op.as_ref());
+                if !user_fields.is_empty() {
+                    description.push_str(&format!(" 必须由用户给出、不得假设的参数：{}（用户没给时先询问，不要调用本工具）。", user_fields.join("、")));
+                }
                 ToolDef {
                     name: op.meta().manifest["mcp"]["tool_name"].as_str().unwrap().to_string(),
                     operator_id: op.meta().id.clone(),
-                    description: description_for(op.as_ref()),
+                    description,
                     json_schema: js,
                     gemini_schema: g,
                     losses,
+                    user_fields,
                 }
             })
             .collect();
@@ -88,7 +96,23 @@ impl Bridge {
     /// Run one tool call; always returns an AEOI envelope (bridge-level failures are wrapped in the
     /// same error shape so the model sees a uniform `isError` + remediation contract).
     pub fn call(&self, name: &str, args: &Value) -> (Value, f64) {
+        self.call_grounded(name, args, None)
+    }
+
+    /// Like [`Bridge::call`]; with `user_text` (everything the user said in this conversation) the
+    /// M-5 grounding check runs first: each `x-aeoi-provenance: "user"` input must be quoted in
+    /// `_user_quote`, the quote must occur in the user's text, and it must state the same number.
+    /// Without `user_text` (direct UI calls) the quote is only stripped.
+    pub fn call_grounded(&self, name: &str, args: &Value, user_text: Option<&str>) -> (Value, f64) {
         let t0 = Instant::now();
+        let mut args = args.clone();
+        let quotes = args.as_object_mut().and_then(|o| o.remove(USER_QUOTE));
+        if let (Some(t), Some(text)) = (self.tool(name), user_text) {
+            if let Some(err) = check_grounding(t, &args, quotes.as_ref(), text) {
+                return (err, t0.elapsed().as_secs_f64() * 1e3);
+            }
+        }
+        let args = &args;
         let env = match aeoi_control::find(&self.reg, name) {
             None => bridge_error(
                 "E.VALIDATION.UNKNOWN_TOOL",
@@ -110,6 +134,50 @@ impl Bridge {
         };
         (env, t0.elapsed().as_secs_f64() * 1e3)
     }
+}
+
+fn squash(s: &str) -> String {
+    crate::answer::normalize(s).chars().filter(|c| !c.is_whitespace() && !"$*`\\{}".contains(*c)).collect::<String>().to_lowercase()
+}
+
+/// Spec M-5 grounding check (binding level). Returns an error envelope when a user-provenance
+/// input is not backed by the user's own words.
+pub fn check_grounding(t: &ToolDef, args: &Value, quotes: Option<&Value>, user_text: &str) -> Option<Value> {
+    for f in &t.user_fields {
+        let Some(v) = args.get(f.as_str()) else { continue }; // absent → operator reports the missing input
+        let q = quotes.and_then(|q| q.get(f.as_str())).and_then(|x| x.as_str()).unwrap_or("").trim();
+        let problem = if q.is_empty() {
+            Some(format!("缺少 {USER_QUOTE}.{f}：没有说明 {f} = {v} 来自用户的哪句话"))
+        } else if !squash(user_text).contains(&squash(q)) {
+            Some(format!("{USER_QUOTE}.{f} 的引用“{q}”不在用户消息中"))
+        } else if let Some(x) = v.as_f64() {
+            // the quote must state this number (s, or ms/μs converted)
+            let scale: &[f64] = if q.contains("ms") || q.contains("毫秒") { &[1e-3, 1.0] } else if q.contains("μs") || q.contains("us") || q.contains("微秒") { &[1e-6, 1.0] } else { &[1.0] };
+            let ok = crate::answer::candidates(q).iter().any(|c| scale.iter().any(|s| (c.value * s - x).abs() <= 1e-9 * x.abs().max(1e-12) + c.half_ulp * s));
+            if ok {
+                None
+            } else {
+                Some(format!("{USER_QUOTE}.{f} 的引用“{q}”里没有数值 {x}"))
+            }
+        } else {
+            None
+        };
+        if let Some(p) = problem {
+            let e = aeoi_core::OpError::new(
+                "E.VALIDATION.UNGROUNDED_INPUT",
+                format!("{p}。{f} 是有物理含义、不能假设的输入（规范 M-5），必须由用户明确给出。"),
+                format!("不要猜测 {f}。请向用户询问 {f} 的取值（含单位），得到回答后再调用；不要换一个“常用值”重试。"),
+            )
+            .detail("source", json!("aeoi-web bridge"))
+            .detail("field", json!(f))
+            .detail("value", v.clone())
+            .detail("quote", json!(q))
+            .path(&format!("/{f}"))
+            .remedy(aeoi_core::error::ask_user("ask_user_for_value", &format!("向用户询问 {f}（含单位）")));
+            return Some(json!({"spec": aeoi_core::SPEC, "status": "error", "result": null, "trust": null, "error": e.to_json()}));
+        }
+    }
+    None
 }
 
 pub fn is_error(env: &Value) -> bool {
@@ -192,5 +260,35 @@ mod tests {
         assert_eq!(c["result"]["y"]["value"]["data"].as_array().unwrap().len(), 50);
         assert!(c["result"]["y"]["value"]["_downsampled"].is_object());
         assert_eq!(env["result"]["y"]["value"]["data"].as_array().unwrap().len(), 1001);
+    }
+
+    #[test]
+    fn ungrounded_sample_time_is_rejected() {
+        let b = Bridge::new();
+        let t = b.tool("control_lti_c2d").unwrap();
+        assert_eq!(t.user_fields, vec!["ts".to_string()]);
+        assert!(t.json_schema["required"].as_array().unwrap().contains(&json!(USER_QUOTE)));
+        assert!(t.description.contains("不得假设"));
+        let sys = json!({"kind":"tf","num":[1],"den":[1,1],"ts":0});
+        let q = "G(s)=1/(s+1)，用 ZOH 离散化";
+        // invented ts, no quote
+        let (e, _) = b.call_grounded("control_lti_c2d", &json!({"system": sys, "ts": 0.1}), Some(q));
+        assert_eq!(e["error"]["code"], "E.VALIDATION.UNGROUNDED_INPUT", "{e}");
+        assert_eq!(e["error"]["remediation"][0]["kind"], "ask_user");
+        // quote not in the user's text
+        let (e, _) = b.call_grounded("control_lti_c2d", &json!({"system": sys, "ts": 0.1, "_user_quote": {"ts": "T = 0.1 s"}}), Some(q));
+        assert_eq!(e["error"]["code"], "E.VALIDATION.UNGROUNDED_INPUT");
+        // quote present but a different number
+        let q2 = "G(s)=1/(s+1)，采样周期 T = 0.5 s，用 ZOH 离散化";
+        let (e, _) = b.call_grounded("control_lti_c2d", &json!({"system": sys, "ts": 0.1, "_user_quote": {"ts": "采样周期 T = 0.5 s"}}), Some(q2));
+        assert_eq!(e["error"]["code"], "E.VALIDATION.UNGROUNDED_INPUT");
+        // grounded (also with ms and extra spacing/LaTeX)
+        let (ok, _) = b.call_grounded("control_lti_c2d", &json!({"system": sys, "ts": 0.5, "_user_quote": {"ts": "采样周期 T = 0.5 s"}}), Some(q2));
+        assert!(!is_error(&ok), "{ok}");
+        let (ok, _) = b.call_grounded("control_lti_c2d", &json!({"system": sys, "ts": 0.02, "_user_quote": {"ts": "T=20ms"}}), Some("请按 T = 20 ms 离散化 1/(s+1)"));
+        assert!(!is_error(&ok), "{ok}");
+        // without user text (direct UI call) the quote is just stripped
+        let (ok, _) = b.call("control_lti_c2d", &json!({"system": sys, "ts": 0.1, "_user_quote": {"ts": "x"}}));
+        assert!(!is_error(&ok), "{ok}");
     }
 }

@@ -178,7 +178,7 @@ pz_out=outs("control.lti.poles_zeros",{"poles":CVEC("c128 向量 [n]，按实部
  "stable":{"type":"boolean","description":"连续：所有 Re p < 0；离散：所有 |p| < 1"}},["poles","zeros","zero_definition","dcgain","natural_frequency","damping_ratio","stable"])
 
 # ---- control.analysis.ctrb_obsv
-co=man("control.analysis.ctrb_obsv","Controllability / observability","计算可控性矩阵 [B AB … A^{n−1}B] 与可观性矩阵 [C; CA; …; CA^{n−1}]、基于 SVD 的数值秩，以及（可选）由 Lyapunov 方程得到的可控/可观 Gramian。","analysis",["lti","controllability","observability","gramian"],
+co=man("control.analysis.ctrb_obsv","Controllability / observability","判断 LTI 系统是否可控、是否可观（“(A, B) 是否可控”“可控性矩阵的秩是多少”“系统是否可观”这类问题用本工具；只给出 A、B 时也用本工具，C、D 按 system 的说明补零即可）。计算可控性矩阵 [B AB … A^{n−1}B] 与可观性矩阵 [C; CA; …; CA^{n−1}]、基于 SVD 的数值秩，以及（可选）由 Lyapunov 方程得到的可控/可观 Gramian。","analysis",["lti","controllability","observability","gramian"],
  ["system 为 proper；tf/zpk 先按可控标准型实现（结果依赖实现，给出 warning）","Gramian 需系统渐近稳定（连续 Re λ < 0；离散 |λ| < 1）"],["大规模系统（n > 100）的秩判定：Krylov 矩阵病态，应改用 PBH/阶梯形"],
  "Krylov 块逐列构造；数值秩 = #{σ_i > rtol·σ_max}，rtol 缺省为 max(行,列)·ε（与 numpy.linalg.matrix_rank 相同）；同时对 A 的每个特征值做 PBH 检验 σ_min([A−λI, B])/‖[A,B]‖_F 作为更稳健的旁证，二者不一致时给出 W.NUMERICAL.RANK_AMBIGUOUS。Gramian：连续 A W_c + W_c Aᵀ + BBᵀ = 0、Aᵀ W_o + W_o A + CᵀC = 0；离散 A W_c Aᵀ − W_c + BBᵀ = 0、Aᵀ W_o A − W_o + CᵀC = 0；用复 Schur 形式的 Bartels–Stewart 法求解（同 control.math.lyap）",
  [R_KAI,R_GVL,R_BS],"ctrb_obsv::analyze","T2",{"max_states":100},COMMON_LTI_ERR,
@@ -209,12 +209,12 @@ mg_out=outs("control.analysis.margin",{"gain_margin":dict(Q,description="unit=1�
 
 # ---- control.lti.c2d
 c2d=man("control.lti.c2d","Continuous-to-discrete conversion","把连续时间 LTI 系统按 zoh / foh / tustin（可选预畸变）离散化为采样周期 ts 的离散系统。","transform",["lti","discretization"],
- ["system 为连续时间（ts = 0）且 proper","tustin 要求 1 − p·T/2 ≠ 0（无极点位于 s = 2/T）","prewarp_frequency 仅用于 tustin，且 < π/ts"],["非线性系统","带时滞的系统（v0.3 不支持）","d2c（v0.3 未实现，见 §12）"],
+ ["ts（采样周期）必须由用户明确给出；用户没给时不要调用本工具，先询问用户，不得假设 0.1 s 等常用值","system 为连续时间（ts = 0）且 proper","tustin 要求 1 − p·T/2 ≠ 0（无极点位于 s = 2/T）","prewarp_frequency 仅用于 tustin，且 < π/ts"],["非线性系统","带时滞的系统（v0.3 不支持）","d2c（v0.3 未实现，见 §12）"],
  "ss 层面计算，tf/zpk 先实现为可控标准型（MIMO tf 逐元素离散化后再拼装，结果仍为 tf）。zoh：expm([[A,B],[0,0]]·T) 得 Φ、Γ（Van Loan 1978；Higham 2005 Padé-13）；foh：expm([[A·T, B·T, 0],[0, 0, I],[0, 0, 0]]) 的块 M11、M12、M13，A_d=M11，B_d=M12−M13+M11·M13，C_d=C，D_d=D+C·M13（三角保持形式，与 scipy cont2discrete 'foh' 相同的状态坐标）；tustin：α=T_w/2，A_d=(I−αA)⁻¹(I+αA)，B_d=(I−αA)⁻¹B·T_w，C_d=C(I−αA)⁻¹，D_d=D+α·C·B_d（与 scipy 'bilinear' 相同坐标）；预畸变 T_w = 2·tan(ω_w·T/2)/ω_w，否则 T_w=T。输出种类缺省与输入相同",
  [{"type":"paper","cite":"C. Van Loan, Computing integrals involving the matrix exponential, IEEE TAC 23(3), 1978","doi":"10.1109/TAC.1978.1101743"},R_HIGHAM,R_FPE],
  "c2d::discretize","T2",{"max_states":200},COMMON_LTI_ERR+["E.DOMAIN.NOT_CONTINUOUS","E.VALIDATION.OPTION_CONFLICT","E.DOMAIN.ABOVE_NYQUIST","E.NUMERICAL.SINGULAR","E.DOMAIN.MIMO_NOT_SUPPORTED","E.DOMAIN.DEGENERATE_SYSTEM"],
  ["W.DOMAIN.NONMINIMAL_REALIZATION","W.ACCURACY.ALIASING"]+LW)
-c2d_in=ins("control.lti.c2d",{"system":LTI,"ts":{"type":"number","exclusiveMinimum":0,"description":"采样周期，unit s"},
+c2d_in=ins("control.lti.c2d",{"system":LTI,"ts":{"type":"number","exclusiveMinimum":0,"description":"采样周期，unit s","x-aeoi-provenance":"user"},
  "method":{"enum":["zoh","foh","tustin"],"default":"zoh"},"prewarp_frequency":{"type":"number","exclusiveMinimum":0,"description":"rad/s，仅 tustin"},
  "output_kind":{"enum":["same","tf","ss","zpk"],"default":"same"}},["system","ts"])
 c2d_out=outs("control.lti.c2d",{"system":dict(LTI,description="离散系统，ts = 输入 ts"),"method":{"enum":["zoh","foh","tustin"]},
@@ -278,29 +278,30 @@ B2={"control.lti.convert":(convert,convert_in,convert_out),"control.lti.poles_ze
  "control.math.lyap":(ly,ly_in,ly_out),"control.design.place":(pl,pl_in,pl_out),"control.design.dlqr":(dl,dl_in,dl_out)}
 # v0.4 rule L-1: every top-level input property carries a description (meaning, shape, unit, enum values)
 # so that function-calling consumers — which drop unknown keywords such as x-aeoi-shape-constraints —
-# still see it. Applied only where the property has no description yet.
+# still see it. DESC wins over a shorter inline description (the inline c2d.ts text lacked the ask-the-user rule).
 SYS_D="被分析的 LTI 系统：tf（num/den 按降幂）、ss（A/B/C/D 稠密矩阵，row-major）或 zpk；ts=0 连续，ts>0 为离散采样周期（s）"
 LQR_D={"A":"状态矩阵 A，[n,n]","B":"输入矩阵 B，[n,m]（单输入时为列向量 [n,1]）","Q":"状态权重 Q，[n,n]，对称半正定","R":"输入权重 R，[m,m]，对称正定（标量写成 [1,1]）","N":"交叉权重 N，[n,m]，缺省为 0"}
 DESC={
  "control.lti.bode":{"system":SYS_D,"frequency":"频率网格：explicit（values 严格递增）或 logspace（min..max 共 n 点，对数均匀）；unit 为 rad/s 或 Hz，必须与用户给出的单位一致（ω = 2π·f）","phase":"相位展开与分支选择（可省略）"},
  "control.lti.step":{"system":SYS_D,"time":"时间网格：uniform（t_final、dt，单位 s）或 auto（由算子按系统时间常数选择）；离散系统要求 dt = ts","step_info":"阶跃指标（上升时间、调节时间、超调等）；enabled=true 时计算","output":"返回的采样点：all / decimated（最多 max_samples 点）/ none"},
- "control.lti.impulse":{"system":SYS_D,"time":"时间网格：uniform（t_final、dt，单位 s）或 auto；离散系统要求 dt = ts","output":"返回的采样点：all / decimated（最多 max_samples 点）/ none","discrete_scaling":"离散冲激的幅值约定：unit_area（幅值 1/ts，与连续冲激面积一致，默认）或 unit_pulse（幅值 1，即 Kronecker δ）"},
+ "control.lti.impulse":{"system":SYS_D,"time":"时间网格：uniform（t_final、dt，单位 s）或 auto；离散系统要求 dt = ts","output":"返回的采样点：all / decimated（最多 max_samples 点）/ none","discrete_scaling":"离散冲激的幅值约定：unit_area（幅值 1/ts，与连续冲激面积一致，默认）或 unit_pulse（幅值 1，即 Kronecker δ）；连续系统忽略"},
  "control.design.lqr":dict(LQR_D),
  "control.design.dlqr":dict(LQR_D,A="离散状态矩阵 A（x[k+1] = A x[k] + B u[k]），[n,n]"),
  "control.design.place":{"A":"状态矩阵 A，[n,n]","B":"输入矩阵 B，[n,m]","max_sweeps":"多输入 KNV 迭代的最大扫描次数（可省略）"},
  "control.math.lyap":{"A":"系数矩阵 A，[n,n]","Q":"右端矩阵 Q，[n,n]，对称","type":"continuous：A X + X Aᵀ + Q = 0；discrete：A X Aᵀ − X + Q = 0"},
  "control.lti.convert":{"system":SYS_D,"to":"目标表示：tf（传递函数）、ss（状态空间，可控标准型）、zpk（零极点增益，仅 SISO）"},
  "control.lti.poles_zeros":{"system":SYS_D,"dcgain":"是否计算直流增益（连续 s=0，离散 z=1），默认 true"},
- "control.analysis.ctrb_obsv":{"system":SYS_D+"。只判断可控性时 C、D 不影响结果，可取 C = [[1, 0, …, 0]]（1×n）、D = [[0]]；只判断可观性时可取 B = [[1], [0], …]（n×1）","gramians":"是否额外计算可控/可观 Gramian（要求系统稳定），默认 false"},
+ "control.analysis.ctrb_obsv":{"system":SYS_D+"。判断可控性只需 A、B：用户没给 C、D 时用 kind=\"ss\"，C = {dtype:\"f64\", shape:[1,n], data:[0,…,0]}、D = {dtype:\"f64\", shape:[1,m], data:[0,…,0]}（不影响可控性结果，回答时只报告可控性）；判断可观性只需 A、C：没给 B、D 时 B 取 shape [n,1] 全零","gramians":"是否额外计算可控/可观 Gramian（要求系统稳定），默认 false"},
  "control.analysis.margin":{"system":"开环 SISO 系统 L(s)（单位负反馈）；tf/ss/zpk，ts>0 为离散"},
- "control.lti.c2d":{"system":"待离散化的连续系统（ts 必须为 0）","ts":"采样周期 T（单位 s，> 0）。用户未给出时必须询问，不得假设","method":"离散化方法：zoh（零阶保持，默认）、foh（一阶保持/三角保持）、tustin（双线性，可配合 prewarp_frequency）","output_kind":"输出表示：same（与输入相同，默认）、tf、ss、zpk"},
+ "control.lti.c2d":{"system":"待离散化的连续系统（ts 必须为 0）","ts":"采样周期 T（单位 s，> 0）。必须是用户在对话中明确给出的数值；用户没给时不要调用本工具，先询问用户，绝不假设 0.1、0.01 等常用值","method":"离散化方法：zoh（零阶保持，默认）、foh（一阶保持/三角保持）、tustin（双线性，可配合 prewarp_frequency）","output_kind":"输出表示：same（与输入相同，默认）、tf、ss、zpk"},
 }
 for op,props in DESC.items():
     for (m_,i_,o_) in [({"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2)[op]]:
         for k,d in props.items():
             assert k in i_["properties"], (op,k)
-            if "description" not in i_["properties"][k]:
-                i_["properties"][k]=dict(json.loads(json.dumps(i_["properties"][k])),description=d)  # copy: property dicts are shared
+            old=i_["properties"][k].get("description")
+            if old and old!=d: print(f"  {op}.{k}: description {old!r} → DESC")
+            i_["properties"][k]=dict(json.loads(json.dumps(i_["properties"][k])),description=d)  # copy: property dicts are shared
 for op,(m,i,o) in ({"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2).items():
     d=f"examples/{op}/"; w(d+"manifest.json",m); w(d+"input.schema.json",i); w(d+"output.schema.json",o)
 print("ok")

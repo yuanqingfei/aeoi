@@ -7,6 +7,7 @@ rust-version.workspace = true
 description = "End-to-end test web UI + eval harness: a cloud LLM calls the AEOI operators via function calling"
 
 [dependencies]
+regex = { version = "1", default-features = false, features = ["std", "unicode-perl"] }
 aeoi-core = { path = "../aeoi-core" }
 aeoi-control = { path = "../aeoi-control" }
 serde.workspace = true

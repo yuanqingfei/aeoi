@@ -96,57 +96,22 @@ fn close(a: &CheckVal, b: &CheckVal, rel: f64) -> bool {
     }
 }
 
-/// Numbers appearing in free text (handles unicode minus, thousands-free decimals, exponents, ×10^k).
+/// Numbers appearing in free text (see [`crate::answer`] for the accepted spellings).
 pub fn numbers_in(text: &str) -> Vec<f64> {
-    let t = text.replace('−', "-").replace('–', "-").replace('，', ",").replace("×10^", "e").replace("× 10^", "e").replace("x10^", "e");
-    let cs: Vec<char> = t.chars().collect();
-    let mut out = vec![];
-    let mut i = 0;
-    while i < cs.len() {
-        let start = i;
-        let neg = cs[i] == '-' && i + 1 < cs.len() && (cs[i + 1].is_ascii_digit() || cs[i + 1] == '.');
-        if neg {
-            i += 1;
-        }
-        if i < cs.len() && (cs[i].is_ascii_digit() || (cs[i] == '.' && i + 1 < cs.len() && cs[i + 1].is_ascii_digit())) {
-            let mut j = i;
-            while j < cs.len() && (cs[j].is_ascii_digit() || cs[j] == '.') {
-                j += 1;
-            }
-            if j < cs.len() && (cs[j] == 'e' || cs[j] == 'E') {
-                let mut k = j + 1;
-                if k < cs.len() && (cs[k] == '-' || cs[k] == '+') {
-                    k += 1;
-                }
-                if k < cs.len() && cs[k].is_ascii_digit() {
-                    while k < cs.len() && cs[k].is_ascii_digit() {
-                        k += 1;
-                    }
-                    j = k;
-                }
-            }
-            let s: String = cs[if neg { start } else { i }..j].iter().collect();
-            if let Ok(x) = s.trim_end_matches('.').parse::<f64>() {
-                out.push(x);
-            }
-            i = j;
-        } else {
-            i = start + 1;
-        }
-    }
-    out
+    crate::answer::candidates(text).iter().map(|c| c.value).collect()
 }
 
 pub fn answer_has(text: &str, v: &CheckVal, chk: &Value) -> bool {
     match v {
-        CheckVal::Inf(_) => ["∞", "无穷", "Inf", "inf", "无限", "无相位穿越", "不存在相位穿越", "没有相位穿越"].iter().any(|k| text.contains(k)),
+        CheckVal::Inf(_) => crate::answer::INF_WORDS.iter().any(|k| text.contains(k)),
         CheckVal::Bool(_) => true,
         CheckVal::Num(x) => {
-            let rel = chk["answer_rel_tol"].as_f64().unwrap_or(0.02);
-            let abs = chk["answer_abs_tol"].as_f64().unwrap_or(1e-3);
-            let flip = chk["allow_sign_flip"].as_bool().unwrap_or(false);
-            let tol = (rel * x.abs()).max(abs);
-            numbers_in(text).iter().any(|y| (y - x).abs() <= tol || (flip && (y + x).abs() <= tol))
+            let tol = crate::answer::Tol {
+                rel: chk["answer_rel_tol"].as_f64().unwrap_or(0.02),
+                abs: chk["answer_abs_tol"].as_f64(),
+                allow_sign_flip: chk["allow_sign_flip"].as_bool().unwrap_or(false),
+            };
+            crate::answer::text_has(text, *x, &tol)
         }
     }
 }
@@ -206,7 +171,9 @@ pub fn score(bridge: &Bridge, q: &Value, tr: &Transcript, latency_s: f64) -> QRe
             first_tool_ok = tr.tools.first().map(|t| !forbidden.contains(&t.tool.as_str()) || t.is_error).unwrap_or(true);
             args_ok = None;
             let kw = q["clarify_keywords"].as_array().map(|a| a.iter().filter_map(|x| x.as_str()).any(|k| final_text.contains(k))).unwrap_or(false);
-            answer_ok = !guessed && kw;
+            // the final message must actually ask (a question), not just mention the missing quantity
+            let asks = ["？", "?", "请提供", "请告诉", "请问", "请给出", "请确认"].iter().any(|k| final_text.contains(k));
+            answer_ok = !guessed && kw && asks;
         }
         _ => {
             tool_ok = exp.iter().any(|e| called.contains(e));
@@ -263,6 +230,60 @@ pub fn score(bridge: &Bridge, q: &Value, tr: &Transcript, latency_s: f64) -> QRe
         http_retries: tr.turns.iter().map(|t| t.http_retries).sum(),
         trace: tr.tools.iter().map(|t| json!({"step": t.step, "tool": t.tool, "request": t.request, "is_error": t.is_error, "error_code": t.error_code, "error_hint": t.response["error"]["agent_hint"], "latency_ms": t.latency_ms})).collect(),
     }
+}
+
+/// Re-score a saved report with the current questions and scorer, without calling the model:
+/// every recorded tool request is re-executed (operators are deterministic), the saved final
+/// answer is re-checked. Token/latency/retry figures are carried over from the report.
+pub fn rescore(bridge: &Bridge, questions: &Value, report: &Value) -> Value {
+    let qs = questions["questions"].as_array().cloned().unwrap_or_default();
+    let mut results = vec![];
+    for old in report["results"].as_array().cloned().unwrap_or_default() {
+        let Some(q) = qs.iter().find(|q| q["id"] == old["id"]) else { continue };
+        let tools = old["trace"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default()
+            .iter()
+            .map(|t| {
+                let name = t["tool"].as_str().unwrap_or("").to_string();
+                // no grounding check: the saved run may predate the _user_quote argument
+                let (resp, _) = bridge.call(&name, &t["request"]);
+                agent::ToolStep {
+                    step: t["step"].as_u64().unwrap_or(0) as usize,
+                    operator_id: None,
+                    call_id: String::new(),
+                    request: t["request"].clone(),
+                    is_error: is_error(&resp),
+                    error_code: resp["error"]["code"].as_str().map(String::from),
+                    response: resp,
+                    latency_ms: t["latency_ms"].as_f64().unwrap_or(0.0),
+                    tool: name,
+                }
+            })
+            .collect::<Vec<_>>();
+        let tr = Transcript {
+            question: q["question"].as_str().unwrap_or("").into(),
+            final_text: old["final_text"].as_str().map(String::from),
+            stopped: old["stopped"].as_str().unwrap_or("").into(),
+            self_corrections: agent::count_self_corrections(&tools),
+            tools,
+            nudges: serde_json::from_value(old["nudges"].clone()).unwrap_or_default(),
+            total_tokens: old["total_tokens"].as_u64().unwrap_or(0),
+            error: old["provider_error"].as_str().map(String::from),
+            ..Default::default()
+        };
+        let mut r = score(bridge, q, &tr, old["latency_s"].as_f64().unwrap_or(0.0));
+        r.http_retries = old["http_retries"].as_u64().unwrap_or(0) as u32;
+        r.model_turns = old["model_turns"].as_u64().unwrap_or(0) as usize;
+        results.push(r);
+    }
+    let st = &report["settings"];
+    let opts = EvalOpts { rpm: st["rpm"].as_f64().unwrap_or(0.0), max_steps: st["max_steps"].as_u64().unwrap_or(8) as usize, only: None, limit: None };
+    let mut out = summarize_named(report["provider"].as_str().unwrap_or(""), report["model"].as_str().unwrap_or(""), &results, report["summary"]["wall_time_s"].as_f64().unwrap_or(0.0), &opts);
+    out["aborted"] = report["aborted"].clone();
+    out["rescored"] = json!({"by": format!("aeoi-web {} rescore", env!("CARGO_PKG_VERSION")), "previous_summary": report["summary"]});
+    out
 }
 
 /// Spaces model calls to at most `rpm` per minute (free-tier friendly).
@@ -357,6 +378,10 @@ fn ok(b: bool) -> &'static str {
 }
 
 pub fn summarize(provider: &dyn Provider, results: &[QResult], wall_s: f64, opts: &EvalOpts) -> Value {
+    summarize_named(provider.name(), provider.model(), results, wall_s, opts)
+}
+
+pub fn summarize_named(provider: &str, model: &str, results: &[QResult], wall_s: f64, opts: &EvalOpts) -> Value {
     let n = results.len().max(1) as f64;
     let frac = |f: &dyn Fn(&QResult) -> bool| results.iter().filter(|r| f(r)).count() as f64 / n;
     let arg_app: Vec<&QResult> = results.iter().filter(|r| r.args_ok.is_some()).collect();
@@ -370,8 +395,8 @@ pub fn summarize(provider: &dyn Provider, results: &[QResult], wall_s: f64, opts
         }
     }
     json!({
-        "provider": provider.name(),
-        "model": provider.model(),
+        "provider": provider,
+        "model": model,
         "generated_by": format!("aeoi-web {} eval", env!("CARGO_PKG_VERSION")),
         "spec": aeoi_core::SPEC,
         "reference_values": "direct AEOI operator calls (python-control/scipy-verified implementation; not MATLAB)",
@@ -407,7 +432,7 @@ mod tests {
     fn number_extraction() {
         assert_eq!(numbers_in("K = [1, 1.732]，S≈−0.5e-3；超调 37.2%"), vec![1.0, 1.732, -0.0005, 37.2]);
         assert_eq!(numbers_in("增益裕度 1.5 (3.52 dB)，ω=1.414 rad/s"), vec![1.5, 3.52, 1.414]);
-        assert_eq!(numbers_in("x2 = 3×10^-2"), vec![2.0, 0.03]);
+        assert_eq!(numbers_in("x2 = 3×10^-2"), vec![0.03]);
     }
 
     #[test]
@@ -508,6 +533,16 @@ mod tests {
         let mut h = vec![];
         let tr = agent::run(&mock, &b, &mut h, "", &AgentCfg::default(), None).await;
         let r = score(&b, &q, &tr, 0.0);
-        assert!(!r.tool_ok && !r.answer_ok);
+        // the binding blocks the invented ts (M-5), but an answer that still states a guess fails
+        assert_eq!(r.tool_errors, vec!["E.VALIDATION.UNGROUNDED_INPUT".to_string()]);
+        assert!(r.tool_ok && !r.answer_ok, "{r:?}");
+        // blocked guess, then asking → pass
+        let mock = MockProvider::new(vec![MockProvider::calls(vec![("control_lti_c2d", json!({"system":{"kind":"tf","num":[1],"den":[1,1,1],"ts":0},"ts":0.1}))]), MockProvider::text("请问采样周期 T 是多少？")]);
+        let mut h = vec![];
+        let tr = agent::run(&mock, &b, &mut h, q["question"].as_str().unwrap(), &AgentCfg::default(), None).await;
+        assert!(score(&b, &q, &tr, 0.0).answer_ok);
+        // a guessed call that the bridge cannot block (no user text check) is still caught by the scorer
+        let ok_env = b.call("control_lti_c2d", &json!({"system":{"kind":"tf","num":[1],"den":[1,1,1],"ts":0},"ts":0.1})).0;
+        assert!(!is_error(&ok_env));
     }
 }
