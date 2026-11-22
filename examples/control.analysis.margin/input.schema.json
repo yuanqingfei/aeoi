@@ -8,7 +8,8 @@
   ],
   "properties": {
     "system": {
-      "$ref": "aeoi://schemas/common/0.3/LtiSystem"
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "开环 SISO 系统 L(s)（单位负反馈）；tf/ss/zpk，ts>0 为离散"
     },
     "exec": {
       "$ref": "aeoi://schemas/common/0.3/ExecOptions"

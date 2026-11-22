@@ -9,14 +9,16 @@
   ],
   "properties": {
     "system": {
-      "$ref": "aeoi://schemas/common/0.3/LtiSystem"
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "被分析的 LTI 系统：tf（num/den 按降幂）、ss（A/B/C/D 稠密矩阵，row-major）或 zpk；ts=0 连续，ts>0 为离散采样周期（s）"
     },
     "to": {
       "enum": [
         "tf",
         "ss",
         "zpk"
-      ]
+      ],
+      "description": "目标表示：tf（传递函数）、ss（状态空间，可控标准型）、zpk（零极点增益，仅 SISO）"
     },
     "normalize": {
       "type": "boolean",

@@ -10,10 +10,12 @@
   ],
   "properties": {
     "A": {
-      "$ref": "aeoi://schemas/common/0.3/Matrix"
+      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "description": "状态矩阵 A，[n,n]"
     },
     "B": {
-      "$ref": "aeoi://schemas/common/0.3/Matrix"
+      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "description": "输入矩阵 B，[n,m]"
     },
     "poles": {
       "type": "array",
@@ -27,7 +29,8 @@
       "type": "integer",
       "minimum": 1,
       "maximum": 200,
-      "default": 50
+      "default": 50,
+      "description": "多输入 KNV 迭代的最大扫描次数（可省略）"
     },
     "exec": {
       "$ref": "aeoi://schemas/common/0.3/ExecOptions"

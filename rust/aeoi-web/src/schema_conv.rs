@@ -21,8 +21,59 @@ fn is_alt_matrix_branch(v: &Value) -> bool {
     req.contains(&"data_b64") || req.contains(&"uri") || (req.contains(&"format") && req.contains(&"indices")) || (req.contains(&"format") && v["properties"].get("row_indices").is_some()) || (req.contains(&"format") && v["properties"]["format"].get("enum").is_some() && v["properties"].get("data").is_none())
 }
 
+const DENSE_SHORT: &str = "稠密矩阵 {dtype:\"f64\", shape:[行,列], data:[...]}；data 按 row-major（逐行）展平，长度 = 行×列";
+/// Optional, defaulted or cosmetic properties hidden from the model (the operator applies defaults).
+const HIDDEN: &[&str] = &["time_unit", "state_names", "input_names", "output_names", "structure"];
+
+fn is_dense_matrix(o: &Map<String, Value>) -> bool {
+    let p = o.get("properties").and_then(|p| p.as_object());
+    p.map(|p| p.contains_key("dtype") && p.contains_key("shape") && p.contains_key("data") && !p.contains_key("data_b64")).unwrap_or(false)
+}
+
+/// Stage 1b: token diet. DenseMatrix → f64-only compact form with a short description; hidden
+/// optional fields dropped; spec-internal remarks (warning codes) trimmed from descriptions.
+fn slim(v: &Value) -> Value {
+    match v {
+        Value::Object(o) => {
+            if is_dense_matrix(o) {
+                let d = o.get("description").and_then(|d| d.as_str()).unwrap_or("");
+                let field = if d.starts_with("内联 JSON 稠密数组") { String::new() } else { d.split("内联 JSON 稠密数组").next().unwrap_or("").trim_end_matches('。').to_string() };
+                let desc = if field.is_empty() { DENSE_SHORT.to_string() } else { format!("{field}。{DENSE_SHORT}") };
+                return json!({"type": "object", "description": desc, "properties": {"dtype": {"enum": ["f64"]}, "shape": {"type": "array", "items": {"type": "integer", "minimum": 0}, "minItems": 2, "maxItems": 2}, "data": {"type": "array", "items": {"type": "number"}}}, "required": ["dtype", "shape", "data"]});
+            }
+            let mut m = Map::new();
+            for (k, x) in o {
+                if k == "properties" {
+                    let props: Map<String, Value> = x.as_object().unwrap().iter().filter(|(pk, _)| !HIDDEN.contains(&pk.as_str())).map(|(pk, pv)| (pk.clone(), slim(pv))).collect();
+                    m.insert(k.clone(), Value::Object(props));
+                } else if k == "description" {
+                    let d = x.as_str().unwrap_or("");
+                    let d = d.split("。前导零").next().unwrap_or(d);
+                    m.insert(k.clone(), json!(d));
+                } else if k == "x-aeoi-shape-constraints" {
+                    // mirrored into the description (unknown keywords are dropped by function-calling subsets)
+                    let sc: Vec<&str> = x.as_array().map(|a| a.iter().filter_map(|s| s.as_str()).collect()).unwrap_or_default();
+                    let prev = m.get("description").and_then(|d| d.as_str()).unwrap_or("").to_string();
+                    m.insert("description".into(), json!(format!("{}维数约束：{}", if prev.is_empty() { String::new() } else { format!("{prev}；") }, sc.join("，"))));
+                } else if k == "$schema" || k == "$id" {
+                    continue;
+                } else {
+                    m.insert(k.clone(), slim(x));
+                }
+            }
+            Value::Object(m)
+        }
+        Value::Array(a) => Value::Array(a.iter().map(slim).collect()),
+        _ => v.clone(),
+    }
+}
+
 /// Stage 1 (provider-independent).
 pub fn llm_surface(schema: &Value) -> Value {
+    slim(&llm_surface_raw(schema))
+}
+
+fn llm_surface_raw(schema: &Value) -> Value {
     fn walk(v: &Value, top: bool) -> Value {
         match v {
             Value::Object(o) => {
@@ -296,7 +347,9 @@ mod tests {
         assert_eq!(a["properties"]["data"]["type"], "array");
         assert_eq!(a["properties"]["data"]["items"]["type"], "number");
         assert!(a["description"].as_str().unwrap().contains("row-major"));
-        assert!(l.iter().any(|x| x.what.contains("标量联合")));
+        assert_eq!(a["properties"]["dtype"]["enum"], json!(["f64"]));
+        let top = g["description"].as_str().unwrap_or("");
+        assert!(top.contains("B: [n,m]"), "{top}");
     }
 
     #[test]

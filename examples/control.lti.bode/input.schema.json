@@ -9,7 +9,8 @@
   ],
   "properties": {
     "system": {
-      "$ref": "aeoi://schemas/common/0.3/LtiSystem"
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "被分析的 LTI 系统：tf（num/den 按降幂）、ss（A/B/C/D 稠密矩阵，row-major）或 zpk；ts=0 连续，ts>0 为离散采样周期（s）"
     },
     "frequency": {
       "oneOf": [
@@ -78,7 +79,8 @@
             }
           }
         }
-      ]
+      ],
+      "description": "频率网格：explicit（values 严格递增）或 logspace（min..max 共 n 点，对数均匀）；unit 为 rad/s 或 Hz，必须与用户给出的单位一致（ω = 2π·f）"
     },
     "phase": {
       "type": "object",
@@ -93,7 +95,8 @@
           "default": 0,
           "description": "首个频点相位落在 (c-180, c+180] 内；unwrap=false 时每个点都落在该区间"
         }
-      }
+      },
+      "description": "相位展开与分支选择（可省略）"
     },
     "exec": {
       "$ref": "aeoi://schemas/common/0.3/ExecOptions"

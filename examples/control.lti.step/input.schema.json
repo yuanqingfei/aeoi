@@ -9,7 +9,8 @@
   ],
   "properties": {
     "system": {
-      "$ref": "aeoi://schemas/common/0.3/LtiSystem"
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "被分析的 LTI 系统：tf（num/den 按降幂）、ss（A/B/C/D 稠密矩阵，row-major）或 zpk；ts=0 连续，ts>0 为离散采样周期（s）"
     },
     "time": {
       "oneOf": [
@@ -63,7 +64,8 @@
           },
           "description": "启发式网格（见 manifest），不参与 parity 测试"
         }
-      ]
+      ],
+      "description": "时间网格：uniform（t_final、dt，单位 s）或 auto（由算子按系统时间常数选择）；离散系统要求 dt = ts"
     },
     "step_info": {
       "type": "object",
@@ -93,7 +95,8 @@
           "maximum": 0.5,
           "default": 0.02
         }
-      }
+      },
+      "description": "阶跃指标（上升时间、调节时间、超调等）；enabled=true 时计算"
     },
     "output": {
       "type": "object",
@@ -112,7 +115,8 @@
           "minimum": 2,
           "default": 10001
         }
-      }
+      },
+      "description": "返回的采样点：all / decimated（最多 max_samples 点）/ none"
     },
     "exec": {
       "$ref": "aeoi://schemas/common/0.3/ExecOptions"

@@ -276,6 +276,31 @@ dl_out["properties"]["closed_loop_poles"]["description"]="c128 向量 [n]，eig(
 B2={"control.lti.convert":(convert,convert_in,convert_out),"control.lti.poles_zeros":(pz,pz_in,pz_out),"control.analysis.ctrb_obsv":(co,co_in,co_out),
  "control.analysis.margin":(mg,mg_in,mg_out),"control.lti.c2d":(c2d,c2d_in,c2d_out),"control.lti.impulse":(imp,imp_in,imp_out),
  "control.math.lyap":(ly,ly_in,ly_out),"control.design.place":(pl,pl_in,pl_out),"control.design.dlqr":(dl,dl_in,dl_out)}
+# v0.4 rule L-1: every top-level input property carries a description (meaning, shape, unit, enum values)
+# so that function-calling consumers — which drop unknown keywords such as x-aeoi-shape-constraints —
+# still see it. Applied only where the property has no description yet.
+SYS_D="被分析的 LTI 系统：tf（num/den 按降幂）、ss（A/B/C/D 稠密矩阵，row-major）或 zpk；ts=0 连续，ts>0 为离散采样周期（s）"
+LQR_D={"A":"状态矩阵 A，[n,n]","B":"输入矩阵 B，[n,m]（单输入时为列向量 [n,1]）","Q":"状态权重 Q，[n,n]，对称半正定","R":"输入权重 R，[m,m]，对称正定（标量写成 [1,1]）","N":"交叉权重 N，[n,m]，缺省为 0"}
+DESC={
+ "control.lti.bode":{"system":SYS_D,"frequency":"频率网格：explicit（values 严格递增）或 logspace（min..max 共 n 点，对数均匀）；unit 为 rad/s 或 Hz，必须与用户给出的单位一致（ω = 2π·f）","phase":"相位展开与分支选择（可省略）"},
+ "control.lti.step":{"system":SYS_D,"time":"时间网格：uniform（t_final、dt，单位 s）或 auto（由算子按系统时间常数选择）；离散系统要求 dt = ts","step_info":"阶跃指标（上升时间、调节时间、超调等）；enabled=true 时计算","output":"返回的采样点：all / decimated（最多 max_samples 点）/ none"},
+ "control.lti.impulse":{"system":SYS_D,"time":"时间网格：uniform（t_final、dt，单位 s）或 auto；离散系统要求 dt = ts","output":"返回的采样点：all / decimated（最多 max_samples 点）/ none","discrete_scaling":"离散冲激的幅值约定：unit_area（幅值 1/ts，与连续冲激面积一致，默认）或 unit_pulse（幅值 1，即 Kronecker δ）"},
+ "control.design.lqr":dict(LQR_D),
+ "control.design.dlqr":dict(LQR_D,A="离散状态矩阵 A（x[k+1] = A x[k] + B u[k]），[n,n]"),
+ "control.design.place":{"A":"状态矩阵 A，[n,n]","B":"输入矩阵 B，[n,m]","max_sweeps":"多输入 KNV 迭代的最大扫描次数（可省略）"},
+ "control.math.lyap":{"A":"系数矩阵 A，[n,n]","Q":"右端矩阵 Q，[n,n]，对称","type":"continuous：A X + X Aᵀ + Q = 0；discrete：A X Aᵀ − X + Q = 0"},
+ "control.lti.convert":{"system":SYS_D,"to":"目标表示：tf（传递函数）、ss（状态空间，可控标准型）、zpk（零极点增益，仅 SISO）"},
+ "control.lti.poles_zeros":{"system":SYS_D,"dcgain":"是否计算直流增益（连续 s=0，离散 z=1），默认 true"},
+ "control.analysis.ctrb_obsv":{"system":SYS_D,"gramians":"是否额外计算可控/可观 Gramian（要求系统稳定），默认 false"},
+ "control.analysis.margin":{"system":"开环 SISO 系统 L(s)（单位负反馈）；tf/ss/zpk，ts>0 为离散"},
+ "control.lti.c2d":{"system":"待离散化的连续系统（ts 必须为 0）","ts":"采样周期 T（单位 s，> 0）。用户未给出时必须询问，不得假设","method":"离散化方法：zoh（零阶保持，默认）、foh（一阶保持/三角保持）、tustin（双线性，可配合 prewarp_frequency）","output_kind":"输出表示：same（与输入相同，默认）、tf、ss、zpk"},
+}
+for op,props in DESC.items():
+    for (m_,i_,o_) in [({"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2)[op]]:
+        for k,d in props.items():
+            assert k in i_["properties"], (op,k)
+            if "description" not in i_["properties"][k]:
+                i_["properties"][k]=dict(json.loads(json.dumps(i_["properties"][k])),description=d)  # copy: property dicts are shared
 for op,(m,i,o) in ({"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2).items():
     d=f"examples/{op}/"; w(d+"manifest.json",m); w(d+"input.schema.json",i); w(d+"output.schema.json",o)
 print("ok")

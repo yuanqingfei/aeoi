@@ -9,7 +9,8 @@
   ],
   "properties": {
     "system": {
-      "$ref": "aeoi://schemas/common/0.3/LtiSystem"
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "待离散化的连续系统（ts 必须为 0）"
     },
     "ts": {
       "type": "number",
@@ -22,7 +23,8 @@
         "foh",
         "tustin"
       ],
-      "default": "zoh"
+      "default": "zoh",
+      "description": "离散化方法：zoh（零阶保持，默认）、foh（一阶保持/三角保持）、tustin（双线性，可配合 prewarp_frequency）"
     },
     "prewarp_frequency": {
       "type": "number",
@@ -36,7 +38,8 @@
         "ss",
         "zpk"
       ],
-      "default": "same"
+      "default": "same",
+      "description": "输出表示：same（与输入相同，默认）、tf、ss、zpk"
     },
     "exec": {
       "$ref": "aeoi://schemas/common/0.3/ExecOptions"
