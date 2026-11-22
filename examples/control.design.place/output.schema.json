@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.design.place/0.3.0/output",
+  "type": "object",
+  "required": [
+    "K",
+    "achieved_poles"
+  ],
+  "properties": {
+    "K": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "description": "[m,n]，u=−Kx"
+    },
+    "achieved_poles": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "description": "eig(A−BK)，c128 [n]，排序同 poles 规范"
+    }
+  }
+}

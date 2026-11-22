@@ -1,0 +1,99 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.design.place",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-place-003-nonsym",
+  "result": {
+    "K": {
+      "dtype": "f64",
+      "shape": [
+        2,
+        3
+      ],
+      "data": [
+        -0.806793948155088,
+        -1.0693025731287862,
+        0.10507066652752864,
+        0.7790583951788946,
+        0.07824222447371919,
+        -0.9198971551051671
+      ]
+    },
+    "achieved_poles": {
+      "dtype": "c128",
+      "shape": [
+        3
+      ],
+      "data": [
+        [
+          -2.0,
+          1.000000000000004
+        ],
+        [
+          -2.0,
+          -1.000000000000004
+        ],
+        [
+          -1.0000000000000022,
+          0.0
+        ]
+      ]
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": true,
+      "converged": true,
+      "iterations": 20,
+      "criterion": "一次扫描后 ln|det X̂|（列归一化）变化 < 1e-6",
+      "final_value": -1.7547031894836451
+    },
+    "residual": {
+      "pole_placement_max_rel": 2.220446049250313e-15,
+      "M_imag_rel": 6.269642809725373e-17,
+      "definition": "eig(A−BK) 与期望极点最近匹配的最大相对差（以 max(1,|p|) 归一）；M_imag_rel = max|Im(XΛX⁻¹)|/‖·‖_F"
+    },
+    "condition": {
+      "cond_X_eigvec": 11.476326490397055,
+      "pbh_min_rel_sv": 0.08207988223636604,
+      "K_norm_fro": 1.8068284139352988,
+      "inputs": 2
+    },
+    "error_estimate": {
+      "poles_rel": 2.548256381550885e-15,
+      "basis": "max(后验极点偏差, u·cond(X))；闭环极点的一阶扰动界 ∝ cond(X)·‖ΔA‖（Bauer–Fike）"
+    },
+    "checks": {
+      "poles_placed": true,
+      "conjugate_closed": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:63ffd869cac998b596905733ceabcde35a2d03fcd31b257911a9650c57910fda",
+    "output_hash": "sha256:8ed5d6df235968d64ce3bfeac3ceaba925ab8df0bdcb0cdf6a2a981eb35d06eb",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.233671
+  }
+}

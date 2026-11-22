@@ -35,6 +35,7 @@ pub mod ctrb_obsv;
 pub mod lqr;
 pub mod lyap;
 pub mod margin;
+pub mod place;
 pub mod poles_zeros;
 pub mod step;
 
@@ -53,6 +54,7 @@ pub fn registry() -> Vec<Box<dyn DynOperator>> {
         Box::new(c2d::C2d::new()),
         Box::new(step::Step::impulse()),
         Box::new(lyap::Lyap::new()),
+        Box::new(place::Place::new()),
     ]
 }
 

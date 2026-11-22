@@ -1,0 +1,76 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.design.place",
+ "operator_version": "0.3.0",
+ "case_family": "siso",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    -0.9692647827833518,
+    1.8497971144655356,
+    1.1995706167716316,
+    0.22719650875147507
+   ]
+  },
+  "B": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    1
+   ],
+   "data": [
+    -1.034532226807702,
+    -0.4507499085084453
+   ]
+  },
+  "poles": [
+   [
+    -2.899085296531441,
+    1.8638598223648615
+   ],
+   [
+    -2.899085296531441,
+    -1.8638598223648615
+   ]
+  ]
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261122,
+  "note": "python-control/scipy reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected": {
+  "K": {
+   "dtype": "f64",
+   "shape": [
+    1,
+    2
+   ],
+   "data": [
+    -1.3846499411377664,
+    -8.039130488273205
+   ]
+  },
+  "poles": [
+   [
+    -2.899085296531441,
+    1.8638598223648615
+   ],
+   [
+    -2.899085296531441,
+    -1.8638598223648615
+   ]
+  ],
+  "cond_X_scipy": 3.4920189086931805
+ }
+}

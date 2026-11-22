@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.design.place/0.3.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "A",
+    "B",
+    "poles"
+  ],
+  "properties": {
+    "A": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix"
+    },
+    "B": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix"
+    },
+    "poles": {
+      "type": "array",
+      "items": {
+        "$ref": "aeoi://schemas/common/0.3/Complex"
+      },
+      "minItems": 1,
+      "description": "期望闭环极点 [re, im]，长度 n，共轭封闭"
+    },
+    "max_sweeps": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200,
+      "default": 50
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+    }
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.design.place",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-place-001",
+  "result": {
+    "K": {
+      "dtype": "f64",
+      "shape": [
+        1,
+        2
+      ],
+      "data": [
+        1.9999999999999996,
+        2.0
+      ]
+    },
+    "achieved_poles": {
+      "dtype": "c128",
+      "shape": [
+        2
+      ],
+      "data": [
+        [
+          -1.0,
+          0.9999999999999998
+        ],
+        [
+          -1.0,
+          -0.9999999999999998
+        ]
+      ]
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false,
+      "converged": true,
+      "iterations": 0,
+      "criterion": "一次扫描后 ln|det X̂|（列归一化）变化 < 1e-6",
+      "final_value": -0.4054651081081644
+    },
+    "residual": {
+      "pole_placement_max_rel": 1.570092458683775e-16,
+      "M_imag_rel": 0.0,
+      "definition": "eig(A−BK) 与期望极点最近匹配的最大相对差（以 max(1,|p|) 归一）；M_imag_rel = max|Im(XΛX⁻¹)|/‖·‖_F"
+    },
+    "condition": {
+      "cond_X_eigvec": 2.618033988749896,
+      "pbh_min_rel_sv": 0.7071067811865475,
+      "K_norm_fro": 2.82842712474619,
+      "inputs": 1
+    },
+    "error_estimate": {
+      "poles_rel": 5.813203227122745e-16,
+      "basis": "max(后验极点偏差, u·cond(X))；闭环极点的一阶扰动界 ∝ cond(X)·‖ΔA‖（Bauer–Fike）"
+    },
+    "checks": {
+      "poles_placed": true,
+      "conjugate_closed": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:fc645b827a90ff0e3685068d7b789a332d038da91170e7c0fda6697b6c25516a",
+    "output_hash": "sha256:8353eccf88599846e3653216dd6efce8df922a38183be90044a3afab0a59a59c",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.191034
+  }
+}

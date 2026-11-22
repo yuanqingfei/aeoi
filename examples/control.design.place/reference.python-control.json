@@ -1,0 +1,55 @@
+{
+  "request.json": {
+    "K": {
+      "dtype": "f64",
+      "shape": [
+        1,
+        2
+      ],
+      "data": [
+        1.9999999999999993,
+        1.9999999999999998
+      ]
+    }
+  },
+  "request.nonsymmetric.json": {
+    "K_scipy_not_unique": {
+      "dtype": "f64",
+      "shape": [
+        2,
+        3
+      ],
+      "data": [
+        -0.8037569382371142,
+        -1.0586765173379997,
+        0.11133472839529886,
+        0.7698204204061189,
+        0.050112805230779704,
+        -0.933813359858713
+      ]
+    },
+    "poles": [
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -2.0,
+        1.0
+      ],
+      [
+        -2.0,
+        -1.0
+      ]
+    ],
+    "cond_X_scipy": 11.476411506978234
+  },
+  "hand_check": "det(sI − A + BK) = s² + k2 s + k1 = s² + 2s + 2 ⇒ K = [2, 2]",
+  "reference_env": {
+    "engine": "python-control",
+    "python_control": "0.10.2",
+    "scipy": "1.18.1",
+    "numpy": "2.5.5",
+    "note": "python-control/scipy reference values (NOT MATLAB output)"
+  }
+}
