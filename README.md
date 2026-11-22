@@ -92,7 +92,7 @@ wasm-bindgen --target nodejs --out-dir /tmp/pkg-node target/wasm32-unknown-unkno
 node aeoi-wasm/parity/parity.mjs /tmp/pkg-node /tmp/cases.json /tmp/native.jsonl /tmp/parity.json
 ```
 
-发布工作流放在 `pages/pages.workflow.yml`：复制到 `.github/workflows/pages.yml` 后（推送工作流文件需要带 `workflow` 权限的 token，或在 GitHub 网页上新建该文件），每次推送到 main 自动构建并发布。GitHub Pages 需要在 Settings → Pages → Source 选 "GitHub Actions"；私有仓库需要付费计划，否则要先把仓库设为公开。
+在线地址：https://yuanqingfei.me/aeoi/（`yuanqingfei.github.io/aeoi/` 会跳转到这里）。发布工作流在 `.github/workflows/pages.yml`，每次推送到 main 自动构建并发布到 GitHub Pages（Source = GitHub Actions）。
 
 ### 设计要点
 

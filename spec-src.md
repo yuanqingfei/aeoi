@@ -530,7 +530,7 @@ pub trait Operator: Send + Sync + 'static {
 
   唯一的状态不一致：一个病态 `lqr` 用例原生返回 `ok_with_warnings`（`W.NUMERICAL.ILL_CONDITIONED`），wasm 返回 `ok`；两边 K、S 相差约 1e-7，条件估计恰在阈值附近。`place` 的差异出在多输入 KNV 用例：多输入时满足极点配置的 K 不唯一，两边都达到了指定极点，只是迭代路径因舍入不同而停在不同的 K。由此得到两条规范性说明：**跨平台时，基于阈值的 warning 可能翻转**（消费者不能把 warning 集合当作跨平台确定）；**对解不唯一的算子，跨平台比较 MUST 用不变量（达到的闭环极点）而不是解本身**。
 - **体积**：wasm 2.97 MB（gzip 1.07 MB；`wasm-release` profile：opt-level s、LTO、codegen-units 1、panic=abort，再经 `wasm-opt -Oz`），Plotly basic 1.07 MB（gzip 354 KB）。这些编译选项不改变 IEEE 运算结果（parity 用的就是这个 profile）。
-- **构建与发布**：`pages/pages.workflow.yml`（安装到 `.github/workflows/pages.yml`）——Rust 1.85.1 + wasm32 目标，固定版本并校验 sha256 的 wasm-bindgen CLI 0.2.130（与 crate 的 `=0.2.130` 一致）与 binaryen version_133，`pages/build.sh` 组装 `_site/`，node 冒烟测试后用 `actions/deploy-pages` 发布；另一个不阻塞发布的 job 跑全量 parity 并上传报告。
+- **构建与发布**：`.github/workflows/pages.yml`——Rust 1.85.1 + wasm32 目标，固定版本并校验 sha256 的 wasm-bindgen CLI 0.2.130（与 crate 的 `=0.2.130` 一致）与 binaryen version_133，`pages/build.sh` 组装 `_site/`，node 冒烟测试后用 `actions/deploy-pages` 发布；另一个不阻塞发布的 job 跑全量 parity 并上传报告。
 
 ## 9. 治理
 
@@ -1425,7 +1425,7 @@ ai-operator-spec/
 ├── reports/parity-python-control.json / parity-python-control-b2.json   parity 测试报告（cargo test 生成）
 ├── reports/mcp-session.jsonl        脚本化 MCP 会话记录（12 个工具）
 ├── rust/                            cargo workspace：aeoi-core、aeoi-control、aeoi-mcp、aeoi-bridge、aeoi-web、aeoi-wasm（第 11 章、8.4、8.5）
-├── pages/                           浏览器版测试台、build.sh 与 GitHub Pages 工作流 pages.workflow.yml（8.5）
+├── pages/                           浏览器版测试台与 build.sh（8.5；工作流在 .github/workflows/pages.yml）
 ├── reports/parity-wasm-vs-native.json     wasm 与原生的逐例比较
 ├── eval/questions.zh.json + gen_questions.py   LLM 评测题库（29 题）
 ├── reports/eval-<model>.json         LLM 评测报告（aeoi-web eval 生成）
