@@ -1,0 +1,79 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.lti.poles_zeros",
+ "operator_version": "0.3.0",
+ "case_family": "zpk",
+ "request": {
+  "system": {
+   "kind": "zpk",
+   "z": [
+    [
+     4.686489508335114,
+     0.0
+    ]
+   ],
+   "p": [
+    [
+     -2.6215159428650656,
+     0.0
+    ],
+    [
+     -4.347791032648311,
+     0.0
+    ],
+    [
+     -2.7245192499102084,
+     0.0
+    ]
+   ],
+   "k": 1.6398374801409152,
+   "ts": 0.0,
+   "time_unit": "s"
+  }
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261122,
+  "note": "python-control/scipy reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected": {
+  "poles": [
+   [
+    -4.347791032648274,
+    0.0
+   ],
+   [
+    -2.7245192499105726,
+    0.0
+   ],
+   [
+    -2.621515942864742,
+    0.0
+   ]
+  ],
+  "zeros": [
+   [
+    4.686489508335114,
+    0.0
+   ]
+  ],
+  "dcgain": [
+   -0.2474784635608252
+  ],
+  "natural_frequency": [
+   4.347791032648274,
+   2.7245192499105726,
+   2.621515942864742
+  ],
+  "damping_ratio": [
+   1.0,
+   1.0,
+   1.0
+  ]
+ }
+}

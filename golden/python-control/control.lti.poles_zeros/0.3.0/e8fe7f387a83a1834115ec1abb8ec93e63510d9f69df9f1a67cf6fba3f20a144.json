@@ -1,0 +1,66 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.lti.poles_zeros",
+ "operator_version": "0.3.0",
+ "case_family": "siso_tf",
+ "request": {
+  "system": {
+   "kind": "tf",
+   "num": [
+    2.6258372907526595,
+    5.651667761427551,
+    -9.821903307170423
+   ],
+   "den": [
+    1.0,
+    5.5438689820892755,
+    12.567957745460479
+   ],
+   "ts": 0.0,
+   "time_unit": "s"
+  }
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261122,
+  "note": "python-control/scipy reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected": {
+  "poles": [
+   [
+    -2.771934491044637,
+    2.2100536017973837
+   ],
+   [
+    -2.771934491044637,
+    -2.2100536017973837
+   ]
+  ],
+  "zeros": [
+   [
+    -3.289446431092302,
+    0.0
+   ],
+   [
+    1.1371166651426452,
+    0.0
+   ]
+  ],
+  "dcgain": [
+   -0.7815035271516627
+  ],
+  "natural_frequency": [
+   3.5451315554518534,
+   3.5451315554518534
+  ],
+  "damping_ratio": [
+   0.7818989077519108,
+   0.7818989077519108
+  ]
+ }
+}

@@ -1,0 +1,97 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.lti.poles_zeros",
+ "operator_version": "0.3.0",
+ "case_family": "discrete_ss",
+ "request": {
+  "system": {
+   "kind": "ss",
+   "A": {
+    "dtype": "f64",
+    "shape": [
+     2,
+     2
+    ],
+    "data": [
+     -0.13511951017201157,
+     -0.18865854507865798,
+     0.21344771946730165,
+     0.5913815544008366
+    ]
+   },
+   "B": {
+    "dtype": "f64",
+    "shape": [
+     2,
+     1
+    ],
+    "data": [
+     -2.2034240599005273,
+     -0.3421369015305062
+    ]
+   },
+   "C": {
+    "dtype": "f64",
+    "shape": [
+     1,
+     2
+    ],
+    "data": [
+     -0.7603126064786927,
+     1.3091758306894645
+    ]
+   },
+   "D": {
+    "dtype": "f64",
+    "shape": [
+     1,
+     1
+    ],
+    "data": [
+     0.0
+    ]
+   },
+   "ts": 0.1,
+   "time_unit": "s"
+  }
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261122,
+  "note": "python-control/scipy reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected": {
+  "poles": [
+   [
+    -0.07465968613356488,
+    0.0
+   ],
+   [
+    0.5309217303623899,
+    0.0
+   ]
+  ],
+  "zeros": [
+   [
+    1.3981566101250535,
+    0.0
+   ]
+  ],
+  "dcgain": [
+   -0.9694255935912063
+  ],
+  "natural_frequency": [
+   40.74637325498688,
+   6.331406690521886
+  ],
+  "damping_ratio": [
+   0.6368210964961503,
+   1.0
+  ]
+ }
+}

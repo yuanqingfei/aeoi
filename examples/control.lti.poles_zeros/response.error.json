@@ -1,0 +1,37 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "control.lti.poles_zeros",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-pz-002",
+  "result": null,
+  "trust": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.DOMAIN.DEGENERATE_SYSTEM",
+    "category": "domain",
+    "retryable": true,
+    "message": "Rosenbrock 系统矩阵不是满法秩（例如某输出恒为零或输入全部不起作用），此时每个复数都是“零点”，零点无定义。",
+    "agent_hint": "检查 B、C、D 中是否有全零行/列；去掉恒零通道后再求零点。",
+    "details": {
+      "path": "/system"
+    },
+    "remediation": [
+      {
+        "id": "ask",
+        "kind": "ask_user",
+        "description": "向用户确认输入与建模假设",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.174316
+  }
+}

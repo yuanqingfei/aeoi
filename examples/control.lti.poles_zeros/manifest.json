@@ -1,0 +1,139 @@
+{
+  "spec": "aeoi/0.3",
+  "id": "control.lti.poles_zeros",
+  "version": "0.3.0",
+  "title": "Poles, zeros and DC gain",
+  "description": "返回 LTI 系统的极点、（不变/传输）零点、DC 增益（连续 s=0，离散 z=1）以及每个极点的自然频率与阻尼比。",
+  "category": "analysis",
+  "tags": [
+    "lti",
+    "poles",
+    "zeros"
+  ],
+  "applicability": {
+    "preconditions": [
+      "system 为 proper"
+    ],
+    "not_for": [
+      "非线性系统",
+      "带时滞的系统"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "极点：ss 为 eig(A)；SISO tf 为 roots(den)；MIMO tf 为各元素分母根的并集（即块对角实现的特征值，非最小）；zpk 为 p。零点：SISO tf 为 roots(num)；ss（任意 p×m）为 Rosenbrock 系统矩阵 [[A−λI,B],[C,D]] 的有限不变零点：两遍基于 SVD 数值秩的压缩（Emami-Naeini & Van Dooren 1982 思路：先压缩 D 的行、再压缩 C 的残余行，原系统与对偶系统各一遍）把 D 化为方阵可逆，再取 eig(A_r − B_r D_r⁻¹ C_r)；实现最小时不变零点 = 传输零点。DC 增益：A（或 I−A）非奇异时 D − C A⁻¹ B（离散 D + C(I−A)⁻¹B）；奇异时逐元素按 zpk 形式在 0（或 1）处对消重合零极点后求极限，未对消则为 ±Inf。阻尼：连续 ω_n = |p|、ζ = −Re p/|p|；离散先映射 s = ln(z)/ts",
+    "references": [
+      {
+        "type": "paper",
+        "cite": "A. Emami-Naeini, P. Van Dooren, Computation of zeros of linear multivariable systems, Automatica 18(4), 1982",
+        "doi": "10.1016/0005-1098(82)90070-X"
+      },
+      {
+        "type": "textbook",
+        "cite": "T. Kailath, Linear Systems, Prentice-Hall 1980（实现、可控/可观、PBH 判据）"
+      },
+      {
+        "type": "paper",
+        "cite": "B. N. Parlett, C. Reinsch, Balancing a matrix for calculation of eigenvalues and eigenvectors, Numer. Math. 13, 1969",
+        "doi": "10.1007/BF02165404"
+      },
+      {
+        "type": "textbook",
+        "cite": "G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., 2013（SVD 数值秩、Schur 分解）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献；MATLAB 仅作为黑盒参考（公开 API），v0.2 的 parity 参考为 python-control/scipy"
+    }
+  },
+  "backend": {
+    "library": "aeoi-control (pure Rust) + nalgebra 0.33",
+    "routine": "poles_zeros::analyze",
+    "version": "0.3.0",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T2",
+  "sparse_support": {
+    "/system/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_states": 200
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/control.lti.poles_zeros/0.3.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ZERO_DENOMINATOR",
+    "E.VALIDATION.NOT_CONJUGATE",
+    "E.VALIDATION.SPARSE_STRUCTURE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.DOMAIN.IMPROPER_SYSTEM",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.DOMAIN.DEGENERATE_SYSTEM"
+  ],
+  "warnings": [
+    "W.DOMAIN.NONMINIMAL_REALIZATION",
+    "W.DOMAIN.INFINITE_DC_GAIN",
+    "W.DOMAIN.UNDEFINED_DC_GAIN",
+    "W.NUMERICAL.ILL_CONDITIONED",
+    "W.VALIDATION.LEADING_ZEROS_STRIPPED",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "control_lti_poles_zeros",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  }
+}

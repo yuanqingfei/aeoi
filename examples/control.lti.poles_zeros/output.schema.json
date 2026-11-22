@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.lti.poles_zeros/0.3.0/output",
+  "type": "object",
+  "required": [
+    "poles",
+    "zeros",
+    "zero_definition",
+    "dcgain",
+    "natural_frequency",
+    "damping_ratio",
+    "stable"
+  ],
+  "properties": {
+    "poles": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "description": "c128 向量 [n]，按实部升序、虚部降序"
+    },
+    "zeros": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "description": "c128 向量，排序同上"
+    },
+    "zero_definition": {
+      "enum": [
+        "polynomial_roots",
+        "invariant_zeros"
+      ]
+    },
+    "dcgain": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "aeoi://schemas/common/0.3/Quantity",
+          "description": "unit=1，shape [ny,nu]；可含 \"Inf\"/\"-Inf\"/\"NaN\""
+        }
+      ]
+    },
+    "natural_frequency": {
+      "$ref": "aeoi://schemas/common/0.3/Quantity",
+      "description": "unit=rad/s，[n]，与 poles 同序"
+    },
+    "damping_ratio": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "description": "f64 [n]，与 poles 同序；p=0 时为 \"NaN\""
+    },
+    "stable": {
+      "type": "boolean",
+      "description": "连续：所有 Re p < 0；离散：所有 |p| < 1"
+    }
+  }
+}

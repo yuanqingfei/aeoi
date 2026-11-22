@@ -31,6 +31,7 @@ macro_rules! operator_struct {
 pub mod bode;
 pub mod convert;
 pub mod lqr;
+pub mod poles_zeros;
 pub mod step;
 
 use aeoi_core::DynOperator;
@@ -42,6 +43,7 @@ pub fn registry() -> Vec<Box<dyn DynOperator>> {
         Box::new(step::Step::new()),
         Box::new(lqr::Lqr::new()),
         Box::new(convert::Convert::new()),
+        Box::new(poles_zeros::PolesZeros::new()),
     ]
 }
 

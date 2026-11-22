@@ -1,0 +1,120 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.lti.poles_zeros",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-pz-001",
+  "result": {
+    "poles": {
+      "dtype": "c128",
+      "shape": [
+        2
+      ],
+      "data": [
+        [
+          -0.6,
+          1.9078784028338913
+        ],
+        [
+          -0.6,
+          -1.9078784028338913
+        ]
+      ]
+    },
+    "zeros": {
+      "dtype": "c128",
+      "shape": [
+        1
+      ],
+      "data": [
+        [
+          -3.0,
+          0.0
+        ]
+      ]
+    },
+    "zero_definition": "polynomial_roots",
+    "dcgain": {
+      "unit": "1",
+      "value": {
+        "dtype": "f64",
+        "shape": [
+          1,
+          1
+        ],
+        "data": [
+          0.75
+        ]
+      }
+    },
+    "natural_frequency": {
+      "unit": "rad/s",
+      "value": {
+        "dtype": "f64",
+        "shape": [
+          2
+        ],
+        "data": [
+          2.0,
+          2.0
+        ]
+      }
+    },
+    "damping_ratio": {
+      "dtype": "f64",
+      "shape": [
+        2
+      ],
+      "data": [
+        0.3,
+        0.3
+      ]
+    },
+    "stable": true
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": null,
+    "condition": {
+      "zero_reduction": null,
+      "dcgain_method": "polynomial_evaluation_with_exact_cancellation",
+      "max_pole_modulus": 2.0
+    },
+    "error_estimate": {
+      "basis": "未给出逐根误差界：特征值/多项式根对扰动的敏感度取决于（未计算的）特征向量条件数；重根的误差可达 O(u^{1/k})"
+    },
+    "checks": {
+      "stable": true,
+      "dcgain_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:6d770ac001d7fd62932c5acfc061d77f909dbfc6267ae104f641e6c56dc84ee5",
+    "output_hash": "sha256:22d247d0c6422a9995702e229b144a26ed08811a4de6bdcf8cfd4f17b27081eb",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.159227
+  }
+}

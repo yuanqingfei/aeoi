@@ -1,0 +1,173 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.lti.poles_zeros",
+ "operator_version": "0.3.0",
+ "case_family": "memory_order_nonsymmetric",
+ "request": {
+  "system": {
+   "kind": "ss",
+   "A": {
+    "dtype": "f64",
+    "shape": [
+     3,
+     3
+    ],
+    "data": [
+     0.0,
+     1.0,
+     0.0,
+     0.5,
+     0.0,
+     1.0,
+     -6.0,
+     -10.8,
+     -6.0
+    ]
+   },
+   "B": {
+    "dtype": "f64",
+    "shape": [
+     3,
+     1
+    ],
+    "data": [
+     0.0,
+     1.0,
+     2.0
+    ]
+   },
+   "C": {
+    "dtype": "f64",
+    "shape": [
+     1,
+     3
+    ],
+    "data": [
+     1.0,
+     0.5,
+     0.0
+    ]
+   },
+   "D": {
+    "dtype": "f64",
+    "shape": [
+     1,
+     1
+    ],
+    "data": [
+     0.0
+    ]
+   },
+   "ts": 0.0,
+   "time_unit": "s"
+  }
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261122,
+  "note": "python-control/scipy reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected": {
+  "poles": [
+   [
+    -0.3636126373101273,
+    0.0
+   ],
+   [
+    -2.818193681344936,
+    0.5552681339482225
+   ],
+   [
+    -2.818193681344936,
+    -0.5552681339482225
+   ]
+  ],
+  "zeros": [
+   [
+    -7.999999999999993,
+    0.0
+   ],
+   [
+    -2.000000000000001,
+    0.0
+   ]
+  ],
+  "dcgain": [
+   2.6666666666666665
+  ],
+  "natural_frequency": [
+   0.3636126373101273,
+   2.8723750322948542,
+   2.8723750322948542
+  ],
+  "damping_ratio": [
+   1.0,
+   0.9811370902682472,
+   0.9811370902682472
+  ]
+ },
+ "column_major_mistake_request": {
+  "system": {
+   "kind": "ss",
+   "A": {
+    "dtype": "f64",
+    "shape": [
+     3,
+     3
+    ],
+    "data": [
+     0.0,
+     0.5,
+     -6.0,
+     1.0,
+     0.0,
+     -10.8,
+     0.0,
+     1.0,
+     -6.0
+    ]
+   },
+   "B": {
+    "dtype": "f64",
+    "shape": [
+     3,
+     1
+    ],
+    "data": [
+     0.0,
+     1.0,
+     2.0
+    ]
+   },
+   "C": {
+    "dtype": "f64",
+    "shape": [
+     1,
+     3
+    ],
+    "data": [
+     1.0,
+     0.5,
+     0.0
+    ]
+   },
+   "D": {
+    "dtype": "f64",
+    "shape": [
+     1,
+     1
+    ],
+    "data": [
+     0.0
+    ]
+   },
+   "ts": 0.0,
+   "time_unit": "s"
+  }
+ }
+}

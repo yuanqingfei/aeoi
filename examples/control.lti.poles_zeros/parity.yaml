@@ -1,0 +1,23 @@
+# Parity test spec — control.lti.poles_zeros 0.3.0 (AEOI v0.3-draft)
+operator: control.lti.poles_zeros
+references:
+  - {engine: python-control, version: "0.10.2 (scipy 1.18.1, numpy 2.5.5)", role: dev_reference, status: active,
+     generator: gen_golden_pycontrol_b2.py, golden_store: "golden/python-control/control.lti.poles_zeros/0.3.0/*.json",
+     note: "python-control/scipy reference values, NOT MATLAB output"}
+  - {engine: MATLAB, role: ground_truth, status: planned, note: "no generator script yet for batch 2"}
+runner: "cargo test --release -p aeoi-control --test parity_b2"
+tolerance_class: T2
+compare:
+  "poles/zeros": "nearest-match |Δ|/max(1,|r|) ≤ 1e-10·max(1, κ_r)"
+  "dcgain": "|Δ|/max(1,|ref|) ≤ 1e-10·max(1, Π(1+|p|)/Π|p|); ±Inf must agree exactly"
+  "natural_frequency / damping_ratio": "≤ 1e-10·max(1, κ_r) of the matched pole"
+case_families:   # n = golden cases
+  - {name: degenerate, n: 1, expect: E.DOMAIN.DEGENERATE_SYSTEM}
+  - {name: discrete_ss, n: 8}
+  - {name: integrator_infinite_dc, n: 2, expect_warning: ['W.DOMAIN.INFINITE_DC_GAIN']}
+  - {name: memory_order_nonsymmetric, n: 1, note: "non-symmetric matrices; the column-major (A(:)) request must deviate > 1e3 × tolerance"}
+  - {name: siso_tf, n: 15}
+  - {name: square_ss, n: 15}
+  - {name: zpk, n: 5}
+reference_postprocess: "python-control (no slycot) returns infinite generalized eigenvalues of the zero pencil as huge finite numbers; zeros with |z| > 1e10·(1+‖[A B; C D]‖_F) are dropped from the reference"
+pass_rule: "all cases within tolerance; expected-error cases return the same code; expected warnings present; every emitted code declared in the manifest; outputs validate against envelope+output schema"

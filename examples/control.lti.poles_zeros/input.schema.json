@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.lti.poles_zeros/0.3.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "system"
+  ],
+  "properties": {
+    "system": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem"
+    },
+    "dcgain": {
+      "type": "boolean",
+      "default": true
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+    }
+  }
+}
