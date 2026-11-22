@@ -1,0 +1,68 @@
+{
+  "system": {
+    "kind": "ss",
+    "A": {
+      "dtype": "f64",
+      "shape": [
+        3,
+        3
+      ],
+      "data": [
+        0.0,
+        1.0,
+        0.0,
+        0.5,
+        0.0,
+        1.0,
+        -6.0,
+        -10.8,
+        -6.0
+      ]
+    },
+    "B": {
+      "dtype": "f64",
+      "shape": [
+        3,
+        1
+      ],
+      "data": [
+        0.0,
+        1.0,
+        2.0
+      ]
+    },
+    "C": {
+      "dtype": "f64",
+      "shape": [
+        1,
+        3
+      ],
+      "data": [
+        1.0,
+        0.5,
+        0.0
+      ]
+    },
+    "D": {
+      "dtype": "f64",
+      "shape": [
+        1,
+        1
+      ],
+      "data": [
+        0.0
+      ]
+    },
+    "ts": 0.0,
+    "time_unit": "s"
+  },
+  "time": {
+    "mode": "uniform",
+    "t_final": 5.0,
+    "dt": 0.05,
+    "unit": "s"
+  },
+  "exec": {
+    "request_id": "req-impulse-003-nonsym"
+  }
+}

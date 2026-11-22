@@ -50,6 +50,7 @@ pub fn registry() -> Vec<Box<dyn DynOperator>> {
         Box::new(ctrb_obsv::CtrbObsv::new()),
         Box::new(margin::Margin::new()),
         Box::new(c2d::C2d::new()),
+        Box::new(step::Step::impulse()),
     ]
 }
 

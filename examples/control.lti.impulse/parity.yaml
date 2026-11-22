@@ -1,0 +1,19 @@
+# Parity test spec — control.lti.impulse 0.3.0 (AEOI v0.3-draft)
+operator: control.lti.impulse
+references:
+  - {engine: python-control, version: "0.10.2 (scipy 1.18.1, numpy 2.5.5)", role: dev_reference, status: active,
+     generator: gen_golden_pycontrol_b2.py, golden_store: "golden/python-control/control.lti.impulse/0.3.0/*.json",
+     note: "python-control/scipy reference values, NOT MATLAB output"}
+  - {engine: MATLAB, role: ground_truth, status: planned, note: "no generator script yet for batch 2"}
+runner: "cargo test --release -p aeoi-control --test parity_b2"
+tolerance_class: T2
+compare:
+  "y": "max|Δy|/max|y_ref| ≤ 1e-10"
+case_families:   # n = golden cases
+  - {name: direct_feedthrough, n: 2, expect_warning: ['W.DOMAIN.DIRECT_FEEDTHROUGH_IGNORED']}
+  - {name: discrete_dt_mismatch, n: 1, expect: E.VALIDATION.GRID}
+  - {name: discrete_unit_area, n: 6}
+  - {name: memory_order_nonsymmetric, n: 1, note: "non-symmetric matrices; the column-major (A(:)) request must deviate > 1e3 × tolerance"}
+  - {name: mimo_ss, n: 8}
+  - {name: siso_tf, n: 10}
+pass_rule: "all cases within tolerance; expected-error cases return the same code; expected warnings present; every emitted code declared in the manifest; outputs validate against envelope+output schema"

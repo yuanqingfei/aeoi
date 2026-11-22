@@ -1,4 +1,5 @@
-//! control.lti.step — step response by exact ZOH discretization (spec 10.2).
+//! control.lti.step — step response by exact ZOH discretization (spec 10.2);
+//! control.lti.impulse — impulse response (spec 10.9) shares the grid/validation/recursion code.
 use crate::U;
 use aeoi_core::error::{ask_user, modify_input, OpError, Warning};
 use aeoi_core::linalg::{expm, norm1, sort_poles};
@@ -10,17 +11,16 @@ use serde_json::{json, Value};
 
 pub struct Step {
     meta: OperatorMeta,
+    impulse: bool,
 }
 
 impl Step {
     pub fn new() -> Self {
-        Step {
-            meta: OperatorMeta::from_json(
-                include_str!("../../../examples/control.lti.step/manifest.json"),
-                include_str!("../../../examples/control.lti.step/input.schema.json"),
-                include_str!("../../../examples/control.lti.step/output.schema.json"),
-            ),
-        }
+        Step { meta: operator_meta!("control.lti.step"), impulse: false }
+    }
+    /// control.lti.impulse
+    pub fn impulse() -> Self {
+        Step { meta: operator_meta!("control.lti.impulse"), impulse: true }
     }
 }
 
@@ -41,6 +41,9 @@ pub struct StepInput {
     pub settle: f64,
     pub out_indices: Option<Vec<usize>>, // None => all
     pub return_none: bool,
+    pub impulse: bool,
+    /// discrete impulse amplitude u_0 (1/ts for unit_area, 1 for unit_pulse)
+    pub pulse: f64,
 }
 
 /// Grid point count for the uniform grid: N = floor(t_final/dt + 1e-9) + 1.
@@ -141,6 +144,7 @@ impl Operator for Step {
             return Err(OpError::new("E.VALIDATION.RANGE", "rise_time_limits 需满足 lo < hi。", "例如 [0.1, 0.9]。").path("/step_info/rise_time_limits")
                 .remedy(modify_input("default", "使用默认 [0.1, 0.9]", "high", false, json!([{"op": "replace", "path": "/step_info/rise_time_limits", "value": [0.1, 0.9]}]))));
         }
+        let pulse = if ss.ts > 0.0 && args.get("discrete_scaling").and_then(|x| x.as_str()) != Some("unit_pulse") { 1.0 / ss.ts } else { 1.0 };
         Ok((
             StepInput {
                 ss,
@@ -148,11 +152,13 @@ impl Operator for Step {
                 dt,
                 n,
                 auto,
-                info: si.get("enabled").and_then(|x| x.as_bool()).unwrap_or(true),
+                info: !self.impulse && si.get("enabled").and_then(|x| x.as_bool()).unwrap_or(true),
                 rise: rl,
                 settle: si.get("settling_threshold").and_then(|x| x.as_f64()).unwrap_or(0.02),
                 out_indices,
                 return_none: mode == "none",
+                impulse: self.impulse,
+                pulse,
             },
             warnings,
         ))
@@ -183,9 +189,30 @@ impl Operator for Step {
         let mut y = vec![0.0f64; ny * nu * n];
         let mut final_states = Vec::with_capacity(nu);
         for j in 0..nu {
-            let mut x = DVector::<f64>::zeros(nx);
             let g = gam.column(j).into_owned();
             let dcol = ss.d.column(j).into_owned();
+            if inp.impulse {
+                // continuous: x_0 = B e_j, y = C x (D·δ not representable); discrete: u_0 = pulse
+                let (mut x, y0) = if continuous { (ss.b.column(j).into_owned(), None) } else { (DVector::<f64>::zeros(nx), Some(&dcol * inp.pulse)) };
+                for k in 0..n {
+                    let yk = match (&y0, k) {
+                        (Some(v), 0) => v.clone(),
+                        _ => &ss.c * &x,
+                    };
+                    for i in 0..ny {
+                        y[(i * nu + j) * n + k] = yk[i];
+                    }
+                    if k + 1 < n {
+                        x = if !continuous && k == 0 { ss.b.column(j) * inp.pulse } else { &phi * &x };
+                    }
+                    if k % 20000 == 0 {
+                        ctx.check()?;
+                    }
+                }
+                final_states.push(x);
+                continue;
+            }
+            let mut x = DVector::<f64>::zeros(nx);
             for k in 0..n {
                 let yk = &ss.c * &x + &dcol;
                 for i in 0..ny {
@@ -204,10 +231,10 @@ impl Operator for Step {
         let t_end = (n - 1) as f64 * dt;
         let mut discrepancy: Option<f64> = None;
         if continuous && nx > 0 {
-            let (_, gam_t, _) = aug_expm(t_end);
+            let (phi_t, gam_t, _) = aug_expm(t_end);
             let mut worst: f64 = 0.0;
             for j in 0..nu {
-                let direct = gam_t.column(j).into_owned();
+                let direct = if inp.impulse { &phi_t * ss.b.column(j) } else { gam_t.column(j).into_owned() };
                 let denom = direct.norm().max(f64::MIN_POSITIVE);
                 worst = worst.max((&final_states[j] - &direct).norm() / denom);
             }
@@ -225,11 +252,12 @@ impl Operator for Step {
             m.lu().solve(&ss.b).map(|x| &ss.c * x + &ss.d).filter(|g| g.iter().all(|v| v.is_finite()))
         };
         if !stable {
-            warnings.push(Warning::new("W.DOMAIN.UNSTABLE_SYSTEM", format!("系统不是渐近稳定的（{} = {:.6}），阶跃响应发散或不收敛，step_info 置为 null。", if continuous { "最大极点实部" } else { "最大极点模" }, max_re)).path("/system"));
+            let what = if inp.impulse { "脉冲响应不衰减或发散" } else { "阶跃响应发散或不收敛，step_info 置为 null" };
+            warnings.push(Warning::new("W.DOMAIN.UNSTABLE_SYSTEM", format!("系统不是渐近稳定的（{} = {:.6}），{what}。", if continuous { "最大极点实部" } else { "最大极点模" }, max_re)).path("/system"));
         }
         let fast = poles.iter().map(|p| p.norm()).fold(0.0, f64::max);
         if continuous && fast > 0.0 && dt > 0.1 / fast {
-            warnings.push(Warning::new("W.ACCURACY.GRID_TOO_COARSE", format!("dt = {dt} s 大于 0.1/最快极点模 = {:.3e} s；响应采样值本身仍精确，但 step_info 的时间类指标误差可达 dt。", 0.1 / fast)).path("/time/dt"));
+            warnings.push(Warning::new("W.ACCURACY.GRID_TOO_COARSE", if self.impulse { format!("dt = {dt} s 大于 0.1/最快极点模 = {:.3e} s；响应采样值本身仍精确，但网格可能看不到快速模态的峰值（从采样点读出的峰值/峰时误差可达 dt 量级）。", 0.1 / fast) } else { format!("dt = {dt} s 大于 0.1/最快极点模 = {:.3e} s；响应采样值本身仍精确，但 step_info 的时间类指标误差可达 dt。", 0.1 / fast) }).path("/time/dt"));
         }
         let tvec: Vec<f64> = (0..n).map(|k| k as f64 * dt).collect();
         // step info (python-control / MATLAB-style grid definitions, no interpolation)
@@ -289,7 +317,15 @@ impl Operator for Step {
         };
         let ymax = y.iter().map(|v| v.abs()).fold(0.0, f64::max);
         let heur = (n as f64 * U).max(discrepancy.unwrap_or(0.0)) * ymax.max(f64::MIN_POSITIVE);
-        let result = json!({"t": t_out, "y": y_out, "n_grid_points": n, "info": info_val});
+        let result = if inp.impulse {
+            let feed = continuous && ss.d.iter().any(|v| *v != 0.0);
+            if feed {
+                warnings.push(Warning::new("W.DOMAIN.DIRECT_FEEDTHROUGH_IGNORED", "系统有直通项 D ≠ 0：连续脉冲响应在 t = 0 处含 D·δ(t)，无法用采样值表示，未计入 y；其权重见 result.direct_feedthrough。").path("/system"));
+            }
+            json!({"t": t_out, "y": y_out, "n_grid_points": n, "direct_feedthrough": if feed { dense_real(&ss.d) } else { Value::Null }})
+        } else {
+            json!({"t": t_out, "y": y_out, "n_grid_points": n, "info": info_val})
+        };
         let trust = json!({
             "convergence": {"applicable": false},
             "residual": if continuous && nx > 0 { json!({"final_state_rel_discrepancy": num(discrepancy.unwrap()), "definition": "‖x_{N−1}(逐步递推) − x(t_end)(一次性 expm 直接计算)‖₂ / ‖x(t_end)‖₂，取所有输入通道最大值"}) } else { Value::Null },

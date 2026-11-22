@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.lti.impulse/0.3.0/output",
+  "type": "object",
+  "required": [
+    "t",
+    "y",
+    "n_grid_points",
+    "direct_feedthrough"
+  ],
+  "properties": {
+    "t": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "aeoi://schemas/common/0.3/Quantity"
+        }
+      ]
+    },
+    "y": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "aeoi://schemas/common/0.3/Quantity",
+          "description": "shape [ny,nu,nt]"
+        }
+      ]
+    },
+    "n_grid_points": {
+      "type": "integer"
+    },
+    "direct_feedthrough": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "aeoi://schemas/common/0.3/Matrix",
+          "description": "连续系统的 D（t=0 处 D·δ(t) 的权重），未计入 y；D=0 或离散时为 null"
+        }
+      ]
+    }
+  }
+}

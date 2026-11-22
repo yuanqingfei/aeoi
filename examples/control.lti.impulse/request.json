@@ -1,0 +1,24 @@
+{
+  "system": {
+    "kind": "tf",
+    "num": [
+      4.0
+    ],
+    "den": [
+      1.0,
+      1.2,
+      4.0
+    ],
+    "ts": 0.0,
+    "time_unit": "s"
+  },
+  "time": {
+    "mode": "uniform",
+    "t_final": 10.0,
+    "dt": 0.05,
+    "unit": "s"
+  },
+  "exec": {
+    "request_id": "req-impulse-001"
+  }
+}

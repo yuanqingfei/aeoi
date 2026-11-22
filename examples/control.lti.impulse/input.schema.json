@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.lti.impulse/0.3.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "system",
+    "time"
+  ],
+  "properties": {
+    "system": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem"
+    },
+    "time": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "t_final",
+            "dt",
+            "unit"
+          ],
+          "properties": {
+            "mode": {
+              "const": "uniform"
+            },
+            "t_final": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "dt": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "unit": {
+              "const": "s"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "unit"
+          ],
+          "properties": {
+            "mode": {
+              "const": "auto"
+            },
+            "t_final": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "exclusiveMinimum": 0
+            },
+            "unit": {
+              "const": "s"
+            }
+          },
+          "description": "启发式网格（见 manifest），不参与 parity 测试"
+        }
+      ]
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "return_samples": {
+          "enum": [
+            "all",
+            "decimated",
+            "none"
+          ],
+          "default": "all"
+        },
+        "max_samples": {
+          "type": "integer",
+          "minimum": 2,
+          "default": 10001
+        }
+      }
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+    },
+    "discrete_scaling": {
+      "enum": [
+        "unit_area",
+        "unit_pulse"
+      ],
+      "default": "unit_area",
+      "description": "离散系统的脉冲幅值：unit_area 为 1/ts（缺省），unit_pulse 为 1；连续系统忽略"
+    }
+  }
+}
