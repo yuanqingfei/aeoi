@@ -1,5 +1,3 @@
-# INSTALL: copy this file to .github/workflows/pages.yml (pushing a workflow file needs a token with
-# the `workflow` scope, or add it through the GitHub web UI: Add file → Create new file).
 # Build the browser version of the AEOI test bench (operators compiled to WebAssembly) and
 # publish it to GitHub Pages: https://yuanqingfei.github.io/aeoi/
 # No secrets are used: visitors bring their own model API key (stored in their browser only).
