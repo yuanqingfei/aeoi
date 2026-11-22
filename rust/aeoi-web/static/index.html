@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AEOI 算子 × LLM 端到端测试台</title>
+<link rel="stylesheet" href="/style.css">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8" defer></script>
+</head>
+<body>
+<header>
+  <div class="brand">AEOI <span>× LLM 端到端测试台</span></div>
+  <label>模型 <select id="model"></select></label>
+  <input id="model-custom" placeholder="或输入 provider:model，如 groq:llama-3.3-70b-versatile" size="38">
+  <label>最多步数 <input id="max-steps" type="number" min="1" max="20" value="8" style="width:4em"></label>
+  <button id="reset" title="清空对话与轨迹">新会话</button>
+  <span id="providers" class="muted"></span>
+</header>
+<main>
+  <section id="chat-col">
+    <div id="chat"></div>
+    <div id="examples"></div>
+    <form id="ask">
+      <textarea id="input" rows="3" placeholder="用中文提问，例如：开环 G(s)=4/(s(s+1)(s+2)) 的相位裕度是多少？（Ctrl+Enter 发送）"></textarea>
+      <button type="submit" id="send">发送</button>
+    </form>
+  </section>
+  <section id="trace-col">
+    <nav class="tabs">
+      <button data-tab="trace" class="active">调用轨迹</button>
+      <button data-tab="tools">工具声明</button>
+      <button data-tab="prompt">系统提示词</button>
+    </nav>
+    <div id="tab-trace" class="tab active"><div id="trace"><p class="muted">每次模型回合与工具调用会显示在这里：选择的工具、发送的请求 JSON、AEOI 响应（result / trust / warnings / error）、耗时与 token 用量。</p></div></div>
+    <div id="tab-tools" class="tab"></div>
+    <div id="tab-prompt" class="tab"><pre id="prompt"></pre></div>
+  </section>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>

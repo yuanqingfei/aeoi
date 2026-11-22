@@ -1,0 +1,18 @@
+[package]
+name = "aeoi-web"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "End-to-end test web UI + eval harness: a cloud LLM calls the AEOI operators via function calling"
+
+[dependencies]
+aeoi-core = { path = "../aeoi-core" }
+aeoi-control = { path = "../aeoi-control" }
+serde.workspace = true
+serde_json.workspace = true
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "net"] }
+axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio", "query"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+tokio-stream = "0.1"

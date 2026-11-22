@@ -1,0 +1,40 @@
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.5 -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif; color: #1d2330; background: #f4f6f9; height: 100vh; display: flex; flex-direction: column; }
+header { display: flex; gap: 12px; align-items: center; padding: 8px 14px; background: #1f2a44; color: #e8ecf5; flex-wrap: wrap; }
+header .brand { font-weight: 700; font-size: 16px; } header .brand span { font-weight: 400; opacity: .8; }
+header select, header input { font: inherit; padding: 3px 6px; border-radius: 4px; border: 1px solid #44507a; background: #2a3658; color: #fff; }
+header button { font: inherit; padding: 4px 10px; border-radius: 4px; border: 0; background: #4a74e8; color: #fff; cursor: pointer; }
+.muted { color: #7a8396; font-size: 12px; } header .muted { color: #aab4cc; }
+main { flex: 1; display: grid; grid-template-columns: minmax(340px, 42%) 1fr; min-height: 0; }
+#chat-col { display: flex; flex-direction: column; border-right: 1px solid #dde2ea; min-height: 0; background: #fff; }
+#chat { flex: 1; overflow: auto; padding: 14px; }
+.msg { margin: 0 0 12px; padding: 9px 12px; border-radius: 8px; max-width: 95%; white-space: normal; word-wrap: break-word; }
+.msg.user { background: #e7eefc; margin-left: auto; }
+.msg.bot { background: #f3f5f8; border: 1px solid #e3e7ee; }
+.msg.err { background: #fdeceb; border: 1px solid #f3b9b5; color: #8a1f17; }
+.msg .meta { font-size: 11px; color: #7a8396; margin-top: 4px; }
+.msg code { background: #e8ebf0; padding: 0 3px; border-radius: 3px; }
+#examples { padding: 4px 14px; display: flex; flex-wrap: wrap; gap: 6px; }
+#examples button { font: inherit; font-size: 12px; border: 1px solid #ccd3e0; background: #f8f9fb; border-radius: 12px; padding: 2px 10px; cursor: pointer; }
+#ask { display: flex; gap: 8px; padding: 10px 14px; border-top: 1px solid #e3e7ee; }
+#ask textarea { flex: 1; font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid #ccd3e0; resize: vertical; }
+#ask button { font: inherit; padding: 0 18px; border: 0; border-radius: 6px; background: #2f5bd8; color: #fff; cursor: pointer; }
+#ask button:disabled { background: #9aaad6; }
+#trace-col { display: flex; flex-direction: column; min-height: 0; }
+.tabs { display: flex; gap: 2px; padding: 6px 10px 0; background: #e9edf3; }
+.tabs button { font: inherit; border: 0; padding: 6px 12px; background: transparent; cursor: pointer; border-radius: 6px 6px 0 0; }
+.tabs button.active { background: #f4f6f9; font-weight: 600; }
+.tab { display: none; flex: 1; overflow: auto; padding: 12px; } .tab.active { display: block; }
+.card { background: #fff; border: 1px solid #dde2ea; border-radius: 8px; margin-bottom: 10px; padding: 8px 12px; }
+.card h4 { margin: 0 0 4px; font-size: 13px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.badge { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: #e3e7ee; font-weight: 500; }
+.badge.ok { background: #dcf3e3; color: #19692c; } .badge.bad { background: #fbdedb; color: #9b1c12; } .badge.warn { background: #fff1cc; color: #7a5600; } .badge.model { background: #e5e9fb; color: #2b3f9e; }
+details { margin: 4px 0; } summary { cursor: pointer; color: #34405a; font-size: 12px; }
+pre { margin: 4px 0; background: #0f1626; color: #d6deeb; padding: 8px; border-radius: 6px; overflow: auto; max-height: 360px; font: 12px/1.45 Consolas, "SFMono-Regular", Menlo, monospace; }
+.kv { font-size: 12px; color: #4a5468; } .kv b { color: #1d2330; }
+.err-box { background: #fdf3f2; border-left: 3px solid #d9534f; padding: 6px 8px; margin: 6px 0; font-size: 12px; }
+.warn-box { background: #fffaeb; border-left: 3px solid #e0a800; padding: 6px 8px; margin: 6px 0; font-size: 12px; }
+.plot { width: 100%; height: 300px; }
+table.res { border-collapse: collapse; font-size: 12px; margin: 4px 0; } table.res td { border-bottom: 1px solid #edf0f4; padding: 2px 8px 2px 0; vertical-align: top; }
+.spinner { display: inline-block; width: 10px; height: 10px; border: 2px solid #8fa3d8; border-top-color: transparent; border-radius: 50%; animation: sp 0.8s linear infinite; }
+@keyframes sp { to { transform: rotate(360deg); } }
