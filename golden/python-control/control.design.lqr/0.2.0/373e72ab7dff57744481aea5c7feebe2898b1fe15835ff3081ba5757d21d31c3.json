@@ -1,0 +1,103 @@
+{
+ "spec": "aeoi/0.2",
+ "operator": "control.design.lqr",
+ "operator_version": "0.2.0",
+ "case_family": "double_integrator_family",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    0.0,
+    1.0,
+    0.0,
+    0.0
+   ]
+  },
+  "B": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    1
+   ],
+   "data": [
+    0.0,
+    1.0
+   ]
+  },
+  "Q": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    1.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  },
+  "R": {
+   "dtype": "f64",
+   "shape": [
+    1,
+    1
+   ],
+   "data": [
+    1.0
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261121,
+  "note": "python-control reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected": {
+  "K": {
+   "dtype": "f64",
+   "shape": [
+    1,
+    2
+   ],
+   "data": [
+    0.9999999999999991,
+    1.732050807568877
+   ]
+  },
+  "S": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    1.7320508075688763,
+    0.9999999999999991,
+    0.9999999999999991,
+    1.732050807568877
+   ]
+  },
+  "closed_loop_poles": [
+   [
+    -0.8660254037844386,
+    0.4999999999999994
+   ],
+   [
+    -0.8660254037844386,
+    -0.4999999999999994
+   ]
+  ],
+  "ref_care_residual_fro": 2.220446049250313e-15,
+  "cond_S": 3.732050807568874
+ }
+}

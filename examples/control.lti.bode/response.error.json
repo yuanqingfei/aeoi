@@ -1,0 +1,83 @@
+{
+  "spec": "aeoi/0.2",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "control.lti.bode",
+    "version": "0.2.0",
+    "build": "aeoi-control 0.2.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-bode-002",
+  "result": null,
+  "trust": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.DOMAIN.IMPROPER_SYSTEM",
+    "category": "domain",
+    "retryable": true,
+    "message": "系统不是 proper：分子阶次 2 > 分母阶次 1，频率响应在 ω→∞ 时发散，不存在状态空间实现。",
+    "agent_hint": "该算子只接受 proper 系统。若是理想微分环节，请补充远高于关心频带的极点使其 proper；若输入有误，检查 num/den 是否颠倒。",
+    "details": {
+      "path": "/system",
+      "num_degree": 2,
+      "den_degree": 1
+    },
+    "remediation": [
+      {
+        "id": "add_filter_pole",
+        "kind": "modify_input",
+        "description": "在分母乘上 (τs+1)^1，τ = 1e-3 s（远高于关心频带时影响可忽略）",
+        "confidence": "medium",
+        "requires_user_confirmation": true,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/system/den",
+            "value": [
+              0.001,
+              1.001,
+              1.0
+            ]
+          }
+        ]
+      },
+      {
+        "id": "swap_num_den",
+        "kind": "modify_input",
+        "description": "若 num/den 写反，交换二者",
+        "confidence": "low",
+        "requires_user_confirmation": true,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/system/num",
+            "value": [
+              1.0,
+              1.0
+            ]
+          },
+          {
+            "op": "replace",
+            "path": "/system/den",
+            "value": [
+              1.0,
+              0.0,
+              0.0
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ask",
+        "kind": "ask_user",
+        "description": "向用户确认系统模型是否为理想微分环节或输入有误",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.11319
+  }
+}

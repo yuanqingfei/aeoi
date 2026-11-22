@@ -1,0 +1,139 @@
+{
+  "spec": "aeoi/0.2",
+  "id": "control.lti.bode",
+  "version": "0.2.0",
+  "title": "Bode frequency response",
+  "description": "计算连续或离散 LTI 系统（tf/ss/zpk，SISO 或 MIMO）在给定频率点上的幅值（dB）与相位（deg）。",
+  "category": "analysis",
+  "tags": [
+    "frequency-domain",
+    "lti"
+  ],
+  "applicability": {
+    "preconditions": [
+      "system 为 proper（分子阶次 ≤ 分母阶次；zpk 零点数 ≤ 极点数）",
+      "频率点为正、严格递增",
+      "离散系统要求 ω ≤ π/ts（Nyquist 频率）"
+    ],
+    "not_for": [
+      "非线性系统",
+      "时变系统",
+      "带时滞的系统（v0.2 不支持）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "tf：分子/分母多项式在 s=jω（离散 z=e^{jωts}）处 Horner 复数求值后相除；zpk：乘积形式 k·Π(s−z)/Π(s−p)；ss：每个频点对 (sI−A)X=B 做部分选主元复数 LU 求解，G=CX+D。相位取 atan2，按频率顺序展开（unwrap），首点落在 (c−180°, c+180°]",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §5.1（Horner 误差界与条件数）",
+        "doi": "10.1137/1.9780898718027"
+      },
+      {
+        "type": "textbook",
+        "cite": "G. F. Franklin, J. D. Powell, A. Emami-Naeini, Feedback Control of Dynamic Systems, ch.6"
+      },
+      {
+        "type": "paper",
+        "cite": "A. J. Laub, Efficient multivariable frequency response computations, IEEE TAC 26(2), 1981（Hessenberg 加速，v0.2 未采用）",
+        "doi": "10.1109/TAC.1981.1102605"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献；MATLAB 仅作为黑盒参考（公开 API），v0.2 的 parity 参考为 python-control/scipy"
+    }
+  },
+  "backend": {
+    "library": "aeoi-control (pure Rust) + nalgebra 0.33",
+    "routine": "bode::evaluate (Horner / zpk product / complex LU)",
+    "version": "0.2.0",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T3",
+  "sparse_support": {
+    "/system/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_frequency_points": 100000,
+    "max_states_for_svd_condition": 64
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/control.lti.bode/0.2.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ZERO_DENOMINATOR",
+    "E.VALIDATION.NOT_CONJUGATE",
+    "E.VALIDATION.SPARSE_STRUCTURE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.DOMAIN.IMPROPER_SYSTEM",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.GRID",
+    "E.VALIDATION.RANGE",
+    "E.DOMAIN.ABOVE_NYQUIST",
+    "E.NUMERICAL.POLE_ON_GRID"
+  ],
+  "warnings": [
+    "W.NUMERICAL.NEAR_POLE",
+    "W.NUMERICAL.ZERO_ON_GRID",
+    "W.VALIDATION.LEADING_ZEROS_STRIPPED",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "control_lti_bode",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  }
+}

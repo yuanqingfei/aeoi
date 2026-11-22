@@ -1,0 +1,332 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/manifest/0.2",
+  "type": "object",
+  "required": [
+    "spec",
+    "id",
+    "version",
+    "title",
+    "description",
+    "applicability",
+    "provenance",
+    "backend",
+    "determinism",
+    "tolerance_class",
+    "input_schema",
+    "output_schema",
+    "errors"
+  ],
+  "properties": {
+    "spec": {
+      "const": "aeoi/0.2"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9_]*){2,4}$",
+      "description": "domain.subdomain.name，如 control.lti.bode"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-[0-9A-Za-z.-]+)?$"
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1024
+    },
+    "category": {
+      "enum": [
+        "analysis",
+        "design",
+        "simulation",
+        "transform",
+        "estimation",
+        "optimization",
+        "utility"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "applicability": {
+      "type": "object",
+      "required": [
+        "preconditions"
+      ],
+      "properties": {
+        "preconditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "not_for": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "siso_only": {
+          "type": "boolean"
+        },
+        "size_limits": {
+          "type": "object"
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "algorithm",
+        "references",
+        "clean_room"
+      ],
+      "properties": {
+        "algorithm": {
+          "type": "string"
+        },
+        "references": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "type",
+              "cite"
+            ],
+            "properties": {
+              "type": {
+                "enum": [
+                  "paper",
+                  "textbook",
+                  "standard",
+                  "software"
+                ]
+              },
+              "cite": {
+                "type": "string"
+              },
+              "doi": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "clean_room": {
+          "type": "object",
+          "required": [
+            "declared"
+          ],
+          "properties": {
+            "declared": {
+              "const": true
+            },
+            "sources": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "backend": {
+      "type": "object",
+      "required": [
+        "library",
+        "version",
+        "binding",
+        "license"
+      ],
+      "properties": {
+        "library": {
+          "type": "string"
+        },
+        "routine": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "binding": {
+          "enum": [
+            "native",
+            "ffi"
+          ]
+        },
+        "license": {
+          "type": "string",
+          "description": "SPDX identifier"
+        }
+      }
+    },
+    "determinism": {
+      "enum": [
+        "bitwise",
+        "platform_bitwise",
+        "tolerance",
+        "seeded"
+      ]
+    },
+    "tolerance_class": {
+      "enum": [
+        "T0",
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "T5",
+        "T6"
+      ]
+    },
+    "overridable_tolerances": {
+      "type": "object"
+    },
+    "input_schema": {
+      "type": "object"
+    },
+    "output_schema": {
+      "type": "object"
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "conformance": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "enum": [
+            "L1",
+            "L2",
+            "L3"
+          ]
+        },
+        "current": {
+          "type": "string"
+        }
+      }
+    },
+    "accuracy_grade": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "U"
+          ]
+        },
+        "current": {
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "U"
+          ]
+        }
+      }
+    },
+    "credentials": {
+      "type": "string"
+    },
+    "deprecated": {
+      "type": "object",
+      "properties": {
+        "since": {
+          "type": "string"
+        },
+        "replaced_by": {
+          "type": "string"
+        },
+        "removal_after": {
+          "type": "string"
+        }
+      }
+    },
+    "mcp": {
+      "type": "object",
+      "properties": {
+        "tool_name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]{1,64}$"
+        },
+        "annotations": {
+          "type": "object"
+        }
+      }
+    },
+    "sparse_support": {
+      "type": "object",
+      "description": "输入字段（JSON Pointer，如 /A 或 /system/A）→ 稀疏支持策略。未列出的矩阵字段视为 reject",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "policy"
+        ],
+        "properties": {
+          "policy": {
+            "enum": [
+              "native",
+              "densify",
+              "reject"
+            ]
+          },
+          "max_dense_elements": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "densify 时允许的最大稠密元素数"
+          }
+        }
+      }
+    },
+    "encodings": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "json",
+              "b64",
+              "ref"
+            ]
+          }
+        },
+        "output": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "json",
+              "b64"
+            ]
+          }
+        }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number"
+      }
+    }
+  }
+}

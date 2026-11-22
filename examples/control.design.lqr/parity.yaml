@@ -1,0 +1,29 @@
+# Parity test spec — control.design.lqr 0.2.0 (AEOI v0.2-draft)
+operator: control.design.lqr
+references:
+  - {engine: python-control, version: "0.10.2 → scipy.linalg.solve_continuous_are 1.18.1 (无 slycot)", role: dev_reference, status: active,
+     generator: gen_golden_pycontrol.py, golden_store: "golden/python-control/control.design.lqr/0.2.0/*.json",
+     note: "NOT MATLAB output"}
+  - {engine: analytic, role: second_reference, note: "双积分器族、标量情形有解析解（单元测试）"}
+  - {engine: MATLAB, role: ground_truth, status: planned, generator: "matlab/gen_golden_lqr.m (待写)",
+     golden_store: "golden/MATLAB/control.design.lqr/0.2.0/*.json"}
+runner: "cargo test --release -p aeoi-control --test parity"
+tolerance_class: T2
+compare:
+  S: {mode: normwise_rel_fro, rtol: "max(1e-10·max(1, cond_S/1e2), 10·trust.error_estimate.S_rel)"}
+  K: {mode: normwise_rel_fro, rtol: "10 × S 的容差"}
+  closed_loop_poles: {mode: matched_set, matching: greedy_nearest, rtol: "1e-8·max(1, cond_S/1e2)"}
+  invariants: ["care_rel_scaled ≤ 1e-12", "S 对称半正定", "A−BK 稳定"]   # 不依赖参考实现，也必须通过
+case_families:
+  - {name: double_integrator_family, n: 5}
+  - {name: random_stabilizable, n: 40, params: "n∈[2,10], m∈[1,3]"}
+  - {name: with_cross_term_N, n: 10}
+  - {name: ill_conditioned_R, n: 5, params: "cond(R)∈[1e6,1e9]",
+     note: "cond(R)≥1e8 时 Rust 结果与 scipy 相对差 ~2e-6（scipy 残差更小）；算子报 W.NUMERICAL.ILL_CONDITIONED 且误差估计覆盖实际偏差"}
+  - {name: larger_n, n: 3, params: "n = 20/30/40"}
+  - {name: memory_order_nonsymmetric, n: 1}
+  - {name: not_stabilizable, n: 3, expect: E.DOMAIN.NOT_STABILIZABLE}
+  - {name: R_indefinite, n: 2, expect: E.DOMAIN.R_NOT_POSITIVE_DEFINITE}
+  - {name: Q_not_symmetric, n: 1, expect: E.VALIDATION.NOT_SYMMETRIC}
+  - {name: hamiltonian_imag_axis, n: 1, expect: E.DOMAIN.HAMILTONIAN_IMAG_AXIS_EIG}
+  - {name: shape_mismatch, n: 1, expect: E.VALIDATION.SHAPE}

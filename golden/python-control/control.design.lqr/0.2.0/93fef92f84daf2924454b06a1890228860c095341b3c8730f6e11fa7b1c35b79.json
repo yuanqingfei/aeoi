@@ -1,0 +1,76 @@
+{
+ "spec": "aeoi/0.2",
+ "operator": "control.design.lqr",
+ "operator_version": "0.2.0",
+ "case_family": "shape_mismatch",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    3,
+    3
+   ],
+   "data": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  },
+  "B": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    1
+   ],
+   "data": [
+    1.0,
+    1.0
+   ]
+  },
+  "Q": {
+   "dtype": "f64",
+   "shape": [
+    3,
+    3
+   ],
+   "data": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  },
+  "R": {
+   "dtype": "f64",
+   "shape": [
+    1,
+    1
+   ],
+   "data": [
+    1.0
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261121,
+  "note": "python-control reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected_error": "E.VALIDATION.SHAPE"
+}

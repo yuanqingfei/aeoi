@@ -1,0 +1,178 @@
+{
+  "spec": "aeoi/0.2",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.lti.step",
+    "version": "0.2.0",
+    "build": "aeoi-control 0.2.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-step-001",
+  "result": {
+    "t": {
+      "unit": "s",
+      "value": {
+        "dtype": "f64",
+        "shape": [
+          11
+        ],
+        "data": [
+          0.0,
+          1.0,
+          2.0,
+          3.0,
+          4.0,
+          5.0,
+          6.0,
+          7.0,
+          8.0,
+          9.0,
+          10.0
+        ]
+      }
+    },
+    "y": {
+      "unit": "1",
+      "value": {
+        "dtype": "f64",
+        "shape": [
+          1,
+          1,
+          11
+        ],
+        "data": [
+          0.0,
+          1.0186307301607034,
+          1.2944308432181657,
+          0.8875035987716836,
+          0.9521578255428503,
+          1.05125103644682,
+          0.9958045219089461,
+          0.9860865361641766,
+          1.0063145500010093,
+          1.0018983329268827,
+          0.9974089570889851
+        ]
+      }
+    },
+    "n_grid_points": 1001,
+    "info": {
+      "rise_time": {
+        "unit": "s",
+        "value": 0.66
+      },
+      "settling_time": {
+        "unit": "s",
+        "value": 5.62
+      },
+      "settling_min": {
+        "unit": "1",
+        "value": 0.8613762654882545
+      },
+      "settling_max": {
+        "unit": "1",
+        "value": 1.3723177192599603
+      },
+      "overshoot": {
+        "unit": "%",
+        "value": 37.23177192599603
+      },
+      "undershoot": {
+        "unit": "%",
+        "value": 0.0
+      },
+      "peak": {
+        "unit": "1",
+        "value": 1.3723177192599603
+      },
+      "peak_time": {
+        "unit": "s",
+        "value": 1.6500000000000001
+      },
+      "steady_state": {
+        "unit": "1",
+        "value": 1.0,
+        "source": "dcgain"
+      }
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "final_state_rel_discrepancy": 3.9471295721541e-16,
+      "definition": "‖x_{N−1}(逐步递推) − x(t_end)(一次性 expm 直接计算)‖₂ / ‖x(t_end)‖₂，取所有输入通道最大值"
+    },
+    "condition": {
+      "norm1_A_dt": 0.04,
+      "expm_squarings": 0,
+      "realization": "controllable canonical form (scipy tf2ss convention)",
+      "max_real_pole": -0.6
+    },
+    "error_estimate": {
+      "y_abs": 1.525102307752513e-13,
+      "basis": "启发式：max(N·u, 终点一致性偏差) × max|y|；expm 后向误差 ≤ u（Higham 2005）。非严格上界",
+      "info_time_metrics_abs_s": 0.01,
+      "info_basis": "指标按网格点定义（首个越过阈值的网格点，不插值），相对连续时间真值误差 ≤ dt"
+    },
+    "checks": {
+      "asymptotically_stable": true,
+      "all_finite": true,
+      "auto_grid": false
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "dcgain": {
+        "dtype": "f64",
+        "shape": [
+          1,
+          1
+        ],
+        "data": [
+          1.0
+        ]
+      },
+      "poles": {
+        "dtype": "c128",
+        "shape": [
+          2
+        ],
+        "data": [
+          [
+            -0.6,
+            1.9078784028338913
+          ],
+          [
+            -0.6,
+            -1.9078784028338913
+          ]
+        ]
+      },
+      "dt": 0.01,
+      "t_end": 10.0
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:67b10a6f76e735d805f4c079ab1e7254602e568993403bfe5848070e6a2c1f3e",
+    "output_hash": "sha256:f8bed5cefb591bf6b9870f25990c51d2a3760d8dc61a1c81bd656cdde39f1406",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.237073
+  }
+}

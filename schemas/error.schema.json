@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/error/0.2",
+  "type": "object",
+  "required": [
+    "code",
+    "category",
+    "retryable",
+    "message",
+    "agent_hint",
+    "remediation"
+  ],
+  "properties": {
+    "code": {
+      "type": "string",
+      "pattern": "^E\\.(VALIDATION|DOMAIN|NUMERICAL|RESOURCE|INTERNAL)\\.[A-Z0-9_]+$"
+    },
+    "category": {
+      "enum": [
+        "validation",
+        "domain",
+        "numerical",
+        "resource",
+        "internal"
+      ]
+    },
+    "retryable": {
+      "type": "boolean",
+      "description": "修改输入（或原样重试，仅 resource/internal）后是否可能成功"
+    },
+    "message": {
+      "type": "string",
+      "description": "面向人：一句话说明发生了什么、为什么"
+    },
+    "agent_hint": {
+      "type": "string",
+      "description": "面向 Agent：下一步该怎么做，避免无效重试"
+    },
+    "details": {
+      "type": "object",
+      "description": "机器可读证据，如阶次、奇异值、条件数；path 为 JSON Pointer。schema 校验失败时为 violations[{path,message}]"
+    },
+    "remediation": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Remediation"
+      }
+    }
+  },
+  "$defs": {
+    "Remediation": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "description"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "modify_input",
+            "relax_tolerance",
+            "regularize",
+            "call_operator",
+            "retry_same",
+            "ask_user"
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "requires_user_confirmation": {
+          "type": "boolean",
+          "default": true,
+          "description": "改变物理模型含义的修复必须为 true"
+        },
+        "patch": {
+          "type": "array",
+          "description": "RFC 6902 JSON Patch，作用于原请求 arguments",
+          "items": {
+            "type": "object",
+            "required": [
+              "op",
+              "path"
+            ],
+            "properties": {
+              "op": {
+                "enum": [
+                  "add",
+                  "remove",
+                  "replace"
+                ]
+              },
+              "path": {
+                "type": "string"
+              },
+              "value": {}
+            }
+          }
+        },
+        "operator": {
+          "type": "string"
+        },
+        "arguments_from": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "目标算子参数名 → 原请求中的 JSON Pointer"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "modify_input"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "patch"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "call_operator"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "operator"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

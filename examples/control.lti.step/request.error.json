@@ -1,0 +1,24 @@
+{
+  "system": {
+    "kind": "tf",
+    "num": [
+      4
+    ],
+    "den": [
+      1,
+      1.2,
+      4
+    ],
+    "ts": 0,
+    "time_unit": "s"
+  },
+  "time": {
+    "mode": "uniform",
+    "t_final": 10,
+    "dt": 1e-07,
+    "unit": "s"
+  },
+  "exec": {
+    "request_id": "req-step-002"
+  }
+}

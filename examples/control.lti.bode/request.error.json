@@ -1,0 +1,26 @@
+{
+  "system": {
+    "kind": "tf",
+    "num": [
+      1,
+      0,
+      0
+    ],
+    "den": [
+      1,
+      1
+    ],
+    "ts": 0,
+    "time_unit": "s"
+  },
+  "frequency": {
+    "mode": "logspace",
+    "min": 0.01,
+    "max": 100,
+    "n": 200,
+    "unit": "rad/s"
+  },
+  "exec": {
+    "request_id": "req-bode-002"
+  }
+}

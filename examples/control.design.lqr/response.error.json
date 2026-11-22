@@ -1,0 +1,86 @@
+{
+  "spec": "aeoi/0.2",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "control.design.lqr",
+    "version": "0.2.0",
+    "build": "aeoi-control 0.2.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-lqr-002",
+  "result": null,
+  "trust": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.DOMAIN.NOT_STABILIZABLE",
+    "category": "domain",
+    "retryable": false,
+    "message": "(A,B) 不可镇定：特征值 λ = 1.000000+0.000000j（Re ≥ 0）对应的模态不受输入影响，不存在使闭环稳定的状态反馈，CARE 无稳定化解。",
+    "agent_hint": "这是模型结构问题，调整 Q/R 无效。需要为该模态增加执行器（修改 B），或确认 A 是否录入有误（含行列顺序：row-major）。",
+    "details": {
+      "path": "/B",
+      "uncontrollable_eigenvalue": [
+        1.0,
+        0.0
+      ],
+      "pbh_min_singular_value_rel": 0.0,
+      "pbh_test": "σ_min([A−λI, B]) / ‖[A, B]‖_F ≤ 1e-10"
+    },
+    "remediation": [
+      {
+        "id": "add_actuator",
+        "kind": "modify_input",
+        "description": "示例：为每个状态各加一路输入（B = I，R = I），仅用于确认问题出在执行器配置",
+        "confidence": "low",
+        "requires_user_confirmation": true,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/B",
+            "value": {
+              "dtype": "f64",
+              "shape": [
+                2,
+                2
+              ],
+              "data": [
+                1.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/R",
+            "value": {
+              "dtype": "f64",
+              "shape": [
+                2,
+                2
+              ],
+              "data": [
+                1.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "ask",
+        "kind": "ask_user",
+        "description": "向用户确认 A 矩阵与执行器配置",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.193415
+  }
+}

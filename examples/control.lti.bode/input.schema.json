@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.lti.bode/0.2.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "system",
+    "frequency"
+  ],
+  "properties": {
+    "system": {
+      "$ref": "aeoi://schemas/common/0.2/LtiSystem"
+    },
+    "frequency": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "values",
+            "unit"
+          ],
+          "properties": {
+            "mode": {
+              "const": "explicit"
+            },
+            "values": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "minItems": 1,
+              "maxItems": 100000,
+              "description": "必须严格递增"
+            },
+            "unit": {
+              "enum": [
+                "rad/s",
+                "Hz"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "min",
+            "max",
+            "n",
+            "unit"
+          ],
+          "properties": {
+            "mode": {
+              "const": "logspace"
+            },
+            "min": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "max": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "n": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 100000
+            },
+            "unit": {
+              "enum": [
+                "rad/s",
+                "Hz"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unwrap": {
+          "type": "boolean",
+          "default": true
+        },
+        "branch_center_deg": {
+          "type": "number",
+          "default": 0,
+          "description": "首个频点相位落在 (c-180, c+180] 内；unwrap=false 时每个点都落在该区间"
+        }
+      }
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.2/ExecOptions"
+    }
+  }
+}

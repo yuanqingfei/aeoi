@@ -1,0 +1,28 @@
+# Parity test spec — control.lti.bode 0.2.0 (AEOI v0.2-draft)
+operator: control.lti.bode
+references:
+  - {engine: python-control, version: "0.10.2 (scipy 1.18.1, numpy 2.5.5)", role: dev_reference, status: active,
+     generator: gen_golden_pycontrol.py, golden_store: "golden/python-control/control.lti.bode/0.2.0/*.json",
+     note: "NOT MATLAB output; 当前 cargo test 实际比对的对象"}
+  - {engine: MATLAB, version: "R2025b", toolbox: "Control System Toolbox", role: ground_truth, status: planned,
+     generator: matlab/gen_golden_bode.m, golden_store: "golden/MATLAB/control.lti.bode/0.2.0/*.json",
+     note: "尚未运行（box 无 MATLAB）"}
+runner: "cargo test --release -p aeoi-control --test parity"
+tolerance_class: T3
+compare:
+  w:         {mode: rel, rtol: 1.0e-14}
+  magnitude: {quantity: abs_db, atol: 1.0e-9, scaling: "max(atol, 10·trust.error_estimate.magnitude_db_abs)"}
+  phase:     {mode: modulo_360_then_abs, atol_deg: 1.0e-8, scaling: "max(atol, 10·trust.error_estimate.phase_deg_abs)"}
+  layout:    "[ny, nu, nw] row-major"
+case_families:   # n = 当前 golden 用例数
+  - {name: siso_2nd_order_sweep, n: 40}
+  - {name: siso_tf_higher_order, n: 15}
+  - {name: mimo_ss_random_stable, n: 20}
+  - {name: zpk, n: 10}
+  - {name: discrete_tf, n: 10}
+  - {name: near_imag_axis_poles, n: 3, expect_warning: W.NUMERICAL.NEAR_POLE, note: "容差按算子报告的误差估计放宽"}
+  - {name: improper_reject, n: 3, expect: E.DOMAIN.IMPROPER_SYSTEM}
+  - {name: hz_unit, n: 1, note: "输入 Hz，输出 w 为 rad/s"}
+  - {name: memory_order_nonsymmetric, n: 1,
+     note: "非对称 A；同时断言 column-major 展平（A(:) 错误）的请求结果与参考值偏差 > 1e3×容差"}
+pass_rule: "所有 case 在容差内；预期报错的 case 报出相同 code；预期 warning 必须出现；所有 code 必须在 manifest 中声明"

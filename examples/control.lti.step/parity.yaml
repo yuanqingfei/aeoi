@@ -1,0 +1,33 @@
+# Parity test spec — control.lti.step 0.2.0 (AEOI v0.2-draft)
+operator: control.lti.step
+references:
+  - {engine: python-control, version: "0.10.2 (scipy 1.18.1, numpy 2.5.5)", role: dev_reference, status: active,
+     generator: gen_golden_pycontrol.py, golden_store: "golden/python-control/control.lti.step/0.2.0/*.json",
+     note: "NOT MATLAB output; python 侧用 step_response(sys, T=显式网格) + step_info(T 同网格)"}
+  - {engine: MATLAB, role: ground_truth, status: planned, generator: "matlab/gen_golden_step.m (待写)",
+     golden_store: "golden/MATLAB/control.lti.step/0.2.0/*.json",
+     note: "MATLAB stepinfo 会在网格间插值，与 AEOI v0.2 的网格定义不同；比较 info 前需用相同定义"}
+runner: "cargo test --release -p aeoi-control --test parity"
+tolerance_class: T2
+compare:
+  t: {atol: 1.0e-12}
+  y: {rtol: 1.0e-10, scale: "max(1, max|y_ref|)"}
+  info.rise_time / settling_time / peak_time: {atol: "dt"}
+  info.peak / settling_min / settling_max / steady_state: {rtol: 1.0e-9}
+  info.overshoot / undershoot: {atol_pct: 1.0e-6}
+  info: {definition: "网格上定义，无插值（v0.2 §5.2）；零 DC 增益通道 info = null（W.DOMAIN.ZERO_DC_GAIN）"}
+case_families:
+  - {name: siso_underdamped, n: 25}
+  - {name: siso_overdamped_and_critically_damped, n: 15}
+  - {name: siso_with_zeros, n: 10}
+  - {name: siso_with_zeros_nonminimum_phase, n: 5}
+  - {name: mimo_ss_random_stable, n: 15}
+  - {name: stiff_spread_poles, n: 3, note: "极点跨 4–6 个数量级，输出 decimated 到 1001 点"}
+  - {name: unstable_system, n: 5, expect_warning: W.DOMAIN.UNSTABLE_SYSTEM, note: "y 仍比较；info 期望为 null"}
+  - {name: discrete_systems, n: 8, note: "dt 必须等于 ts"}
+  - {name: memory_order_nonsymmetric, n: 1}
+  - {name: compute_limit, n: 1, expect: E.RESOURCE.COMPUTE_LIMIT}
+  - {name: output_too_large, n: 1, expect: E.RESOURCE.OUTPUT_TOO_LARGE}
+  - {name: improper_reject, n: 1, expect: E.DOMAIN.IMPROPER_SYSTEM}
+  - {name: discrete_dt_mismatch, n: 1, expect: E.VALIDATION.GRID}
+excluded: ["auto 时间网格（参考实现的自动网格不公开且会变化，不作为 parity 对象）"]

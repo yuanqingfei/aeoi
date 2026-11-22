@@ -1,0 +1,36 @@
+{
+  "system": {
+    "kind": "tf",
+    "num": [
+      4
+    ],
+    "den": [
+      1,
+      1.2,
+      4
+    ],
+    "ts": 0,
+    "time_unit": "s"
+  },
+  "time": {
+    "mode": "uniform",
+    "t_final": 10,
+    "dt": 0.01,
+    "unit": "s"
+  },
+  "step_info": {
+    "enabled": true,
+    "rise_time_limits": [
+      0.1,
+      0.9
+    ],
+    "settling_threshold": 0.02
+  },
+  "output": {
+    "return_samples": "decimated",
+    "max_samples": 11
+  },
+  "exec": {
+    "request_id": "req-step-001"
+  }
+}

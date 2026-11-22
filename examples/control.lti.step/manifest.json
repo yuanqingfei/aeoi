@@ -1,0 +1,144 @@
+{
+  "spec": "aeoi/0.2",
+  "id": "control.lti.step",
+  "version": "0.2.0",
+  "title": "Step response",
+  "description": "计算 LTI 系统在均匀时间网格上的单位阶跃响应（每个输入通道分别施加单位阶跃），并给出阶跃特性指标。",
+  "category": "analysis",
+  "tags": [
+    "time-domain",
+    "lti"
+  ],
+  "applicability": {
+    "preconditions": [
+      "system 为 proper",
+      "uniform 网格：t_k = k·dt，k = 0..N−1，N = floor(t_final/dt + 1e-9) + 1",
+      "离散系统要求 dt = ts（相对误差 1e-9）",
+      "step_info 需系统渐近稳定，否则为 null 并给出 warning"
+    ],
+    "not_for": [
+      "非线性系统",
+      "任意输入（将来用 control.lti.lsim）",
+      "带时滞的系统（v0.2 不支持）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "连续系统：对增广矩阵 [[A,B],[0,0]]·dt 求矩阵指数（Padé 13 阶 + scaling & squaring）得 Φ、Γ，再递推 x_{k+1}=Φx_k+Γu、y_k=Cx_k+Du；阶跃输入在 ZOH 下无离散化误差。离散系统直接递推。tf/zpk 先转为可控标准型实现。指标按网格点定义，不插值（与 python-control step_info 相同）",
+    "references": [
+      {
+        "type": "paper",
+        "cite": "C. Van Loan, Computing integrals involving the matrix exponential, IEEE TAC 23(3), 1978",
+        "doi": "10.1109/TAC.1978.1101743"
+      },
+      {
+        "type": "paper",
+        "cite": "N. J. Higham, The scaling and squaring method for the matrix exponential revisited, SIMAX 26(4), 2005",
+        "doi": "10.1137/04061101X"
+      },
+      {
+        "type": "textbook",
+        "cite": "K. Ogata, Modern Control Engineering, 5th ed., ch.5（阶跃指标定义）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献；MATLAB 仅作为黑盒参考（公开 API），v0.2 的 parity 参考为 python-control/scipy"
+    }
+  },
+  "backend": {
+    "library": "aeoi-control (pure Rust) + nalgebra 0.33",
+    "routine": "step::simulate (expm Padé-13 + recursion)",
+    "version": "0.2.0",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T2",
+  "sparse_support": {
+    "/system/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_grid_points": 10000000,
+    "max_output_values": 1000000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/control.lti.step/0.2.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ZERO_DENOMINATOR",
+    "E.VALIDATION.NOT_CONJUGATE",
+    "E.VALIDATION.SPARSE_STRUCTURE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.DOMAIN.IMPROPER_SYSTEM",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.GRID",
+    "E.VALIDATION.RANGE",
+    "E.RESOURCE.COMPUTE_LIMIT",
+    "E.RESOURCE.OUTPUT_TOO_LARGE"
+  ],
+  "warnings": [
+    "W.DOMAIN.UNSTABLE_SYSTEM",
+    "W.DOMAIN.NOT_SETTLED",
+    "W.DOMAIN.INFINITE_DC_GAIN",
+    "W.DOMAIN.ZERO_DC_GAIN",
+    "W.ACCURACY.GRID_TOO_COARSE",
+    "W.ACCURACY.AUTO_GRID",
+    "W.VALIDATION.LEADING_ZEROS_STRIPPED",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "control_lti_step",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  }
+}

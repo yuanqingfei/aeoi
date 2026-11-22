@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/common/0.2",
+  "$defs": {
+    "NonFinite": { "enum": ["NaN", "Inf", "-Inf"] },
+    "Complex": {
+      "type": "array", "prefixItems": [{ "type": "number" }, { "type": "number" }],
+      "minItems": 2, "maxItems": 2, "description": "[re, im]"
+    },
+    "Unit": {
+      "type": "string", "pattern": "^[\\x21-\\x7e]+$",
+      "description": "UCUM case-sensitive code（c/s），如 s, rad/s, Hz, deg, rad, 1, %, N.m；dB 为本规范登记的扩展单位，表示 20·log10(幅值比)"
+    },
+    "Sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "DType": { "enum": ["f64", "c128", "i64", "bool"] },
+    "Shape": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "minItems": 1, "maxItems": 8 },
+    "Structure": { "enum": ["general", "symmetric", "hermitian", "diagonal", "upper_triangular", "lower_triangular"] },
+    "Scalar": {
+      "type": "object", "additionalProperties": false, "required": ["dtype", "value"],
+      "properties": {
+        "dtype": { "$ref": "#/$defs/DType" },
+        "value": { "oneOf": [{ "type": "number" }, { "$ref": "#/$defs/Complex" }, { "type": "boolean" }, { "$ref": "#/$defs/NonFinite" }] }
+      }
+    },
+    "DenseMatrix": {
+      "type": "object", "additionalProperties": false, "required": ["dtype", "shape", "data"],
+      "description": "内联 JSON 稠密数组。data 为按 row-major (C order) 展平的一维数组；MATLAB 是 column-major，生成时必须先转置再展平。data 长度必须等于 shape 各维乘积（语义校验）",
+      "properties": {
+        "dtype": { "$ref": "#/$defs/DType" },
+        "shape": { "$ref": "#/$defs/Shape" },
+        "data": {
+          "type": "array",
+          "items": { "oneOf": [{ "type": "number" }, { "$ref": "#/$defs/Complex" }, { "type": "boolean" }, { "$ref": "#/$defs/NonFinite" }] }
+        },
+        "structure": { "$ref": "#/$defs/Structure" }
+      }
+    },
+    "DenseMatrixB64": {
+      "type": "object", "additionalProperties": false, "required": ["dtype", "shape", "order", "byte_order", "data_b64", "sha256"],
+      "description": "二进制内联：data_b64 = base64(RFC 4648, 标准字母表, 带 padding) 的原始缓冲区。f64/i64 为 8 字节小端，c128 为 re,im 交错的 2×f64，bool 为 1 字节 0/1。sha256 针对解码后的原始缓冲区，同时用作编码无关的内容摘要",
+      "properties": {
+        "dtype": { "$ref": "#/$defs/DType" },
+        "shape": { "$ref": "#/$defs/Shape" },
+        "order": { "const": "C" },
+        "byte_order": { "const": "little" },
+        "data_b64": { "type": "string", "contentEncoding": "base64" },
+        "sha256": { "$ref": "#/$defs/Sha256" },
+        "structure": { "$ref": "#/$defs/Structure" }
+      }
+    },
+    "MatrixRef": {
+      "type": "object", "additionalProperties": false, "required": ["dtype", "shape", "order", "byte_order", "encoding", "uri", "sha256", "byte_length"],
+      "description": "外部引用：uri 指向与 DenseMatrixB64 相同布局的原始缓冲区。v0.2 服务端只解析 data root 之下的 file:// URI；其他 scheme 返回 E.VALIDATION.REF_UNSUPPORTED",
+      "properties": {
+        "dtype": { "$ref": "#/$defs/DType" },
+        "shape": { "$ref": "#/$defs/Shape" },
+        "order": { "const": "C" },
+        "byte_order": { "const": "little" },
+        "encoding": { "const": "raw" },
+        "uri": { "type": "string", "format": "uri", "maxLength": 2048 },
+        "sha256": { "$ref": "#/$defs/Sha256" },
+        "byte_length": { "type": "integer", "minimum": 0 },
+        "structure": { "$ref": "#/$defs/Structure" }
+      }
+    },
+    "SparseMatrix": {
+      "type": "object", "additionalProperties": false, "required": ["dtype", "shape", "format", "indptr", "indices", "data"],
+      "description": "压缩稀疏矩阵（0 基索引）。csr: indptr 长度 m+1，indices 为列号；csc: indptr 长度 n+1，indices 为行号。每段内索引必须严格递增；duplicates=sum 时允许相等（非递减）并在使用时求和",
+      "properties": {
+        "dtype": { "enum": ["f64", "c128", "i64", "bool"] },
+        "shape": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "minItems": 2, "maxItems": 2 },
+        "format": { "enum": ["csr", "csc"] },
+        "indptr": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "minItems": 1 },
+        "indices": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+        "data": {
+          "type": "array",
+          "items": { "oneOf": [{ "type": "number" }, { "$ref": "#/$defs/Complex" }, { "type": "boolean" }, { "$ref": "#/$defs/NonFinite" }] }
+        },
+        "duplicates": { "enum": ["error", "sum"], "default": "error" },
+        "structure": { "$ref": "#/$defs/Structure" }
+      }
+    },
+    "Matrix": {
+      "description": "任一数组编码。各分支以必填字段区分：data（内联 JSON）、data_b64（二进制）、uri（引用）、format（稀疏）",
+      "oneOf": [
+        { "$ref": "#/$defs/DenseMatrix" },
+        { "$ref": "#/$defs/DenseMatrixB64" },
+        { "$ref": "#/$defs/MatrixRef" },
+        { "$ref": "#/$defs/SparseMatrix" }
+      ]
+    },
+    "Quantity": {
+      "type": "object", "additionalProperties": true, "required": ["unit", "value"],
+      "properties": {
+        "unit": { "$ref": "#/$defs/Unit" },
+        "value": { "oneOf": [{ "type": "number" }, { "$ref": "#/$defs/Matrix" }, { "$ref": "#/$defs/Scalar" }, { "$ref": "#/$defs/NonFinite" }] }
+      }
+    },
+    "Polynomial": {
+      "type": "array", "items": { "type": "number" }, "minItems": 1,
+      "description": "实系数，按 s（或 z）降幂排列。前导零会被去除并给出 W.VALIDATION.LEADING_ZEROS_STRIPPED"
+    },
+    "LtiSystem": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false, "required": ["kind", "num", "den", "ts"],
+          "properties": {
+            "kind": { "const": "tf" },
+            "num": { "oneOf": [{ "$ref": "#/$defs/Polynomial" }, { "type": "array", "items": { "type": "array", "items": { "$ref": "#/$defs/Polynomial" } } }] },
+            "den": { "oneOf": [{ "$ref": "#/$defs/Polynomial" }, { "type": "array", "items": { "type": "array", "items": { "$ref": "#/$defs/Polynomial" } } }] },
+            "ts": { "type": "number", "minimum": 0, "description": "0 = 连续时间；>0 = 离散采样周期" },
+            "time_unit": { "const": "s", "default": "s" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["kind", "A", "B", "C", "D", "ts"],
+          "properties": {
+            "kind": { "const": "ss" },
+            "A": { "$ref": "#/$defs/Matrix" }, "B": { "$ref": "#/$defs/Matrix" },
+            "C": { "$ref": "#/$defs/Matrix" }, "D": { "$ref": "#/$defs/Matrix" },
+            "ts": { "type": "number", "minimum": 0 },
+            "time_unit": { "const": "s", "default": "s" },
+            "state_names": { "type": "array", "items": { "type": "string" } },
+            "input_names": { "type": "array", "items": { "type": "string" } },
+            "output_names": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["kind", "z", "p", "k", "ts"],
+          "properties": {
+            "kind": { "const": "zpk" },
+            "z": { "type": "array", "items": { "$ref": "#/$defs/Complex" }, "description": "复数必须共轭成对出现（相对容差 1e-12）" },
+            "p": { "type": "array", "items": { "$ref": "#/$defs/Complex" } },
+            "k": { "type": "number" },
+            "ts": { "type": "number", "minimum": 0 },
+            "time_unit": { "const": "s", "default": "s" }
+          }
+        }
+      ]
+    },
+    "ExecOptions": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "request_id": { "type": "string", "maxLength": 128 },
+        "seed": { "type": ["integer", "null"], "minimum": 0 },
+        "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 600000, "default": 30000 },
+        "tolerance": { "type": "object", "description": "仅允许覆盖 manifest 中声明为 overridable 的容差", "additionalProperties": { "type": "number", "exclusiveMinimum": 0 } },
+        "trust_level": { "enum": ["summary", "full"], "default": "summary" },
+        "dry_run": { "type": "boolean", "default": false, "description": "只做校验与代价估计，不执行" },
+        "output_encoding": { "enum": ["json", "b64"], "default": "json", "description": "结果中稠密数组的编码；b64 时为 DenseMatrixB64" }
+      }
+    }
+  }
+}

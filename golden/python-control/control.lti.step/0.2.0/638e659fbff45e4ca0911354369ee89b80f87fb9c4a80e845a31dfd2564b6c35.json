@@ -1,0 +1,37 @@
+{
+ "spec": "aeoi/0.2",
+ "operator": "control.lti.step",
+ "operator_version": "0.2.0",
+ "case_family": "discrete_dt_mismatch",
+ "request": {
+  "system": {
+   "kind": "tf",
+   "num": [
+    1.0
+   ],
+   "den": [
+    1.0,
+    -0.5
+   ],
+   "ts": 0.1,
+   "time_unit": "s"
+  },
+  "time": {
+   "mode": "uniform",
+   "t_final": 1,
+   "dt": 0.05,
+   "unit": "s"
+  }
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261121,
+  "note": "python-control reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected_error": "E.VALIDATION.GRID"
+}

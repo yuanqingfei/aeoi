@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.lti.step/0.2.0/output",
+  "type": "object",
+  "required": [
+    "t",
+    "y",
+    "info"
+  ],
+  "properties": {
+    "t": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "aeoi://schemas/common/0.2/Quantity"
+        }
+      ]
+    },
+    "y": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "aeoi://schemas/common/0.2/Quantity",
+          "description": "shape [ny,nu,nt]"
+        }
+      ]
+    },
+    "n_grid_points": {
+      "type": "integer"
+    },
+    "info": {
+      "type": [
+        "object",
+        "array",
+        "null"
+      ],
+      "description": "SISO 为单个对象；MIMO 为 [ny][nu] 嵌套数组，元素可为 null（该通道不稳定或 DC 增益无穷）"
+    }
+  }
+}

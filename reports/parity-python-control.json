@@ -1,0 +1,242 @@
+{
+  "reference": "python-control 0.10.2 / scipy 1.18.1 / numpy 2.5.5 (NOT MATLAB)",
+  "build": "aeoi-control 0.2.0+nogit nalgebra-0.33 rustc-1.85",
+  "cpu_features": [
+    "avx",
+    "avx2",
+    "fma",
+    "avx512f"
+  ],
+  "results": {
+    "control.lti.bode": {
+      "cases": 103,
+      "passed": 103,
+      "max_error_over_tolerance": 0.0002970068635477219,
+      "kappa_scaled_cases": 3,
+      "max_errors": {
+        "magnitude_db_abs": 2.8421709430404007e-13,
+        "magnitude_db_abs (κ-scaled cases)": 7.105427357601002e-15,
+        "magnitude_db_abs (κ-scaled cases) [max err/tol]": 1.2280453827459502e-11,
+        "magnitude_db_abs [max err/tol]": 0.0002842170943040401,
+        "phase_deg_abs_mod360": 2.9700686354772188e-12,
+        "phase_deg_abs_mod360 (κ-scaled cases)": 3.308722450212111e-24,
+        "phase_deg_abs_mod360 (κ-scaled cases) [max err/tol]": 8.669144172134643e-22,
+        "phase_deg_abs_mod360 [max err/tol]": 0.0002970068635477219,
+        "w_rel": 0.0,
+        "w_rel [max err/tol]": 0.0
+      },
+      "tolerances": {
+        "magnitude_db_abs": 1e-9,
+        "magnitude_db_abs (κ-scaled cases)": 0.000578596480018762,
+        "magnitude_db_abs (κ-scaled cases) [max err/tol]": 1.0,
+        "magnitude_db_abs [max err/tol]": 1.0,
+        "phase_deg_abs_mod360": 1e-8,
+        "phase_deg_abs_mod360 (κ-scaled cases)": 0.0038166656183287223,
+        "phase_deg_abs_mod360 (κ-scaled cases) [max err/tol]": 1.0,
+        "phase_deg_abs_mod360 [max err/tol]": 1.0,
+        "w_rel": 1e-14,
+        "w_rel [max err/tol]": 1.0
+      },
+      "families": {
+        "discrete_tf": {
+          "cases": 10,
+          "passed": 10
+        },
+        "hz_unit": {
+          "cases": 1,
+          "passed": 1
+        },
+        "improper_reject": {
+          "cases": 3,
+          "passed": 3
+        },
+        "memory_order_nonsymmetric": {
+          "cases": 1,
+          "passed": 1
+        },
+        "mimo_ss_random_stable": {
+          "cases": 20,
+          "passed": 20
+        },
+        "near_imag_axis_poles": {
+          "cases": 3,
+          "passed": 3
+        },
+        "siso_2nd_order_sweep": {
+          "cases": 40,
+          "passed": 40
+        },
+        "siso_tf_higher_order": {
+          "cases": 15,
+          "passed": 15
+        },
+        "zpk": {
+          "cases": 10,
+          "passed": 10
+        }
+      },
+      "memory_order_mismatch_ratio": 55564194916.63654,
+      "failures": []
+    },
+    "control.lti.step": {
+      "cases": 89,
+      "passed": 89,
+      "max_error_over_tolerance": 0.11535217225855376,
+      "kappa_scaled_cases": 0,
+      "max_errors": {
+        "info_percent_abs": 3.219611244276166e-10,
+        "info_percent_abs [max err/tol]": 0.0003219611244276166,
+        "info_time_abs_(tol=dt)_ratio": 0.0,
+        "info_time_abs_(tol=dt)_ratio [max err/tol]": 0.0,
+        "info_value_rel": 1.1545172224954472e-11,
+        "info_value_rel [max err/tol]": 0.011545172224954471,
+        "t_abs": 0.0,
+        "t_abs [max err/tol]": 0.0,
+        "y_rel_to_max|y|": 1.1535217225855376e-11,
+        "y_rel_to_max|y| [max err/tol]": 0.11535217225855376
+      },
+      "tolerances": {
+        "info_percent_abs": 1e-6,
+        "info_percent_abs [max err/tol]": 1.0,
+        "info_time_abs_(tol=dt)_ratio": 1.000000001,
+        "info_time_abs_(tol=dt)_ratio [max err/tol]": 1.0,
+        "info_value_rel": 1e-9,
+        "info_value_rel [max err/tol]": 1.0,
+        "t_abs": 1e-12,
+        "t_abs [max err/tol]": 1.0,
+        "y_rel_to_max|y|": 1e-10,
+        "y_rel_to_max|y| [max err/tol]": 1.0
+      },
+      "families": {
+        "compute_limit": {
+          "cases": 1,
+          "passed": 1
+        },
+        "discrete_dt_mismatch": {
+          "cases": 1,
+          "passed": 1
+        },
+        "discrete_systems": {
+          "cases": 8,
+          "passed": 8
+        },
+        "improper_reject": {
+          "cases": 1,
+          "passed": 1
+        },
+        "memory_order_nonsymmetric": {
+          "cases": 1,
+          "passed": 1
+        },
+        "mimo_ss_random_stable": {
+          "cases": 15,
+          "passed": 15
+        },
+        "output_too_large": {
+          "cases": 1,
+          "passed": 1
+        },
+        "siso_overdamped_and_critically_damped": {
+          "cases": 15,
+          "passed": 15
+        },
+        "siso_underdamped": {
+          "cases": 25,
+          "passed": 25
+        },
+        "siso_with_zeros": {
+          "cases": 10,
+          "passed": 10
+        },
+        "siso_with_zeros_nonminimum_phase": {
+          "cases": 5,
+          "passed": 5
+        },
+        "stiff_spread_poles": {
+          "cases": 1,
+          "passed": 1
+        },
+        "unstable_system": {
+          "cases": 5,
+          "passed": 5
+        }
+      },
+      "memory_order_mismatch_ratio": 12799999242.093311,
+      "failures": []
+    },
+    "control.design.lqr": {
+      "cases": 72,
+      "passed": 72,
+      "max_error_over_tolerance": 0.12360487660073814,
+      "kappa_scaled_cases": 4,
+      "max_errors": {
+        "K_rel_fro": 1.7471476181879421e-6,
+        "K_rel_fro [max err/tol]": 0.008935521818845557,
+        "S_rel_fro": 2.416825453818823e-6,
+        "S_rel_fro [max err/tol]": 0.12360487660073814,
+        "care_rel_scaled (invariant, tol 1e-12)": 6.349835945753627e-17,
+        "care_rel_scaled (invariant, tol 1e-12) [max err/tol]": 0.00006349835945753627,
+        "poles_rel": 0.00002280467181119841,
+        "poles_rel [max err/tol]": 0.020714918005372927
+      },
+      "tolerances": {
+        "K_rel_fro": 1e-9,
+        "K_rel_fro [max err/tol]": 1.0,
+        "S_rel_fro": 1e-10,
+        "S_rel_fro [max err/tol]": 1.0,
+        "care_rel_scaled (invariant, tol 1e-12)": 1e-12,
+        "care_rel_scaled (invariant, tol 1e-12) [max err/tol]": 1.0,
+        "poles_rel": 1e-8,
+        "poles_rel [max err/tol]": 1.0
+      },
+      "families": {
+        "Q_not_symmetric": {
+          "cases": 1,
+          "passed": 1
+        },
+        "R_indefinite": {
+          "cases": 2,
+          "passed": 2
+        },
+        "double_integrator_family": {
+          "cases": 5,
+          "passed": 5
+        },
+        "hamiltonian_imag_axis": {
+          "cases": 1,
+          "passed": 1
+        },
+        "ill_conditioned_R": {
+          "cases": 5,
+          "passed": 5
+        },
+        "larger_n": {
+          "cases": 3,
+          "passed": 3
+        },
+        "memory_order_nonsymmetric": {
+          "cases": 1,
+          "passed": 1
+        },
+        "not_stabilizable": {
+          "cases": 3,
+          "passed": 3
+        },
+        "random_stabilizable": {
+          "cases": 40,
+          "passed": 40
+        },
+        "shape_mismatch": {
+          "cases": 1,
+          "passed": 1
+        },
+        "with_cross_term_N": {
+          "cases": 10,
+          "passed": 10
+        }
+      },
+      "memory_order_mismatch_ratio": 9302431217.208038,
+      "failures": []
+    }
+  }
+}

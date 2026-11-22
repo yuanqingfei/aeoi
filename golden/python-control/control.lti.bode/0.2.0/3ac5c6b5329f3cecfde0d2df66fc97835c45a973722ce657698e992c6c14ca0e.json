@@ -1,0 +1,38 @@
+{
+ "spec": "aeoi/0.2",
+ "operator": "control.lti.bode",
+ "operator_version": "0.2.0",
+ "case_family": "improper_reject",
+ "request": {
+  "system": {
+   "kind": "tf",
+   "num": [
+    2.0,
+    0.0
+   ],
+   "den": [
+    5.0
+   ],
+   "ts": 0.0,
+   "time_unit": "s"
+  },
+  "frequency": {
+   "mode": "logspace",
+   "min": 0.01,
+   "max": 100,
+   "n": 50,
+   "unit": "rad/s"
+  }
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261121,
+  "note": "python-control reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected_error": "E.DOMAIN.IMPROPER_SYSTEM"
+}

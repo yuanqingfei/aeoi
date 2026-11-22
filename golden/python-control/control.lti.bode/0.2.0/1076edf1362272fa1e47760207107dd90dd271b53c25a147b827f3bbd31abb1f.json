@@ -1,0 +1,66 @@
+{
+ "spec": "aeoi/0.2",
+ "operator": "control.lti.bode",
+ "operator_version": "0.2.0",
+ "case_family": "hz_unit",
+ "request": {
+  "system": {
+   "kind": "tf",
+   "num": [
+    4.0
+   ],
+   "den": [
+    1.0,
+    1.2,
+    4.0
+   ],
+   "ts": 0.0,
+   "time_unit": "s"
+  },
+  "frequency": {
+   "mode": "explicit",
+   "values": [
+    0.01,
+    0.1,
+    0.3183098861837907,
+    1.0
+   ],
+   "unit": "Hz"
+  }
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "scipy": "1.18.1",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "slycot": false,
+  "seed": 20261121,
+  "note": "python-control reference values computed on the Grok Bot box; NOT MATLAB output"
+ },
+ "expected": {
+  "w": [
+   0.06283185307179587,
+   0.6283185307179586,
+   2.0,
+   6.283185307179586
+  ],
+  "shape": [
+   1,
+   1,
+   4
+  ],
+  "magnitude_db": [
+   0.0070310140969589395,
+   0.7166591776056932,
+   4.436974992327128,
+   -19.149930005778213
+  ],
+  "phase_deg": [
+   -1.0809387081807431,
+   -11.812385952568485,
+   -90.0,
+   -168.00208300205816
+  ]
+ }
+}

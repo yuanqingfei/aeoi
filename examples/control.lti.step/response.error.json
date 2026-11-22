@@ -1,0 +1,54 @@
+{
+  "spec": "aeoi/0.2",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "control.lti.step",
+    "version": "0.2.0",
+    "build": "aeoi-control 0.2.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-step-002",
+  "result": null,
+  "trust": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.RESOURCE.COMPUTE_LIMIT",
+    "category": "resource",
+    "retryable": true,
+    "message": "时间网格 100000001 点 × 1 个输入通道 = 100000001 步，超过单次计算上限 10000000。",
+    "agent_hint": "增大 dt 或缩短 t_final。抽样返回（output.return_samples）不能解决此问题，因为递推仍需走完每个网格点。",
+    "details": {
+      "path": "/time/dt",
+      "grid_points": 100000001,
+      "limit": 10000000,
+      "fastest_pole_rad_s": 2.0
+    },
+    "remediation": [
+      {
+        "id": "coarser_grid",
+        "kind": "modify_input",
+        "description": "dt 改为 0.05 s（≈ 0.1/最快极点模，且满足上限）",
+        "confidence": "high",
+        "requires_user_confirmation": false,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/time/dt",
+            "value": 0.05
+          }
+        ]
+      },
+      {
+        "id": "shorten",
+        "kind": "ask_user",
+        "description": "与用户确认是否可以缩短 t_final",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.09293699999999999
+  }
+}

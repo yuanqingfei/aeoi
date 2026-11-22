@@ -1,0 +1,134 @@
+{
+  "spec": "aeoi/0.2",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.lti.bode",
+    "version": "0.2.0",
+    "build": "aeoi-control 0.2.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-bode-001",
+  "result": {
+    "w": {
+      "unit": "rad/s",
+      "value": {
+        "dtype": "f64",
+        "shape": [
+          6
+        ],
+        "data": [
+          0.1,
+          0.5,
+          1.0,
+          2.0,
+          5.0,
+          10.0
+        ]
+      }
+    },
+    "magnitude": {
+      "unit": "dB",
+      "value": {
+        "dtype": "f64",
+        "shape": [
+          1,
+          1,
+          6
+        ],
+        "data": [
+          0.017815421224700548,
+          0.4507943502574479,
+          1.8541948398968155,
+          4.436974992327127,
+          -14.743983963841893,
+          -27.671558660821805
+        ]
+      }
+    },
+    "phase": {
+      "unit": "deg",
+      "value": {
+        "dtype": "f64",
+        "shape": [
+          1,
+          1,
+          6
+        ],
+        "data": [
+          -1.7226620716228027,
+          -9.090276920822323,
+          -21.80140948635181,
+          -90.0,
+          -164.05460409907712,
+          -172.8749836510982
+        ]
+      }
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": null,
+    "condition": {
+      "representation": "tf",
+      "max_cond_sI_minus_A": null,
+      "max_rel_error_estimate": 3.2196467714129563e-15
+    },
+    "error_estimate": {
+      "kind": "a_priori_bound",
+      "rel_max": 3.2196467714129563e-15,
+      "magnitude_db_abs": 2.7965496530045342e-14,
+      "phase_deg_abs": 1.844721715248841e-13,
+      "worst_frequency_rad_s": 2.0,
+      "basis": "Horner 先验误差界（一阶）：|Δp/p| ≤ γ_{2n}·Σ|a_k||s|^k/|p(s)|（Higham 2002 §5.1），分子分母相加；dB 误差 ≈ 8.686×相对误差，相位误差 ≈ 57.30°×相对误差"
+    },
+    "checks": {
+      "all_finite": true,
+      "frequencies_strictly_increasing": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "poles": {
+        "dtype": "c128",
+        "shape": [
+          2
+        ],
+        "data": [
+          [
+            -0.6,
+            1.9078784028338913
+          ],
+          [
+            -0.6,
+            -1.9078784028338913
+          ]
+        ]
+      },
+      "phase_convention": "unwrapped",
+      "branch_center_deg": 0.0
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T3",
+    "input_hash": "sha256:bfdce579308b4a1bd5ca4e277eb79481fbcd93ea4817cc11fd590eefe4761d28",
+    "output_hash": "sha256:05bbe7b5711a1fbcf66af8712e3672c8c7c5440965ac9c47450bdaed88856048",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.19426
+  }
+}

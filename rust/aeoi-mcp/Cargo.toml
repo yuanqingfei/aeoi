@@ -1,0 +1,10 @@
+[package]
+name = "aeoi-mcp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+aeoi-core = { path = "../aeoi-core" }
+aeoi-control = { path = "../aeoi-control" }
+serde_json.workspace = true

@@ -1,0 +1,348 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/envelope/0.2",
+  "type": "object",
+  "required": [
+    "spec",
+    "status",
+    "operator",
+    "result",
+    "dry_run"
+  ],
+  "properties": {
+    "spec": {
+      "const": "aeoi/0.2"
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "ok_with_warnings",
+        "error"
+      ]
+    },
+    "operator": {
+      "type": "object",
+      "required": [
+        "id",
+        "version",
+        "build"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "build": {
+          "type": "string"
+        }
+      }
+    },
+    "request_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "status=error 时必须为 null；结构由算子 output_schema 定义"
+    },
+    "trust": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/Trust"
+        }
+      ]
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Warning"
+      }
+    },
+    "error": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "aeoi://schemas/error/0.2"
+        }
+      ]
+    },
+    "reproducibility": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/Repro"
+        }
+      ]
+    },
+    "timing": {
+      "type": "object",
+      "properties": {
+        "wall_ms": {
+          "type": "number"
+        },
+        "cpu_ms": {
+          "type": "number"
+        },
+        "queue_ms": {
+          "type": "number"
+        },
+        "illustrative": {
+          "type": "boolean"
+        }
+      }
+    },
+    "dry_run": {
+      "type": "boolean",
+      "description": "exec.dry_run=true 时为 true；此时 result 为 null，附 estimate"
+    },
+    "estimate": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "error"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "result": {
+            "const": null
+          },
+          "error": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "ok",
+              "ok_with_warnings"
+            ]
+          },
+          "dry_run": {
+            "const": false
+          }
+        },
+        "required": [
+          "status",
+          "dry_run"
+        ]
+      },
+      "then": {
+        "required": [
+          "trust",
+          "reproducibility"
+        ],
+        "properties": {
+          "trust": {
+            "type": "object"
+          },
+          "reproducibility": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "Trust": {
+      "type": "object",
+      "required": [
+        "convergence",
+        "error_estimate",
+        "accuracy_grade"
+      ],
+      "properties": {
+        "convergence": {
+          "type": "object",
+          "required": [
+            "applicable"
+          ],
+          "properties": {
+            "applicable": {
+              "type": "boolean"
+            },
+            "converged": {
+              "type": "boolean"
+            },
+            "iterations": {
+              "type": "integer"
+            },
+            "criterion": {
+              "type": "string"
+            },
+            "final_value": {
+              "type": "number"
+            }
+          }
+        },
+        "residual": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "condition": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error_estimate": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "basis": {
+              "type": "string",
+              "description": "估计依据：a-priori 界 / a-posteriori 残差 / 嵌入式误差估计 / 无"
+            }
+          }
+        },
+        "checks": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        },
+        "accuracy_grade": {
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "U"
+          ]
+        },
+        "credentials": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri"
+        }
+      }
+    },
+    "Warning": {
+      "type": "object",
+      "required": [
+        "code",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^W\\.[A-Z_]+\\.[A-Z_]+$"
+        },
+        "message": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string",
+          "description": "JSON Pointer，指向相关输入或输出"
+        },
+        "details": {
+          "type": "object"
+        },
+        "remediation": {
+          "type": "array",
+          "items": {
+            "$ref": "aeoi://schemas/error/0.2#/$defs/Remediation"
+          }
+        }
+      }
+    },
+    "Repro": {
+      "type": "object",
+      "required": [
+        "determinism",
+        "tolerance_class",
+        "input_hash",
+        "output_hash"
+      ],
+      "properties": {
+        "determinism": {
+          "enum": [
+            "bitwise",
+            "platform_bitwise",
+            "tolerance",
+            "seeded"
+          ]
+        },
+        "tolerance_class": {
+          "enum": [
+            "T0",
+            "T1",
+            "T2",
+            "T3",
+            "T4",
+            "T5",
+            "T6"
+          ]
+        },
+        "input_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "output_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "platform": {
+          "type": "string"
+        },
+        "blas": {
+          "type": "string"
+        },
+        "threads": {
+          "type": "integer"
+        },
+        "seed": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "cpu_features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "影响数值内核分派的 CPU 特性（如 avx2, fma）；platform_bitwise 的“平台”= target triple + 该特性集合"
+        }
+      }
+    }
+  }
+}
