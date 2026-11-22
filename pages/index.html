@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AEOI 算子 × LLM 端到端测试台（浏览器版）</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="pages.css">
+<script src="vendor/plotly-basic-2.35.2.min.js" charset="utf-8" defer></script>
+<script>window.AEOI_BACKEND_READY = new Promise((res, rej) => { window.__aeoiBackend = { res, rej }; });</script>
+</head>
+<body>
+<header>
+  <div class="brand">AEOI <span>× LLM 端到端测试台 · 浏览器版</span></div>
+  <label>模型 <select id="model"></select></label>
+  <input id="model-custom" placeholder="或输入 provider:model，如 openrouter:nvidia/nemotron-3-ultra-550b-a55b:free" size="38">
+  <label>最多步数 <input id="max-steps" type="number" min="1" max="20" value="8" style="width:4em"></label>
+  <button id="reset" title="清空对话与轨迹">新会话</button>
+  <button id="keys-btn" title="设置自己的 API key（只保存在本浏览器）">API key</button>
+  <span id="providers" class="muted"></span>
+</header>
+<div id="boot" class="boot">正在加载 WebAssembly 算子…</div>
+<dialog id="keys">
+  <form method="dialog">
+    <h3>使用你自己的 API key（BYOK）</h3>
+    <p class="notice">key <b>只保存在本浏览器的 localStorage</b>，由页面直接发给 Google（Gemini）或 OpenRouter，<b>不经过任何 AEOI 服务器</b>，也不会写进仓库。在公用电脑上用完请点“忘记 key”。不填 key 也可以用 <code>mock:demo</code> 离线演示。</p>
+    <label>Gemini API key <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">（获取）</a><input id="key-gemini" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…"></label>
+    <label>OpenRouter API key <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener">（获取）</a><input id="key-openrouter" type="password" autocomplete="off" spellcheck="false" placeholder="sk-or-…"></label>
+    <div class="row">
+      <button value="save" id="keys-save">保存</button>
+      <button value="forget" id="keys-forget" class="danger" formnovalidate>忘记 key</button>
+      <button value="cancel" formnovalidate>关闭</button>
+    </div>
+    <p class="muted" id="keys-status"></p>
+  </form>
+</dialog>
+<main>
+  <section id="chat-col">
+    <div id="chat"></div>
+    <div id="examples"></div>
+    <form id="ask">
+      <textarea id="input" rows="3" placeholder="用中文提问，例如：开环 G(s)=4/(s(s+1)(s+2)) 的相位裕度是多少？（Ctrl+Enter 发送）"></textarea>
+      <button type="submit" id="send">发送</button>
+    </form>
+  </section>
+  <section id="trace-col">
+    <nav class="tabs">
+      <button data-tab="trace" class="active">调用轨迹</button>
+      <button data-tab="tools">工具声明</button>
+      <button data-tab="prompt">系统提示词</button>
+      <button data-tab="about">关于</button>
+    </nav>
+    <div id="tab-trace" class="tab active"><div id="trace"><p class="muted">每次模型回合与工具调用会显示在这里：选择的工具、发送的请求 JSON、AEOI 响应（result / trust / warnings / error）、耗时与 token 用量。先试试模型 <code>mock:demo</code>（不需要 key）。</p></div></div>
+    <div id="tab-tools" class="tab"></div>
+    <div id="tab-prompt" class="tab"><pre id="prompt"></pre></div>
+    <div id="tab-about" class="tab"><div class="card">
+      <p>这是 <a href="https://github.com/yuanqingfei/aeoi">AEOI</a> 规范的端到端测试台的纯静态版本：12 个控制算子（Rust，编译为 WebAssembly）在你的浏览器里运行；Agent 循环也在浏览器里，模型由页面用你的 key 直接调用（Gemini Generative Language API 或 OpenRouter）。</p>
+      <p>与本地版（<code>cargo run -p aeoi-web</code>）的算子、函数声明、F-5 来源核对、系统提示词完全相同（同一套 Rust 代码）。浮点结果与 x86_64 原生版在约 2/3 的 golden 用例上逐位相同，其余差异 ≤ 5e-6（范数相对），详见仓库 <code>reports/parity-wasm-vs-native.json</code>；平台标识为 <code>wasm32-unknown</code>。</p>
+      <p>参考值来自 python-control / scipy（不是 MATLAB）。</p>
+      <p id="build-info" class="muted"></p>
+    </div></div>
+  </section>
+</main>
+<script src="app.js"></script>
+<script type="module" src="browser.js"></script>
+</body>
+</html>

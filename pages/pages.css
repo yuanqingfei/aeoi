@@ -1,0 +1,12 @@
+.boot { padding: 6px 14px; background: #fff7d6; color: #5c4600; font-size: 12px; }
+.boot.err { background: #fdeceb; color: #8a1f17; }
+dialog#keys { border: 0; border-radius: 10px; padding: 0; max-width: 560px; width: 92vw; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+dialog#keys form { padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+dialog#keys h3 { margin: 0; }
+dialog#keys label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+dialog#keys input { font: inherit; padding: 6px 8px; border: 1px solid #ccd3e0; border-radius: 6px; }
+dialog#keys .notice { background: #eef3ff; border-left: 3px solid #4a74e8; padding: 8px 10px; margin: 0; font-size: 12px; }
+dialog#keys .row { display: flex; gap: 8px; }
+dialog#keys button { font: inherit; padding: 5px 14px; border: 0; border-radius: 6px; background: #2f5bd8; color: #fff; cursor: pointer; }
+dialog#keys button.danger { background: #c0392b; }
+dialog#keys button[value=cancel] { background: #8a93a6; }

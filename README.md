@@ -22,7 +22,7 @@ cargo test --release -p aeoi-control --test parity_b2 -- --nocapture
 
 ## LLM 端到端测试台（`aeoi-web`）
 
-一个本地网页：云端 LLM（默认 Gemini）通过函数调用使用 12 个 AEOI 算子。左侧是中文对话，右侧是调用轨迹：模型选了哪个工具、请求 JSON、AEOI 响应（result / trust / warnings / error + remediation）、耗时与 token 用量；bode、step、impulse 的结果会自动画图（Plotly，经 CDN 加载；离线时退回内置的简易 SVG 图）。没有 key 时可以选 `mock:demo` 模型，看一段脚本化的演示（含一次报错 → 按 remediation 自我纠错）。
+一个本地网页：云端 LLM（默认 Gemini）通过函数调用使用 12 个 AEOI 算子。左侧是中文对话，右侧是调用轨迹：模型选了哪个工具、请求 JSON、AEOI 响应（result / trust / warnings / error + remediation）、耗时与 token 用量；bode、step、impulse 的结果会自动画图（Plotly basic，已内置在仓库里，不走 CDN；加载失败时退回内置的简易 SVG 图）。没有 key 时可以选 `mock:demo` 模型，看一段脚本化的演示（含一次报错 → 按 remediation 自我纠错）。
 
 纯 Rust（axum + tokio + reqwest/rustls-ring），静态页面编译进二进制，不需要 npm，也不依赖 Linux 专有库，Windows 应可直接构建：已在 Linux 上交叉编译 `x86_64-pc-windows-gnu` 通过（得到 `aeoi-web.exe`），但还没在真 Windows 机器上运行过，MSVC 工具链未验证。
 
@@ -71,6 +71,29 @@ cargo test --release -p aeoi-control --test parity_b2 -- --nocapture
 
 免费层按模型分别限额。`gemini-2.5-flash` 每天只有 20 次请求（每道题至少 2 次），网页里聊几句就会用完；用完后 API 返回 429（`GenerateRequestsPerDayPerProjectPerModel-FreeTier`），`aeoi-web` 会立即报错而不是等十几个小时。日常试用建议在下拉框里选 `gemini-3.1-flash-lite`（额度大得多，29 题评测一次跑完）。
 
+### 浏览器版（GitHub Pages）
+
+不想装 Rust 时可以直接打开 **https://yuanqingfei.github.io/aeoi/** ：12 个算子与工具桥编译成 WebAssembly 在浏览器里运行，Agent 循环也在页面里，没有任何服务器。
+
+- 不填 key：选 `mock:demo`，离线演示（4 次工具调用，含一次自我纠错，带 Plotly 图）。
+- 用真实模型：点右上角"API key"填自己的 Gemini 或 OpenRouter key。key **只保存在这个浏览器的 localStorage**，由页面直接发给 Google / OpenRouter（两家都允许跨域调用），不经过 AEOI 的任何服务器，也不在仓库里；"忘记 key"按钮会清除它。公用电脑上请不要保存。
+- 与本地版是同一份 Rust 代码（`rust/aeoi-bridge`：函数声明、F-5 核对、provider 线格式、系统提示词），轨迹面板与画图相同。浏览器版没有评测 CLI。
+- 数值：与 x86_64 原生版在 651 个 golden/示例请求中 66% 逐位相同，其余差异 ≤ 5e-15（病态 `lqr` 4.7e-6；多输入 `place` 的 K 不唯一，极点相同），见 `reports/parity-wasm-vs-native.json` 与规范 §8.5。
+- 体积：wasm 2.97 MB（gzip 1.07 MB）+ Plotly basic 1.07 MB（gzip 354 KB）。
+
+本地构建（需要 `rustup target add wasm32-unknown-unknown`、wasm-bindgen CLI 0.2.130，可选 binaryen 的 wasm-opt）：
+
+```bash
+pages/build.sh                       # 生成 _site/
+python3 -m http.server -d _site 8000 # 打开 http://localhost:8000/
+# wasm 与原生逐例比较
+cd rust && cargo run --release -p aeoi-wasm --example golden_dump /tmp/cases.json > /tmp/native.jsonl
+wasm-bindgen --target nodejs --out-dir /tmp/pkg-node target/wasm32-unknown-unknown/wasm-release/aeoi_wasm.wasm
+node aeoi-wasm/parity/parity.mjs /tmp/pkg-node /tmp/cases.json /tmp/native.jsonl /tmp/parity.json
+```
+
+发布工作流放在 `pages/pages.workflow.yml`：复制到 `.github/workflows/pages.yml` 后（推送工作流文件需要带 `workflow` 权限的 token，或在 GitHub 网页上新建该文件），每次推送到 main 自动构建并发布。GitHub Pages 需要在 Settings → Pages → Source 选 "GitHub Actions"；私有仓库需要付费计划，否则要先把仓库设为公开。
+
 ### 设计要点
 
 - 算子在进程内调用（`aeoi_control::registry()`），与 `aeoi-mcp` 走同一条 `DynOperator::call` 管线，信封逐字节相同；不需要子进程和 JSON-RPC，Windows 上更简单。
@@ -83,4 +106,4 @@ cargo test --release -p aeoi-control --test parity_b2 -- --nocapture
 ### 后续计划
 
 - 用 Tauri 打包成桌面应用（复用同一个 axum 服务与静态页面），免去命令行启动。
-- 流式输出模型文本；会话持久化；把 uPlot 内置以支持完全离线画图。
+- 流式输出模型文本；会话持久化。

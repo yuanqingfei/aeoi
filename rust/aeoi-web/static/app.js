@@ -7,6 +7,36 @@ let sessionId = newSession();
 let busy = false;
 let plotSeq = 0;
 
+// ---------------------------------------------------------------- backends
+// The same page runs against the local axum server (aeoi-web: /api/*, SSE) or, on GitHub Pages,
+// against an in-browser backend (pages/browser.js: operators in WebAssembly, LLM called directly
+// with the visitor's own key). The browser backend publishes itself as window.AEOI_BACKEND_READY.
+const serverBackend = {
+  kind: "server",
+  config: () => fetch("/api/config").then((r) => r.json()),
+  tools: () => fetch("/api/tools").then((r) => r.json()),
+  reset: (sid) => fetch("/api/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sid }) }),
+  async chat(req, onEvent) {
+    const resp = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req) });
+    if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error(e.error || resp.statusText); }
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf("\n\n")) >= 0) {
+        const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
+        const data = chunk.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).replace(/^ /, "")).join("\n");
+        if (data) onEvent(JSON.parse(data));
+      }
+    }
+  },
+};
+let B = serverBackend;
+
 function newSession() { return "s-" + Math.random().toString(36).slice(2) + Date.now().toString(36); }
 
 const EXAMPLES = [
@@ -66,38 +96,20 @@ async function send(text) {
   const t0 = performance.now();
   let tokens = 0, toolsN = 0, gotFinal = false;
   try {
-    const resp = await fetch("/api/chat", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id: sessionId, model: currentModel(), message: text, max_steps: +$("#max-steps").value || 8 }),
-    });
-    if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error(e.error || resp.statusText); }
-    const reader = resp.body.getReader();
-    const dec = new TextDecoder();
-    let buf = "";
-    for (;;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buf += dec.decode(value, { stream: true });
-      let i;
-      while ((i = buf.indexOf("\n\n")) >= 0) {
-        const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
-        const data = chunk.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).replace(/^ /, "")).join("\n");
-        if (!data) continue;
-        const ev = JSON.parse(data);
-        if (ev.type === "thinking") pending.innerHTML = `<span class="spinner"></span> 第 ${ev.step} 步：等待模型…`;
-        else if (ev.type === "model") { tokens += ev.turn.usage.total_tokens || 0; renderModelTurn(ev.turn); if (ev.turn.tool_calls.length) pending.innerHTML = `<span class="spinner"></span> 调用 ${ev.turn.tool_calls.map(esc).join(", ")}…`; }
-        else if (ev.type === "tool") { toolsN++; renderTool(ev.step); }
-        else if (ev.type === "nudge") { $("#trace").insertAdjacentHTML("beforeend", `<div class="card"><h4><span class="badge warn">空回合</span> 模型第 ${ev.step} 步没有输出（${esc(ev.reason)}），已提示其按 schema 重试或向用户提问</h4></div>`); }
-        else if (ev.type === "final") { gotFinal = true; pending.innerHTML = md(ev.text || "（模型没有给出文本回答）"); }
-        else if (ev.type === "error") { pending.className = "msg err"; pending.innerHTML = "模型调用失败：" + esc(ev.message); gotFinal = true; }
-        else if (ev.type === "stopped") { pending.className = "msg err"; pending.innerHTML = `达到最多步数（${ev.max_steps}）仍未得到最终回答。可调大“最多步数”后重试。`; gotFinal = true; }
-        else if (ev.type === "done") {
-          const meta = `${currentModel()} · ${toolsN} 次工具调用 · 自我纠错 ${ev.self_corrections} 次 · ${tokens || "?"} tokens · ${((performance.now() - t0) / 1000).toFixed(1)} s`;
-          pending.insertAdjacentHTML("beforeend", `<div class="meta">${esc(meta)}</div>`);
-        }
-        $("#trace-col .tab.active").scrollTop = 1e9;
+    await B.chat({ session_id: sessionId, model: currentModel(), message: text, max_steps: +$("#max-steps").value || 8 }, (ev) => {
+      if (ev.type === "thinking") pending.innerHTML = `<span class="spinner"></span> 第 ${ev.step} 步：等待模型…`;
+      else if (ev.type === "model") { tokens += ev.turn.usage.total_tokens || 0; renderModelTurn(ev.turn); if (ev.turn.tool_calls.length) pending.innerHTML = `<span class="spinner"></span> 调用 ${ev.turn.tool_calls.map(esc).join(", ")}…`; }
+      else if (ev.type === "tool") { toolsN++; renderTool(ev.step); }
+      else if (ev.type === "nudge") { $("#trace").insertAdjacentHTML("beforeend", `<div class="card"><h4><span class="badge warn">空回合</span> 模型第 ${ev.step} 步没有输出（${esc(ev.reason)}），已提示其按 schema 重试或向用户提问</h4></div>`); }
+      else if (ev.type === "final") { gotFinal = true; pending.innerHTML = md(ev.text || "（模型没有给出文本回答）"); }
+      else if (ev.type === "error") { pending.className = "msg err"; pending.innerHTML = "模型调用失败：" + esc(ev.message); gotFinal = true; }
+      else if (ev.type === "stopped") { pending.className = "msg err"; pending.innerHTML = `达到最多步数（${ev.max_steps}）仍未得到最终回答。可调大“最多步数”后重试。`; gotFinal = true; }
+      else if (ev.type === "done") {
+        const meta = `${currentModel()} · ${toolsN} 次工具调用 · 自我纠错 ${ev.self_corrections} 次 · ${tokens || "?"} tokens · ${((performance.now() - t0) / 1000).toFixed(1)} s`;
+        pending.insertAdjacentHTML("beforeend", `<div class="meta">${esc(meta)}</div>`);
       }
-    }
+      $("#trace-col .tab.active").scrollTop = 1e9;
+    });
     if (!gotFinal) pending.innerHTML = "（连接已结束，没有收到回答）";
   } catch (e) {
     pending.className = "msg err"; pending.textContent = "请求失败：" + e.message;
@@ -205,7 +217,7 @@ function channels(q) {
   }
   return out;
 }
-// Plotly comes from a CDN; wait for it a little, then fall back to a built-in SVG plot (offline use).
+// Plotly (vendored, loaded with defer); wait for it a little, then fall back to a built-in SVG plot.
 function whenPlotly(timeoutMs) {
   return new Promise((res) => {
     const t0 = performance.now();
@@ -234,7 +246,7 @@ function svgPlot(el, panels) {
       <text x="12" y="${(H - m.b + m.t) / 2}" font-size="10" transform="rotate(-90 12 ${(H - m.b + m.t) / 2})" text-anchor="middle">${esc(p.ylabel)}</text></svg>`;
   }
   el.style.height = "auto";
-  el.innerHTML = html + '<div class="muted">（Plotly 未能从 CDN 加载，使用内置简易图）</div>';
+  el.innerHTML = html + '<div class="muted">（Plotly 未能加载，使用内置简易图）</div>';
 }
 async function drawPlot(id, kind, r, tool) {
   const el = document.getElementById(id);
@@ -281,14 +293,15 @@ async function drawPlot(id, kind, r, tool) {
 
 // ---------------------------------------------------------------- init
 async function init() {
-  const cfg = await fetch("/api/config").then((r) => r.json());
+  if (window.AEOI_BACKEND_READY) B = await window.AEOI_BACKEND_READY;
+  const cfg = await B.config();
   const sel = $("#model");
   for (const m of cfg.models) { const o = document.createElement("option"); o.value = o.textContent = m; sel.appendChild(o); }
   sel.value = cfg.default_model;
   $("#max-steps").value = cfg.max_steps;
-  $("#providers").textContent = "已配置：" + cfg.providers.filter((p) => p.configured).map((p) => p.provider).join(", ") + ` · ${cfg.spec} · ${cfg.tools.length} 个工具`;
+  $("#providers").textContent = (cfg.note ? cfg.note + " · " : "") + "已配置：" + (cfg.providers.filter((p) => p.configured).map((p) => p.provider).join(", ") || "无") + ` · ${cfg.spec} · ${cfg.tools.length} 个工具`;
   $("#prompt").textContent = cfg.system_prompt;
-  const tools = await fetch("/api/tools").then((r) => r.json());
+  const tools = await B.tools();
   $("#tab-tools").innerHTML = tools.map((t) => `<div class="card"><h4><code>${esc(t.name)}</code><span class="muted">${esc(t.operator_id)}</span>${t.lossy_mappings.length ? `<span class="badge warn">${t.lossy_mappings.length} 处有损映射</span>` : ""}</h4>
       <div class="kv">${esc(t.description)}</div>
       <details><summary>Gemini parameters（OpenAPI 子集）</summary><pre>${esc(JSON.stringify(t.gemini_schema, null, 2))}</pre></details>
@@ -304,7 +317,7 @@ async function init() {
 $("#ask").addEventListener("submit", (e) => { e.preventDefault(); const t = $("#input").value; $("#input").value = ""; send(t); });
 $("#input").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); $("#ask").requestSubmit(); } });
 $("#reset").addEventListener("click", async () => {
-  await fetch("/api/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId }) });
+  await B.reset(sessionId);
   sessionId = newSession(); $("#chat").innerHTML = ""; $("#trace").innerHTML = '<p class="muted">新会话。</p>';
 });
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => {

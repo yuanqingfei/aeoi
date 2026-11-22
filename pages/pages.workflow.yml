@@ -1,0 +1,127 @@
+# INSTALL: copy this file to .github/workflows/pages.yml (pushing a workflow file needs a token with
+# the `workflow` scope, or add it through the GitHub web UI: Add file → Create new file).
+# Build the browser version of the AEOI test bench (operators compiled to WebAssembly) and
+# publish it to GitHub Pages: https://yuanqingfei.github.io/aeoi/
+# No secrets are used: visitors bring their own model API key (stored in their browser only).
+name: pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  WASM_BINDGEN_VERSION: "0.2.130"   # must equal the `wasm-bindgen = "=0.2.130"` pin in rust/aeoi-wasm
+  WASM_BINDGEN_SHA256: 9687f3bb551b9f66f37ed32a40d7913a00f7962db653054e56857bc306c3227f
+  BINARYEN_VERSION: version_133
+  BINARYEN_SHA256: 2dc9c7813f5375db93d96ead4b78222fcc3e2677bbb832297af4797782a37489
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      pages_enabled: ${{ steps.pages.outputs.enabled }}
+    steps:
+      - uses: actions/checkout@v4
+      # Pages must be enabled once (Settings → Pages → Source: GitHub Actions); on a private repo
+      # this needs a paid plan. Until then the site is still built and uploaded, but not deployed.
+      - id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${GITHUB_REPOSITORY}/pages" --jq .build_type > /tmp/bt 2>/dev/null; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"; echo "Pages enabled (build_type=$(cat /tmp/bt))"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::GitHub Pages is not enabled for this repository; building only, deploy skipped."
+          fi
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.85.1
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - name: Install wasm-bindgen CLI and binaryen (pinned, checksummed)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/tools" && cd "$RUNNER_TEMP/tools"
+          wb="wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl"
+          curl -sSfL -o wb.tgz "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/${wb}.tar.gz"
+          echo "${WASM_BINDGEN_SHA256}  wb.tgz" | sha256sum -c -
+          tar xzf wb.tgz
+          curl -sSfL -o by.tgz "https://github.com/WebAssembly/binaryen/releases/download/${BINARYEN_VERSION}/binaryen-${BINARYEN_VERSION}-x86_64-linux.tar.gz"
+          echo "${BINARYEN_SHA256}  by.tgz" | sha256sum -c -
+          tar xzf by.tgz
+          echo "WASM_BINDGEN=$PWD/${wb}/wasm-bindgen" >> "$GITHUB_ENV"
+          echo "WASM_OPT=$PWD/binaryen-${BINARYEN_VERSION}/bin/wasm-opt" >> "$GITHUB_ENV"
+      - name: Build wasm and assemble the site
+        run: OUT="$GITHUB_WORKSPACE/_site" pages/build.sh
+      - name: Smoke-test the wasm bundle in node
+        run: |
+          set -euo pipefail
+          "$WASM_BINDGEN" --target nodejs --no-typescript --out-dir /tmp/pkg-node rust/target/wasm32-unknown-unknown/wasm-release/aeoi_wasm.wasm
+          node -e '
+            const w = require("/tmp/pkg-node/aeoi_wasm.js");
+            const info = JSON.parse(w.info()); console.log(info);
+            if (info.tools !== 12 || info.platform !== "wasm32-unknown") process.exit(1);
+            const r = JSON.parse(w.call_tool("control_lti_poles_zeros", JSON.stringify({system:{kind:"tf",num:[1],den:[1,3,2],ts:0}}), null, 120));
+            console.log(r.envelope.status, JSON.stringify(r.envelope.result.poles));
+            if (r.is_error) process.exit(1);'
+      - uses: actions/configure-pages@v5
+        if: steps.pages.outputs.enabled == 'true'
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    if: needs.build.outputs.pages_enabled == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  # wasm-vs-native parity on all golden + example requests (informational; does not block deploy).
+  parity:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.85.1
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - name: Parity
+        working-directory: rust
+        env:
+          AEOI_PARITY_ALLOW_MISMATCH: "1"
+        run: |
+          set -euo pipefail
+          curl -sSfL "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl.tar.gz" -o /tmp/wb.tgz
+          echo "${WASM_BINDGEN_SHA256}  /tmp/wb.tgz" | sha256sum -c -
+          tar xzf /tmp/wb.tgz -C /tmp
+          cargo build --profile wasm-release -p aeoi-wasm --lib --target wasm32-unknown-unknown
+          /tmp/wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl/wasm-bindgen --target nodejs --no-typescript --out-dir /tmp/pkg-node target/wasm32-unknown-unknown/wasm-release/aeoi_wasm.wasm
+          cargo run --release -q -p aeoi-wasm --example golden_dump /tmp/cases.json > /tmp/native.jsonl
+          node aeoi-wasm/parity/parity.mjs /tmp/pkg-node /tmp/cases.json /tmp/native.jsonl /tmp/parity-report.json > /tmp/parity-summary.txt; tail -c 3000 /tmp/parity-summary.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: parity-report
+          path: /tmp/parity-report.json

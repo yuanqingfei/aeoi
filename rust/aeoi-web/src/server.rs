@@ -18,6 +18,8 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 const INDEX: &str = include_str!("../static/index.html");
 const APP_JS: &str = include_str!("../static/app.js");
 const STYLE: &str = include_str!("../static/style.css");
+/// Vendored Plotly (basic bundle: scatter/bar/pie, MIT) so plots work offline; no CDN.
+const PLOTLY: &str = include_str!("../static/vendor/plotly-basic-2.35.2.min.js");
 
 pub struct AppState {
     pub bridge: Bridge,
@@ -30,6 +32,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/", get(|| async { ([(header::CONTENT_TYPE, "text/html; charset=utf-8")], INDEX) }))
         .route("/app.js", get(|| async { ([(header::CONTENT_TYPE, "application/javascript; charset=utf-8")], APP_JS) }))
         .route("/style.css", get(|| async { ([(header::CONTENT_TYPE, "text/css; charset=utf-8")], STYLE) }))
+        .route("/vendor/plotly-basic-2.35.2.min.js", get(|| async { ([(header::CONTENT_TYPE, "application/javascript; charset=utf-8"), (header::CACHE_CONTROL, "max-age=86400")], PLOTLY) }))
         .route("/api/config", get(config))
         .route("/api/tools", get(tools))
         .route("/api/chat", post(chat))
@@ -143,6 +146,9 @@ mod tests {
         assert!(html.contains("AEOI"));
         let js = c.get(format!("http://{addr}/app.js")).send().await.unwrap();
         assert_eq!(js.status(), 200);
+        assert!(html.contains("/vendor/plotly-basic-2.35.2.min.js") && !html.contains("cdn."), "Plotly must be vendored");
+        let pl = c.get(format!("http://{addr}/vendor/plotly-basic-2.35.2.min.js")).send().await.unwrap().text().await.unwrap();
+        assert!(pl.len() > 500_000 && pl.contains("plotly.js"));
         let tools: Value = c.get(format!("http://{addr}/api/tools")).send().await.unwrap().json().await.unwrap();
         assert_eq!(tools.as_array().unwrap().len(), 12);
         let r: Value = c.post(format!("http://{addr}/api/call")).json(&json!({"tool":"control_lti_poles_zeros","args":{"system":{"kind":"tf","num":[1],"den":[1,3,2],"ts":0}}})).send().await.unwrap().json().await.unwrap();
