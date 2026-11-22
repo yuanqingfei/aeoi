@@ -1,17 +1,17 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.2-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.3-draft
 
-> 状态：Draft v0.2 · 2026-11-21 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.3 · 2026-11-21 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
 > 定位：叠加在 MCP 之上的"工程计算语义层"。MCP 负责传输与工具调用；AEOI 规定工程算子如何描述自己、如何表达带物理意义的输入输出、如何报告结果可信度、如何报错、如何复现、如何证明与参考实现一致。
 > 冻结条件：用 5–10 个真实控制算子跑通后再升级为 v1.0。v0.x 期间任何条款都可能被修改。
-> v0.2 相对 v0.1 的全部改动及原因见第 13 章 Changelog。v0.2 已有可运行的 Rust 参考实现（第 11 章）：`control.lti.bode`、`control.lti.step`、`control.design.lqr` 三个算子 + MCP stdio server，全部测试通过。
+> v0.3 相对 v0.2 的改动及原因见第 13 章 Changelog（v0.2 相对 v0.1 的改动也在其中）。v0.3 的 Rust 参考实现（第 11 章）共 12 个控制算子 + MCP stdio server，全部测试通过：v0.2 的 `control.lti.bode`、`control.lti.step`、`control.design.lqr`，以及 v0.3 新增的 `control.lti.convert`、`control.lti.poles_zeros`、`control.analysis.ctrb_obsv`、`control.analysis.margin`、`control.lti.c2d`、`control.lti.impulse`、`control.math.lyap`、`control.design.place`、`control.design.dlqr`。
 
 ## 0. 约定
 
 - 关键词 MUST / MUST NOT / SHOULD / SHOULD NOT / MAY 按 RFC 2119 / RFC 8174 解释。
-- JSON Schema 一律使用 Draft 2020-12。完整 schema 文件见 `schemas/`，`$id` 形如 `aeoi://schemas/common/0.2`。
-- 本文中 `spec` 版本标识写作 `aeoi/0.2`。
+- JSON Schema 一律使用 Draft 2020-12。完整 schema 文件见 `schemas/`，`$id` 形如 `aeoi://schemas/common/0.3`。
+- 本文中 `spec` 版本标识写作 `aeoi/0.3`。
 - **净室原则（normative）**：算子实现 MUST 仅依据公开文献、教科书、标准与开源许可兼容的代码；MUST NOT 反编译、反汇编、阅读或复制 MATLAB（或任何闭源软件）的实现代码、`.p` 文件、二进制或未公开文档。MATLAB 只作为黑盒 ground truth，通过其公开 API 生成对照数据。每个 manifest MUST 带 `provenance.clean_room.declared = true`。
-- **示例数值说明**：第 10 章示例的响应由 Rust 参考实现（`aeoi-control 0.2.0`）实际输出（`regen_examples.py`）；其数值另与 python-control 0.10.2 / scipy 1.18.1 / numpy 2.5.5 在 box 上的计算结果比对（`cargo test`）。**两者都不是 MATLAB 输出。** `timing` 为 box 上的实测值，仅供参考。
+- **示例数值说明**：第 10 章示例的响应由 Rust 参考实现（`aeoi-control 0.3.0`）实际输出（`regen_examples.py`）；其数值另与 python-control 0.10.2 / scipy 1.18.1 / numpy 2.5.5 在 box 上的计算结果比对（`cargo test`）。**两者都不是 MATLAB 输出。** `timing` 为 box 上的实测值，仅供参考。
 
 > ### ⚠ 内存序（MUST，最常见的静默错误）
 >
@@ -21,7 +21,7 @@
 > - 从 MATLAB 生成 AEOI 数据 MUST 先转置再展平：`data = reshape(A.', 1, [])`；N 维数组用 `reshape(permute(X, ndims(X):-1:1), 1, [])`。
 > - 从 NumPy 生成 MUST 使用 `A.ravel(order="C")`（或 `A.tolist()` 后按行展平）；Fortran 序数组（`A.flags.f_contiguous`）MUST 先 `np.ascontiguousarray`。
 > - 二进制编码（`data_b64`、`MatrixRef`）同样是 row-major，`order` 字段 MUST 为 `"C"`（v0.2 不接受 `"F"`）。
-> - 每个算子的 parity 测试集 MUST 至少包含一个**非对称矩阵**用例（case family `memory_order_nonsymmetric`），并 MUST 断言：把同一矩阵按 column-major 展平的请求，其结果与参考值的偏差远超容差（v0.2 参考实现实测为容差的 9.3×10⁹ – 5.6×10¹⁰ 倍）。对称矩阵（如 Q = I）无法暴露这类错误。
+> - 每个算子的 parity 测试集 MUST 至少包含一个**非对称矩阵**用例（case family `memory_order_nonsymmetric`），并 MUST 断言：把同一矩阵按 column-major 展平的请求，其结果与参考值的偏差远超容差（v0.3 参考实现 12 个算子实测为容差的 4.3×10⁸ – 1.0×10¹³ 倍；`margin` 的错误请求直接得到不同的交越点集合；`place` 的 MIMO 用例只能通过在测试中用参考请求重算 eig(A − BK) 来检出，见 V-5a）。对称矩阵（如 Q = I）无法暴露这类错误。
 > - 生成脚本 SHOULD 对每个矩阵做往返自检（见 `matlab/gen_golden_bode.m` 中的 `aeoi_dense_check`）。
 
 ## 1. 架构与术语
@@ -62,7 +62,7 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
 | `tolerance` | 同平台多次运行也只保证在容差类内 | 必须说明原因（如并行归约），L3 需评审 |
 | `seeded` | 给定 `seed` 后满足 `bitwise` | 随机算法 |
 
-  "平台" = 目标三元组（`reproducibility.platform`）+ 运行时检测到的 CPU 特性集合（`reproducibility.cpu_features`）。v0.2 的三个算子都声明 `platform_bitwise`：nalgebra 的稠密乘法走 `matrixmultiply`，后者在运行时按 AVX/FMA 等特性选择内核。
+  "平台" = 目标三元组（`reproducibility.platform`）+ 运行时检测到的 CPU 特性集合（`reproducibility.cpu_features`）。v0.3 参考实现的 12 个算子都声明 `platform_bitwise`：nalgebra 的稠密乘法走 `matrixmultiply`，后者在运行时按 AVX/FMA 等特性选择内核。
 - M-8 `tolerance_class` MUST 取 7.2 表中的一个值。
 - M-9 **稀疏支持声明（v0.2 新增）**：manifest MUST 含 `sparse_support`，以输入字段的 JSON Pointer 为键，值为 `{"policy": "native" | "densify" | "reject", "max_dense_elements": <int>}`。未列出的矩阵字段视为 `reject`。`densify` 时算子 MUST 返回 `W.PERFORMANCE.SPARSE_DENSIFIED`；稠密化后元素数超过 `max_dense_elements` MUST 返回 `E.RESOURCE.INPUT_TOO_LARGE`。
 - M-10 **编码与上限（v0.2 新增）**：manifest MUST 含 `encodings {input: [...], output: [...]}`（取值 `json`、`b64`、`ref`），以及 `limits`（算子特有的规模上限，如 `max_grid_points`、`max_states`）。上限检查 MUST 在主计算前完成。
@@ -71,7 +71,7 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
 
 ```json
 {
-  "spec": "aeoi/0.2",
+  "spec": "aeoi/0.3",
   "id": "control.design.lqr",
   "version": "0.2.0",
   "determinism": "platform_bitwise",
@@ -201,6 +201,36 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
 "Matrix": { "oneOf": [ {"$ref": "#/$defs/DenseMatrix"}, {"$ref": "#/$defs/DenseMatrixB64"}, {"$ref": "#/$defs/MatrixRef"}, {"$ref": "#/$defs/SparseMatrix"} ] }
 ```
 
+### 3.10 多输出结果、系统输出与离散时间约定（v0.3 新增）
+
+实现第二批算子时发现 v0.2 没有规定以下内容，各算子各写各的会让 Agent 无法泛化。以下条款为规范性要求。
+
+**多输出结果**
+- R-1 结果是一个对象，每个输出是一个具名字段（如 `poles`、`zeros`、`dcgain`；`gain_margin`、`phase_margin`、`crossings`），MUST NOT 用位置数组表示多个输出。带单位的标量/数组用 `{unit, value}`；无量纲矩阵直接用 `Matrix`；复数集合用 `c128` 向量。
+- R-2 复数集合（极点、零点、闭环极点）的顺序没有规范意义：参考实现按实部升序、虚部降序输出，但消费者与 parity 测试 MUST 按集合匹配比较（V-5）。
+- R-3 "不存在"的标量用 JSON 字符串 `"Inf"`/`"NaN"` 并在 schema 中允许（如无相位交越时 `gain_margin = "Inf"`、对应频率 `"NaN"`），MUST NOT 用 `null` 表达"无穷大"。`null` 只表示"未计算/不适用"（如不稳定系统的 Gramian，伴随 `W.DOMAIN.GRAMIAN_UNDEFINED`）。
+- R-4 选择一个"代表值"的输出（如多个交越中的 GM/PM）MUST 同时返回全部候选（`crossings.phase[]`、`crossings.gain[]`、`crossings.stability[]`），并在 10.x 写明选择规则。
+
+**返回系统的算子**
+- R-5 返回 LTI 系统的算子（`convert`、`c2d`）MUST 在 `result.system` 中返回完整的 `LtiSystem`（含 `ts`、`time_unit`），可直接作为下一个算子的输入。MIMO tf 用嵌套数组 `num[i][j]`、`den[i][j]`（`[ny][nu]`）。
+- R-6 状态空间实现不唯一。返回 ss 的算子 MUST 用 `realization` 字段（枚举）说明所用实现：`identity`、`controllable_canonical`（scipy `tf2ss` 约定：A 第一行为 −a₁…−aₙ，B = e₁）、`block_diagonal_controllable_canonical`（MIMO tf 逐元素）、`ss2tf_characteristic_polynomial`、`expanded_product`、`polynomial_roots`、`invariant_zeros_eigenvalues_markov_gain`。v0.3 不做最小实现（minreal）；MIMO 转换得到非最小实现时 MUST 给 `W.DOMAIN.NONMINIMAL_REALIZATION`。
+- R-7 ss→tf 约定（与 scipy `ss2tf` 一致）：den = det(sI − A)（由特征值展开），numᵢⱼ = det(sI − A + bⱼcᵢ) + (dᵢⱼ − 1)·den；所有元素共享同一分母；首项系数精确置为 dᵢⱼ 后去除前导零；`normalize = true`（默认）时分母为首一。
+- R-8 zpk 在 v0.3 只表示 SISO；MIMO → zpk MUST 返回 `E.DOMAIN.MIMO_NOT_SUPPORTED`（remediation 建议 `to: "tf"` 或逐通道调用）。ss→zpk 的增益 k 取首个非零 Markov 参数 C·A^{r−1}·B（r = 相对阶），不经多项式。
+- R-9 零点 = 不变零点（Rosenbrock 系统矩阵降秩的有限 s）。系统矩阵不是满法秩（例如传递函数恒为零）时零点无定义，MUST 返回 `E.DOMAIN.DEGENERATE_SYSTEM`，MUST NOT 返回空集合冒充"没有零点"。法秩判定在两个确定性的一般位置点上计算 G(s) 的奇异值（与尺度无关的阈值，X-4a）。
+
+**离散时间**
+- D-1 `ts > 0` 为离散系统；频率一律 rad/s，离散系统的有效频段为 [0, π/ts]。
+- D-2 DC 增益：连续在 s = 0，离散在 z = 1；未对消的极点给 `±Inf` + `W.DOMAIN.INFINITE_DC_GAIN`，0/0 给 `NaN` + `W.DOMAIN.UNDEFINED_DC_GAIN`。稳定性：连续 Re λ < 0，离散 |λ| < 1。
+- D-3 离散脉冲响应的幅值约定 MUST 显式：`discrete_scaling = "unit_area"`（默认，u₀ = 1/ts，与 python-control 一致，使离散脉冲响应逼近连续冲激响应）或 `"unit_pulse"`（u₀ = 1，即 Kronecker δ）。
+- D-4 连续冲激响应 y(t) = C·e^{At}·B；D·δ(t) 项无法采样，MUST 去掉并在 `result.direct_feedthrough` 中返回 D，同时给 `W.DOMAIN.DIRECT_FEEDTHROUGH_IGNORED`。
+- D-5 离散化公式（与 scipy `cont2discrete` 一致，状态坐标相同）：zoh 为增广矩阵指数；foh 为 expm([[A·T, B·T, 0], [0, 0, I], [0, 0, 0]]) 的块组合（Ad = Φ, Bd = Γ₁ − Γ₂ + Φ·Γ₂, Cd = C, Dd = D + C·Γ₂）；tustin 取 α = T_w/2：Ad = (I−αA)⁻¹(I+αA)，Bd = (I−αA)⁻¹B·T_w，Cd = C(I−αA)⁻¹，Dd = D + ½·C·Bd。预畸变时 T_w = 2·tan(ω_p·T/2)/ω_p，否则 T_w = T。
+- D-6 离散 `margin`：用双线性映射 z = (1+w)/(1−w)（ν = tan(ω·ts/2)）把单位圆上的交越问题化为实多项式求根；相位交越只在 θ = ω·ts ∈ [0, π) 上搜索（与 python-control 0.10.2 一致，恰在 Nyquist 频率的交越不报告，见 11.4）；稳定裕度取 |1 + G(e^{jθ})| 在 [0, π] 上的最小值，端点 θ = 0、π（对实系数系统总是驻点）是局部极小时也作为候选。
+
+**选项枚举**
+- O-1 改变数学定义的选项 MUST 是 input schema 中带默认值的枚举，并在结果中回显（如 `c2d.method ∈ {zoh, foh, tustin}`、`lyap.type ∈ {continuous, discrete}`、`convert.to ∈ {tf, ss, zpk}`、`impulse.discrete_scaling ∈ {unit_area, unit_pulse}`、`c2d.output_kind ∈ {same, tf, ss, zpk}`）。
+- O-2 互相矛盾的选项组合 MUST 返回 `E.VALIDATION.OPTION_CONFLICT`，remediation 给出去掉冲突项的 patch（例：`prewarp_frequency` 只对 `tustin` 有意义）。MUST NOT 静默忽略选项。
+- O-3 方程约定 MUST 写清符号：`lyap` 连续为 A X + X Aᵀ + Q = 0，离散为 A X Aᵀ − X + Q = 0（= python-control `lyap(A, Q)` / `dlyap(A, Q)`，= scipy `solve_continuous_lyapunov(A, −Q)` / `solve_discrete_lyapunov(A, Q)`）；`dlqr` 的 u = −Kx，代价 Σ xᵀQx + uᵀRu + 2xᵀNu。
+
 ## 4. 结果信封与可信度元数据
 
 ### 4.1 规则
@@ -232,7 +262,7 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
 
 ```json
 {
-  "spec": "aeoi/0.2",
+  "spec": "aeoi/0.3",
   "status": "ok | ok_with_warnings | error",
   "dry_run": false,
   "operator": { "id": "control.lti.step", "version": "0.2.0", "build": "aeoi-control 0.2.0+<git sha|nogit> nalgebra-0.33 rustc-1.85" },
@@ -255,15 +285,17 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
 
 格式：`E.<CATEGORY>.<NAME>`。类别固定为 5 个；`NAME` 由注册表统一登记，算子 MUST 在 manifest `errors[]` 中列出可能返回的全部错误码（参考实现在 parity 测试中逐次断言这一点）。
 
-| 类别 | 何时使用 | `retryable` 默认 | v0.2 已登记的码 |
+| 类别 | 何时使用 | `retryable` 默认 | 已登记的码（v0.3 新增的加粗） |
 |---|---|---|---|
-| `VALIDATION` | 输入不符合 schema 或语义约束 | true（改输入） | `SCHEMA`、`SHAPE`、`DTYPE`、`RANGE`、`NON_FINITE`、`NOT_SYMMETRIC`、`NOT_CONJUGATE`、`ZERO_DENOMINATOR`、`GRID`、`SPARSE_STRUCTURE`、`DIGEST_MISMATCH`、`REF_UNSUPPORTED`、`REF_FORBIDDEN` |
-| `DOMAIN` | 输入合法，但数学问题本身无解/不适用 | 视情况 | `IMPROPER_SYSTEM`、`NOT_STABILIZABLE`、`R_NOT_POSITIVE_DEFINITE`、`WEIGHT_NOT_PSD`、`HAMILTONIAN_IMAG_AXIS_EIG`、`ABOVE_NYQUIST` |
+| `VALIDATION` | 输入不符合 schema 或语义约束 | true（改输入） | `SCHEMA`、`SHAPE`、`DTYPE`、`RANGE`、`NON_FINITE`、`NOT_SYMMETRIC`、`NOT_CONJUGATE`、`ZERO_DENOMINATOR`、`GRID`、`SPARSE_STRUCTURE`、`DIGEST_MISMATCH`、`REF_UNSUPPORTED`、`REF_FORBIDDEN`、**`OPTION_CONFLICT`**、**`RANK_DEFICIENT`** |
+| `DOMAIN` | 输入合法，但数学问题本身无解/不适用 | 视情况 | `IMPROPER_SYSTEM`、`NOT_STABILIZABLE`、`R_NOT_POSITIVE_DEFINITE`、`WEIGHT_NOT_PSD`、`HAMILTONIAN_IMAG_AXIS_EIG`、`ABOVE_NYQUIST`、**`MIMO_NOT_SUPPORTED`**、**`DEGENERATE_SYSTEM`**、**`NOT_CONTINUOUS`**、**`NOT_CONTROLLABLE`**、**`POLE_MULTIPLICITY`**、**`LYAP_SINGULAR`**、**`SYMPLECTIC_UNIT_CIRCLE_EIG`** |
 | `NUMERICAL` | 问题理论上可解，但数值上失败或不可信 | true（正则化/放宽/换算法） | `SINGULAR`、`NO_CONVERGENCE`、`POLE_ON_GRID` |
 | `RESOURCE` | 超时、超规模、被取消 | true | `TIMEOUT`、`INPUT_TOO_LARGE`、`COMPUTE_LIMIT`、`OUTPUT_TOO_LARGE` |
 | `INTERNAL` | 实现缺陷或后端异常 | false（可原样重试一次） | `PANIC`（`BACKEND`、`INVARIANT_VIOLATED` 为保留码，v0.2 算子未使用） |
 
-v0.2 已登记的 warning：`W.NUMERICAL.{NEAR_POLE, ZERO_ON_GRID, ILL_CONDITIONED, LARGE_RESIDUAL, NEAR_UNCONTROLLABLE}`、`W.DOMAIN.{UNSTABLE_SYSTEM, NOT_SETTLED, INFINITE_DC_GAIN, ZERO_DC_GAIN}`、`W.ACCURACY.{GRID_TOO_COARSE, AUTO_GRID}`、`W.VALIDATION.{LEADING_ZEROS_STRIPPED, SYMMETRIZED}`、`W.PERFORMANCE.SPARSE_DENSIFIED`。
+已登记的 warning：`W.NUMERICAL.{NEAR_POLE, ZERO_ON_GRID, ILL_CONDITIONED, LARGE_RESIDUAL, NEAR_UNCONTROLLABLE, **RANK_AMBIGUOUS, CROSSING_RECOVERED, PLACEMENT_INACCURATE, CONVERSION_DISCREPANCY**}`、`W.DOMAIN.{UNSTABLE_SYSTEM, NOT_SETTLED, INFINITE_DC_GAIN, ZERO_DC_GAIN, **UNDEFINED_DC_GAIN, NONMINIMAL_REALIZATION, REALIZATION_DEPENDENT, GRAMIAN_UNDEFINED, CLOSED_LOOP_UNSTABLE, DIRECT_FEEDTHROUGH_IGNORED**}`、`W.ACCURACY.{GRID_TOO_COARSE, AUTO_GRID, **ALIASING**}`、`W.VALIDATION.{LEADING_ZEROS_STRIPPED, SYMMETRIZED}`、`W.PERFORMANCE.SPARSE_DENSIFIED`（加粗为 v0.3 新增）。
+
+v0.3 新增码的含义：`OPTION_CONFLICT` 选项组合矛盾（O-2）；`RANK_DEFICIENT` 输入矩阵列不满秩（`place` 的 B）；`MIMO_NOT_SUPPORTED` 该算子/表示只支持 SISO（R-8、`margin`）；`DEGENERATE_SYSTEM` 系统矩阵非满法秩，零点无定义（R-9）；`NOT_CONTINUOUS` 需要连续系统却给了离散系统（`c2d`）；`NOT_CONTROLLABLE` 有不可控模态，无法任意配置极点（`place`；与 `NOT_STABILIZABLE` 区分：后者只关心不稳定模态）；`POLE_MULTIPLICITY` 期望极点重数超过输入数 m；`LYAP_SINGULAR` Lyapunov 方程奇异（连续 λᵢ + λ̄ⱼ ≈ 0，离散 λᵢλ̄ⱼ ≈ 1）；`SYMPLECTIC_UNIT_CIRCLE_EIG` DARE 的辛矩阵束在单位圆上有特征值（单位圆上的模态不被 Q 观测）。这些都是 `DOMAIN`/`VALIDATION`：调数值参数无效（X-1）。
 
 规则：
 - X-1 `DOMAIN` 与 `NUMERICAL` MUST 区分清楚：前者告诉 Agent"别再调参了，问题本身不成立"，后者告诉 Agent"换个数值处理可能成功"。这是本规范对 Agent 最重要的区分。
@@ -320,7 +352,11 @@ v0.2 已登记的 warning：`W.NUMERICAL.{NEAR_POLE, ZERO_ON_GRID, ILL_CONDITION
 - V-6 比较公式：|x − x_ref| ≤ atol + rtol·|x_ref|；矩阵 SHOULD 用范数形式。**（v0.2 细化）** 病态问题的容差 MAY 按以下两种方式放宽，且 MUST 写入 parity spec、MUST 在测试报告中单独统计被放宽的用例数：
   - 条件数缩放：`rtol × max(1, κ/10²)`（`lqr` 用 κ = cond(S)）；
   - 误差估计缩放：`max(class_tol, 10 × trust.error_estimate)`——只有当算子自报的误差估计本身已经较大时才放宽（如 `bode` 的近极点频点）。这同时检验了误差估计不是"夸大的好消息"：实际偏差必须落在算子自报估计的 10 倍以内。
+  - **（v0.3 新增）根与系数的条件数缩放**：多项式根/特征值逐个按最近匹配比较，容差 = class_tol × max(1, κᵣ)，κᵣ = Σ|aₖ||r|^{n−k} / (max(1,|r|)·|p′(r)|)（参考多项式的 Wilkinson 相对条件数）；由特征值展开得到的多项式系数，容差 = class_tol × max(1, Π(1+|λᵢ|)/‖p‖₁)（系数对特征值扰动的一阶界）。DC 增益用 κ = Π(1+|p|)/Π|p|；Tustin 离散化用 κ = cond(I − αA)；zoh/foh 用 κ = e^{‖A‖₁·T}。
+- V-5a **（v0.3 新增）非唯一的设计结果**：多输入极点配置的 K 不唯一，MUST NOT 与参考的 K 比较；parity 测试 MUST 用**参考请求中的 A、B**（而不是算子自报的 `achieved_poles`）重算 eig(A − B·K) 并与期望极点比较——否则把 A 按 column-major 传错的请求也会"成功配置极点"，内存序错误无法检出。闭环特征向量矩阵的条件数与参考（scipy YT）之比作为信息报告。
 - V-7 预期报错用例 MUST 比对错误码；预期 warning 用例 MUST 断言 warning 出现。
+- V-9 **（v0.3 新增）参考值的后处理** MUST 写入 parity spec 并说明原因。例：python-control（无 slycot）用 scipy QZ 计算零点时，会把无穷远广义特征值返回成 ~10¹⁶–10¹⁸ 的有限数；参考生成器丢弃 |z| > 10¹⁰·(1+‖[A B; C D]‖_F) 的"零点"。
+- V-10 **（v0.3 新增）参考本身是局部优化结果时**（python-control 离散 `stability_margins` 用 scipy L-BFGS-B 求 min|1+G|），比较规则为：在类容差内一致，或被测值更小（更好的极小值）且参考值与在参考频率处重新求值的 |1+G| 一致（≤ 1e-9）、差距 ≤ 1e-6；频率按优化器精度比较（rel 1e-3）。这类规则 MUST 在报告中单独标注。
 
 ### 7.2 容差类
 
@@ -328,8 +364,8 @@ v0.2 已登记的 warning：`W.NUMERICAL.{NEAR_POLE, ZERO_ON_GRID, ILL_CONDITION
 |---|---|---|---|
 | T0 | 精确/整数/组合 | 完全相等 | 秩、阶次、结构判定 |
 | T1 | 直接稠密线性代数 | rtol 1e-12（× κ 缩放） | 求解、分解、乘法 |
-| T2 | 矩阵函数、特征值、Riccati/Lyapunov、LTI 精确离散化 | rtol 1e-10（× κ 缩放） | `expm`、`lqr`、`lyap`、ZOH `step` |
-| T3 | 频率响应求值 | 幅值 1e-9 dB abs，相位 1e-8 deg（mod 360） | `bode`、`nyquist`、`freqresp` |
+| T2 | 矩阵函数、特征值、Riccati/Lyapunov、LTI 精确离散化 | rtol 1e-10（× κ 缩放） | `expm`、`lqr`、`dlqr`、`lyap`、`c2d`、`place`、`poles_zeros`、ZOH `step`/`impulse` |
+| T3 | 频率响应求值及其导出量 | 幅值 1e-9 dB abs，相位 1e-8 deg（mod 360）；裕度：GM 与交越频率 rel 1e-9，PM 1e-8 deg | `bode`、`margin`、`nyquist`、`freqresp` |
 | T4 | 变步长 ODE / 一般仿真 | rtol 1e-6、atol 1e-9，或"求解器容差 × 10" | 参考与被测 MUST 用相同容差设置 |
 | T5 | 迭代优化 | KKT 残差 ≤ tol；目标值 rtol 1e-6 | `quadprog` 类、NLP |
 | T6 | 随机算法 | 统计检验或固定 seed 下的 T1–T5 | 蒙特卡洛 |
@@ -343,11 +379,11 @@ v0.2 已登记的 warning：`W.NUMERICAL.{NEAR_POLE, ZERO_ON_GRID, ILL_CONDITION
 | C | 只有不变量/自洽性检查 |
 | U | 未验证（实验性）；生产注册表 MUST NOT 默认暴露 U 级算子 |
 
-v0.2 参考实现的三个算子当前均为 **B 级**（python-control parity + 解析解单元测试 + 不变量），目标 A 级。
+v0.3 参考实现的 12 个算子当前均为 **B 级**（python-control parity + 解析解单元测试 + 不变量），目标 A 级。
 
 ### 7.4 凭证记录
 
-参考实现的 parity 测试会写出 `reports/parity-python-control.json`（每个算子：用例数、通过数、各量的最大误差与容差、各 case family 统计、被放宽的用例数、内存序回归结果、build、cpu_features）。它是凭证的原始材料；正式凭证还需要 MATLAB golden 与 CI 签名。
+参考实现的 parity 测试会写出 `reports/parity-python-control.json`（v0.2 算子）与 `reports/parity-python-control-b2.json`（v0.3 新增算子）（每个算子：用例数、通过数、各量的最大误差与容差、各 case family 统计、被放宽的用例数、内存序回归结果、build、cpu_features）。它是凭证的原始材料；正式凭证还需要 MATLAB golden 与 CI 签名。
 
 - V-7 凭证 MUST 与 `build` 绑定；任何后端或数值依赖升级 MUST 重新跑 parity 并生成新凭证。
 - V-8 凭证 SHOULD 由 CI 签名（如 Sigstore），平台展示"verified"标识前 MUST 校验签名。
@@ -419,7 +455,7 @@ pub trait Operator: Send + Sync + 'static {
 | L2 Trusted | L1 + 完整 trust 元数据 + 可复现性（第 6 章全部 MUST）+ 重放测试 | 生产注册表最低要求 |
 | L3 Verified | L2 + 验证凭证等级 A 或 B + CI 签名 + parity 测试持续运行 | 平台"verified"标识 |
 
-参考实现三个算子当前为 L2（缺 CI 签名与凭证资源，故未到 L3）。
+参考实现 12 个算子当前为 L2（缺 CI 签名与凭证资源，故未到 L3）。
 
 ### 9.2 版本与弃用
 
@@ -446,7 +482,7 @@ pub trait Operator: Send + Sync + 'static {
 
 ## 10. 完整示例
 
-`bode` 与 `step` 使用同一被控对象，`lqr` 使用经典双积分器。**所有响应都是 Rust 参考实现的实际输出**（`regen_examples.py` 调用 `aeoi-call` 生成），并经 `cargo test` 与 python-control 结果比对；不是 MATLAB 输出。每个示例的完整文件在 `examples/<id>/`。
+`bode` 与 `step` 使用同一被控对象，`lqr` 使用经典双积分器；v0.3 新增算子（10.4–10.12）的示例尽量复用同一被控对象，并都给出可手算核对的值。10.4–10.12 中用 `jsonc` 占位符 内联的 JSON 为了可读性把超过 16 个元素的数值数组缩写为 `"…(+N)…"`，完整内容见对应文件。**所有响应都是 Rust 参考实现的实际输出**（`regen_examples.py` 调用 `aeoi-call` 生成），并经 `cargo test` 与 python-control 结果比对；不是 MATLAB 输出。每个示例的完整文件在 `examples/<id>/`。
 
 被控对象：G(s) = 4 / (s² + 1.2s + 4)（ωn = 2 rad/s，ζ = 0.3），极点 −0.6 ± 1.9079j。
 
@@ -602,17 +638,436 @@ pub trait Operator: Send + Sync + 'static {
 {{file:examples/control.design.lqr/parity.yaml}}
 ```
 
-## 11. Rust 参考实现（v0.2）
+### 10.4 `control.lti.convert`（v0.3 新增）
+
+tf ↔ ss ↔ zpk 互转。
+
+语义要点：
+- `to ∈ {tf, ss, zpk}`；`realization` 字段说明所用实现（R-6）。tf→ss 用可控标准型（scipy `tf2ss` 约定）；MIMO tf→ss 为逐元素块对角（非最小，`W.DOMAIN.NONMINIMAL_REALIZATION`）。
+- ss→tf 按 R-7（scipy `ss2tf` 约定，所有元素共享 det(sI − A)）；zpk→tf 为乘积展开；tf→zpk 为多项式求根（平衡伴随矩阵特征值 + Newton 精修，共轭对精确共轭）；ss→zpk 为不变零点 + eig(A) + Markov 增益（R-8）。
+- 非 proper 的 tf → `E.DOMAIN.IMPROPER_SYSTEM`；MIMO→zpk → `E.DOMAIN.MIMO_NOT_SUPPORTED`；传递函数恒为零的 ss→zpk 返回 k = 0、无零点（与 python-control 一致），结构退化 → `E.DOMAIN.DEGENERATE_SYSTEM`。
+- trust：在 9 个测试点（连续 jω；离散单位圆）比较转换前后的频率响应，最大相对差写入 `residual.response_max_rel_discrepancy`；> 1e-6 时 `W.NUMERICAL.CONVERSION_DISCREPANCY`（高阶/重根时多项式表示本身病态）。
+
+**Manifest** — `examples/control.lti.convert/manifest.json`
+
+```json
+{{jsonc:examples/control.lti.convert/manifest.json}}
+```
+
+**请求**（G(s) = 4/(s² + 1.2s + 4) 转为 ss；手算：A = [[−1.2, −4], [1, 0]]，B = [1, 0]ᵀ，C = [0, 4]，D = 0）
+
+```json
+{{file:examples/control.lti.convert/request.json}}
+```
+
+**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 python-control/scipy 值一致，见 11.3）
+
+```json
+{{jsonc:examples/control.lti.convert/response.success.json}}
+```
+
+**错误请求与响应**（2×2 ss 请求转 zpk：v0.3 的 zpk 只表示 SISO）
+
+```json
+{{jsonc:examples/control.lti.convert/request.error.json}}
+```
+
+```json
+{{jsonc:examples/control.lti.convert/response.error.json}}
+```
+
+**非对称矩阵示例（内存序回归用例）** — `request.nonsymmetric.json`（3 阶非对称 A 的 ss→tf），响应见 `response.nonsymmetric.json`。Input/output schema 见 `examples/control.lti.convert/input.schema.json`、`output.schema.json`。
+
+**Parity 测试规格** — `examples/control.lti.convert/parity.yaml`
+
+```yaml
+{{file:examples/control.lti.convert/parity.yaml}}
+```
+
+### 10.5 `control.lti.poles_zeros`（v0.3 新增）
+
+极点、（传输/不变）零点、DC 增益、自然频率与阻尼比。
+
+语义要点：
+- 极点 = eig(A)（tf 为分母根）；零点 = 不变零点：先做原始与对偶两遍 Emami-Naeini/Van Dooren 式 SVD 秩揭示约化直到 D 方阵可逆，再求 eig(A − B·D⁻¹·C)。支持非方系统（如 2×1 系统的公共零点）。
+- 法秩不足（例如 C = 0）→ `E.DOMAIN.DEGENERATE_SYSTEM`（R-9），不返回空集。
+- DC 增益按 D-2：连续 s = 0，离散 z = 1；A 数值奇异时改用逐元素 zpk 极限（带零极点对消判定），方法写在 `trust.condition.dcgain_method`。
+- 自然频率/阻尼比：连续 ωn = |λ|、ζ = −Re λ/|λ|；离散先映射 s = ln(z)/ts（与 python-control `damp` 一致）。
+- 约化后 D 的条件数写入 trust；偏大时 `W.NUMERICAL.ILL_CONDITIONED`。
+
+**Manifest** — `examples/control.lti.poles_zeros/manifest.json`
+
+```json
+{{jsonc:examples/control.lti.poles_zeros/manifest.json}}
+```
+
+**请求**（G(s) = (s + 3)/(s² + 1.2s + 4)；手算：零点 −3，极点 −0.6 ± 1.907878j，DC 增益 3/4，ωn = 2，ζ = 0.3）
+
+```json
+{{file:examples/control.lti.poles_zeros/request.json}}
+```
+
+**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 python-control/scipy 值一致，见 11.3）
+
+```json
+{{jsonc:examples/control.lti.poles_zeros/response.success.json}}
+```
+
+**错误请求与响应**（C = 0 的 ss：传递函数恒为零，零点无定义）
+
+```json
+{{jsonc:examples/control.lti.poles_zeros/request.error.json}}
+```
+
+```json
+{{jsonc:examples/control.lti.poles_zeros/response.error.json}}
+```
+
+**非对称矩阵示例（内存序回归用例）** — `request.nonsymmetric.json`（3 阶非对称 A），响应见 `response.nonsymmetric.json`。Input/output schema 见 `examples/control.lti.poles_zeros/input.schema.json`、`output.schema.json`。
+
+**Parity 测试规格** — `examples/control.lti.poles_zeros/parity.yaml`
+
+```yaml
+{{file:examples/control.lti.poles_zeros/parity.yaml}}
+```
+
+### 10.6 `control.analysis.ctrb_obsv`（v0.3 新增）
+
+可控性/可观性矩阵、数值秩、可选 Gramian。
+
+语义要点：
+- Krylov 矩阵 [B, AB, …, A^{n−1}B] 与 [C; CA; …]（T1）；数值秩 = 奇异值 > rtol·σ_max 的个数，默认 rtol = max(行, 列)·ε（与 numpy `matrix_rank` 一致），可用 `rank_rtol` 覆盖。
+- PBH 交叉检查：min over λ ∈ eig(A) 的 σ_min([A − λI, B])/‖[A, B]‖_F；与 Krylov 秩结论不一致、或秩阈值处无明显奇异值间隙时 `W.NUMERICAL.RANK_AMBIGUOUS`（Krylov 矩阵在 n 较大时本身病态）。
+- `gramians: true`：连续 A Wc + Wc Aᵀ + B Bᵀ = 0，离散 A Wc Aᵀ − Wc + B Bᵀ = 0（Wo 对偶），用 `control.math.lyap` 同一 Bartels–Stewart 实现；系统不渐近稳定时 Gramian 为 `null` + `W.DOMAIN.GRAMIAN_UNDEFINED`（R-3）。
+- tf/zpk 输入先按可控标准型实现，结果依赖实现：`W.DOMAIN.REALIZATION_DEPENDENT`。
+
+**Manifest** — `examples/control.analysis.ctrb_obsv/manifest.json`
+
+```json
+{{jsonc:examples/control.analysis.ctrb_obsv/manifest.json}}
+```
+
+**请求**（G(s) = 4/(s² + 1.2s + 4) 的 ss 形式 + Gramian；手算：ctrb = [[0, 4], [4, −4.8]]，obsv = I）
+
+```json
+{{file:examples/control.analysis.ctrb_obsv/request.json}}
+```
+
+**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 python-control/scipy 值一致，见 11.3）
+
+```json
+{{jsonc:examples/control.analysis.ctrb_obsv/response.success.json}}
+```
+
+**错误请求与响应**（B 的行数与 A 不符）
+
+```json
+{{jsonc:examples/control.analysis.ctrb_obsv/request.error.json}}
+```
+
+```json
+{{jsonc:examples/control.analysis.ctrb_obsv/response.error.json}}
+```
+
+**非对称矩阵示例（内存序回归用例）** — `request.nonsymmetric.json`（非对称 A，含 Gramian），响应见 `response.nonsymmetric.json`。Input/output schema 见 `examples/control.analysis.ctrb_obsv/input.schema.json`、`output.schema.json`。
+
+**Parity 测试规格** — `examples/control.analysis.ctrb_obsv/parity.yaml`
+
+```yaml
+{{file:examples/control.analysis.ctrb_obsv/parity.yaml}}
+```
+
+### 10.7 `control.analysis.margin`（v0.3 新增）
+
+增益裕度、相位裕度、稳定裕度及全部交越点（SISO）。
+
+语义要点：
+- 交越点由多项式精确求根得到，不依赖网格：相位交越 Im[N(jω)·D(−jω)] = 0，增益交越 |N(jω)|² − |D(jω)|² = 0，稳定裕度的驻点为 d|1+G|²/dω 的分子根；偶/奇多项式先做 x = ω² 降阶。离散系统按 D-6 经双线性映射处理。
+- 求根后在 G 上做割线修正；再用 4000 点对数网格做符号变化审计，漏检的交越点用二分补回并给 `W.NUMERICAL.CROSSING_RECOVERED`（近重根/相切时求根可能漏根）。
+- 选择规则与 python-control 0.10.2 一致：GM 取 Re G ≤ 0 的相位交越中 |ln GM| 最小者；PM = mod(∠G, 360) − 180 中 |PM| 最小者；SM 取最小值。全部候选在 `crossings` 中返回（R-4）。
+- 负单位反馈闭环稳定性由 N + D 的根判定；不稳定时 `W.DOMAIN.CLOSED_LOOP_UNSTABLE`（裕度数值不再代表鲁棒性）。MIMO → `E.DOMAIN.MIMO_NOT_SUPPORTED`。
+
+**Manifest** — `examples/control.analysis.margin/manifest.json`
+
+```json
+{{jsonc:examples/control.analysis.margin/manifest.json}}
+```
+
+**请求**（L(s) = 4/(s(s+1)(s+2))；手算：ω = √2 处相位 −180°，|L| = 2/3 ⇒ GM = 1.5（3.52 dB））
+
+```json
+{{file:examples/control.analysis.margin/request.json}}
+```
+
+**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 python-control/scipy 值一致，见 11.3）
+
+```json
+{{jsonc:examples/control.analysis.margin/response.success.json}}
+```
+
+**错误请求与响应**（2×2 系统）
+
+```json
+{{jsonc:examples/control.analysis.margin/request.error.json}}
+```
+
+```json
+{{jsonc:examples/control.analysis.margin/response.error.json}}
+```
+
+**非对称矩阵示例（内存序回归用例）** — `request.nonsymmetric.json`（非对称 A 的 SISO ss），响应见 `response.nonsymmetric.json`。Input/output schema 见 `examples/control.analysis.margin/input.schema.json`、`output.schema.json`。
+
+**Parity 测试规格** — `examples/control.analysis.margin/parity.yaml`
+
+```yaml
+{{file:examples/control.analysis.margin/parity.yaml}}
+```
+
+### 10.8 `control.lti.c2d`（v0.3 新增）
+
+连续 → 离散：zoh / foh / tustin（可选预畸变）。
+
+语义要点：
+- 公式按 D-5，与 scipy `cont2discrete` 相同的状态坐标（因此可逐元素比较）；`output_kind = same` 时 tf 输入返回 tf（MIMO tf 逐元素离散化）。
+- `prewarp_frequency` 只与 `tustin` 组合，否则 `E.VALIDATION.OPTION_CONFLICT`（O-2）；预畸变频率 ≥ π/ts → `E.DOMAIN.ABOVE_NYQUIST`；输入已是离散系统 → `E.DOMAIN.NOT_CONTINUOUS`；I − αA 奇异 → `E.NUMERICAL.SINGULAR`。
+- 极点虚部超过 π/ts 时 `W.ACCURACY.ALIASING`。trust 记录极点映射不变量：eig(Ad) 与 exp(λ·ts)（tustin 为 (1+λT_w/2)/(1−λT_w/2)）的最大偏差，以及 cond(I − αA)、‖A‖₁·ts、expm 平方次数。
+- 实现中发现的缺陷：tustin 的 Dd 初版写成 D + (T/2)·C·Bd（多乘了一个 T），D ≠ 0 的 18 个 golden 用例因此失败；正确为 D + ½·C·Bd（scipy gbt, α = ½）。
+
+**Manifest** — `examples/control.lti.c2d/manifest.json`
+
+```json
+{{jsonc:examples/control.lti.c2d/manifest.json}}
+```
+
+**请求**（被控对象 ss 形式，ts = 0.1 s，zoh）
+
+```json
+{{file:examples/control.lti.c2d/request.json}}
+```
+
+**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 python-control/scipy 值一致，见 11.3）
+
+```json
+{{jsonc:examples/control.lti.c2d/response.success.json}}
+```
+
+**错误请求与响应**（zoh + 预畸变频率：选项冲突）
+
+```json
+{{jsonc:examples/control.lti.c2d/request.error.json}}
+```
+
+```json
+{{jsonc:examples/control.lti.c2d/response.error.json}}
+```
+
+**非对称矩阵示例（内存序回归用例）** — `request.nonsymmetric.json`（非对称 A，zoh），响应见 `response.nonsymmetric.json`。Input/output schema 见 `examples/control.lti.c2d/input.schema.json`、`output.schema.json`。
+
+**Parity 测试规格** — `examples/control.lti.c2d/parity.yaml`
+
+```yaml
+{{file:examples/control.lti.c2d/parity.yaml}}
+```
+
+### 10.9 `control.lti.impulse`（v0.3 新增）
+
+冲激（脉冲）响应，与 `step` 共用网格、规模限制与 ZOH 递推。
+
+语义要点：
+- 连续：y(t) = C·e^{At}·B，在均匀网格上用精确递推；D·δ(t) 按 D-4 去掉并返回 `direct_feedthrough` + `W.DOMAIN.DIRECT_FEEDTHROUGH_IGNORED`。
+- 离散：`dt` MUST 等于 `ts`（否则 `E.VALIDATION.GRID`）；幅值按 D-3（默认 unit_area，u₀ = 1/ts）。
+- trust：终点一致性检查用 Φ(t_end)·B 一次性计算与逐步递推比较；不稳定系统给 `W.DOMAIN.UNSTABLE_SYSTEM`。
+- 输出 `{t, y, n_grid_points, direct_feedthrough}`，y 布局 `[ny, nu, nt]` row-major（与 `step` 相同）。
+
+**Manifest** — `examples/control.lti.impulse/manifest.json`
+
+```json
+{{jsonc:examples/control.lti.impulse/manifest.json}}
+```
+
+**请求**（G(s) = 4/(s² + 1.2s + 4)，0–10 s，dt = 0.05；手算 y(t) = (4/ωd)·e^{−0.6t}·sin(ωd·t)，ωd = 1.907878）
+
+```json
+{{file:examples/control.lti.impulse/request.json}}
+```
+
+**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 python-control/scipy 值一致，见 11.3）
+
+```json
+{{jsonc:examples/control.lti.impulse/response.success.json}}
+```
+
+**错误请求与响应**（离散系统 ts = 0.1 但 dt = 0.05）
+
+```json
+{{jsonc:examples/control.lti.impulse/request.error.json}}
+```
+
+```json
+{{jsonc:examples/control.lti.impulse/response.error.json}}
+```
+
+**非对称矩阵示例（内存序回归用例）** — `request.nonsymmetric.json`（非对称 A 的 MIMO ss），响应见 `response.nonsymmetric.json`。Input/output schema 见 `examples/control.lti.impulse/input.schema.json`、`output.schema.json`。
+
+**Parity 测试规格** — `examples/control.lti.impulse/parity.yaml`
+
+```yaml
+{{file:examples/control.lti.impulse/parity.yaml}}
+```
+
+### 10.10 `control.math.lyap`（v0.3 新增）
+
+连续/离散 Lyapunov 方程（O-3 约定）。
+
+语义要点：
+- Bartels–Stewart：A 的实 Schur 分解（带迭代上限与确定性回退的 `schur_robust`）→ 复 Schur → 逐列回代。Q 对称时解对称化（对称化前的不对称度写入 trust）；Q 非对称也可解。
+- 奇异判据与尺度无关（X-4a）：连续 min|λᵢ + λ̄ⱼ| ≤ 10³·u·‖A‖，离散 min|λᵢλ̄ⱼ − 1| ≤ 10³·u·max(1, ‖A‖)² → `E.DOMAIN.LYAP_SINGULAR`（不是数值问题，调参无效）。Schur 迭代不收敛 → `E.NUMERICAL.NO_CONVERGENCE`。
+- trust.residual：相对残差（连续 ‖AX + XAᵀ + Q‖_F/(2‖A‖_F‖X‖_F + ‖Q‖_F)，离散类似）与 Schur 后向误差；error_estimate = ‖残差‖/sep_min（非严格上界：A 非正规时偏乐观）。
+- A 不稳定但方程非奇异时照常求解（Lyapunov 方程本身有唯一解），trust.checks.A_stable = false。
+
+**Manifest** — `examples/control.math.lyap/manifest.json`
+
+```json
+{{jsonc:examples/control.math.lyap/manifest.json}}
+```
+
+**请求**（A = [[−1, 2], [0, −3]]（非对称），Q = I，连续）
+
+```json
+{{file:examples/control.math.lyap/request.json}}
+```
+
+**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 python-control/scipy 值一致，见 11.3）
+
+```json
+{{jsonc:examples/control.math.lyap/response.success.json}}
+```
+
+**错误请求与响应**（A 的特征值为 ±j：λ₁ + λ̄₂ = 0）
+
+```json
+{{jsonc:examples/control.math.lyap/request.error.json}}
+```
+
+```json
+{{jsonc:examples/control.math.lyap/response.error.json}}
+```
+
+**非对称矩阵示例（内存序回归用例）** — `request.nonsymmetric.json`（非对称 A），响应见 `response.nonsymmetric.json`。Input/output schema 见 `examples/control.math.lyap/input.schema.json`、`output.schema.json`。
+
+**Parity 测试规格** — `examples/control.math.lyap/parity.yaml`
+
+```yaml
+{{file:examples/control.math.lyap/parity.yaml}}
+```
+
+### 10.11 `control.design.place`（v0.3 新增）
+
+状态反馈极点配置 u = −Kx。
+
+语义要点：
+- SISO：K 唯一（与 scipy/python-control 一致到舍入）。MIMO：KNV 方法 0 的复数版本——B = [U₀ U₁][Z; 0]，Sᵢ = null(U₁ᵀ(A − λᵢI))；实极点取实向量，共轭对成对更新，逐列扫描直到 Δln|det X̂| < 1e-6（`max_sweeps` 默认 50）；然后 M = XΛX⁻¹，K = Z⁻¹U₀ᵀ(A − M)。m = n（B 方阵可逆）时直接取酉矩阵 X（cond = 1）。
+- 不可控 → `E.DOMAIN.NOT_CONTROLLABLE`（PBH）；期望极点重数 > m → `E.DOMAIN.POLE_MULTIPLICITY`；B 列不满秩 → `E.VALIDATION.RANK_DEFICIENT`；极点不共轭封闭 → `E.VALIDATION.NOT_CONJUGATE`。
+- trust：达成极点与期望极点的最大相对偏差、闭环特征向量矩阵 cond(X)（鲁棒性指标）、‖K‖_F；偏差大时 `W.NUMERICAL.PLACEMENT_INACCURATE`，cond(X) 大时 `W.NUMERICAL.ILL_CONDITIONED`。
+- parity 按 V-5a 比较；golden 中本实现的 cond(X) 最多为 scipy YT 方法的 1.08 倍。
+
+**Manifest** — `examples/control.design.place/manifest.json`
+
+```json
+{{jsonc:examples/control.design.place/manifest.json}}
+```
+
+**请求**（双积分器，期望极点 −1 ± j；手算 K = [2, 2]）
+
+```json
+{{file:examples/control.design.place/request.json}}
+```
+
+**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 python-control/scipy 值一致，见 11.3）
+
+```json
+{{jsonc:examples/control.design.place/response.success.json}}
+```
+
+**错误请求与响应**（A = diag(1, −1)，B = [0, 1]ᵀ：λ = 1 不可控）
+
+```json
+{{jsonc:examples/control.design.place/request.error.json}}
+```
+
+```json
+{{jsonc:examples/control.design.place/response.error.json}}
+```
+
+**非对称矩阵示例（内存序回归用例）** — `request.nonsymmetric.json`（非对称 A，2 输入），响应见 `response.nonsymmetric.json`。Input/output schema 见 `examples/control.design.place/input.schema.json`、`output.schema.json`。
+
+**Parity 测试规格** — `examples/control.design.place/parity.yaml`
+
+```yaml
+{{file:examples/control.design.place/parity.yaml}}
+```
+
+### 10.12 `control.design.dlqr`（v0.3 新增）
+
+离散 LQR：DARE 的稳定化解、增益与闭环极点（O-3 约定，支持交叉项 N）。
+
+语义要点：
+- 算法：结构保持倍增算法（SDA）求 DARE，再做至多 3 步 Newton–Hewer 修正（每步解一个离散 Lyapunov 方程，复用 `lyap` 的 Bartels–Stewart）。K = (R + BᵀSB)⁻¹(BᵀSA + Nᵀ)。
+- 前置检查：对 |λ| ≥ 1 的模态做 PBH 可镇定性检查 → `E.DOMAIN.NOT_STABILIZABLE`；单位圆上不被 Q 观测的模态 → `E.DOMAIN.SYMPLECTIC_UNIT_CIRCLE_EIG`；R 非正定 → `E.DOMAIN.R_NOT_POSITIVE_DEFINITE`。输入校验与 `lqr` 共用（对称化规则、`symmetry_tolerance`）。
+- trust：DARE 相对残差与缩放残差、cond(S)、cond(R)、闭环谱半径、error_estimate = ‖残差‖/min|λᵢλ̄ⱼ − 1|（非严格上界）。
+- parity 容差规则与 `lqr` 相同（V-6）。
+
+**Manifest** — `examples/control.design.dlqr/manifest.json`
+
+```json
+{{jsonc:examples/control.design.dlqr/manifest.json}}
+```
+
+**请求**（ZOH 离散双积分器（ts = 0.1），Q = I，R = 1）
+
+```json
+{{file:examples/control.design.dlqr/request.json}}
+```
+
+**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 python-control/scipy 值一致，见 11.3）
+
+```json
+{{jsonc:examples/control.design.dlqr/response.success.json}}
+```
+
+**错误请求与响应**（A = diag(1.2, 0.5)，B = [0, 1]ᵀ：不稳定模态 1.2 不可控）
+
+```json
+{{jsonc:examples/control.design.dlqr/request.error.json}}
+```
+
+```json
+{{jsonc:examples/control.design.dlqr/response.error.json}}
+```
+
+**非对称矩阵示例（内存序回归用例）** — `request.nonsymmetric.json`（非对称 A），响应见 `response.nonsymmetric.json`。Input/output schema 见 `examples/control.design.dlqr/input.schema.json`、`output.schema.json`。
+
+**Parity 测试规格** — `examples/control.design.dlqr/parity.yaml`
+
+```yaml
+{{file:examples/control.design.dlqr/parity.yaml}}
+```
+
+## 11. Rust 参考实现（v0.3）
 
 ### 11.1 结构
 
 ```
 rust/                         cargo workspace（resolver 3，Rust 1.85，纯 Rust，无 C/Fortran 依赖）
 ├── aeoi-core/                规范层：错误/warning、JCS 哈希、schema 内联与校验、数组解析（json/b64/ref/sparse）、
-│                             LTI 解析与 tf→ss、线性代数（expm、Lyapunov、条件数）、Operator trait 与调用管线
-├── aeoi-control/             三个算子 + aeoi-call CLI
-│   ├── src/bode.rs  step.rs  lqr.rs
-│   └── tests/parity.rs  examples.rs
+│                             LTI 解析与 tf→ss、线性代数（expm、Lyapunov、条件数）、Operator trait 与调用管线；
+│                             v0.3 新增 poly.rs（平衡伴随矩阵求根 + Newton 精修）、sysalg.rs（ss2tf、不变零点、
+│                             Bartels–Stewart、频响求值、PBH），以及带迭代上限的 schur_robust
+├── aeoi-control/             12 个算子 + aeoi-call CLI
+│   ├── src/bode.rs step.rs(含 impulse) lqr.rs                       v0.2
+│   ├── src/convert.rs poles_zeros.rs ctrb_obsv.rs margin.rs c2d.rs
+│   │       lyap.rs place.rs dlqr.rs                                 v0.3
+│   └── tests/parity.rs parity_b2.rs examples.rs analytic_b2.rs
 └── aeoi-mcp/                 MCP stdio server + tests/e2e.rs
 ```
 
@@ -622,14 +1077,18 @@ rust/                         cargo workspace（resolver 3，Rust 1.85，纯 Rus
 
 ```bash
 cd ai-operator-spec/rust
-cargo test --release                      # 全部测试（含 264 个 python-control golden 用例）
-cargo test --release -p aeoi-control --test parity -- --nocapture   # 打印 parity 误差表，写 reports/parity-python-control.json
+cargo test --release                      # 全部测试（含 264 + 353 个 python-control golden 用例）
+cargo test --release -p aeoi-control --test parity -- --nocapture      # v0.2 算子，写 reports/parity-python-control.json
+cargo test --release -p aeoi-control --test parity_b2 -- --nocapture   # v0.3 算子，写 reports/parity-python-control-b2.json
 cargo build --release
 ./target/release/aeoi-call control.lti.bode ../examples/control.lti.bode/request.json
 ./target/release/aeoi-mcp [--data-root DIR] [--namespace control.lti]   # MCP stdio server
 cd .. && python3 mcp_session_demo.py      # 脚本化 MCP 会话，记录到 reports/mcp-session.jsonl
 python3 regen_examples.py                 # 用 Rust 输出重新生成 examples/*/response*.json
-python3 gen_golden_pycontrol.py           # 重新生成 python-control golden（需 python-control/scipy）
+python3 gen_golden_pycontrol.py           # 重新生成 v0.2 算子的 python-control golden（需 python-control/scipy）
+python3 gen_golden_pycontrol_b2.py        # v0.3 算子的 golden（seed 20261122）
+python3 make_examples_b2.py               # v0.3 算子的示例请求、python-control 参考值与 parity.yaml
+python3 build_spec.py                     # spec-src.md → spec-v0.3.md（内联示例文件）
 python3 validate_examples.py              # 独立的 Python jsonschema 校验
 ```
 
@@ -637,9 +1096,9 @@ MCP 客户端配置示例：`{"command": "/path/to/aeoi-mcp", "args": ["--data-r
 
 ### 11.3 测试结果（2026-11-21，x86_64-linux，cpu_features avx/avx2/fma/avx512f）
 
-全部通过：aeoi-core 单元测试 16 个，aeoi-control 单元测试 10 个（含解析解：一阶系统 bode/step、标量 LQR），示例测试 4 个，parity 测试 1 个（覆盖 264 个 golden 用例），MCP 端到端测试 1 个；release 与 debug 构建都通过。独立 Python 校验器 32 项全部通过。
+全部通过（`cargo test --release`）：aeoi-core 单元测试 22 个，aeoi-control 单元测试 12 个，v0.3 解析解测试 9 个（`analytic_b2.rs`：非方系统零点、Tustin 标量闭式解、离散 SM 的 Nyquist 端点、标量 DLQR = 黄金比例等），示例测试 5 个（12 个算子的示例请求 vs python-control/scipy 参考值与已发布响应的 `output_hash`），parity 测试 2 个（v0.2：264 例；v0.3：353 例），MCP 端到端测试 1 个（12 个工具，每个算子的成功与错误请求）。独立 Python 校验器（`validate_examples.py`）136 项 + 364 个 golden 请求全部通过。
 
-parity（参考 = python-control 0.10.2 / scipy 1.18.1，**不是 MATLAB**）：
+v0.2 算子的 parity（参考 = python-control 0.10.2 / scipy 1.18.1，**不是 MATLAB**）：
 
 | 算子 | 用例 | 通过 | 量 | 实测最大误差 | 容差 |
 |---|---|---|---|---|---|
@@ -655,7 +1114,36 @@ parity（参考 = python-control 0.10.2 / scipy 1.18.1，**不是 MATLAB**）：
 | | | | 闭环极点（集合匹配，相对） | 2.3e-5 | 1e-8·max(1,cond(S)/100) |
 | | | | 不变量：缩放 CARE 残差 | 6.4e-17 | 1e-12 |
 
-内存序回归：三个算子的 column-major 错误请求与参考值偏差分别为容差的 5.6e10（bode）、1.3e10（step）、9.3e9（lqr）倍，均被检出。
+内存序回归（v0.2 三个算子）：column-major 错误请求与参考值偏差分别为容差的 5.6e10（bode）、1.3e10（step）、9.3e9（lqr）倍，均被检出。
+
+v0.3 新增算子的 parity（`reports/parity-python-control-b2.json`；参考 = python-control 0.10.2 / scipy 1.18.1 / numpy 2.5.5，**不是 MATLAB**）。"基准容差"为未缩放的类容差；"κ 缩放"列为按 V-6 放宽过容差的比较次数（实际误差除 `place` 外都低于未缩放的基准容差）：
+
+| 算子 | 用例 | 通过 | 量 | 实测最大误差 | 基准容差 | 最大 误差/容差 | κ 缩放 | 内存序检出倍数 |
+|---|---|---|---|---|---|---|---|---|
+| convert | 76 | 76 | tf→ss 矩阵（rel_fro） | 0（逐位相同） | 1e-12 | 7.4e-4 | 133 | 2.5e10 |
+| | | | tf 系数 | 1.9e-14 | 1e-10 | | | |
+| | | | zpk 根 / 增益 | 7.0e-14 / 7.4e-14 | 1e-10 | | | |
+| poles_zeros | 47 | 47 | 极点 / 零点 | 2.9e-12 / 2.1e-12 | 1e-10 | 4.5e-5 | 165 | 1.8e10 |
+| | | | DC 增益 | 8.3e-16 | 1e-10 | | | |
+| | | | ωn / ζ | 2.9e-12 / 3.7e-14 | 1e-10 | | | |
+| ctrb_obsv | 26 | 26 | 秩 | 0（全部一致） | 精确 | 1.1e-3 | 0 | 1.0e13 |
+| | | | Krylov 矩阵 / 奇异值 | 5.0e-16 / 1.1e-15 | 1e-12 | | | |
+| | | | Gramian | 9.1e-15 | 1e-10 | | | |
+| margin | 45 | 45 | GM / 交越频率 | 1.9e-14 / 6.3e-15 | 1e-9 | 0.12 | 0 | 检出（交越集合不同） |
+| | | | PM（deg） | 2.0e-13 | 1e-8 | | | |
+| | | | SM / SM 频率（连续） | 4.4e-15 / 2.3e-15 | 1e-9 / 1e-6 | | | |
+| | | | SM 频率（离散，V-10） | 1.2e-4 | 1e-3 | | | |
+| c2d | 47 | 47 | 离散 ss 矩阵 / tf 系数 | 5.7e-16 / 2.7e-15 | 1e-10 | 1.4e-5 | 44 | 8.5e8 |
+| impulse | 28 | 28 | y（相对 max\|y\|） | 3.0e-14 | 1e-10 | 3.0e-4 | 0 | 4.6e10 |
+| lyap | 31 | 31 | X（rel_fro） | 1.6e-14 | 1e-10 | 1.6e-4 | 0 | 1.6e10 |
+| place | 28 | 28 | 达成极点（V-5a） | 4.3e-10 | 1e-10（× cond(X)·(1+‖K‖)） | 1.2e-6 | 25 | 4.3e8 |
+| | | | SISO K | 3.0e-13 | 同上 | | | |
+| | | | cond(X) / scipy YT（信息） | 最大 1.08 | — | | | |
+| dlqr | 25 | 25 | S / K | 6.7e-14 / 4.8e-14 | 1e-10 | 5.4e-4 | 15 | 2.8e10 |
+| | | | 闭环极点 | 2.2e-14 | 1e-10 | | | |
+
+v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多乘了 T（18 例失败）；`margin` 离散系统漏掉 Nyquist 端点处的稳定裕度极小值（6 例）；`poles_zeros` 对 C = 0 的退化系统返回了空零点集而不是报错；`place` 在 B 方阵时初始特征向量矩阵奇异；python-control 零点参考中的伪"无穷远零点"（V-9）。
+
 
 ### 11.4 已知限制
 
@@ -664,9 +1152,19 @@ parity（参考 = python-control 0.10.2 / scipy 1.18.1，**不是 MATLAB**）：
 - Newton–Kleinman 修正只在 n ≤ 32 时进行（Kronecker 形式 O(n⁶)）；n > 32 只用符号函数解。golden 中最大 n = 40。
 - 只实现了 stdio 传输；未实现 Streamable HTTP、PyO3、C ABI 绑定；credentials 资源未提供。
 - 稀疏输入一律稠密化（`densify`），没有原生稀疏算法。
-- golden 规模小于 v0.1 parity.yaml 的计划数量（实际 264 例），且未跑 MATLAB；`matlab/gen_golden_bode.m` 未在 MATLAB 上运行过。
+- golden 规模小于 v0.1 parity.yaml 的计划数量（实际 264 + 353 例），且未跑 MATLAB；`matlab/gen_golden_bode.m` 未在 MATLAB 上运行过，v0.3 算子还没有 MATLAB 生成脚本。
+- **v0.3 算子的限制**：
+  - 未实现 d2c（离散 → 连续，需要矩阵对数）；`c2d` 只接受连续系统。
+  - 不做最小实现（minreal）/零极点对消；MIMO 转换得到非最小实现（有 warning）。zpk 只表示 SISO（R-8）。
+  - `place` 用 KNV 方法 0 的复数变体，不是 scipy 的 YT 方法；golden 中 cond(X) 最多为 YT 的 1.08 倍，没有对极难问题做系统比较。
+  - `margin` 只支持 SISO；恰在 Nyquist 频率的相位交越不报告（与 python-control 0.10.2 一致，D-6）；没有返回时滞裕度。
+  - `dlqr` 的误差估计（‖残差‖/sep）是启发式的；没有像 `lqr` 那样做病态 R 的专门测试。
+  - 不变零点在接近退化的系统上精度依赖约化时的秩判定；只有 2 个确定性点的法秩检查。
+  - `lyap` 的 error_estimate 在 A 非正规时可能偏乐观；规模上限由 manifest `limits` 控制，未做大规模（n > 100）测试。
+  - `ctrb_obsv` 的 Krylov 矩阵在 n 较大时本身病态，秩判定以 PBH 交叉检查兜底（`W.NUMERICAL.RANK_AMBIGUOUS`）。
+  - nalgebra 0.33 的实 Schur QR 没有特殊移位，个别矩阵会不收敛（实现中遇到：`margin` 的偶多项式伴随矩阵导致死循环）；参考实现用带迭代上限与确定性回退的 `schur_robust` 规避，回退路径只在少数矩阵上被触发过。
 - 只在一台 x86_64-linux 机器上测试，跨平台（aarch64、无 AVX-512）的 `platform_bitwise` 行为未验证。
-- b64/ref 编码只测试了 f64；c128/i64/bool 的二进制解码路径已实现但没有测试。`reject` 稀疏策略已定义但三个算子都未使用。
+- b64/ref 编码只测试了 f64；c128/i64/bool 的二进制解码路径已实现但没有测试。`reject` 稀疏策略已定义但算子都未使用。
 
 ## 12. 开放问题与下一步
 
@@ -676,7 +1174,8 @@ parity（参考 = python-control 0.10.2 / scipy 1.18.1，**不是 MATLAB**）：
 2. **单位的深度**：v0.2 只做声明与校验，不做量纲推导。是否需要状态/输入/输出逐通道单位？
 3. **时滞系统**：`InputDelay`/`OutputDelay`/内部时滞的表示与 Padé 近似策略未定义。
 4. ~~相位分支约定~~（v0.2 已用 `branch_center_deg` + numpy 一致的 unwrap 规则定义）；剩余：MATLAB `bode` 的分支选择与此是否一致，需 MATLAB golden 验证。
-5. **κ 缩放的容差**：v0.2 给出了 `lqr` 的 cond(S) 缩放与"自报估计 × 10"两种规则；其合理性还需 MATLAB golden 与更大规模用例标定。
+5. **κ 缩放的容差**：v0.2 给出了 `lqr` 的 cond(S) 缩放与"自报估计 × 10"两种规则；v0.3 增加了根（Wilkinson κ）、系数（Π(1+|λ|)）、DC 增益、离散化的缩放（V-6）。实测误差都远低于缩放后的容差，说明这些界偏保守；其合理性还需 MATLAB golden 与更大规模、更病态的用例标定。
+12. **（v0.3 新）参考实现自身的约定是否应成为规范**：例如 python-control 不报告恰在 Nyquist 频率的相位交越、离散 SM 用局部优化。v0.3 为了 parity 采用了相同约定并写明（D-6、V-10），但数学上更完整的定义可能不同；待 MATLAB golden 对照后再决定。
 6. **组合调用的可信度传播**：Agent 串联 `lqr → step` 时，上游误差如何传递到下游 trust？未处理。
 7. **会话/对象句柄**：是否允许"创建系统对象、返回句柄、后续按句柄调用"？会破坏纯函数性。
 8. **MATLAB 版本漂移**：建议凭证中锁定参考版本，并做版本间 diff 报告。
@@ -688,12 +1187,43 @@ parity（参考 = python-control 0.10.2 / scipy 1.18.1，**不是 MATLAB**）：
 
 1. 在有授权的机器上运行 `matlab/gen_golden_bode.m`（并补 step/lqr 脚本），先核对 `memory_order_nonsymmetric` 用例与 python-control 一致，再跑通第一份 A 级凭证
 2. 为 `lqr` 实现基于平衡 + 有序 Schur（或广义特征值）的求解路径，修复病态 R 的精度差距
-3. 再接 5–7 个差异较大的控制算子：`tf2ss`/`ss2tf`、`margin`、`lsim`、`lyap`、`place`、`c2d`、`kalman`
+3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；剩余：`lsim`、`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
 5. Agent 回归评测：同一组工程任务，对比"Agent + AEOI 工具"与"Agent + 裸 scipy"的正确率与自我修复率
 6. 根据以上反馈修订，冻结 v1.0
 
 ## 13. Changelog
+
+### v0.3-draft（2026-11-21）
+
+新增 9 个控制算子（10.4–10.12），实现过程中暴露的规范缺口与对应修订：
+
+| # | 改动 | 原因 |
+|---|---|---|
+| 1 | spec 标识升为 `aeoi/0.3`，schema `$id` 升为 `/0.3`；新算子版本 0.3.0，v0.2 三个算子保持 0.2.0（行为与输出逐位不变，示例 `output_hash` 未变） | 新增错误码、输出约定与比较规则属实质性改动；信封结构未变 |
+| 2 | 新增 3.10 多输出结果约定（R-1 – R-4）：具名字段、复数集合按集合比较、`"Inf"`/`"NaN"` 与 `null` 的区分、"代表值"必须同时返回全部候选 | `poles_zeros`、`margin`、`ctrb_obsv` 都有多个输出；`margin` 的 GM/PM 选择规则会让 Agent 误解，必须给出全部交越点 |
+| 3 | 返回系统的算子用 `result.system`（完整 LtiSystem，可直接串联）；新增 `realization` 枚举；ss→tf 约定写明（R-5 – R-7） | 状态空间实现不唯一，不写明则 Agent 无法判断两个 ss 是否等价；首项系数的浮点残留曾产生伪前导 0 |
+| 4 | zpk 在 v0.3 只表示 SISO；ss→zpk 的增益取 Markov 参数（R-8） | MIMO 的零极点表示需要逐元素或 Smith–McMillan 形式，v0.3 不定义 |
+| 5 | 零点定义为不变零点；非满法秩 MUST 报 `E.DOMAIN.DEGENERATE_SYSTEM`，不得返回空集（R-9） | 初版对 C = 0 的系统返回空零点集，被 parity 用例发现——"没有零点"与"零点无定义"对 Agent 是完全不同的结论 |
+| 6 | 离散时间约定 D-1 – D-6：频段、DC 增益在 z = 1、脉冲幅值 `discrete_scaling`、D·δ 的处理、c2d 公式、离散 margin 的搜索区间与端点 | v0.2 只有 `step` 一个离散相关约定；脉冲幅值（1/ts 还是 1）与 Nyquist 端点在不同软件间不一致，必须显式 |
+| 7 | 选项枚举 O-1 – O-3：改变数学定义的选项必须是带默认值的枚举并回显；矛盾组合报 `E.VALIDATION.OPTION_CONFLICT`；方程符号写明 | `c2d` 的 `prewarp_frequency` 只对 tustin 有意义，静默忽略会给出错误模型；Lyapunov 方程的符号约定在 scipy 与 python-control 之间不同 |
+| 8 | 登记新错误码 `OPTION_CONFLICT`、`RANK_DEFICIENT`、`MIMO_NOT_SUPPORTED`、`DEGENERATE_SYSTEM`、`NOT_CONTINUOUS`、`NOT_CONTROLLABLE`、`POLE_MULTIPLICITY`、`LYAP_SINGULAR`、`SYMPLECTIC_UNIT_CIRCLE_EIG` 与 11 个 warning（5.1） | 新算子的失败模式；全部是 DOMAIN/VALIDATION，告诉 Agent 调数值参数无效（X-1） |
+| 9 | V-6 增加根、系数、DC 增益、离散化的条件数缩放规则 | 多项式根与由特征值展开的系数天生病态，固定 rtol 会在合法用例上误报，或者被迫放宽到失去意义 |
+| 10 | 新增 V-5a：非唯一设计结果（MIMO `place` 的 K）用参考请求重算 eig(A − BK) 比较 | 初版只比较算子自报的达成极点，column-major 错误请求同样"配置成功"，内存序回归断言失败——这正是第 0 章警告的静默错误 |
+| 11 | 新增 V-9（参考值后处理须写明）与 V-10（参考是局部优化结果时的比较规则） | python-control 无 slycot 时把无穷远零点返回为 ~1e17 的有限数；其离散稳定裕度来自 L-BFGS-B，自身只有 ~1e-4 的频率精度 |
+| 12 | T2/T3 容差类的适用算子表扩充（7.2） | 覆盖新算子 |
+
+实现中发现并修正的问题：
+
+| # | 改动 | 原因（发现过程） |
+|---|---|---|
+| 13 | `c2d` tustin：Dd = D + ½·C·Bd（初版多乘了 T） | parity：D ≠ 0 的 18 个 tustin 用例偏差 ~0.1–1 |
+| 14 | 离散 `margin` 的稳定裕度候选加入 θ = 0、π 端点（D-6） | parity：6 个离散用例 python-control 的最小值在 Nyquist 端点 |
+| 15 | 实 Schur 分解改为带迭代上限与确定性回退的 `schur_robust`，`eigenvalues()` 与 `lyap` 共用 | nalgebra 0.33 的 QR 迭代在偶多项式的伴随矩阵上死循环（`margin` 调用挂起）；v0.2 算子示例输出逐位不变 |
+| 16 | `place` 在 m = n 时直接取酉矩阵 X | 初版的初始向量选择使 X 奇异，1 个 MIMO 用例报 `E.NUMERICAL.SINGULAR` |
+| 17 | `lyap` 的 Schur 不收敛映射为 `E.NUMERICAL.NO_CONVERGENCE`（不再与奇异混为一谈） | 区分 DOMAIN 与 NUMERICAL（X-1） |
+| 18 | `impulse` 与 `step` 共用实现（`control.lti.impulse` 为独立 manifest），warning 文案按算子区分 | 网格、规模限制、ZOH 递推完全相同；`step_info` 文案不适用于冲激响应 |
+| 19 | 示例目录新增 `reference.python-control.json`（示例请求的 python-control/scipy 参考值）；`regen_examples.py` 覆盖全部算子与全部 `request*.json` | 让每个示例都能独立核对，且 MCP 端到端测试按已发布响应的 `output_hash` 比对 |
 
 ### v0.2-draft（2026-11-21）
 
@@ -742,20 +1272,22 @@ parity（参考 = python-control 0.10.2 / scipy 1.18.1，**不是 MATLAB**）：
 
 ```
 ai-operator-spec/
-├── spec-v0.2.md                     本文（由 spec-src.md 内联示例文件生成）
-├── spec-v0.1.md                     v0.1 原文（历史）
-├── spec-src.md                      本文源稿（{{file:…}} 占位符）
-├── schemas/                         common / manifest / envelope / error（/0.2）
-├── examples/<id>/                   manifest、input/output schema、request(.error)、response(.success/.error)、parity.yaml
-│                                    bode 另有 request/response.ss_nonsymmetric.json
-├── golden/python-control/<op>/0.2.0/<sha256>.json + INDEX.json   264 个 python-control 参考用例（NOT MATLAB）
-├── reports/parity-python-control.json   parity 测试报告（cargo test 生成）
-├── reports/mcp-session.jsonl        脚本化 MCP 会话记录
+├── spec-v0.3.md                     本文（由 spec-src.md 经 build_spec.py 内联示例文件生成）
+├── spec-v0.2.md / spec-v0.1.md      历史版本
+├── spec-src.md                      本文源稿（file / jsonc 占位符）
+├── schemas/                         common / manifest / envelope / error（/0.3）
+├── examples/<id>/                   12 个算子：manifest、input/output schema、request(.error/.nonsymmetric)、
+│                                    response(.success/.error/.nonsymmetric)、parity.yaml；v0.3 算子另有 reference.python-control.json
+├── golden/python-control/<op>/<ver>/<sha256>.json + INDEX.json   264（0.2.0）+ 353（0.3.0）个 python-control 参考用例（NOT MATLAB）
+├── reports/parity-python-control.json / parity-python-control-b2.json   parity 测试报告（cargo test 生成）
+├── reports/mcp-session.jsonl        脚本化 MCP 会话记录（12 个工具）
 ├── rust/                            cargo workspace：aeoi-core、aeoi-control、aeoi-mcp（第 11 章）
 ├── matlab/gen_golden_bode.m         MATLAB golden 生成脚本（已修正内存序；未在 MATLAB 中运行）
 ├── write_manifests.py               examples/*/manifest 与 schema 的源
-├── gen_golden_pycontrol.py          python-control golden 生成器
+├── gen_golden_pycontrol.py / gen_golden_pycontrol_b2.py   python-control golden 生成器（v0.2 / v0.3 算子）
+├── make_examples_b2.py              v0.3 算子的示例请求、参考值与 parity.yaml
 ├── regen_examples.py                用 Rust 输出生成示例响应
+├── build_spec.py                    spec-src.md → spec-v0.3.md
 ├── validate_examples.py             独立 Python jsonschema 校验
 ├── mcp_session_demo.py              脚本化 MCP 会话
 ├── compute_examples.py / computed_values.json   v0.1 的 python-control 计算（examples 测试仍用其作对照）
