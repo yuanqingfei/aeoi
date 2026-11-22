@@ -8,7 +8,7 @@ use crate::schema::{inline, Validator};
 use crate::SPEC;
 use serde_json::{json, Value};
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::time::Instant;
+use web_time::Instant;
 
 /// Successful operator output; the framework adds hashes, timing and the envelope.
 pub struct Output {
@@ -84,6 +84,13 @@ pub fn build_string() -> String {
         option_env!("AEOI_GIT_SHA").unwrap_or("nogit"),
         option_env!("AEOI_RUSTC_VERSION").unwrap_or("1.85")
     )
+}
+
+/// `<arch>-<os>`, e.g. `x86_64-linux`; the browser build (wasm32-unknown-unknown, OS = "") reports
+/// `wasm32-unknown`. A different platform string means `platform_bitwise` results may differ.
+pub fn platform() -> String {
+    let os = if std::env::consts::OS.is_empty() { "unknown" } else { std::env::consts::OS };
+    format!("{}-{}", std::env::consts::ARCH, os)
 }
 
 pub fn cpu_features() -> Vec<&'static str> {
@@ -198,7 +205,7 @@ impl<T: Operator> DynOperator for T {
             "reproducibility": {
                 "determinism": m.determinism, "tolerance_class": m.tolerance_class,
                 "input_hash": input_hash, "output_hash": output_hash,
-                "platform": format!("{}-{}", std::env::consts::ARCH, std::env::consts::OS),
+                "platform": platform(),
                 "cpu_features": cpu_features(),
                 "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
                 "threads": 1, "seed": ctx.seed

@@ -1,0 +1,24 @@
+[package]
+name = "aeoi-wasm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "AEOI operators + LLM tool bridge compiled to WebAssembly (wasm-bindgen) for the GitHub Pages test bench"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+aeoi-core = { path = "../aeoi-core" }
+aeoi-control = { path = "../aeoi-control" }
+aeoi-bridge = { path = "../aeoi-bridge" }
+serde_json.workspace = true
+wasm-bindgen = "=0.2.130"
+
+# getrandom is pulled in by jsonschema/ahash; on wasm32-unknown-unknown it needs the JS backend.
+# (0.3 additionally needs `--cfg getrandom_backend="wasm_js"`, set in rust/.cargo/config.toml)
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+getrandom02 = { package = "getrandom", version = "0.2", features = ["js"] }
+getrandom03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }

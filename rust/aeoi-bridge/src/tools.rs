@@ -7,7 +7,7 @@
 use crate::schema_conv::{llm_surface, to_gemini, user_provenance_fields, Loss, USER_QUOTE};
 use aeoi_core::{DynOperator, HostCtx};
 use serde_json::{json, Map, Value};
-use std::time::Instant;
+use web_time::Instant;
 
 static CALLS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 

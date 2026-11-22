@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["aeoi-core", "aeoi-control", "aeoi-mcp", "aeoi-web"]
+members = ["aeoi-core", "aeoi-control", "aeoi-mcp", "aeoi-bridge", "aeoi-web", "aeoi-wasm"]
 
 [workspace.package]
 version = "0.3.0"
@@ -20,3 +20,12 @@ jsonschema = { version = "0.18", default-features = false, features = ["draft202
 debug = false
 [profile.test]
 opt-level = 2
+
+# Size-optimised profile for the browser build (aeoi-wasm). opt-level/LTO do not change IEEE-754
+# results (no fast-math); the wasm-vs-native parity run checks it.
+[profile.wasm-release]
+inherits = "release"
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"

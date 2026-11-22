@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 use std::time::Instant;
 use tokio::sync::mpsc::UnboundedSender;
 
-pub const SYSTEM_PROMPT: &str = include_str!("system_prompt.zh.md");
+pub use aeoi_bridge::SYSTEM_PROMPT;
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct ToolStep {
@@ -82,18 +82,12 @@ pub fn count_self_corrections(steps: &[ToolStep]) -> usize {
     n
 }
 
-/// Marker of harness-generated user turns (nudges); they never count as the user's own words.
-pub const NUDGE_PREFIX: &str = "（系统提示）";
-
-/// Everything the user actually said in this conversation (for the F-5 grounding check).
-pub fn user_text(history: &[Msg]) -> String {
-    history.iter().filter_map(|m| if let Msg::User(t) = m { (!t.starts_with(NUDGE_PREFIX)).then_some(t.as_str()) } else { None }).collect::<Vec<_>>().join("\n")
-}
+pub use aeoi_bridge::llm::{user_text, NUDGE_PREFIX};
 
 /// Runs one user message on top of `history` (which is extended in place).
 pub async fn run(provider: &dyn Provider, bridge: &Bridge, history: &mut Vec<Msg>, question: &str, cfg: &AgentCfg, tx: Option<UnboundedSender<Value>>) -> Transcript {
     let mut tr = Transcript { provider: provider.name().into(), model: provider.model().into(), question: question.into(), ..Default::default() };
-    history.push(Msg::User(question.to_string()));
+    history.push(Msg::user(question));
     let mut step = 0;
     let mut nudges = 0;
     loop {
@@ -132,10 +126,10 @@ pub async fn run(provider: &dyn Provider, bridge: &Bridge, history: &mut Vec<Msg
             // that does not fit the declared parameters). Tell it so and let it try again.
             nudges += 1;
             let why = resp.finish_reason.clone().unwrap_or_else(|| "EMPTY".into());
-            let nudge = format!("{NUDGE_PREFIX}上一轮没有产生有效输出（{why}）。如果要调用工具，请严格按该工具的 parameters 构造参数：矩阵写成 {{\"dtype\":\"f64\",\"shape\":[行,列],\"data\":[...]}}，必填字段齐全；如果缺少必要信息，请直接用中文向用户提问。");
+            let nudge = aeoi_bridge::llm::nudge_text(&why);
             emit(&tx, json!({"type": "nudge", "step": step, "reason": why}));
             tr.nudges.push(why);
-            history.push(Msg::User(nudge));
+            history.push(Msg::user(nudge));
             continue;
         }
         history.push(Msg::Assistant { text: resp.text.clone(), calls: resp.calls.clone(), raw: resp.raw.clone() });
@@ -247,7 +241,7 @@ mod tests {
         assert_eq!(tr.stopped, "answered");
         assert_eq!(tr.nudges, vec!["MALFORMED_FUNCTION_CALL".to_string()]);
         assert_eq!(tr.final_text.as_deref(), Some("请提供 C 矩阵"));
-        assert!(matches!(&h[1], Msg::User(t) if t.contains("MALFORMED_FUNCTION_CALL")));
+        assert!(matches!(&h[1], Msg::User { text } if text.contains("MALFORMED_FUNCTION_CALL")));
     }
 
     #[test]

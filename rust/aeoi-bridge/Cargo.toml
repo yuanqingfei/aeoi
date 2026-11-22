@@ -1,0 +1,15 @@
+[package]
+name = "aeoi-bridge"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Runtime-free LLM binding for AEOI operators: function declarations, Gemini/OpenAI wire formats, tool bridge with F-5 grounding. No tokio/reqwest, compiles to wasm32."
+
+[dependencies]
+aeoi-core = { path = "../aeoi-core" }
+aeoi-control = { path = "../aeoi-control" }
+serde.workspace = true
+serde_json.workspace = true
+regex = { version = "1", default-features = false, features = ["std", "unicode-perl"] }
+web-time = "1"
