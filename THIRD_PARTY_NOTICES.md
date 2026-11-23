@@ -17,6 +17,8 @@ into the binaries we build. Regenerate the crate table with `python3 tools/gen_t
 | python-control 0.10.2, scipy, numpy | generate `golden/python-control/` reference values (`gen_golden_pycontrol*.py`); values only, no code copied | BSD-3-Clause |
 | mpmath | 50-digit reference values in `golden/mpmath/` (`gen_golden_mpmath.py`) | BSD-3-Clause |
 | tpt-control (rev 10e4320, © TPT Solutions) | `tools/xcheck-tpt/` cross-check harness, referenced by git rev; no source copied | MIT OR Apache-2.0 |
+| EngDesign (commit c8ec338, © 2025 EngDesign Benchmark Team) | 10 control/DSP task prompts, rubrics and reference solutions vendored verbatim in `eval/design/engdesign.json` (`tools/vendor_engdesign.py`); scoring re-implemented, no evaluator code copied | MIT — `eval/design/LICENSE-EngDesign` |
+| ControlEval (EnvCommons/ControlEval; data from ControlAgent/ControlAgent) | design tasks downloaded at run time by `eval/design/fetch_controleval.py` into the gitignored `eval/design/upstream/`; nothing vendored, prompts and scoring are our own | none declared (not redistributed) |
 
 Ideas borrowed, no code copied: result receipts and verify-by-replay (spec 4.3) from bicmath (https://github.com/nikoma/bicmath, MIT); "no evidence, no success claim" (spec E-11) from matlab-mcp-extensions (https://github.com/zws20070309/matlab-mcp-extensions).
 
@@ -32,23 +34,23 @@ Ideas borrowed, no code copied: result receipts and verify-by-replay (spec 4.3) 
 | Unicode-3.0 | 18 |
 | Apache-2.0 OR MIT | 10 |
 | MIT/Apache-2.0 | 6 |
-| Apache-2.0 | 4 |
 | Zlib OR Apache-2.0 OR MIT | 4 |
+| Apache-2.0 | 4 |
 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | 3 |
-| Unlicense OR MIT | 2 |
-| Apache-2.0 OR ISC OR MIT | 2 |
-| BSD-2-Clause OR Apache-2.0 OR MIT | 2 |
 | ISC | 2 |
+| BSD-2-Clause OR Apache-2.0 OR MIT | 2 |
+| Apache-2.0 OR ISC OR MIT | 2 |
+| Unlicense OR MIT | 2 |
 | MIT OR Apache-2.0 OR LGPL-2.1-or-later | 2 |
+| Apache-2.0/MIT | 1 |
+| BSD-3-Clause | 1 |
+| MIT AND BSD-3-Clause | 1 |
+| Zlib | 1 |
 | Apache-2.0 AND ISC | 1 |
 | MIT OR Apache-2.0 OR Zlib | 1 |
-| Zlib | 1 |
-| MIT AND BSD-3-Clause | 1 |
-| Apache-2.0 OR BSL-1.0 | 1 |
-| Apache-2.0/MIT | 1 |
 | (MIT OR Apache-2.0) AND Unicode-3.0 | 1 |
+| Apache-2.0 OR BSL-1.0 | 1 |
 | CDLA-Permissive-2.0 | 1 |
-| BSD-3-Clause | 1 |
 
 | Crate | Version | License | In browser build |
 |---|---|---|---|
