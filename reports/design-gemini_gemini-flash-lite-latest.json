@@ -24,26 +24,27 @@
   },
   "aborted": null,
   "summary": {
-    "tasks": 6,
+    "tasks": 7,
     "passed": 0,
     "pass_rate": 0.0,
-    "submitted": 4,
-    "mean_score_where_defined": 37.5,
+    "submitted": 5,
+    "mean_score_where_defined": 43.6,
     "by_benchmark": {
-      "EngDesign": "0/6"
+      "EngDesign": "0/7"
     },
     "tool_calls": {
       "control_analysis_ctrb_obsv": 1,
       "control_analysis_margin": 16,
+      "control_design_place": 2,
       "control_lti_bode": 5,
       "control_lti_poles_zeros": 2,
       "control_lti_step": 2
     },
     "tool_errors": 3,
-    "model_turns": 30,
+    "model_turns": 33,
     "provider_errors": 0,
-    "total_tokens": 665010,
-    "wall_time_s": 295.142979531
+    "total_tokens": 723271,
+    "wall_time_s": 402.26808224
   },
   "results": [
     {
@@ -5041,6 +5042,355 @@
           "is_error": true,
           "error_code": "E.VALIDATION.SCHEMA",
           "latency_ms": 13.13358
+        }
+      ]
+    },
+    {
+      "id": "engdesign/LX_02",
+      "benchmark": "EngDesign",
+      "scorer": "maglev_observer",
+      "submitted": true,
+      "submission": {
+        "l1": 11,
+        "b21": -2,
+        "a11": 0,
+        "s2": 1,
+        "a12": 1,
+        "s1": 1,
+        "b11": 0,
+        "s3": 0,
+        "a21": 2,
+        "k1": -2,
+        "a22": 0,
+        "s4": 0,
+        "k2": -1,
+        "l2": 32
+      },
+      "pass": false,
+      "score": 68.0,
+      "details": {
+        "A": true,
+        "B": true,
+        "K": true,
+        "L": true,
+        "s1": true,
+        "s2": false,
+        "s3": false,
+        "s4": true
+      },
+      "expected_blockers": [
+        "nonlinear simulation (region of attraction)"
+      ],
+      "tool_calls": [
+        "control_design_place",
+        "control_design_place"
+      ],
+      "tool_errors": [],
+      "self_corrections": 0,
+      "model_turns": 3,
+      "stopped": "submitted",
+      "final_text": "磁悬浮系统线性化、全状态反馈控制器与全维观测器设计，以及非线性系统渐近稳定性分析完成。",
+      "provider_error": null,
+      "total_tokens": 58261,
+      "latency_s": 107.116141854,
+      "transcript_tools": [
+        {
+          "step": 1,
+          "tool": "control_design_place",
+          "operator_id": "control.design.place",
+          "call_id": "call_8023980608769841249",
+          "request": {
+            "B": {
+              "dtype": "f64",
+              "data": [
+                0,
+                -2
+              ],
+              "shape": [
+                2,
+                1
+              ]
+            },
+            "A": {
+              "shape": [
+                2,
+                2
+              ],
+              "data": [
+                0,
+                1,
+                2,
+                0
+              ],
+              "dtype": "f64"
+            },
+            "poles": [
+              [
+                -1,
+                1
+              ],
+              [
+                -1,
+                -1
+              ]
+            ]
+          },
+          "response": {
+            "spec": "aeoi/0.3",
+            "status": "ok",
+            "dry_run": false,
+            "operator": {
+              "id": "control.design.place",
+              "version": "0.3.0",
+              "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+            },
+            "request_id": "web-37",
+            "result": {
+              "K": {
+                "dtype": "f64",
+                "shape": [
+                  1,
+                  2
+                ],
+                "data": [
+                  -1.9999999999999996,
+                  -0.9999999999999997
+                ]
+              },
+              "achieved_poles": {
+                "dtype": "c128",
+                "shape": [
+                  2
+                ],
+                "data": [
+                  [
+                    -0.9999999999999997,
+                    0.9999999999999999
+                  ],
+                  [
+                    -0.9999999999999997,
+                    -0.9999999999999999
+                  ]
+                ]
+              }
+            },
+            "trust": {
+              "convergence": {
+                "applicable": false,
+                "converged": true,
+                "iterations": 0,
+                "criterion": "一次扫描后 ln|det X̂|（列归一化）变化 < 1e-6",
+                "final_value": -0.4054651081081641
+              },
+              "residual": {
+                "pole_placement_max_rel": 2.482534153247273e-16,
+                "M_imag_rel": 6.409875621278546e-17,
+                "definition": "eig(A−BK) 与期望极点最近匹配的最大相对差（以 max(1,|p|) 归一）；M_imag_rel = max|Im(XΛX⁻¹)|/‖·‖_F"
+              },
+              "condition": {
+                "cond_X_eigvec": 2.6180339887498936,
+                "pbh_min_rel_sv": 0.3333333333333333,
+                "K_norm_fro": 2.236067977499789,
+                "inputs": 1
+              },
+              "error_estimate": {
+                "poles_rel": 5.81320322712274e-16,
+                "basis": "max(后验极点偏差, u·cond(X))；闭环极点的一阶扰动界 ∝ cond(X)·‖ΔA‖（Bauer–Fike）"
+              },
+              "checks": {
+                "poles_placed": true,
+                "conjugate_closed": true
+              },
+              "accuracy_grade": "B",
+              "credentials": null
+            },
+            "receipt": {
+              "claim": "verified",
+              "failed_postconditions": [],
+              "exactness": {
+                "class": "approximate",
+                "bound_kind": "a_posteriori_heuristic"
+              },
+              "unchecked_assumptions": [
+                "多输入时 K 不唯一：结果是满足极点配置的一个 K"
+              ],
+              "method": "aeoi:place:knv0-complex",
+              "fingerprint": "sha256:bd55b8afb180083dc9392182b92d30b8cb52f5d2c7502a195b9dd76f28d0a5b9"
+            },
+            "warnings": [],
+            "error": null,
+            "reproducibility": {
+              "determinism": "platform_bitwise",
+              "tolerance_class": "T2",
+              "input_hash": "sha256:9ffaefcfc42ac2cdc05e66df860f95e21745ed41b7d23b0f945513b61448ebe3",
+              "output_hash": "sha256:5448ce73d36384fa3a6bac609503d4b9525dc98f434705da01cca4500646fa21",
+              "platform": "x86_64-linux",
+              "cpu_features": [
+                "avx",
+                "avx2",
+                "fma",
+                "avx512f"
+              ],
+              "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+              "threads": 1,
+              "seed": null
+            },
+            "timing": {
+              "wall_ms": 2.015184
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "latency_ms": 2.202356
+        },
+        {
+          "step": 2,
+          "tool": "control_design_place",
+          "operator_id": "control.design.place",
+          "call_id": "call_675362055558195578",
+          "request": {
+            "poles": [
+              [
+                -5,
+                0
+              ],
+              [
+                -6,
+                0
+              ]
+            ],
+            "A": {
+              "data": [
+                0,
+                2,
+                1,
+                0
+              ],
+              "dtype": "f64",
+              "shape": [
+                2,
+                2
+              ]
+            },
+            "B": {
+              "data": [
+                1,
+                0
+              ],
+              "dtype": "f64",
+              "shape": [
+                2,
+                1
+              ]
+            }
+          },
+          "response": {
+            "spec": "aeoi/0.3",
+            "status": "ok",
+            "dry_run": false,
+            "operator": {
+              "id": "control.design.place",
+              "version": "0.3.0",
+              "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+            },
+            "request_id": "web-38",
+            "result": {
+              "K": {
+                "dtype": "f64",
+                "shape": [
+                  1,
+                  2
+                ],
+                "data": [
+                  10.999999999999986,
+                  31.99999999999996
+                ]
+              },
+              "achieved_poles": {
+                "dtype": "c128",
+                "shape": [
+                  2
+                ],
+                "data": [
+                  [
+                    -5.999999999999953,
+                    0.0
+                  ],
+                  [
+                    -5.000000000000031,
+                    0.0
+                  ]
+                ]
+              }
+            },
+            "trust": {
+              "convergence": {
+                "applicable": false,
+                "converged": true,
+                "iterations": 0,
+                "criterion": "一次扫描后 ln|det X̂|（列归一化）变化 < 1e-6",
+                "final_value": -3.4345072253328492
+              },
+              "residual": {
+                "pole_placement_max_rel": 7.84557604068444e-15,
+                "M_imag_rel": 0.0,
+                "definition": "eig(A−BK) 与期望极点最近匹配的最大相对差（以 max(1,|p|) 归一）；M_imag_rel = max|Im(XΛX⁻¹)|/‖·‖_F"
+              },
+              "condition": {
+                "cond_X_eigvec": 62.01612483854146,
+                "pbh_min_rel_sv": 0.22715055219559063,
+                "K_norm_fro": 33.83784863137722,
+                "inputs": 1
+              },
+              "error_estimate": {
+                "poles_rel": 1.3770345938755359e-14,
+                "basis": "max(后验极点偏差, u·cond(X))；闭环极点的一阶扰动界 ∝ cond(X)·‖ΔA‖（Bauer–Fike）"
+              },
+              "checks": {
+                "poles_placed": true,
+                "conjugate_closed": true
+              },
+              "accuracy_grade": "B",
+              "credentials": null
+            },
+            "receipt": {
+              "claim": "verified",
+              "failed_postconditions": [],
+              "exactness": {
+                "class": "approximate",
+                "bound_kind": "a_posteriori_heuristic"
+              },
+              "unchecked_assumptions": [
+                "多输入时 K 不唯一：结果是满足极点配置的一个 K"
+              ],
+              "method": "aeoi:place:knv0-complex",
+              "fingerprint": "sha256:de62b44e6b23726b571d1a478de4aa56407bffa3657fb23a7df781f487aacaf9"
+            },
+            "warnings": [],
+            "error": null,
+            "reproducibility": {
+              "determinism": "platform_bitwise",
+              "tolerance_class": "T2",
+              "input_hash": "sha256:042e4d39286f8b4041e8b4c3548073270f6d3dd56831cb2a7b74d3d502834d86",
+              "output_hash": "sha256:09a0d49a173cd468260efdcef2a8797a0e60b883c25777ab81e785aa9d8f883b",
+              "platform": "x86_64-linux",
+              "cpu_features": [
+                "avx",
+                "avx2",
+                "fma",
+                "avx512f"
+              ],
+              "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+              "threads": 1,
+              "seed": null
+            },
+            "timing": {
+              "wall_ms": 1.272957
+            }
+          },
+          "is_error": false,
+          "error_code": null,
+          "latency_ms": 1.36511
         }
       ]
     }
