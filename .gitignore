@@ -4,3 +4,4 @@ __pycache__/
 *.bak
 _site/
 eval/design/upstream/
+*.json.partial

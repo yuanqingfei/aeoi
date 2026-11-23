@@ -165,6 +165,7 @@ pub fn submit_tool(task: &Value) -> ToolDef {
 
 // ------------------------------------------------------------------------------------------ agent loop
 
+#[derive(Clone)]
 pub struct DesignRun {
     pub turns: Vec<ModelTurn>,
     pub tools: Vec<ToolStep>,
@@ -175,7 +176,7 @@ pub struct DesignRun {
     pub total_tokens: u64,
 }
 
-pub async fn run_task(provider: &dyn Provider, bridge: &Bridge, task: &Value, max_steps: usize) -> DesignRun {
+pub async fn run_task(provider: &dyn Provider, bridge: &Bridge, task: &Value, max_steps: usize, call_timeout: Duration, mut on_turn: impl FnMut(&DesignRun)) -> DesignRun {
     let system = format!("{}{DESIGN_ADDENDUM}", crate::agent::SYSTEM_PROMPT);
     let mut tools = bridge.tools.clone();
     tools.push(submit_tool(task));
@@ -185,11 +186,18 @@ pub async fn run_task(provider: &dyn Provider, bridge: &Bridge, task: &Value, ma
     let mut nudges = 0;
     for step in 1..=max_steps {
         let t0 = Instant::now();
-        let resp = match provider.chat(&system, &hist, &tools).await {
-            Ok(r) => r,
-            Err(e) => {
+        let resp = match tokio::time::timeout(call_timeout, provider.chat(&system, &hist, &tools)).await {
+            Ok(Ok(r)) => r,
+            Ok(Err(e)) => {
                 run.error = Some(e);
                 run.stopped = "provider_error".into();
+                on_turn(&run);
+                return run;
+            }
+            Err(_) => {
+                run.error = Some(format!("call_timeout: 单次模型请求超过 {:.0} s 未返回（含 429/5xx 退避）", call_timeout.as_secs_f64()));
+                run.stopped = "call_timeout".into();
+                on_turn(&run);
                 return run;
             }
         };
@@ -210,6 +218,7 @@ pub async fn run_task(provider: &dyn Provider, bridge: &Bridge, task: &Value, ma
             }
             if nudges >= 2 {
                 run.stopped = "answered_without_submit".into();
+                on_turn(&run);
                 return run;
             }
             nudges += 1;
@@ -218,6 +227,7 @@ pub async fn run_task(provider: &dyn Provider, bridge: &Bridge, task: &Value, ma
             }
             let why = resp.finish_reason.clone().unwrap_or_default();
             hist.push(Msg::user(&if resp.text.is_none() { aeoi_bridge::llm::nudge_text(&why) } else { format!("没有用户可以回答问题。请完成设计并调用 {SUBMIT} 提交（只能调用一次）。") }));
+            on_turn(&run);
             continue;
         }
         hist.push(Msg::Assistant { text: resp.text.clone(), calls: resp.calls.clone(), raw: resp.raw.clone() });
@@ -227,6 +237,7 @@ pub async fn run_task(provider: &dyn Provider, bridge: &Bridge, task: &Value, ma
                 run.submission = Some(ans);
                 run.final_text = c.args["summary"].as_str().map(|s| s.to_string()).or(resp.text.clone());
                 run.stopped = "submitted".into();
+                on_turn(&run);
                 return run;
             }
             let (env, ms) = bridge.call_grounded(&c.name, &c.args, Some(&prompt));
@@ -244,8 +255,10 @@ pub async fn run_task(provider: &dyn Provider, bridge: &Bridge, task: &Value, ma
             });
             hist.push(Msg::Tool { call_id: c.id.clone(), name: c.name.clone(), response: compact_for_model(&env, 120) });
         }
+        on_turn(&run);
     }
     run.stopped = "max_steps".into();
+    on_turn(&run);
     run
 }
 
@@ -259,6 +272,12 @@ fn val(v: &Value) -> f64 {
         Value::String(s) if s == "-Inf" || s == "-inf" => f64::NEG_INFINITY,
         _ => f64::NAN,
     }
+}
+
+/// JSON number that keeps NaN/Inf (spec R-2 strings). `json!(f64::INFINITY)` becomes null, which
+/// made an infinite phase margin look like a missing field while still passing `pm > 60`.
+fn jn(x: f64) -> Value {
+    aeoi_core::num(x)
 }
 
 fn tf(num: &[f64], den: &[f64], ts: f64) -> Value {
@@ -352,14 +371,14 @@ fn pid_unity(b: &Bridge, tid: &str, a: &Value) -> Scored {
     let l = series((&g.0, &g.1), (&c.0, &c.1));
     let t = feedback(&l);
     let (stable, max_re) = cl_stable(b, &t.0, &t.1, 0.0)?;
-    let mut d = json!({"stable": stable, "max_pole_re": max_re});
+    let mut d = json!({"stable": stable, "max_pole_re": jn(max_re)});
     if !stable {
         return Ok((false, Some(0.0), d));
     }
     if tid == "XG_13" {
         let (ts, os, _) = step_info(b, &t.0, &t.1, 10.0, 0.02)?;
-        d["settling_time"] = json!(ts);
-        d["overshoot_pct"] = json!(os);
+        d["settling_time"] = jn(ts);
+        d["overshoot_pct"] = jn(os);
         d["upstream_literal_pass"] = json!(ts < 2.0 && os < 0.05);
         let score = 40.0 + if ts < 0.2 { 30.0 } else { 0.0 } + if os < 5.0 { 30.0 } else { 0.0 };
         return Ok((ts < 0.2 && os < 5.0, Some(score), d));
@@ -368,7 +387,7 @@ fn pid_unity(b: &Bridge, tid: &str, a: &Value) -> Scored {
     let m = margins(b, &l.0, &l.1)?;
     let (gm, pm) = (val(&m["gain_margin_db"]), val(&m["phase_margin"]));
     let e = (1.0 - yf).abs();
-    d.update_with(json!({"settling_time_5pct": ts, "overshoot_pct": os, "ess": e, "gm_db": gm, "pm_deg": pm,
+    d.update_with(json!({"settling_time_5pct": jn(ts), "overshoot_pct": jn(os), "ess": jn(e), "gm_db": jn(gm), "pm_deg": jn(pm),
         "upstream_literal_pass": ts < 5.0 && os < 20.0 && e < 1e-3 && gm > 20.0 && pm > 45.0}));
     let score = [(ts < 5.0, 30.0), (os < 20.0, 20.0), (e < 1e-3, 30.0), (gm > 10.0, 10.0), (pm > 45.0, 10.0)].iter().filter(|x| x.0).map(|x| x.1).sum::<f64>();
     Ok((score == 100.0, Some(score), d))
@@ -395,7 +414,7 @@ fn fopdt(b: &Bridge, a: &Value) -> Scored {
     let th_ok = (theta - 16.5).abs() <= 2.0;
     let ta_ok = (tau - 19.5).abs() <= 2.0;
     let (stable, max_re) = cl_stable(b, &t.0, &t.1, 0.0)?;
-    let mut d = json!({"theta_ok": th_ok, "tau_ok": ta_ok, "stable": stable, "max_pole_re": max_re});
+    let mut d = json!({"theta_ok": th_ok, "tau_ok": ta_ok, "stable": stable, "max_pole_re": jn(max_re)});
     let base = if th_ok { 10.0 } else { 0.0 } + if ta_ok { 10.0 } else { 0.0 };
     if !stable {
         return Ok((false, Some(base), d));
@@ -403,7 +422,7 @@ fn fopdt(b: &Bridge, a: &Value) -> Scored {
     let (ts, os, _) = step_info(b, &t.0, &t.1, 2000.0, 0.02)?;
     let m = margins(b, &l.0, &l.1)?;
     let (gm, pm) = (val(&m["gain_margin_db"]), val(&m["phase_margin"]));
-    d.update_with(json!({"settling_time": ts, "overshoot_pct": os, "gm_db": gm, "pm_deg": pm}));
+    d.update_with(json!({"settling_time": jn(ts), "overshoot_pct": jn(os), "gm_db": jn(gm), "pm_deg": jn(pm)}));
     let checks = [(os <= 10.0, 20.0), (ts <= 150.0, 20.0), (gm > 7.0, 20.0), (pm > 60.0, 20.0)];
     let score = base + checks.iter().filter(|x| x.0).map(|x| x.1).sum::<f64>();
     Ok((score == 100.0, Some(score), d))
@@ -458,7 +477,7 @@ fn loopshape(b: &Bridge, tid: &str, a: &Value) -> Scored {
     let l = series((&g.0, &g.1), (&k.0, &k.1));
     let t = feedback(&l);
     let (stable, max_re) = cl_stable(b, &t.0, &t.1, 0.0)?;
-    d.update_with(json!({"stable": stable, "max_pole_re": max_re}));
+    d.update_with(json!({"stable": stable, "max_pole_re": jn(max_re)}));
     let coef_ok = d["tf_equivalent"] == true;
     let coef_pts = if coef_ok { 40.0 } else { 0.0 };
     if !stable {
@@ -468,7 +487,7 @@ fn loopshape(b: &Bridge, tid: &str, a: &Value) -> Scored {
     let gmax = max_over(&m["crossings"]["phase"], "gain_margin_db");
     let pmax = max_over(&m["crossings"]["gain"], "phase_margin_deg");
     let gmax_abs = 10f64.powf(gmax / 20.0);
-    d.update_with(json!({"gm_db_min": val(&m["gain_margin_db"]), "pm_deg_min": val(&m["phase_margin"]), "gm_db_max": gmax, "pm_deg_max": pmax,
+    d.update_with(json!({"gm_db_min": jn(val(&m["gain_margin_db"])), "pm_deg_min": jn(val(&m["phase_margin"])), "gm_db_max": jn(gmax), "pm_deg_max": jn(pmax),
         "upstream_literal_pass": d["num_ok_upstream_literal"] == true && d["den_ok_upstream_literal"] == true && gmax_abs >= gmin && pmax >= pmin}));
     let score = coef_pts + 20.0 + if pmax >= pmin { 20.0 } else { 0.0 } + if gmax >= gmin { 20.0 } else { 0.0 };
     Ok((score == 100.0, Some(score), d))
@@ -503,7 +522,7 @@ fn loopshape_bandwidth(b: &Bridge, a: &Value) -> Scored {
     let l = series((&gn, &gd), (&num, &den));
     let t = feedback(&l);
     let (stable, max_re) = cl_stable(b, &t.0, &t.1, 0.0)?;
-    let mut d = json!({"stable": stable, "max_pole_re": max_re});
+    let mut d = json!({"stable": stable, "max_pole_re": jn(max_re)});
     if !stable {
         return Ok((false, Some(0.0), d));
     }
@@ -519,9 +538,16 @@ fn loopshape_bandwidth(b: &Bridge, a: &Value) -> Scored {
     }
     let mg = margins(b, &l.0, &l.1)?;
     let (gm, pm) = (val(&mg["gain_margin_db"]), val(&mg["phase_margin"]));
-    d.update_with(json!({"bandwidth_hz": bw, "gm_db": gm, "pm_deg": pm, "upstream_literal_pass": (bw - 85.0).abs() <= 10.0 && 10f64.powf(gm / 20.0) > 1.5 && pm > 60.0}));
-    let ok = (bw - 85.0).abs() <= 10.0 && gm > 1.5 && pm > 60.0;
-    Ok((ok, Some(if ok { 100.0 } else { 0.0 }), d))
+    // Rubric (vendored): bandwidth 40, GM > 1.5 dB 30, PM > 60° 30. Upstream's MATLAB scorer is
+    // all-or-nothing on the pass flag but still returns this partial score; an earlier version of
+    // ours returned 100 or 0, so a stable design that only missed the bandwidth got 0.
+    let bw_ok = (bw - 85.0).abs() <= 10.0;
+    let gm_ok = gm > 1.5;
+    let pm_ok = pm > 60.0;
+    let score = (if bw_ok { 40.0 } else { 0.0 }) + (if gm_ok { 30.0 } else { 0.0 }) + (if pm_ok { 30.0 } else { 0.0 });
+    d.update_with(json!({"bandwidth_hz": jn(bw), "gm_db": jn(gm), "pm_deg": jn(pm), "bandwidth_ok": bw_ok, "gm_ok": gm_ok, "pm_ok": pm_ok,
+        "upstream_literal_pass": bw_ok && 10f64.powf(gm / 20.0) > 1.5 && pm > 60.0}));
+    Ok((bw_ok && gm_ok && pm_ok, Some(score), d))
 }
 
 fn maglev(a: &Value) -> Scored {
@@ -560,7 +586,7 @@ fn iir_notch(b: &Bridge, a: &Value) -> Scored {
     let tg = mag_db(b, &num, &den, ts, &[120.0])?[0];
     let d = json!({"lower_ok": lo.iter().all(|x| *x >= -3.0), "upper_ok": hi.iter().all(|x| *x >= -3.0), "target_ok": tg <= -40.0,
         "order_ok": order <= 50.0, "coeff_ok": num.len() as f64 == order + 1.0 && den.len() as f64 == order + 1.0,
-        "min_db_lower": lo.iter().cloned().fold(f64::INFINITY, f64::min), "min_db_upper": hi.iter().cloned().fold(f64::INFINITY, f64::min), "db_at_120hz": tg});
+        "min_db_lower": jn(lo.iter().cloned().fold(f64::INFINITY, f64::min)), "min_db_upper": jn(hi.iter().cloned().fold(f64::INFINITY, f64::min)), "db_at_120hz": jn(tg)});
     let (ok, s) = weighted(&d, &[("lower_ok", 0.2), ("upper_ok", 0.2), ("target_ok", 0.4), ("order_ok", 0.1), ("coeff_ok", 0.1)]);
     Ok((ok, Some(s), d))
 }
@@ -576,7 +602,7 @@ fn fir_antialias(b: &Bridge, a: &Value) -> Scored {
     let tb = mag_db(b, &c, &den, ts, &linspace(3500.0, 4000.0, 20))?;
     let d = json!({"pass_ok": pb.iter().all(|x| *x >= -3.0), "stop_ok": sb[1..].iter().all(|x| *x <= -40.0), "trans_ok": tb[1..].iter().all(|x| *x <= 0.0),
         "order_ok": order <= 350.0, "ord_coeff_ok": c.len() as f64 == order + 1.0, "stpbnd_ok": (3500.0..=4000.0).contains(&stp), "decim_ok": dec == 6.0,
-        "min_db_pass": pb.iter().cloned().fold(f64::INFINITY, f64::min), "max_db_stop": sb[1..].iter().cloned().fold(f64::NEG_INFINITY, f64::max)});
+        "min_db_pass": jn(pb.iter().cloned().fold(f64::INFINITY, f64::min)), "max_db_stop": jn(sb[1..].iter().cloned().fold(f64::NEG_INFINITY, f64::max))});
     let (ok, s) = weighted(&d, &[("pass_ok", 0.2), ("stop_ok", 0.2), ("trans_ok", 0.1), ("order_ok", 0.1), ("ord_coeff_ok", 0.1), ("stpbnd_ok", 0.2), ("decim_ok", 0.1)]);
     Ok((ok, Some(s), d))
 }
@@ -591,7 +617,7 @@ fn controleval(b: &Bridge, t: &Value, a: &Value) -> Scored {
     let l = series((&g.0, &g.1), (&num, &den));
     let tcl = feedback(&l);
     let (stable, max_re) = cl_stable(b, &tcl.0, &tcl.1, -0.01)?;
-    let mut d = json!({"stable": stable, "max_pole_re": max_re});
+    let mut d = json!({"stable": stable, "max_pole_re": jn(max_re)});
     if !stable {
         return Ok((false, None, d));
     }
@@ -603,7 +629,7 @@ fn controleval(b: &Bridge, t: &Value, a: &Value) -> Scored {
     let ld = strip(&l.1);
     let (n0, d0) = (*ln.last().unwrap_or(&0.0), *ld.last().unwrap_or(&0.0));
     let sse = if d0 == 0.0 && n0 != 0.0 { 0.0 } else if d0 == 0.0 { 1.0 } else { 1.0 / (1.0 + (n0 / d0).abs()) };
-    d.update_with(json!({"pm_deg": pm, "settling_time": ts, "overshoot_pct": os, "sse": sse,
+    d.update_with(json!({"pm_deg": jn(pm), "settling_time": jn(ts), "overshoot_pct": jn(os), "sse": jn(sse),
         "pm_ok": pm >= t["phase_margin_min"].as_f64().unwrap_or(0.0), "settling_ok": st_min <= ts && ts <= st_max, "sse_ok": sse <= t["steadystate_error_max"].as_f64().unwrap_or(0.0)}));
     let ok = d["pm_ok"] == true && d["settling_ok"] == true && d["sse_ok"] == true;
     Ok((ok, None, d))
@@ -632,6 +658,48 @@ pub fn score(b: &Bridge, task: &Value, answer: &Value) -> (bool, Option<f64>, Va
 pub struct DesignOpts {
     pub rpm: f64,
     pub max_steps: usize,
+    /// Bounds one model request, including provider retries. A stalled socket cannot sit for the
+    /// old 180 s × (retries + 1).
+    pub call_timeout: Duration,
+    /// Bounds one task. The report is checkpointed at task start and after every model turn, so a
+    /// kill still leaves the task id and whatever turns finished.
+    pub task_timeout: Duration,
+}
+
+impl Default for DesignOpts {
+    fn default() -> Self {
+        DesignOpts { rpm: 8.0, max_steps: 10, call_timeout: Duration::from_secs(150), task_timeout: Duration::from_secs(600) }
+    }
+}
+
+fn blockers_of(task: &Value) -> Vec<String> {
+    task["expected_blockers"].as_array().map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect()).unwrap_or_default()
+}
+
+fn result_from(task: &Value, run: &DesignRun, latency_s: f64, scored: Option<(bool, Option<f64>, Value)>) -> DesignResult {
+    let (pass, score, details) = scored.unwrap_or_else(|| (false, None, json!({"status": if run.stopped.is_empty() { "running" } else { run.stopped.as_str() }})));
+    DesignResult {
+        id: task["id"].as_str().unwrap_or("").into(),
+        benchmark: task["benchmark"].as_str().unwrap_or("").into(),
+        scorer: task["scorer"].as_str().unwrap_or("").into(),
+        submitted: run.submission.is_some(),
+        submission: run.submission.clone(),
+        pass,
+        score,
+        details,
+        expected_blockers: blockers_of(task),
+        tool_calls: run.tools.iter().map(|t| t.tool.clone()).collect(),
+        tool_errors: run.tools.iter().filter_map(|t| t.error_code.clone()).collect(),
+        self_corrections: count_self_corrections(&run.tools),
+        model_turns: run.turns.len(),
+        stopped: if run.stopped.is_empty() { "running".into() } else { run.stopped.clone() },
+        final_text: run.final_text.clone(),
+        provider_error: run.error.clone(),
+        total_tokens: run.total_tokens,
+        latency_s,
+        controleval_task: if task["benchmark"] == "ControlEval" { Some(task["controleval"].clone()) } else { None },
+        transcript_tools: run.tools.clone(),
+    }
 }
 
 pub async fn run_design(provider: &dyn Provider, bridge: &Bridge, tasks: &[Value], opts: &DesignOpts, mut checkpoint: impl FnMut(&Value)) -> Value {
@@ -639,47 +707,58 @@ pub async fn run_design(provider: &dyn Provider, bridge: &Bridge, tasks: &[Value
     let t_all = Instant::now();
     let mut results: Vec<DesignResult> = vec![];
     for (i, task) in tasks.iter().enumerate() {
+        let id = task["id"].as_str().unwrap_or("");
+        eprintln!("[{}/{}] {} 开始（最多 {} 步，单次请求 {:.0} s，本题 {:.0} s）", i + 1, tasks.len(), id, opts.max_steps, opts.call_timeout.as_secs_f64(), opts.task_timeout.as_secs_f64());
         let t0 = Instant::now();
-        let run = run_task(&paced, bridge, task, opts.max_steps).await;
+        let running = DesignRun { turns: vec![], tools: vec![], submission: None, final_text: None, stopped: "running".into(), error: None, total_tokens: 0 };
+        results.push(result_from(task, &running, 0.0, None));
+        let slot = results.len() - 1;
+        checkpoint(&summarize(provider, &results, t_all.elapsed().as_secs_f64(), opts));
+        let outcome = tokio::time::timeout(opts.task_timeout, run_task(&paced, bridge, task, opts.max_steps, opts.call_timeout, |run| {
+            eprintln!("  … {id} 回合 {} 工具 {} 次 stop={}", run.turns.len(), run.tools.len(), if run.stopped.is_empty() { "…" } else { run.stopped.as_str() });
+            results[slot] = result_from(task, run, t0.elapsed().as_secs_f64(), None);
+            checkpoint(&summarize(provider, &results, t_all.elapsed().as_secs_f64(), opts));
+        }))
+        .await;
+        let timed_out = outcome.is_err();
+        let kept_turns = results[slot].model_turns;
+        let run = match outcome {
+            Ok(r) => r,
+            Err(_) => DesignRun {
+                turns: vec![],
+                tools: results[slot].transcript_tools.clone(),
+                submission: results[slot].submission.clone(),
+                final_text: results[slot].final_text.clone(),
+                stopped: "task_timeout".into(),
+                error: Some(format!("task_timeout: 本题超过 {:.0} s", opts.task_timeout.as_secs_f64())),
+                total_tokens: results[slot].total_tokens,
+            },
+        };
         let quota = run.error.as_deref().map(|e| e.starts_with(crate::provider::QUOTA_EXHAUSTED)).unwrap_or(false);
+        let (pass, sc, details) = if let Some(a) = &run.submission {
+            score(bridge, task, a)
+        } else {
+            let why = run.error.clone().unwrap_or_else(|| "no submission".into());
+            (false, None, json!({"error": why}))
+        };
+        let mut r = result_from(task, &run, t0.elapsed().as_secs_f64(), Some((pass, sc, details)));
+        if timed_out {
+            // the in-flight turn was dropped with the future; the checkpoint has the finished turns
+            r.model_turns = kept_turns;
+            r.stopped = "task_timeout".into();
+        }
+        eprintln!("[{}/{}] {:<40} pass={} score={} submitted={} tools={} errs={:?} turns={} stop={} {:.1}s{}", i + 1, tasks.len(), r.id, r.pass,
+            r.score.map(|s| format!("{s:.0}")).unwrap_or("-".into()), r.submitted, r.tool_calls.len(), r.tool_errors, r.model_turns, r.stopped, r.latency_s,
+            r.provider_error.as_ref().map(|e| format!(" PROVIDER_ERROR: {e}")).unwrap_or_default());
+        results[slot] = r;
+        checkpoint(&summarize(provider, &results, t_all.elapsed().as_secs_f64(), opts));
         if quota {
-            let skipped: Vec<String> = tasks[i..].iter().map(|t| t["id"].as_str().unwrap_or("").to_string()).collect();
+            let skipped: Vec<String> = tasks[i + 1..].iter().map(|t| t["id"].as_str().unwrap_or("").to_string()).collect();
             eprintln!("配额用尽，停止；未运行 {} 题：{}", skipped.len(), skipped.join(", "));
             let mut rep = summarize(provider, &results, t_all.elapsed().as_secs_f64(), opts);
             rep["aborted"] = json!({"reason": run.error, "not_run": skipped});
             return rep;
         }
-        let (pass, sc, details) = match &run.submission {
-            Some(a) => score(bridge, task, a),
-            None => (false, None, json!({"error": "no submission"})),
-        };
-        let r = DesignResult {
-            id: task["id"].as_str().unwrap_or("").into(),
-            benchmark: task["benchmark"].as_str().unwrap_or("").into(),
-            scorer: task["scorer"].as_str().unwrap_or("").into(),
-            submitted: run.submission.is_some(),
-            submission: run.submission.clone(),
-            pass,
-            score: sc,
-            details,
-            expected_blockers: task["expected_blockers"].as_array().map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect()).unwrap_or_default(),
-            tool_calls: run.tools.iter().map(|t| t.tool.clone()).collect(),
-            tool_errors: run.tools.iter().filter_map(|t| t.error_code.clone()).collect(),
-            self_corrections: count_self_corrections(&run.tools),
-            model_turns: run.turns.len(),
-            stopped: run.stopped.clone(),
-            final_text: run.final_text.clone(),
-            provider_error: run.error.clone(),
-            total_tokens: run.total_tokens,
-            latency_s: t0.elapsed().as_secs_f64(),
-            controleval_task: if task["benchmark"] == "ControlEval" { Some(task["controleval"].clone()) } else { None },
-            transcript_tools: run.tools,
-        };
-        eprintln!("[{}/{}] {:<40} pass={} score={} submitted={} tools={} errs={:?} turns={} stop={} {:.1}s{}", i + 1, tasks.len(), r.id, r.pass,
-            r.score.map(|s| format!("{s:.0}")).unwrap_or("-".into()), r.submitted, r.tool_calls.len(), r.tool_errors, r.model_turns, r.stopped, r.latency_s,
-            r.provider_error.as_ref().map(|e| format!(" PROVIDER_ERROR: {e}")).unwrap_or_default());
-        results.push(r);
-        checkpoint(&summarize(provider, &results, t_all.elapsed().as_secs_f64(), opts));
     }
     summarize(provider, &results, t_all.elapsed().as_secs_f64(), opts)
 }
@@ -710,7 +789,7 @@ pub fn summarize(provider: &dyn Provider, results: &[DesignResult], wall_s: f64,
             "EngDesign": {"repo": "https://github.com/AGI4Engineering/EngDesign", "license": "MIT", "vendored": "eval/design/engdesign.json"},
             "ControlEval": {"repo": "https://github.com/EnvCommons/ControlEval", "data": "https://github.com/ControlAgent/ControlAgent", "license": "none declared — fetched at run time, not vendored"}
         },
-        "settings": {"rpm": opts.rpm, "max_steps": opts.max_steps, "temperature": 0.0},
+        "settings": {"rpm": opts.rpm, "max_steps": opts.max_steps, "call_timeout_s": opts.call_timeout.as_secs_f64(), "task_timeout_s": opts.task_timeout.as_secs_f64(), "temperature": 0.0},
         "aborted": null,
         "summary": {
             "tasks": n,
@@ -733,7 +812,11 @@ pub fn summarize(provider: &dyn Provider, results: &[DesignResult], wall_s: f64,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::provider::MockProvider;
+    use crate::provider::{MockProvider, Provider, QUOTA_EXHAUSTED};
+
+    fn opts(max_steps: usize) -> DesignOpts {
+        DesignOpts { rpm: 6000.0, max_steps, call_timeout: Duration::from_secs(5), task_timeout: Duration::from_secs(30) }
+    }
 
     fn task(id: &str) -> Value {
         engdesign_tasks().into_iter().find(|t| t["id"] == format!("engdesign/{id}")).unwrap()
@@ -793,6 +876,21 @@ mod tests {
     }
 
     #[test]
+    fn xg02_partial_score_and_infinite_margin_is_not_null() {
+        // Pilot submission: stable, GM about 15 dB, no 0 dB crossing (bandwidth 0), phase margin
+        // infinite because there is no gain crossover. The rubric awards 30 + 30, not 0; Inf must
+        // survive JSON as the string "Inf" (a null used to pass `pm > 60` and then disappear).
+        let b = Bridge::new();
+        let (ok, sc, d) = score(&b, &task("XG_02"), &json!({"num": [100.0], "den": [1.0, 100.0]}));
+        assert!(!ok, "{d}");
+        assert_eq!(d["pm_deg"], json!("Inf"), "{d}");
+        assert_eq!(d["bandwidth_ok"], false);
+        assert_eq!(d["gm_ok"], true, "{d}");
+        assert_eq!(d["pm_ok"], true, "{d}");
+        assert_eq!(sc, Some(60.0), "{d}");
+    }
+
+    #[test]
     fn pade_matches_known_first_order() {
         let (n, d) = pade(2.0, 1);
         assert!((n[0] + 1.0).abs() < 1e-12 && (n[1] - 1.0).abs() < 1e-12 && (d[0] - 1.0).abs() < 1e-12 && (d[1] - 1.0).abs() < 1e-12, "{n:?} {d:?}");
@@ -826,13 +924,118 @@ mod tests {
             MockProvider::text("我需要更多信息"),
             MockProvider::calls(vec![(SUBMIT, json!({"answer": {"alpha": 0.9}, "summary": "circle criterion"}))]),
         ]);
-        let rep = run_design(&p, &b, &[t], &DesignOpts { rpm: 6000.0, max_steps: 6 }, |_| {}).await;
+        let mut writes = 0;
+        let mut saw_running = false;
+        let rep = run_design(&p, &b, &[t], &opts(6), |partial| {
+            writes += 1;
+            if partial["results"][0]["stopped"] == "running" {
+                saw_running = true;
+            }
+        })
+        .await;
         let r = &rep["results"][0];
         assert_eq!(r["stopped"], "submitted");
         assert_eq!(r["pass"], true);
         assert_eq!(r["model_turns"], 3);
         assert_eq!(rep["summary"]["passed"], 1);
+        assert!(saw_running && writes >= 3, "checkpoint writes={writes} saw_running={saw_running}");
         let st = submit_tool(&task("AV_03"));
         assert_eq!(st.json_schema["properties"]["answer"]["required"], json!(["order", "coeffs", "stpbnd", "decim"]));
+    }
+
+    #[tokio::test]
+    async fn max_steps_stops_without_another_call() {
+        let b = Bridge::new();
+        let turns = (0..6).map(|_| MockProvider::calls(vec![("control_lti_poles_zeros", json!({"system": {"kind": "tf", "num": [1.0], "den": [1.0, 1.0], "ts": 0.0}}))])).collect();
+        let p = MockProvider::new(turns);
+        let rep = run_design(&p, &b, &[task("ZC_02")], &opts(3), |_| {}).await;
+        let r = &rep["results"][0];
+        assert_eq!(r["stopped"], "max_steps");
+        assert_eq!(r["submitted"], false);
+        assert_eq!(r["model_turns"], 3);
+        assert_eq!(r["pass"], false);
+        assert_eq!(p.seen.lock().unwrap().len(), 3);
+    }
+
+    struct SlowProvider {
+        delay: Duration,
+    }
+    impl Provider for SlowProvider {
+        fn name(&self) -> &str {
+            "slow"
+        }
+        fn model(&self) -> &str {
+            "slow"
+        }
+        fn chat<'a>(&'a self, _: &'a str, _: &'a [crate::provider::Msg], _: &'a [crate::tools::ToolDef]) -> crate::provider::BoxFut<'a, Result<crate::provider::ChatResponse, String>> {
+            let delay = self.delay;
+            Box::pin(async move {
+                tokio::time::sleep(delay).await;
+                Ok(MockProvider::text("late"))
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn call_timeout_ends_the_task() {
+        let b = Bridge::new();
+        let p = SlowProvider { delay: Duration::from_secs(30) };
+        let mut o = opts(4);
+        o.call_timeout = Duration::from_millis(80);
+        o.task_timeout = Duration::from_secs(5);
+        let t0 = Instant::now();
+        let rep = run_design(&p, &b, &[task("ZC_02")], &o, |_| {}).await;
+        assert!(t0.elapsed() < Duration::from_secs(2), "{:?}", t0.elapsed());
+        assert_eq!(rep["results"][0]["stopped"], "call_timeout");
+        assert!(rep["results"][0]["provider_error"].as_str().unwrap().contains("call_timeout"));
+        assert_eq!(rep["aborted"], Value::Null);
+    }
+
+    #[tokio::test]
+    async fn task_timeout_ends_the_task() {
+        let b = Bridge::new();
+        let p = SlowProvider { delay: Duration::from_millis(400) };
+        let mut o = opts(8);
+        o.call_timeout = Duration::from_secs(2);
+        o.task_timeout = Duration::from_millis(150);
+        let t0 = Instant::now();
+        let rep = run_design(&p, &b, &[task("ZC_02")], &o, |_| {}).await;
+        assert!(t0.elapsed() < Duration::from_secs(2), "{:?}", t0.elapsed());
+        assert_eq!(rep["results"][0]["stopped"], "task_timeout");
+    }
+
+    struct QuotaThen;
+    impl Provider for QuotaThen {
+        fn name(&self) -> &str {
+            "q"
+        }
+        fn model(&self) -> &str {
+            "q"
+        }
+        fn chat<'a>(&'a self, _: &'a str, _: &'a [crate::provider::Msg], _: &'a [crate::tools::ToolDef]) -> crate::provider::BoxFut<'a, Result<crate::provider::ChatResponse, String>> {
+            Box::pin(async { Err(format!("{QUOTA_EXHAUSTED}: free tier daily")) })
+        }
+    }
+
+    #[tokio::test]
+    async fn quota_aborts_and_lists_the_rest() {
+        let b = Bridge::new();
+        let rep = run_design(&QuotaThen, &b, &[task("ZC_02"), task("XG_13")], &opts(3), |_| {}).await;
+        assert_eq!(rep["results"].as_array().unwrap().len(), 1);
+        assert!(rep["results"][0]["provider_error"].as_str().unwrap().starts_with(QUOTA_EXHAUSTED));
+        assert_eq!(rep["aborted"]["not_run"], json!(["engdesign/XG_13"]));
+    }
+
+    #[tokio::test]
+    async fn mock_design_submits_offline() {
+        let b = Bridge::new();
+        let p = crate::provider::make("mock:design").unwrap();
+        let rep = run_design(p.as_ref(), &b, &[task("ZC_02"), task("XG_13")], &opts(4), |_| {}).await;
+        assert_eq!(rep["model"], "design");
+        assert_eq!(rep["results"][0]["stopped"], "submitted");
+        assert_eq!(rep["results"][0]["pass"], true, "{}", rep["results"][0]["details"]);
+        assert_eq!(rep["results"][1]["submitted"], true);
+        assert_eq!(rep["results"][1]["submission"]["Kp"], 1.0);
+        assert!(rep["aborted"].is_null());
     }
 }

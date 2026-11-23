@@ -266,7 +266,7 @@
     "ss→tf series with a controller (tf arithmetic)",
     "bandwidth"
    ],
-   "scoring_notes": "Stable closed loop, first 0 dB crossing of L in [75, 95] Hz, GM > 1.5 dB, PM > 60°. Upstream compares MATLAB margin()'s absolute gain margin with 1.5; we use dB as the prompt says."
+   "scoring_notes": "Stable closed loop, first 0 dB crossing of L in [75, 95] Hz (40), GM > 1.5 dB (30), PM > 60° (30); unstable scores 0. Upstream MATLAB names margin()'s absolute gain margin Gm_db and compares it with 1.5; we use dB as the prompt and the rubric say, and report that literal verdict as upstream_literal_pass. A missing crossover is an infinite margin (JSON \"Inf\"), which meets a lower bound."
   },
   {
    "id": "engdesign/LX_02",
