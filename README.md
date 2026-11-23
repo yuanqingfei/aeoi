@@ -109,3 +109,10 @@ node aeoi-wasm/parity/parity.mjs /tmp/pkg-node /tmp/cases.json /tmp/native.jsonl
 
 - 用 Tauri 打包成桌面应用（复用同一个 axum 服务与静态页面），免去命令行启动。
 - 流式输出模型文本；会话持久化。
+
+## 许可（License）
+
+- 代码（`rust/`、`pages/`、`tools/`、Python 脚本、schemas、examples、golden 数据）：**MIT OR Apache-2.0** 双许可，任选其一——见 [`LICENSE-MIT`](LICENSE-MIT)（Copyright (c) 2026 Qingfei Yuan）与 [`LICENSE-APACHE`](LICENSE-APACHE)。所有 crate 的 `Cargo.toml` 都声明 `license = "MIT OR Apache-2.0"`（workspace 继承）。
+- 规范与文档（`spec-src.md`、`spec-v*.md`、`reports/*.md`、本 README 的文字部分）：**CC-BY-4.0**，见 [`LICENSE-CC-BY-4.0`](LICENSE-CC-BY-4.0)。
+- 除非另行明确声明，你有意提交给本项目的贡献按上述同样条款许可（Apache-2.0 第 5 条）。
+- 第三方组件（内置的 Plotly.js basic，MIT；编译进二进制的 Rust crate；参考数据来源）见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
