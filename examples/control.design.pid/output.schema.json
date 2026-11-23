@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.design.pid/0.3.0/output",
+  "type": "object",
+  "required": [
+    "system",
+    "realization",
+    "proper",
+    "parameters",
+    "composition"
+  ],
+  "properties": {
+    "system": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "控制器，ts=0。proper 时也可为 ss"
+    },
+    "realization": {
+      "enum": [
+        "pid_closed_form",
+        "controllable_canonical"
+      ]
+    },
+    "minimal": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "proper": {
+      "type": "boolean"
+    },
+    "parameters": {
+      "type": "object",
+      "description": "回显的形式与增益，含规范默认值（Ki/Kd/Tf 缺省为 0）"
+    },
+    "composition": {
+      "type": "object"
+    }
+  }
+}

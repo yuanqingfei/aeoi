@@ -1,0 +1,42 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "control.lti.series",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-series-002",
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.DOMAIN.SAMPLE_TIME_MISMATCH",
+    "category": "domain",
+    "retryable": true,
+    "message": "两个系统的采样周期不同：sys1.ts = 0，sys2.ts = 0.1。连续（0）与离散、或两个不同的采样周期不能互联。",
+    "agent_hint": "离散化到同一个 ts（control.lti.c2d，采样周期必须由用户给出），或分别处理。",
+    "details": {
+      "path": "/sys2/ts",
+      "ts": [
+        0.0,
+        0.1
+      ]
+    },
+    "remediation": [
+      {
+        "id": "ts",
+        "kind": "ask_user",
+        "description": "向用户确认两个系统是否应该在同一采样周期下互联",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.058286
+  }
+}

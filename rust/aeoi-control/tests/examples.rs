@@ -245,3 +245,35 @@ fn batch2_examples() {
         assert_eq!(ns["reproducibility"]["output_hash"], pns["reproducibility"]["output_hash"], "{op}: nonsymmetric example");
     }
 }
+
+/// Batch 3 (spec v0.3.5): interconnection, pid, stepinfo, pade.
+#[test]
+fn batch3_examples() {
+    let h = HostCtx::default();
+    let ops = ["control.lti.series", "control.lti.parallel", "control.lti.feedback", "control.design.pid", "control.lti.stepinfo", "control.lti.pade"];
+    for op in ops {
+        let dir = format!("examples/{op}");
+        let env = call(op, &read(&format!("{dir}/request.json")), &h);
+        assert!(env["status"] == "ok" || env["status"] == "ok_with_warnings", "{op}: {}", env["error"]);
+        let pub_ = read(&format!("{dir}/response.success.json"));
+        assert_eq!(env["reproducibility"]["output_hash"], pub_["reproducibility"]["output_hash"], "{op}: bitwise example");
+        assert_eq!(env["receipt"]["evidence"]["claim"], pub_["receipt"]["evidence"]["claim"]);
+        let rf = &read(&format!("{dir}/reference.python-control.json"))["request.json"];
+        let err = if op == "control.lti.stepinfo" {
+            let info = &env["result"]["info"];
+            ["rise_time", "settling_time", "overshoot", "steady_state"].iter().map(|k| (f(&info[k]["value"]) - f(&rf[k])).abs()).fold(0.0, f64::max)
+        } else {
+            relf(&fvec(&env["result"]["system"]["num"]), &fvec(&rf["num"])).max(relf(&fvec(&env["result"]["system"]["den"]), &fvec(&rf["den"])))
+        };
+        assert!(err <= 1e-12, "{op}: example vs closed form {err:e}");
+        let e = call(op, &read(&format!("{dir}/request.error.json")), &h);
+        assert_eq!(e["error"]["code"], read(&format!("{dir}/response.error.json"))["error"]["code"], "{op} error");
+        assert!(!e["error"]["remediation"].as_array().unwrap().is_empty(), "{op}: remediation");
+        let ns_path = format!("{dir}/request.nonsymmetric.json");
+        if spec_root().join(&ns_path).exists() {
+            let ns = call(op, &read(&ns_path), &h);
+            let pns = read(&format!("{dir}/response.nonsymmetric.json"));
+            assert_eq!(ns["reproducibility"]["output_hash"], pns["reproducibility"]["output_hash"], "{op}: nonsymmetric");
+        }
+    }
+}

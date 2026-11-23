@@ -1,0 +1,27 @@
+{
+  "system": {
+    "kind": "tf",
+    "num": [
+      1
+    ],
+    "den": [
+      1,
+      1
+    ],
+    "ts": 0,
+    "time_unit": "s"
+  },
+  "time": {
+    "mode": "uniform",
+    "t_final": 5,
+    "dt": 0.5,
+    "unit": "s"
+  },
+  "rise_time_limits": [
+    0.9,
+    0.1
+  ],
+  "exec": {
+    "request_id": "req-stepinfo-002"
+  }
+}

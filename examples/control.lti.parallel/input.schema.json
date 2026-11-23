@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.lti.parallel/0.3.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sys1",
+    "sys2"
+  ],
+  "properties": {
+    "sys1": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "并联支路 1，与 sys2 输入数、输出数都相同"
+    },
+    "sys2": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "并联支路 2。结果是 sys1+sys2"
+    },
+    "output_kind": {
+      "enum": [
+        "same",
+        "tf",
+        "ss"
+      ],
+      "default": "same",
+      "description": "same（默认）、tf 或 ss"
+    },
+    "lineage": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 8,
+      "description": "可选。上游 receipt.fingerprint.request，只回显，不核验"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+    }
+  }
+}

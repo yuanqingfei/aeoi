@@ -1,0 +1,177 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.lti.series",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-series-001",
+  "result": {
+    "system": {
+      "kind": "tf",
+      "num": [
+        2.0
+      ],
+      "den": [
+        1.0,
+        4.0,
+        5.0,
+        2.0
+      ],
+      "ts": 0.0,
+      "time_unit": "s"
+    },
+    "realization": "polynomial_product",
+    "minimal": null,
+    "proper": true,
+    "composition": {
+      "operation": "series",
+      "operands": [
+        {
+          "role": "sys1",
+          "sha256": "sha256:e2d0fa44dfd0e58904bccdbc60df90c3a0d224d8123f3954144ed581a2214ebe"
+        },
+        {
+          "role": "sys2",
+          "sha256": "sha256:bee5979ccb2f95f3511c79acf83d50967a3f4dcd4fc9286038b14af725333817"
+        }
+      ],
+      "sign": null,
+      "implicit_unity": false,
+      "lineage": null,
+      "lineage_checked": false
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "identity_rel": 2.348653126691156e-16,
+      "definition": "在若干测试点上 ‖互联恒等式残差‖ / max(‖结果‖, ‖期望‖)"
+    },
+    "condition": {
+      "identity_points": 6,
+      "algebraic_loop_rcond": null
+    },
+    "error_estimate": {
+      "identity_rel": 2.348653126691156e-16,
+      "basis": "多项式算术或块公式在测试点上的相对残差；不是严格上界。系数本身是有限次乘加。"
+    },
+    "checks": {
+      "response_consistent": true,
+      "sample_times_equal": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "sign": null
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:series:polynomial-or-block",
+      "routine": "connect::series_ss / polynomial product",
+      "provenance": "aeoi://operators/control.lti.series/0.3.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "输入系统准确描述被研究对象",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "improper",
+        "statement": "相对阶 ≤ 8 的 improper tf 可作为操作数；ss 输出仍拒绝",
+        "enforced_by": "error:E.DOMAIN.IMPROPER_SYSTEM"
+      },
+      {
+        "id": "same_ts",
+        "statement": "两个系统采样周期相同",
+        "enforced_by": "error:E.DOMAIN.SAMPLE_TIME_MISMATCH"
+      },
+      {
+        "id": "dims",
+        "statement": "sys1 的输出数 = sys2 的输入数",
+        "enforced_by": "error:E.VALIDATION.SHAPE"
+      },
+      {
+        "id": "no_cancel",
+        "statement": "不做零极点对消",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "lineage",
+        "statement": "lineage 若给出，由调用方保证它指向这些操作数；算子不核验",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_priori",
+      "bound": {
+        "identity_rel": 2.348653126691156e-16
+      },
+      "basis": "多项式算术或块公式在测试点上的相对残差；不是严格上界。系数本身是有限次乘加。"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "response_consistent": true,
+        "sample_times_equal": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null
+    },
+    "fingerprint": {
+      "request": "sha256:2288541aaa0017f53f69d29cbb41583226ee5d52b36413440f9db76ad6f75803",
+      "result": "sha256:adf71363b7f9a12138a304803ac89ed72cbe4e30b21f498de5acac01bf382164",
+      "output_hash": "sha256:18d43f21891d3d51d53f087c13d6d548ab2f8631c2b3aa7c5894f75b431a82a2",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.lti.series@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "platform": "x86_64-linux",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:54ed12bb4d8b86482eac33f241d898237285301483f011a209103b290c4858a3",
+    "output_hash": "sha256:18d43f21891d3d51d53f087c13d6d548ab2f8631c2b3aa7c5894f75b431a82a2",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.188063
+  }
+}

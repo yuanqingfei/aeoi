@@ -1,0 +1,311 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.lti.pade",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-pade-001",
+  "result": {
+    "system": {
+      "kind": "tf",
+      "num": [
+        1.0,
+        -3.0,
+        3.0
+      ],
+      "den": [
+        1.0,
+        3.0,
+        3.0
+      ],
+      "ts": 0.0,
+      "time_unit": "s"
+    },
+    "realization": "pade_coefficients",
+    "minimal": null,
+    "proper": true,
+    "approximation": {
+      "target": "exp(-delay*s)",
+      "method": "diagonal_pade",
+      "order": 2,
+      "delay": 2.0,
+      "matched_order": 4,
+      "next_coefficient": -0.044444444444444425,
+      "next_power": 5,
+      "taylor_residual_rel": 0.0,
+      "certificate": {
+        "norm": "max_abs_on_grid",
+        "value": 1.9466086339579776,
+        "grid_unit": "rad/s",
+        "grid": [
+          0.005,
+          0.006729801620776821,
+          0.009058045971002071,
+          0.012191770491344145,
+          0.01640963936255737,
+          0.022086723515700343,
+          0.029727853542721956,
+          0.040012511390805264,
+          0.053855252801838456,
+          0.07248703351863162,
+          0.09756467113179816,
+          0.13131817638266663,
+          0.17674905525150528,
+          0.23789721570047057,
+          0.320200213559864,
+          0.4309767832376516,
+          0.5800776508699858,
+          0.7807615030002483,
+          1.0508740056662447,
+          1.4144347173129848,
+          1.903773010611186,
+          2.562402938480466,
+          3.448892689693829,
+          4.642072722597372,
+          6.2480457064599335,
+          8.409621624404345,
+          11.319017047607245,
+          15.234947854517541,
+          20.5056353527565,
+          27.599771606407838,
+          37.14819753797475,
+          50.0
+        ],
+        "grid_definition": "ω_k = (1/θ)·10^(-2 + 4k/31), k = 0..31"
+      },
+      "bound": null,
+      "bound_kind": "none",
+      "note": "next_coefficient 是 e^{-θs}−R(s) 在 s=0 的 s^{2N+1} 系数（级数除法）。certificate 是虚轴网格上的计算值，不是严格上界。二者都是逼近误差，不是系数的舍入误差。"
+    },
+    "composition": {
+      "operation": "pade",
+      "operands": [],
+      "parameters_sha256": "sha256:52ea3e1f1a4929389add5e93e8909835064c70d7fe0059defb2b080055e35f44",
+      "lineage": null,
+      "lineage_checked": false
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "taylor_matched_rel": 0.0
+    },
+    "condition": {
+      "coefficient_scale": 3.0
+    },
+    "error_estimate": {
+      "coefficient_abs": 1.3322676295501878e-15,
+      "basis": "系数：递推 N 步，先验界 N·ε·max|coeff|。这不是对 e^{-θs} 的逼近误差。",
+      "approximation_abs": 1.9466086339579776,
+      "approximation_basis": "虚轴 32 点网格上 |e^{-jωθ}−R(jω)| 的最大值（certificate），不是舍入界"
+    },
+    "checks": {
+      "taylor_matched": true,
+      "dc_is_one": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "approximation": {
+      "target": "exp(-delay*s)",
+      "method": "diagonal_pade",
+      "order": 2,
+      "delay": 2.0,
+      "matched_order": 4,
+      "next_coefficient": -0.044444444444444425,
+      "next_power": 5,
+      "taylor_residual_rel": 0.0,
+      "certificate": {
+        "norm": "max_abs_on_grid",
+        "value": 1.9466086339579776,
+        "grid_unit": "rad/s",
+        "grid": [
+          0.005,
+          0.006729801620776821,
+          0.009058045971002071,
+          0.012191770491344145,
+          0.01640963936255737,
+          0.022086723515700343,
+          0.029727853542721956,
+          0.040012511390805264,
+          0.053855252801838456,
+          0.07248703351863162,
+          0.09756467113179816,
+          0.13131817638266663,
+          0.17674905525150528,
+          0.23789721570047057,
+          0.320200213559864,
+          0.4309767832376516,
+          0.5800776508699858,
+          0.7807615030002483,
+          1.0508740056662447,
+          1.4144347173129848,
+          1.903773010611186,
+          2.562402938480466,
+          3.448892689693829,
+          4.642072722597372,
+          6.2480457064599335,
+          8.409621624404345,
+          11.319017047607245,
+          15.234947854517541,
+          20.5056353527565,
+          27.599771606407838,
+          37.14819753797475,
+          50.0
+        ],
+        "grid_definition": "ω_k = (1/θ)·10^(-2 + 4k/31), k = 0..31"
+      },
+      "bound": null,
+      "bound_kind": "none",
+      "note": "next_coefficient 是 e^{-θs}−R(s) 在 s=0 的 s^{2N+1} 系数（级数除法）。certificate 是虚轴网格上的计算值，不是严格上界。二者都是逼近误差，不是系数的舍入误差。"
+    },
+    "derived": {}
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:pade:golub-van-loan-11.3.1",
+      "routine": "pade::pade_tf",
+      "provenance": "aeoi://operators/control.lti.pade/0.3.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "delay",
+        "statement": "delay 由调用方给出，不是假设值",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "order",
+        "statement": "阶次由调用方给出，不是假设值",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "diagonal",
+        "statement": "只做 [N/N] 对角近似",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "approximation",
+        "statement": "结果逼近 e^{-θs}，逼近误差在 approximation，不在系数舍入界里",
+        "enforced_by": "validation"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_priori",
+      "bound": {
+        "coefficient_abs": 1.3322676295501878e-15,
+        "approximation_abs": 1.9466086339579776
+      },
+      "basis": "系数：递推 N 步，先验界 N·ε·max|coeff|。这不是对 e^{-θs} 的逼近误差。"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "taylor_matched": true,
+        "dc_is_one": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "approximation": {
+        "target": "exp(-delay*s)",
+        "method": "diagonal_pade",
+        "order": 2,
+        "delay": 2.0,
+        "matched_order": 4,
+        "next_coefficient": -0.044444444444444425,
+        "next_power": 5,
+        "taylor_residual_rel": 0.0,
+        "certificate": {
+          "norm": "max_abs_on_grid",
+          "value": 1.9466086339579776,
+          "grid_unit": "rad/s",
+          "grid": [
+            0.005,
+            0.006729801620776821,
+            0.009058045971002071,
+            0.012191770491344145,
+            0.01640963936255737,
+            0.022086723515700343,
+            0.029727853542721956,
+            0.040012511390805264,
+            0.053855252801838456,
+            0.07248703351863162,
+            0.09756467113179816,
+            0.13131817638266663,
+            0.17674905525150528,
+            0.23789721570047057,
+            0.320200213559864,
+            0.4309767832376516,
+            0.5800776508699858,
+            0.7807615030002483,
+            1.0508740056662447,
+            1.4144347173129848,
+            1.903773010611186,
+            2.562402938480466,
+            3.448892689693829,
+            4.642072722597372,
+            6.2480457064599335,
+            8.409621624404345,
+            11.319017047607245,
+            15.234947854517541,
+            20.5056353527565,
+            27.599771606407838,
+            37.14819753797475,
+            50.0
+          ],
+          "grid_definition": "ω_k = (1/θ)·10^(-2 + 4k/31), k = 0..31"
+        },
+        "bound": null,
+        "bound_kind": "none",
+        "note": "next_coefficient 是 e^{-θs}−R(s) 在 s=0 的 s^{2N+1} 系数（级数除法）。certificate 是虚轴网格上的计算值，不是严格上界。二者都是逼近误差，不是系数的舍入误差。"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:2a8ad4b5a3c3ee3cca3ea014a345dc9e2ee5d738a2addf9df69061e3179edbe6",
+      "result": "sha256:94a8ef7be511825187f8a99b773fa973621216642f1d5f3a81f8aa00ad8e8b0c",
+      "output_hash": "sha256:bf21fc7159fd1270b43ef925a91d6266d16bcde95453dba5b8923324f315b6b9",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.lti.pade@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "platform": "x86_64-linux",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:52ea3e1f1a4929389add5e93e8909835064c70d7fe0059defb2b080055e35f44",
+    "output_hash": "sha256:bf21fc7159fd1270b43ef925a91d6266d16bcde95453dba5b8923324f315b6b9",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.206283
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.lti.stepinfo/0.3.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "system",
+    "time"
+  ],
+  "properties": {
+    "system": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "被分析的 LTI 系统：tf（num/den 按降幂）、ss（A/B/C/D 稠密矩阵，row-major）或 zpk；ts=0 连续，ts>0 为离散采样周期（s）"
+    },
+    "time": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "t_final",
+            "dt",
+            "unit"
+          ],
+          "properties": {
+            "mode": {
+              "const": "uniform"
+            },
+            "t_final": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "dt": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "unit": {
+              "const": "s"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "unit"
+          ],
+          "properties": {
+            "mode": {
+              "const": "auto"
+            },
+            "t_final": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "exclusiveMinimum": 0
+            },
+            "unit": {
+              "const": "s"
+            }
+          },
+          "description": "启发式网格（见 manifest），不参与 parity 测试"
+        }
+      ],
+      "description": "时间网格，与 step 相同：uniform（t_final、dt，单位 s）或 auto。指标相对这个网格定义"
+    },
+    "rise_time_limits": {
+      "type": "array",
+      "items": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "default": [
+        0.1,
+        0.9
+      ],
+      "x-aeoi-provenance": "convention",
+      "description": "上升时间的低/高阈值，默认 [0.1, 0.9]（10% 到 90%）。这是指标定义，不是对象的物理参数；省略即用默认，不必询问"
+    },
+    "settling_threshold": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 0.5,
+      "default": 0.02,
+      "x-aeoi-provenance": "convention",
+      "description": "调节带半宽，默认 0.02（2%）。定义默认值，省略即用默认"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+    }
+  }
+}

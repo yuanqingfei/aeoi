@@ -285,6 +285,9 @@ pub fn check_conjugate(v: &[C64], path: &str) -> Result<(), OpError> {
     Ok(())
 }
 
+/// Relative degree above this is rejected even by interconnection operators (spec I-7).
+pub const MAX_RELATIVE_DEGREE: isize = 8;
+
 fn improper(path: &str, nd: isize, dd: isize, siso_patch: Option<(&[f64], &[f64])>) -> OpError {
     let mut e = OpError::new(
         "E.DOMAIN.IMPROPER_SYSTEM",
@@ -312,8 +315,18 @@ fn improper(path: &str, nd: isize, dd: isize, siso_patch: Option<(&[f64], &[f64]
     e.remedy(ask_user("ask", "向用户确认系统模型是否为理想微分环节或输入有误"))
 }
 
-/// Parse and validate an LtiSystem value at `path`.
+/// Parse and validate an LtiSystem value at `path`. Improper systems are `E.DOMAIN.IMPROPER_SYSTEM`.
 pub fn parse_lti(v: &Value, path: &str, host: &HostCtx, warnings: &mut Vec<Warning>, max_dense: usize) -> Result<Lti, OpError> {
+    parse_lti_mode(v, path, host, warnings, max_dense, false)
+}
+
+/// Like `parse_lti`, but a tf/zpk whose relative degree is in `1..=MAX_RELATIVE_DEGREE` is accepted.
+/// Interconnection and `pid` use this (spec I-7); analysis operators do not.
+pub fn parse_lti_allow_improper(v: &Value, path: &str, host: &HostCtx, warnings: &mut Vec<Warning>, max_dense: usize) -> Result<Lti, OpError> {
+    parse_lti_mode(v, path, host, warnings, max_dense, true)
+}
+
+fn parse_lti_mode(v: &Value, path: &str, host: &HostCtx, warnings: &mut Vec<Warning>, max_dense: usize, allow_improper: bool) -> Result<Lti, OpError> {
     let o = v.as_object().ok_or_else(|| OpError::new("E.VALIDATION.SCHEMA", "system 必须是对象。", "按 LtiSystem schema 提供。").path(path))?;
     let ts = o.get("ts").and_then(|t| t.as_f64()).unwrap_or(0.0);
     match o.get("kind").and_then(|k| k.as_str()) {
@@ -356,7 +369,7 @@ pub fn parse_lti(v: &Value, path: &str, host: &HostCtx, warnings: &mut Vec<Warni
             for i in 0..num.len() {
                 for j in 0..num[0].len() {
                     let (nd, dd) = (degree(&num[i][j]), degree(&den[i][j]));
-                    if nd > dd {
+                    if nd > dd && !(allow_improper && nd - dd <= MAX_RELATIVE_DEGREE) {
                         let p = if siso { path.to_string() } else { format!("{path}/num/{i}/{j}") };
                         return Err(improper(&p, nd, dd, if siso { Some((&num[0][0], &den[0][0])) } else { None }));
                     }
@@ -404,7 +417,7 @@ pub fn parse_lti(v: &Value, path: &str, host: &HostCtx, warnings: &mut Vec<Warni
             if !k.is_finite() {
                 return Err(OpError::new("E.VALIDATION.NON_FINITE", "k 必须是有限实数。", "修正 k。").path(&format!("{path}/k")));
             }
-            if z.len() > p.len() {
+            if z.len() > p.len() && !(allow_improper && z.len() as isize - p.len() as isize <= MAX_RELATIVE_DEGREE) {
                 return Err(improper(path, z.len() as isize, p.len() as isize, None));
             }
             Ok(Lti::Zpk { z, p, k, ts })

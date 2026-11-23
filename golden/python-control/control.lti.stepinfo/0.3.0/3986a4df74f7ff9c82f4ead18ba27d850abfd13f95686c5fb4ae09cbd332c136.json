@@ -1,0 +1,47 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.lti.stepinfo",
+ "operator_version": "0.3.0",
+ "case_family": "second_order",
+ "request": {
+  "system": {
+   "kind": "tf",
+   "num": [
+    4.0
+   ],
+   "den": [
+    1.0,
+    1.2,
+    4.0
+   ],
+   "ts": 0.0,
+   "time_unit": "s"
+  },
+  "time": {
+   "mode": "uniform",
+   "t_final": 10.0,
+   "dt": 0.01,
+   "unit": "s"
+  }
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "numpy": "2.5.5",
+  "python": "3.12.3",
+  "seed": 20261123,
+  "note": "python-control reference values; NOT MATLAB output"
+ },
+ "expected": {
+  "rise_time": 0.66,
+  "settling_time": 5.62,
+  "overshoot": 37.23177192599629,
+  "undershoot": 0.0,
+  "peak": 1.372317719259963,
+  "peak_time": 1.6500000000000001,
+  "steady_state": 1.0,
+  "stable": true,
+  "settling_min": 0.8613762654882532,
+  "settling_max": 1.372317719259963
+ }
+}

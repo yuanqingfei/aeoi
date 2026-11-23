@@ -1,0 +1,181 @@
+{
+  "spec": "aeoi/0.3",
+  "id": "control.lti.stepinfo",
+  "version": "0.3.0",
+  "title": "Step-response metrics",
+  "description": "在显式时间网格上给出阶跃指标：上升时间、调节时间、超调、欠调、峰值、峰值时间、稳态值。阈值有规范默认值。不稳定或不在窗口内调节的通道把依赖稳态的指标设为 null，峰值仍给出。",
+  "category": "analysis",
+  "tags": [
+    "time-domain",
+    "lti",
+    "stepinfo"
+  ],
+  "applicability": {
+    "preconditions": [
+      "采样与 control.lti.step 相同（连续为 ZOH 精确递推）",
+      "时间指标是网格点，不插值：与连续穿越点之差 ≤ dt，记为 time_quantization_s，不占用 T2 的 rtol",
+      "rise_time_limits 默认 [0.1, 0.9]，settling_threshold 默认 0.02；这是指标定义，不是被测对象的物理参数",
+      "稳态值取 DC 增益，不取最后一个采样"
+    ],
+    "not_for": [
+      "把未调节写成 Inf（窗口太短只说明没观察到，不说明永不调节）",
+      "插值到网格之间"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "先调用与 step 相同的递推得到 y[k]。上升时间 = t[k_hi]−t[k_lo]，k_lo/k_hi 是 sgn·(y−阈值·y∞) 第一次 ≥ 0 的下标。调节时间 = 最后一次 |y/y∞−1| ≥ 阈值 的下一格；若末点仍在带外则为 null，并给 W.DOMAIN.NOT_SETTLED。超调、欠调为百分数。不稳定：依赖 y∞ 的字段为 null，peak 为窗口内 max|y|，window_limited=true。",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "K. Ogata, Modern Control Engineering, 5th ed., Prentice-Hall（串联、并联、反馈；阶跃指标）"
+      },
+      {
+        "type": "software",
+        "cite": "python-control 0.10 step_info 文档（仅作网格定义对照：不插值、百分数超调）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献；MATLAB 仅作为黑盒参考（公开 API），v0.2 的 parity 参考为 python-control/scipy"
+    }
+  },
+  "backend": {
+    "library": "aeoi-control (pure Rust) + nalgebra 0.33",
+    "routine": "stepinfo::channel",
+    "version": "0.3.0",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T2",
+  "sparse_support": {
+    "/system/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_grid_points": 10000000,
+    "max_states": 200
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/control.lti.stepinfo/0.3.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ZERO_DENOMINATOR",
+    "E.VALIDATION.NOT_CONJUGATE",
+    "E.VALIDATION.SPARSE_STRUCTURE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.DOMAIN.IMPROPER_SYSTEM",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.GRID",
+    "E.VALIDATION.RANGE",
+    "E.RESOURCE.COMPUTE_LIMIT",
+    "E.RESOURCE.OUTPUT_TOO_LARGE"
+  ],
+  "warnings": [
+    "W.DOMAIN.UNSTABLE_SYSTEM",
+    "W.DOMAIN.NOT_SETTLED",
+    "W.DOMAIN.INFINITE_DC_GAIN",
+    "W.DOMAIN.ZERO_DC_GAIN",
+    "W.ACCURACY.GRID_TOO_COARSE",
+    "W.ACCURACY.AUTO_GRID",
+    "W.VALIDATION.LEADING_ZEROS_STRIPPED",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "control_lti_stepinfo",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:stepinfo:zoh-grid-metrics",
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "输入系统准确描述被研究对象（单位、符号、row-major 录入）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "proper",
+        "statement": "系统为 proper（deg num ≤ deg den）",
+        "enforced_by": "error:E.DOMAIN.IMPROPER_SYSTEM"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "grid_definition",
+        "statement": "时间指标是网格点，不插值；量化误差 ≤ dt",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "thresholds",
+        "statement": "阈值用请求里的值；省略则是规范默认 10–90% 与 2%",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "steady",
+        "statement": "稳态取 DC 增益，不取最后采样",
+        "enforced_by": "validation"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "samples_finite",
+      "settling_matches_definition"
+    ]
+  }
+}

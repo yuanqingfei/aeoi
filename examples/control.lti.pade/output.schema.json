@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.lti.pade/0.3.0/output",
+  "type": "object",
+  "required": [
+    "system",
+    "realization",
+    "proper",
+    "approximation",
+    "composition"
+  ],
+  "properties": {
+    "system": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "连续 tf，ts=0，分母首项为 1"
+    },
+    "realization": {
+      "const": "pade_coefficients"
+    },
+    "minimal": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "proper": {
+      "const": true
+    },
+    "approximation": {
+      "type": "object",
+      "description": "target、method、matched_order、next_coefficient、certificate、bound（无严格界时为 null）"
+    },
+    "composition": {
+      "type": "object"
+    }
+  }
+}

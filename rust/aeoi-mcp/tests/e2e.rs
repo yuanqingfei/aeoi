@@ -34,7 +34,7 @@ fn mcp_stdio_session() {
     let tools = tl["result"]["tools"].as_array().unwrap();
     let names: Vec<&str> = tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
     println!("tools/list: {names:?}");
-    assert_eq!(names.len(), 13, "12 operators + aeoi_verify");
+    assert_eq!(names.len(), 19, "18 operators + aeoi_verify");
     assert!(names.contains(&"aeoi_verify"));
     for t in tools {
         assert_eq!(t["inputSchema"]["type"], "object");
@@ -43,7 +43,8 @@ fn mcp_stdio_session() {
     let ops = [
         "control.lti.bode", "control.lti.step", "control.design.lqr", "control.lti.convert", "control.lti.poles_zeros",
         "control.analysis.ctrb_obsv", "control.analysis.margin", "control.lti.c2d", "control.lti.impulse", "control.math.lyap",
-        "control.design.place", "control.design.dlqr",
+        "control.design.place", "control.design.dlqr", "control.lti.series", "control.lti.parallel", "control.lti.feedback",
+        "control.design.pid", "control.lti.stepinfo", "control.lti.pade",
     ];
     for op in ops {
         let tool = op.replace('.', "_");

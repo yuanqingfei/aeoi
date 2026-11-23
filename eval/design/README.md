@@ -14,9 +14,10 @@ aeoi-web design --model mock:script --mock-script turns.json   # or set AEOI_MOC
 /workspace/.venv-ctrl/bin/python eval/design/pyscore.py report reports/design-<model>.json   # cross-check
 ```
 
-Loop: the model gets the task prompt plus the list of answer fields, and the 12 AEOI tools plus a
-`submit_design` pseudo-tool. Operators only analyse; they do **not** do transfer-function arithmetic, so the
-model has to form G·C and the closed loop itself (the system prompt tells it how). The run ends when
+Loop: the model gets the task prompt plus the list of answer fields, and the AEOI tools plus a
+`submit_design` pseudo-tool. Series, parallel, feedback, PID construction, stepinfo and Padé are operators:
+the model passes `result.system` from one call into the next instead of multiplying polynomials by hand.
+The run ends when
 the model calls `submit_design` (one submission) or after `--max-steps` model turns. The submission is
 scored by `rust/aeoi-web/src/design.rs`, which re-implements each task's evaluator on AEOI operators
 (`control_lti_poles_zeros` for closed-loop stability, `control_lti_step` for settling time and overshoot,

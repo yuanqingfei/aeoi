@@ -1,18 +1,28 @@
 {
  "generated_by": "rust/aeoi-wasm/parity/parity.mjs",
  "wasm_platform": "wasm32-unknown",
- "node": "v24.22.1",
- "cases": 681,
- "bitwise_equal": 501,
- "output_hash_differs_only": 180,
+ "node": "v22.23.4",
+ "cases": 755,
+ "bitwise_equal": 566,
+ "output_hash_differs_only": 189,
  "status_or_code_mismatch": 0,
  "max_rel_diff": 0.024322409351980843,
- "seconds": 75.484,
+ "seconds": 128.938,
  "by_operator": {
   "control.design.lqr": {
    "cases": 91,
    "bitwise": 91,
    "max_rel_diff": 0
+  },
+  "control.design.pid": {
+   "cases": 12,
+   "bitwise": 12,
+   "max_rel_diff": 0
+  },
+  "control.lti.pade": {
+   "cases": 12,
+   "bitwise": 3,
+   "max_rel_diff": 5.3290705182007524e-17
   },
   "control.math.lyap": {
    "cases": 47,
@@ -54,20 +64,40 @@
    "bitwise": 79,
    "max_rel_diff": 0
   },
+  "control.lti.feedback": {
+   "cases": 14,
+   "bitwise": 14,
+   "max_rel_diff": 0
+  },
   "control.lti.impulse": {
    "cases": 31,
    "bitwise": 28,
    "max_rel_diff": 2.1984614349013e-18
+  },
+  "control.lti.parallel": {
+   "cases": 13,
+   "bitwise": 13,
+   "max_rel_diff": 0
   },
   "control.lti.poles_zeros": {
    "cases": 50,
    "bitwise": 43,
    "max_rel_diff": 1.078979645996899e-15
   },
+  "control.lti.series": {
+   "cases": 14,
+   "bitwise": 14,
+   "max_rel_diff": 0
+  },
   "control.lti.step": {
    "cases": 91,
    "bitwise": 81,
    "max_rel_diff": 4.669240930168513e-15
+  },
+  "control.lti.stepinfo": {
+   "cases": 9,
+   "bitwise": 9,
+   "max_rel_diff": 0
   }
  },
  "diffs": [

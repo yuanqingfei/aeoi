@@ -1,0 +1,208 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok_with_warnings",
+  "dry_run": false,
+  "operator": {
+    "id": "control.lti.stepinfo",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-stepinfo-001",
+  "result": {
+    "definition": {
+      "rise_time_limits": [
+        0.1,
+        0.9
+      ],
+      "settling_threshold": 0.02,
+      "time_quantization": "grid_point",
+      "overshoot_unit": "%",
+      "steady_state_source": "dcgain",
+      "note": "上升/调节时间取第一个越过阈值的网格点，不插值。与连续时间穿越点之差 ≤ dt，记在 error_estimate.time_quantization_s，不占 T2 的 rtol。"
+    },
+    "stable": true,
+    "n_grid_points": 11,
+    "info": {
+      "rise_time": {
+        "unit": "s",
+        "value": 2.0
+      },
+      "settling_time": {
+        "unit": "s",
+        "value": 4.0
+      },
+      "settling_min": {
+        "unit": "1",
+        "value": 0.9179150013761012
+      },
+      "settling_max": {
+        "unit": "1",
+        "value": 1.0
+      },
+      "overshoot": {
+        "unit": "%",
+        "value": 0.0
+      },
+      "undershoot": {
+        "unit": "%",
+        "value": 0.0
+      },
+      "peak": {
+        "unit": "1",
+        "value": 0.9932620530009145
+      },
+      "peak_time": {
+        "unit": "s",
+        "value": 5.0
+      },
+      "steady_state": {
+        "unit": "1",
+        "value": 1.0,
+        "source": "dcgain"
+      },
+      "settled": true,
+      "window_limited": false
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "final_state_rel_discrepancy": 0.0,
+      "definition": "‖x_{N−1}(逐步递推) − x(t_end)(一次性 expm 直接计算)‖₂ / ‖x(t_end)‖₂，取所有输入通道最大值"
+    },
+    "condition": {
+      "dt": 0.5,
+      "max_real_or_modulus": -1.0
+    },
+    "error_estimate": {
+      "y_abs": 1.2130166408008746e-15,
+      "time_quantization_s": 0.5,
+      "basis": "采样值沿用 step 的 ZOH 递推。时间类指标是网格横坐标：相对连续穿越的误差 ≤ dt，这是定义的量化，不是积分误差。"
+    },
+    "checks": {
+      "samples_finite": true,
+      "settling_matches_definition": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "dcgain": {
+        "dtype": "f64",
+        "shape": [
+          1,
+          1
+        ],
+        "data": [
+          1.0
+        ]
+      },
+      "dt": 0.5
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:stepinfo:zoh-grid-metrics",
+      "routine": "stepinfo::channel",
+      "provenance": "aeoi://operators/control.lti.stepinfo/0.3.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "输入系统准确描述被研究对象（单位、符号、row-major 录入）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "proper",
+        "statement": "系统为 proper（deg num ≤ deg den）",
+        "enforced_by": "error:E.DOMAIN.IMPROPER_SYSTEM"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "grid_definition",
+        "statement": "时间指标是网格点，不插值；量化误差 ≤ dt",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "thresholds",
+        "statement": "阈值用请求里的值；省略则是规范默认 10–90% 与 2%",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "steady",
+        "statement": "稳态取 DC 增益，不取最后采样",
+        "enforced_by": "validation"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "y_abs": 1.2130166408008746e-15,
+        "time_quantization_s": 0.5
+      },
+      "basis": "采样值沿用 step 的 ZOH 递推。时间类指标是网格横坐标：相对连续穿越的误差 ≤ dt，这是定义的量化，不是积分误差。"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "samples_finite": true,
+        "settling_matches_definition": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null
+    },
+    "fingerprint": {
+      "request": "sha256:4dcfd2c4ee2728369bc429edae4d24acaaabfcd2e744f6b2ec76ef31aedf66d7",
+      "result": "sha256:214680c048a08ddaafa7a45bacad66319470f6b68eea6f3b30f11f45d901c70c",
+      "output_hash": "sha256:b2587d7e71618ff9697cbc9cb1244ee3374bc579f642b926557e138c07ed863e",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.lti.stepinfo@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "platform": "x86_64-linux",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [
+    {
+      "code": "W.ACCURACY.GRID_TOO_COARSE",
+      "message": "dt = 0.5 s 大于 0.1/最快极点模 = 1.000e-1 s；响应采样值本身仍精确，但 step_info 的时间类指标误差可达 dt。",
+      "path": "/time/dt"
+    }
+  ],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:b09067bec698558da9fa3406477190fd730db951fca67a3e43eab5c928b33ce5",
+    "output_hash": "sha256:b2587d7e71618ff9697cbc9cb1244ee3374bc579f642b926557e138c07ed863e",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 14.297426
+  }
+}

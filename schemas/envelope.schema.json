@@ -488,6 +488,10 @@
               "items": {
                 "type": "string"
               }
+            },
+            "approximation": {
+              "description": "仅近似算子（v0.3.5 A-2，目前是 control.lti.pade）。抄自 trust.approximation。其他算子不出现此字段。",
+              "type": "object"
             }
           }
         },

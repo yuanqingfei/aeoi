@@ -30,15 +30,19 @@ macro_rules! operator_struct {
 
 pub mod bode;
 pub mod c2d;
+pub mod connect;
 pub mod convert;
 pub mod ctrb_obsv;
 pub mod dlqr;
 pub mod lqr;
 pub mod lyap;
 pub mod margin;
+pub mod pade;
+pub mod pid;
 pub mod place;
 pub mod poles_zeros;
 pub mod step;
+pub mod stepinfo;
 
 use aeoi_core::DynOperator;
 
@@ -57,6 +61,12 @@ pub fn registry() -> Vec<Box<dyn DynOperator>> {
         Box::new(lyap::Lyap::new()),
         Box::new(place::Place::new()),
         Box::new(dlqr::Dlqr::new()),
+        Box::new(connect::Series::new()),
+        Box::new(connect::Parallel::new()),
+        Box::new(connect::Feedback::new()),
+        Box::new(pid::Pid::new()),
+        Box::new(stepinfo::StepInfo::new()),
+        Box::new(pade::Pade::new()),
     ]
 }
 

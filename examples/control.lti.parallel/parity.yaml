@@ -1,0 +1,15 @@
+# Parity — control.lti.parallel 0.3.0
+operator: control.lti.parallel
+references:
+  - {engine: python-control, version: "0.10.2", role: dev_reference, status: active, generator: gen_golden_b3.py, golden_store: "golden/python-control/control.lti.parallel/0.3.0/*.json", note: "NOT MATLAB"}
+runner: "cargo test --release -p aeoi-control --test parity_b3"
+tolerance_class: T1
+compare:
+  "tf coefficients / ss matrices": "max |Δ| / max(1, max|ref|) ≤ 1e-12"
+case_families:
+  - {name: siso_tf, n: 6}
+  - {name: mimo_ss, n: 1}
+  - {name: sample_time_mismatch, n: 1, expect: E.DOMAIN.SAMPLE_TIME_MISMATCH}
+  - {name: shape_mismatch, n: 1, expect: E.VALIDATION.SHAPE}
+  - {name: memory_order_nonsymmetric, n: 1}
+pass_rule: "within T1; expected errors; column-major mistake deviates by > 1e3 × tolerance"

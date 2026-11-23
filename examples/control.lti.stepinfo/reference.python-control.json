@@ -1,0 +1,9 @@
+{
+  "request.json": {
+    "rise_time": 2.0,
+    "settling_time": 4.0,
+    "overshoot": 0.0,
+    "steady_state": 1.0
+  },
+  "note": "hand / python-control / mpmath closed form; not MATLAB"
+}

@@ -1,0 +1,86 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.lti.series",
+ "operator_version": "0.3.0",
+ "case_family": "shape_mismatch",
+ "request": {
+  "sys1": {
+   "kind": "tf",
+   "num": [
+    1.0
+   ],
+   "den": [
+    1.0,
+    1.0
+   ],
+   "ts": 0.0,
+   "time_unit": "s"
+  },
+  "sys2": {
+   "kind": "ss",
+   "A": {
+    "dtype": "f64",
+    "shape": [
+     2,
+     2
+    ],
+    "data": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "B": {
+    "dtype": "f64",
+    "shape": [
+     2,
+     2
+    ],
+    "data": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "C": {
+    "dtype": "f64",
+    "shape": [
+     2,
+     2
+    ],
+    "data": [
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "D": {
+    "dtype": "f64",
+    "shape": [
+     2,
+     2
+    ],
+    "data": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "ts": 0.0,
+   "time_unit": "s"
+  }
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "numpy": "2.5.5",
+  "python": "3.12.3",
+  "seed": 20261123,
+  "note": "python-control reference values; NOT MATLAB output"
+ },
+ "expected_error": "E.VALIDATION.SHAPE"
+}
