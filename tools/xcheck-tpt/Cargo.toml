@@ -1,0 +1,22 @@
+# Dev-only cross-check of aeoi-control against tpt-control (https://github.com/tpt-solutions/tpt-control,
+# MIT OR Apache-2.0). Standalone package: NOT a member of rust/ and NOT a dependency of any aeoi crate.
+[package]
+name = "xcheck-tpt"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "MIT OR Apache-2.0"
+
+# empty [workspace] keeps this package out of any parent workspace
+[workspace]
+
+[dependencies]
+aeoi-core = { path = "../../rust/aeoi-core" }
+aeoi-control = { path = "../../rust/aeoi-control" }
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
+tpt-ctrl-core = { git = "https://github.com/tpt-solutions/tpt-control", rev = "10e432068e094bc37977bfcc5c96bac3f6ef3641" }
+tpt-ctrl-classic = { git = "https://github.com/tpt-solutions/tpt-control", rev = "10e432068e094bc37977bfcc5c96bac3f6ef3641" }
+tpt-ctrl-optimal = { git = "https://github.com/tpt-solutions/tpt-control", rev = "10e432068e094bc37977bfcc5c96bac3f6ef3641" }
+
+[profile.release]
+debug = false

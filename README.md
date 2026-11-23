@@ -20,6 +20,8 @@ cargo test --release -p aeoi-control --test parity_b2 -- --nocapture
 ./target/release/aeoi-mcp
 ```
 
+与独立的纯 Rust 实现 [tpt-control](https://github.com/tpt-solutions/tpt-control)（MIT OR Apache-2.0）的交叉验证见 `reports/parity-tpt-control.md`（开发工具 `tools/xcheck-tpt/`，不是任何 aeoi crate 的依赖）。
+
 ## LLM 端到端测试台（`aeoi-web`）
 
 一个本地网页：云端 LLM（默认 Gemini）通过函数调用使用 12 个 AEOI 算子。左侧是中文对话，右侧是调用轨迹：模型选了哪个工具、请求 JSON、AEOI 响应（result / trust / warnings / error + remediation）、耗时与 token 用量；bode、step、impulse 的结果会自动画图（Plotly basic，已内置在仓库里，不走 CDN；加载失败时退回内置的简易 SVG 图）。没有 key 时可以选 `mock:demo` 模型，看一段脚本化的演示（含一次报错 → 按 remediation 自我纠错）。
