@@ -1,0 +1,113 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.design.lqr",
+ "operator_version": "0.3.0",
+ "case_family": "ill_conditioned_R_extreme",
+ "reference_env": {
+  "engine": "mpmath",
+  "mpmath": "1.4.1",
+  "dps": 50,
+  "numpy": "2.5.5",
+  "scipy": "1.18.1",
+  "python": "3.13.5",
+  "seed": 20261123,
+  "method": "lqr: Newton–Kleinman in 50 digits from scipy.linalg.solve_continuous_are until ‖ΔX‖/‖X‖ < 1e-40; lyap: Kronecker-form linear solve in 50 digits",
+  "note": "high-precision reference values computed on the Grok Bot box; NOT MATLAB output, NOT python-control"
+ },
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    -0.19911156740958447,
+    -1.5967502566604435,
+    0.3731154377889516,
+    1.8157398407143235
+   ]
+  },
+  "B": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    2.945780458322256,
+    -1.150790869356187,
+    0.6196263975943397,
+    0.8691843320890087
+   ]
+  },
+  "Q": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    0.7423046378661621,
+    0.8548091590319576,
+    0.8548091590319576,
+    2.2243739971285086
+   ]
+  },
+  "R": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    0.30067206730315404,
+    0.4585502973936539,
+    0.4585502973936539,
+    0.699327932706846
+   ]
+  }
+ },
+ "expected": {
+  "K": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    223841.62339777302,
+    562681.427286008,
+    -146773.30501082333,
+    -368947.9072571636
+   ]
+  },
+  "S": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    0.00044102713330993674,
+    -0.0327710846872391,
+    -0.0327710846872391,
+    2.44004461643528
+   ]
+  },
+  "closed_loop_poles": [
+   [
+    -856258.7008887554,
+    0.0
+   ],
+   [
+    -1.8671564624471058,
+    0.0
+   ]
+  ],
+  "cond_R": 100001612964.38907,
+  "cond_S": 2729726.864039766,
+  "scipy_forward_error_rel_max": 2.9240191746470667e-12,
+  "newton_iterations_50_digits": 4
+ }
+}

@@ -167,17 +167,17 @@
     "control.design.lqr": {
       "cases": 72,
       "passed": 72,
-      "max_error_over_tolerance": 0.12360487660073814,
-      "kappa_scaled_cases": 4,
+      "max_error_over_tolerance": 0.0008478511146980001,
+      "kappa_scaled_cases": 0,
       "max_errors": {
-        "K_rel_fro": 1.7471476181879421e-6,
-        "K_rel_fro [max err/tol]": 0.008935521818845557,
-        "S_rel_fro": 2.416825453818823e-6,
-        "S_rel_fro [max err/tol]": 0.12360487660073814,
-        "care_rel_scaled (invariant, tol 1e-12)": 6.349835945753627e-17,
-        "care_rel_scaled (invariant, tol 1e-12) [max err/tol]": 0.00006349835945753627,
-        "poles_rel": 0.00002280467181119841,
-        "poles_rel [max err/tol]": 0.020714918005372927
+        "K_rel_fro": 1.0810493185470871e-8,
+        "K_rel_fro [max err/tol]": 0.0008478511146980001,
+        "S_rel_fro": 6.893782536350899e-10,
+        "S_rel_fro [max err/tol]": 0.0006785321711436033,
+        "care_rel_scaled (invariant, tol 1e-12)": 8.885549054087976e-17,
+        "care_rel_scaled (invariant, tol 1e-12) [max err/tol]": 0.00008885549054087976,
+        "poles_rel": 5.0546261216299785e-8,
+        "poles_rel [max err/tol]": 0.00008461360436171251
       },
       "tolerances": {
         "K_rel_fro": 1e-9,

@@ -1,9 +1,12 @@
-# Parity test spec — control.math.lyap 0.3.0 (AEOI v0.3-draft)
+# Parity test spec — control.math.lyap 0.4.0 (AEOI v0.3-draft); python-control golden store generated for 0.3.0 and reused unchanged (V-3a)
 operator: control.math.lyap
 references:
   - {engine: python-control, version: "0.10.2 (scipy 1.18.1, numpy 2.5.5)", role: dev_reference, status: active,
      generator: gen_golden_pycontrol_b2.py, golden_store: "golden/python-control/control.math.lyap/0.3.0/*.json",
      note: "python-control/scipy reference values, NOT MATLAB output"}
+  - {engine: mpmath, version: "50 digits", role: high_precision_reference, status: active, generator: gen_golden_mpmath.py,
+     golden_store: "golden/mpmath/control.math.lyap/0.4.0/*.json", runner: "cargo test --release -p aeoi-control --test parity_hp",
+     compare: "rel_fro ≤ 1e-12, no relaxation", note: "ill-conditioned families from the tpt-control cross-check; NOT MATLAB, NOT python-control"}
   - {engine: MATLAB, role: ground_truth, status: planned, note: "no generator script yet for batch 2"}
 runner: "cargo test --release -p aeoi-control --test parity_b2"
 tolerance_class: T2
@@ -17,4 +20,8 @@ case_families:   # n = golden cases
   - {name: singular_continuous, n: 1, expect: E.DOMAIN.LYAP_SINGULAR}
   - {name: singular_discrete, n: 1, expect: E.DOMAIN.LYAP_SINGULAR}
   - {name: unstable_solvable, n: 3, expect_warning: ['W.DOMAIN.UNSTABLE_SYSTEM']}
+case_families_high_precision:   # golden/mpmath, n = cases
+  - {name: continuous_near_axis, n: 3}
+  - {name: discrete_rho_near_1, n: 8}
+  - {name: discrete_rho_near_1_nonsymmetric_Q, n: 1}
 pass_rule: "all cases within tolerance; expected-error cases return the same code; expected warnings present; every emitted code declared in the manifest; outputs validate against envelope+output schema"

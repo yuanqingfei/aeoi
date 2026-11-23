@@ -1,0 +1,84 @@
+{
+  "reference": "mpmath 50-digit (gen_golden_mpmath.py); NOT MATLAB, NOT python-control",
+  "tolerances": {
+    "S_K_X_rel_fro": 1e-12,
+    "closed_loop_poles_rel": "max(1e-10, 1e2·ε·‖A − B K_ref‖_F)",
+    "relaxation": "poles only: eigenvalue backward-error floor of A − BK"
+  },
+  "operators": {
+    "control.design.lqr": {
+      "operator_version": "0.3.0",
+      "golden_store": "golden/mpmath/control.design.lqr/0.3.0",
+      "families": {
+        "condR_1e12_decoupled_repro": {
+          "cases": 1,
+          "passed": 1,
+          "max": {
+            "poles_tol": 2.2204460492514457e-8,
+            "S_rel_fro": 0.0,
+            "K_rel_fro": 0.0,
+            "poles_rel": 0.0
+          }
+        },
+        "ill_conditioned_R_cross_N": {
+          "cases": 2,
+          "passed": 2,
+          "max": {
+            "poles_tol": 9.384020145500553e-6,
+            "S_rel_fro": 0.0,
+            "K_rel_fro": 0.0,
+            "poles_rel": 1.1259240761170818e-8
+          }
+        },
+        "ill_conditioned_R_extreme": {
+          "cases": 8,
+          "passed": 8,
+          "max": {
+            "poles_tol": 2.0466930396527544e-7,
+            "S_rel_fro": 3.0994037449395475e-19,
+            "K_rel_fro": 0.0,
+            "poles_rel": 2.7391893116172177e-8
+          }
+        },
+        "ill_conditioned_R_hp": {
+          "cases": 5,
+          "passed": 5,
+          "max": {
+            "poles_tol": 9.805721482153515e-9,
+            "S_rel_fro": 0.0,
+            "K_rel_fro": 0.0,
+            "poles_rel": 1.46171514513301e-10
+          }
+        }
+      }
+    },
+    "control.math.lyap": {
+      "operator_version": "0.4.0",
+      "golden_store": "golden/mpmath/control.math.lyap/0.4.0",
+      "families": {
+        "continuous_near_axis": {
+          "cases": 3,
+          "passed": 3,
+          "max": {
+            "X_rel_fro": 4.4040056129725355e-15
+          }
+        },
+        "discrete_rho_near_1": {
+          "cases": 8,
+          "passed": 8,
+          "max": {
+            "X_rel_fro": 6.737866450887111e-15
+          }
+        },
+        "discrete_rho_near_1_nonsymmetric_Q": {
+          "cases": 1,
+          "passed": 1,
+          "max": {
+            "X_rel_fro": 0.0
+          }
+        }
+      }
+    }
+  },
+  "failures": []
+}

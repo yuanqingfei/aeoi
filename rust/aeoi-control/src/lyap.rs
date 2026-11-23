@@ -1,15 +1,20 @@
-//! control.math.lyap — continuous / discrete Lyapunov equations via complex-Schur Bartels–Stewart (spec 10.10).
+//! control.math.lyap — continuous / discrete Lyapunov equations via complex-Schur Bartels–Stewart, with
+//! compensated-residual iterative refinement when the equation is near-singular (spec 10.10).
 use crate::check_states;
 use aeoi_core::error::{ask_user, OpError, Warning};
 use aeoi_core::linalg::{rel_asym, symmetrize};
 use aeoi_core::lti::eigenvalues;
 use aeoi_core::matrix::{dense_real, parse_array, to_real_matrix};
-use aeoi_core::sysalg::{lyap_bs, lyap_residual, LyapKind};
+use aeoi_core::sysalg::{lyap_refined, lyap_residual, LyapKind};
 use aeoi_core::{num, ExecCtx, HostCtx, Operator, Output};
 use nalgebra::DMatrix;
 use serde_json::{json, Value};
 
 operator_struct!(Lyap, "control.math.lyap");
+
+/// refinement trigger on ‖R‖_F/(sep·‖X‖_F) (plain f64 residual) and step budget
+const REFINE_TRIGGER_REL: f64 = 1e-12;
+const MAX_REFINE_STEPS: usize = 4;
 
 pub struct LyapInput {
     pub a: DMatrix<f64>,
@@ -52,7 +57,7 @@ impl Operator for Lyap {
         let mut warnings = Vec::new();
         let LyapInput { a, q, kind, q_symmetric } = inp;
         let disc = kind == LyapKind::Discrete;
-        let (mut x, info) = lyap_bs(&a, &q, kind).map_err(|sep| {
+        let refined = lyap_refined(&a, &q, kind, REFINE_TRIGGER_REL, MAX_REFINE_STEPS).map_err(|sep| {
             if sep.is_nan() {
                 // Schur iteration did not converge within its bounded iteration budget (incl. fallbacks)
                 return OpError::new("E.NUMERICAL.NO_CONVERGENCE", "Schur 分解（QR 迭代，含确定性回退）未在迭代上限内收敛，无法求解 Lyapunov 方程。", "检查 A 的数值尺度（极大/极小元素、NaN 附近的值）；可先对 A 做平衡或缩放后重试。")
@@ -69,6 +74,8 @@ impl Operator for Lyap {
             .detail("separation_min", json!(sep))
             .remedy(ask_user("ask", "向用户确认 A（含 row-major 顺序）与方程类型（continuous/discrete）"))
         })?;
+        let info = refined.info.clone();
+        let mut x = refined.x.clone();
         let asym_raw = rel_asym(&x);
         if q_symmetric {
             x = symmetrize(&x);
@@ -83,7 +90,8 @@ impl Operator for Lyap {
         let anorm = a.norm().max(f64::MIN_POSITIVE);
         let sep_rel = info.separation / if disc { anorm.max(1.0).powi(2) } else { anorm };
         // heuristic forward error: residual / separation (exact for normal A)
-        let est = res / info.separation;
+        // after refinement the compensated residual is the meaningful one (the f64 residual is at its rounding floor)
+        let est = if refined.triggered { refined.residual_dd.max(f64::MIN_POSITIVE) / info.separation } else { res / info.separation };
         let xn = x.norm().max(f64::MIN_POSITIVE);
         if sep_rel < 1e-8 {
             warnings.push(Warning::new("W.NUMERICAL.ILL_CONDITIONED", format!("相对分离度 {sep_rel:.2e} 很小（特征值接近使方程奇异的位置），解对扰动敏感。")).path("/A"));
@@ -93,13 +101,20 @@ impl Operator for Lyap {
         }
         let x_psd = if q_symmetric { Some(x.clone().symmetric_eigenvalues().min() >= -1e-10 * xn) } else { None };
         let result = json!({"X": dense_real(&x)});
+        let convergence = if refined.triggered {
+            json!({"applicable": true, "converged": refined.last_correction_rel <= 1e-12, "iterations": refined.steps,
+                   "criterion": format!("迭代精化（补偿残差 Dot2，复用 Schur 分解）：启发式前向误差估计 > {REFINE_TRIGGER_REL:.0e} 时触发，至多 {MAX_REFINE_STEPS} 步；‖δ‖_F ≤ 2u‖X‖_F 或修正量未减半即停"),
+                   "final_value": refined.last_correction_rel})
+        } else {
+            json!({"applicable": false})
+        };
         let mut checks = json!({"A_stable": stable, "X_symmetric": q_symmetric || asym_raw <= 1e-12});
         if let Some(p) = x_psd {
             checks["X_psd"] = json!(p);
         }
         let trust = json!({
-            "convergence": {"applicable": false},
-            "residual": {"abs_fro": res, "rel": rel, "X_asymmetry_before_symmetrization_rel": asym_raw, "schur_backward_rel": info.schur_residual,
+            "convergence": convergence,
+            "residual": {"abs_fro": res, "rel": rel, "abs_fro_compensated": if refined.triggered { json!(refined.residual_dd) } else { Value::Null }, "X_asymmetry_before_symmetrization_rel": asym_raw, "schur_backward_rel": info.schur_residual,
                          "definition": if disc { "rel = ‖A X Aᵀ − X + Q‖_F / (‖A‖_F²‖X‖_F + ‖X‖_F + ‖Q‖_F)" } else { "rel = ‖A X + X Aᵀ + Q‖_F / (2‖A‖_F‖X‖_F + ‖Q‖_F)" }},
             "condition": {"separation_min": num(info.separation), "separation_rel": num(sep_rel), "definition": if disc { "min_{i,j}|λ_i λ̄_j − 1|" } else { "min_{i,j}|λ_i + λ̄_j|" }},
             "error_estimate": {"X_abs_fro": num(est), "X_rel": num(est / xn), "basis": "启发式：‖残差‖_F / sep_min；A 为正规矩阵时 sep_min 即真实分离度，非正规时真实 sep 可能更小（估计偏乐观）"},

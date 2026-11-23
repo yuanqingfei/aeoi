@@ -1,5 +1,5 @@
 //! Native side of the wasm-vs-native parity run: executes every golden request
-//! (`golden/python-control/*/*/*.json`) and every `examples/*/request*.json` through the native
+//! (`golden/python-control/*/*/*.json`, `golden/mpmath/*/*/*.json`) and every `examples/*/request*.json` through the native
 //! operators and prints one JSON line per case: {case, operator, status, error_code, warnings,
 //! input_hash, output_hash, result}. `parity/parity.mjs` does the same through the wasm build and
 //! compares.
@@ -9,11 +9,13 @@ use std::path::{Path, PathBuf};
 fn cases(repo: &Path) -> Vec<(String, String, Value)> {
     let mut out = vec![];
     let mut files: Vec<PathBuf> = vec![];
-    let g = repo.join("golden/python-control");
-    for op in std::fs::read_dir(&g).unwrap().flatten().filter(|e| e.path().is_dir()) {
-        for ver in std::fs::read_dir(op.path()).unwrap().flatten() {
-            for f in std::fs::read_dir(ver.path()).unwrap().flatten() {
-                files.push(f.path());
+    for engine in ["python-control", "mpmath"] {
+        let g = repo.join("golden").join(engine);
+        for op in std::fs::read_dir(&g).unwrap().flatten().filter(|e| e.path().is_dir()) {
+            for ver in std::fs::read_dir(op.path()).unwrap().flatten() {
+                for f in std::fs::read_dir(ver.path()).unwrap().flatten() {
+                    files.push(f.path());
+                }
             }
         }
     }

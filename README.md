@@ -80,7 +80,7 @@ cargo test --release -p aeoi-control --test parity_b2 -- --nocapture
 - 不填 key：选 `mock:demo`，离线演示（4 次工具调用，含一次自我纠错，带 Plotly 图）。
 - 用真实模型：点右上角"API key"填自己的 Gemini 或 OpenRouter key。key **只保存在这个浏览器的 localStorage**，由页面直接发给 Google / OpenRouter（两家都允许跨域调用），不经过 AEOI 的任何服务器，也不在仓库里；"忘记 key"按钮会清除它。公用电脑上请不要保存。
 - 与本地版是同一份 Rust 代码（`rust/aeoi-bridge`：函数声明、F-5 核对、provider 线格式、系统提示词），轨迹面板与画图相同。浏览器版没有评测 CLI。
-- 数值：与 x86_64 原生版在 651 个 golden/示例请求中 66% 逐位相同，其余差异 ≤ 5e-15（病态 `lqr` 4.7e-6；多输入 `place` 的 K 不唯一，极点相同），见 `reports/parity-wasm-vs-native.json` 与规范 §8.5。
+- 数值：与 x86_64 原生版在 681 个 golden/示例请求中 74% 逐位相同（lqr、lyap 全部逐位相同），其余差异 ≤ 1.5e-14（多输入 `place` 的 K 不唯一，极点相同），见 `reports/parity-wasm-vs-native.json` 与规范 §8.5。
 - 体积：wasm 2.97 MB（gzip 1.07 MB）+ Plotly basic 1.07 MB（gzip 354 KB）。
 
 本地构建（需要 `rustup target add wasm32-unknown-unknown`、wasm-bindgen CLI 0.2.130，可选 binaryen 的 wasm-opt）：

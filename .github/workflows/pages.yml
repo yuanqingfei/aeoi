@@ -108,7 +108,7 @@ jobs:
       - name: Parity
         working-directory: rust
         env:
-          AEOI_PARITY_ALLOW_MISMATCH: "1"
+          AEOI_PARITY_ALLOW_MISMATCH: "0"
         run: |
           set -euo pipefail
           curl -sSfL "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl.tar.gz" -o /tmp/wb.tgz

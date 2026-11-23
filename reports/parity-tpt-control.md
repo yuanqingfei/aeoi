@@ -3,7 +3,45 @@
 > 参考实现：**tpt-control**（<https://github.com/tpt-solutions/tpt-control>，commit `10e432068e094bc37977bfcc5c96bac3f6ef3641`，2026-10-16；© TPT Solutions，许可 **MIT OR Apache-2.0**）。本仓库只在开发工具 `tools/xcheck-tpt/`（独立 cargo 包，不是 `rust/` workspace 成员，也不是任何 aeoi crate 的依赖）里按 git rev 引用 `tpt-ctrl-core`、`tpt-ctrl-classic`、`tpt-ctrl-optimal`，没有复制其源码。
 > 第三方参考值来自 python-control / scipy（不是 MATLAB）。机器可读结果：`reports/parity-tpt-control.json`。
 
-## 中文摘要
+## v0.3.2 修复后（`lqr` 0.3.0、`lyap` 0.4.0，2026-11-23）
+
+本报告初版（下文"中文摘要"及之后各节）是在 commit `3640023`（`lqr` 0.2.0、`lyap` 0.3.0）上测的。"改进想法"中的 CARE 部分与离散 Lyapunov 迭代精化已在 v0.3.2 实施（spec 10.3、10.10），用同一 harness、同一随机种子重跑（用例 956 个：语料增加了 2 个新示例请求）。`reports/parity-tpt-control.json` 是重跑后的结果，修复前的数字保留在 `before_fix` 字段。
+
+前向误差 max|X−X*|/max|X*|（lqr 同时给 K），真值为 50 位精度 Newton 迭代（`analyze.py`）；括号内为 AEOI 报错的用例数（`lqr_marginal_undetectable`、`lqr_unstabilizable` 与语料中的 9 个是应当报错的输入）：
+
+| 算子 | 族 | 用例 | AEOI 修复前 X / K（报错数） | AEOI 修复后 X / K（报错数） | tpt X / K | scipy X / K |
+|---|---|---|---|---|---|---|
+| lqr | corpus | 75 | 2.5e-06 / 1.5e-06（9） | 0 / 0（9） | 3.7e-02 / 3.7e-02 | 7.0e-10 / 1.1e-08 |
+| lqr | random/lqr_bigA_1e3 | 10 | 2.0e-12 / 9.1e-13（0） | 0 / 0（0） | 1.6e-13 / 9.2e-14 | 4.0e-11 / 3.0e-11 |
+| lqr | random/lqr_condR_1e12 | 10 | 3.0e-05 / 2.5e-05（7） | 3.3e-17 / 3.4e-17（0） | 7.4e-09 / 1.8e-04 | 6.1e-11 / 3.3e-05 |
+| lqr | random/lqr_condR_1e8 | 10 | 1.8e-08 / 2.1e-08（0） | 0 / 0（0） | 1.7e-12 / 2.5e-09 | 2.0e-12 / 6.0e-09 |
+| lqr | random/lqr_crossN | 6 | 8.2e-14 / 4.3e-14（0） | 0 / 0（0） | 3.2e-14 / 1.8e-14 | 1.0e-13 / 1.0e-13 |
+| lqr | random/lqr_marginal_undetectable | 4 | — / —（4） | — / —（4） | — / — | 3.6e-16 / 3.6e-16 |
+| lqr | random/lqr_smallQ_1e-8 | 10 | 4.8e-14 / 4.5e-14（0） | 0 / 0（0） | 1.9e-14 / 1.8e-14 | 1.4e-08 / 1.8e-08 |
+| lqr | random/lqr_unstabilizable | 5 | — / —（5） | — / —（5） | — / — | — / — |
+| lqr | random/lqr_weakB_1e-4 | 10 | 2.9e-10 / 1.4e-10（0） | 0 / 0（0） | 5.2e-13 / 2.5e-13 | 1.1e-03 / 1.0e-03 |
+| lqr | random/lqr_well | 10 | 5.9e-12 / 2.2e-12（0） | 0 / 0（0） | 3.7e-13 / 1.3e-13 | 3.6e-13 / 3.4e-13 |
+| lqr | repro | 1 | — / —（1） | 0 / 0（0） | 5.1e-23 / 1.2e-16 | 1.1e-17 / 4.4e-11 |
+| lyap | corpus | 35 | 2.8e-14（3） | 2.8e-14（3） | 2.9e-12 | 2.8e-14 |
+| lyap | random/lyap_c_near_axis_1e-3 | 12 | 1.7e-12（0） | 1.0e-13（0） | 2.0e-12 | 5.5e-13 |
+| lyap | random/lyap_c_near_axis_1e-6 | 12 | 2.1e-09（0） | 0（0） | 1.7e-09 | 1.1e-09 |
+| lyap | random/lyap_c_nonnormal_rot_1e1 | 8 | 4.9e-03（0） | 4.9e-03（0） | 2.1e-02 | 2.1e-02 |
+| lyap | random/lyap_c_nonnormal_rot_1e2 | 8 | 1.0e+00（0） | 1.0e+00（0） | 1.0e+00 | 5.7e-01 |
+| lyap | random/lyap_c_nonnormal_rot_1e3 | 8 | 9.0e+01（0） | 9.0e+01（0） | 7.6e+03 | 1.0e+00 |
+| lyap | random/lyap_c_nonnormal_triangular | 12 | 5.0e-16（0） | 5.0e-16（0） | 1.0e+00 | 5.2e-16 |
+| lyap | random/lyap_c_unstable | 6 | 2.5e-14（0） | 2.5e-14（0） | 8.6e-15 | 1.2e-14 |
+| lyap | random/lyap_c_well | 12 | 6.3e-15（0） | 6.3e-15（0） | 6.4e-15 | 3.2e-15 |
+| lyap | random/lyap_d_rho_0.999 | 12 | 4.3e-12（0） | 1.4e-13（0） | 6.0e-14 | 1.5e-13 |
+| lyap | random/lyap_d_rho_1-1e-6 | 12 | 6.0e-09（0） | 4.3e-11（0） | 5.5e-11 | 2.6e-10 |
+| lyap | random/lyap_d_unstable | 6 | 4.1e-14（0） | 4.1e-14（0） | — | 4.3e-15 |
+| lyap | random/lyap_d_well | 12 | 2.4e-14（0） | 2.4e-14（0） | 2.0e-16 | 4.9e-15 |
+
+- **lqr**：所有能求解的用例 S、K 都等于真值的 f64 舍入（≤ 3.4e-17）；cond(R) = 1e12 族的 7 个误报 `HAMILTONIAN_IMAG_AXIS_EIG` 与复现用例全部消失；应当报错的 9 个（不可镇定、不可检测的虚轴模态）仍以原错误码报错。
+- **lyap**：离散 ρ = 1 − 1e-6 由 6.0e-9 降到 4.3e-11（tpt 5.5e-11），连续 1e-6 近虚轴由 2.1e-9 降到 0；未触发精化的用例逐位不变。`lyap_c_nonnormal_rot_*` 的大误差三家都有（问题本身的条件数达 1e12 以上），未改变。
+- **dlqr** 算法未改，结果与修复前相同。
+- 与 tpt 的直接差（"直接比较"表）中 lqr 的 K 最大差变为 1.8e-4：来自 `random/lqr_condR_1e12/4`，修复前 AEOI 在该例报错、不参与比较；修复后 AEOI 误差 3.4e-17，差值是 tpt 自身的 K 误差。
+
+## 中文摘要（修复前，commit `3640023`）
 
 - **覆盖**：12 个 AEOI 算子中 11 个在 tpt-control 里有对应或可组合的实现（`place` 没有，只用 tpt 的特征值求解器复核 AEOI 的 K）。用例 954 个：wasm/原生 parity 用的 651 个（617 个 python-control golden + 34 个示例请求），加 300 个带种子的随机良态/病态用例和 3 个最小复现用例。直接比较了 729 个用例，另有 32 个两边都报错。
 - **良态问题两边基本一致**：c2d（zoh/tustin）≤ 1e-15，bode 幅值 ≤ 3e-14 dB、相位 ≤ 2e-13°，step/impulse ≤ 1.4e-11，ctrb/obsv 矩阵逐位相同，Gramian ≤ 7e-15，tf→ss 的 Markov 参数 ≤ 5e-15，极点 ≤ 1.3e-12，良态 lyap/lqr/dlqr 的中位差约 1e-14。margin：tpt 在网格上插值，相对 AEOI 的解析值增益裕度差 ≤ 2.8e-6、相位裕度差 ≤ 3.4e-5°，属于网格误差。place：tpt 求的 eig(A − BK) 与目标极点差 ≤ 1.6e-10。
@@ -181,7 +219,7 @@
    golden 中的 `control.design.dlqr/0.3.0/a981bc1f…` 是同一个问题。
 4. **tpt 文档**：`freq::Margins` 两个交越频率字段的注释写反；`solve_lyapunov` 关于不稳定 A 的说明与实际行为不符；`lqr`/`care` 不检查 Q 的对称性。
 
-## 改进想法（未实施）
+## 改进想法（CARE 与离散 Lyapunov 部分已在 v0.3.2 实施，见文首）
 
 - **lqr**：
   1. Newton–Kleinman 用 K 形式：K = chol(R)⁻¹(BᵀX + Nᵀ)，Lyapunov 方程右端为 Q − NK − KᵀNᵀ + KᵀRK，不显式构造 G = BR⁻¹Bᵀ。
@@ -198,7 +236,7 @@
 ```bash
 cd tools/xcheck-tpt
 cp ../../rust/Cargo.lock .            # 与主 workspace 相同的依赖版本（Rust 1.85 兼容）
-cargo run --release -- ../.. /tmp/xcheck-tpt.jsonl
+cargo run --release --bin xcheck-tpt -- ../.. /tmp/xcheck-tpt.jsonl
 PY=/path/to/venv/bin/python           # 需要 numpy、scipy、mpmath
 $PY analyze.py /tmp/xcheck-tpt.jsonl /tmp/analysis.json
 $PY prototype_nk.py /tmp/xcheck-tpt.jsonl /tmp/proto.json

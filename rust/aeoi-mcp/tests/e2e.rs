@@ -73,7 +73,7 @@ fn mcp_stdio_session() {
     assert_eq!(r["error"]["code"], -32602);
     let rl = rpc("resources/list", json!({}));
     assert!(rl["result"]["resources"].as_array().unwrap().len() >= 8);
-    let rr = rpc("resources/read", json!({"uri":"aeoi://operators/control.design.lqr/0.2.0/manifest"}));
+    let rr = rpc("resources/read", json!({"uri":"aeoi://operators/control.design.lqr/0.3.0/manifest"}));
     let m: Value = serde_json::from_str(rr["result"]["contents"][0]["text"].as_str().unwrap()).unwrap();
     assert_eq!(m["id"], "control.design.lqr");
     let cat = rpc("resources/read", json!({"uri":"aeoi://operators"}));

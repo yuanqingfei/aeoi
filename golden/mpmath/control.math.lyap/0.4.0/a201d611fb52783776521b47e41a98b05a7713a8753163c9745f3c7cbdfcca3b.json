@@ -1,0 +1,64 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.math.lyap",
+ "operator_version": "0.4.0",
+ "case_family": "discrete_rho_near_1",
+ "reference_env": {
+  "engine": "mpmath",
+  "mpmath": "1.4.1",
+  "dps": 50,
+  "numpy": "2.5.5",
+  "scipy": "1.18.1",
+  "python": "3.13.5",
+  "seed": 20261123,
+  "method": "lqr: Newton–Kleinman in 50 digits from scipy.linalg.solve_continuous_are until ‖ΔX‖/‖X‖ < 1e-40; lyap: Kronecker-form linear solve in 50 digits",
+  "note": "high-precision reference values computed on the Grok Bot box; NOT MATLAB output, NOT python-control"
+ },
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    -1.0169572935895075,
+    -0.7050013798325903,
+    0.04091188855968741,
+    0.6910445648446284
+   ]
+  },
+  "Q": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    12.047974020573873,
+    -2.994828356091191,
+    -2.994828356091191,
+    2.1746312247823885
+   ]
+  },
+  "type": "discrete"
+ },
+ "expected": {
+  "X": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    50664.7104658176,
+    -1228.4916075987899,
+    -1228.4916075987899,
+    33.51979573900868
+   ]
+  },
+  "spectral_radius": 0.9999,
+  "scipy_forward_error_rel_max": 1.4073777184043146e-14
+ },
+ "rho": 0.9999
+}

@@ -37,8 +37,9 @@ for d in sorted(glob.glob("examples/*/")):
         undeclared = [c for c in codes if c not in m["errors"] + m["warnings"]]
         bad += bool(undeclared)
         print(("OK  " if not undeclared else "FAIL"), op, rs.split("/")[-1], "codes declared", undeclared or "")
-# golden requests: all batch-2 (0.3.0) requests incl. column-major mistake variants; a sample of batch-1 (0.2.0)
-gold = sorted(glob.glob("golden/python-control/*/0.3.0/*.json")) + sorted(glob.glob("golden/python-control/*/0.2.0/*.json"))[::25]
+# golden requests: all batch-2 (0.3.0) requests incl. column-major mistake variants; a sample of batch-1 (0.2.0);
+# all high-precision (golden/mpmath) requests
+gold = sorted(glob.glob("golden/python-control/*/0.3.0/*.json")) + sorted(glob.glob("golden/python-control/*/0.2.0/*.json"))[::25] + sorted(glob.glob("golden/mpmath/*/*/*.json"))
 ng = 0
 for g in gold:
     op = g.split("/")[2]; case = L(g)

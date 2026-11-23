@@ -137,3 +137,49 @@ fn dlqr_scalar_golden_ratio() {
     assert!(close(fvec(&r["S"]["data"])[0], phi, 1e-14));
     assert!(close(fvec(&r["K"]["data"])[0], 1.0 / phi, 1e-14));
 }
+
+/// Regression for the false E.DOMAIN.HAMILTONIAN_IMAG_AXIS_EIG found by the tpt-control cross-check
+/// (reports/parity-tpt-control.md): decoupled scalar CAREs with cond(R) = 1e12. Exact: sᵢ = qᵢ/(√(aᵢ² + bᵢ²qᵢ/rᵢ) − aᵢ).
+#[test]
+fn lqr_condr_1e12_decoupled_closed_form() {
+    let env = call("control.design.lqr", json!({"A": m(2, 2, &[-0.1, 0.0, 0.0, -1.0]), "B": m(2, 2, &[0.1, 0.0, 0.0, 1.0]), "Q": m(2, 2, &[1.0, 0.0, 0.0, 1.0]), "R": m(2, 2, &[1.0, 0.0, 0.0, 1e-12])}));
+    let r = ok(&env);
+    let s = fvec(&r["S"]["data"]);
+    let s1 = 1.0 / ((0.01f64 + 0.01).sqrt() + 0.1);
+    let s2 = 1.0 / ((1.0f64 + 1e12).sqrt() + 1.0);
+    assert!(((s[0] - s1) / s1).abs() <= 1e-13, "S11 = {} vs {s1}", s[0]);
+    assert!(((s[3] - s2) / s2).abs() <= 1e-12, "S22 = {} vs {s2}", s[3]);
+    assert!(s[1].abs() <= 1e-15 && s[2].abs() <= 1e-15, "off-diagonal {:?}", &s[1..3]);
+    let k = fvec(&r["K"]["data"]);
+    assert!(((k[3] - s2 / 1e-12) / (s2 / 1e-12)).abs() <= 1e-12, "K22 = {}", k[3]);
+    assert!((s1 - 4.142135623730952).abs() < 1e-14 && (s2 - 9.99999e-7).abs() < 1e-12);
+}
+
+/// Genuinely ill-posed CAREs must still report E.DOMAIN.HAMILTONIAN_IMAG_AXIS_EIG at any scale.
+#[test]
+fn lqr_imag_axis_unobservable_modes_still_error() {
+    for (a, b, q) in [
+        (vec![0.0, 1e3, -1e3, 0.0], vec![0.0, 1.0], vec![0.0; 4]),
+        (vec![0.0, 1e-3, -1e-3, 0.0], vec![0.0, 1.0], vec![0.0; 4]),
+        (vec![0.0, 0.0, 0.0, -1.0], vec![1.0, 1.0], vec![0.0, 0.0, 0.0, 1.0]),
+    ] {
+        let env = call("control.design.lqr", json!({"A": m(2, 2, &a), "B": m(2, 1, &b), "Q": m(2, 2, &q), "R": m(1, 1, &[1.0])}));
+        assert_eq!(env["error"]["code"], "E.DOMAIN.HAMILTONIAN_IMAG_AXIS_EIG", "A = {a:?}: {}", env);
+    }
+}
+
+/// Discrete Lyapunov with ρ(A) → 1: A = [[p, −q], [q, p]], p = 1 − 2⁻²⁰, q = 2⁻¹⁰, so AAᵀ = (1 − 2⁻²⁰ + 2⁻⁴⁰)·I exactly
+/// and X = I / (2⁻²⁰ − 2⁻⁴⁰) (sep ≈ 9.5e-7). Refinement with a compensated residual must reach ~u.
+#[test]
+fn dlyap_rho_near_one_refined() {
+    let (p, q) = (1.0 - 2f64.powi(-20), 2f64.powi(-10));
+    let env = call("control.math.lyap", json!({"A": m(2, 2, &[p, -q, q, p]), "Q": m(2, 2, &[1.0, 0.0, 0.0, 1.0]), "type": "discrete"}));
+    let r = ok(&env);
+    let x = fvec(&r["X"]["data"]);
+    let exact = 1.0 / (2f64.powi(-20) - 2f64.powi(-40));
+    for (i, v) in x.iter().enumerate() {
+        let want = if i == 0 || i == 3 { exact } else { 0.0 };
+        assert!((v - want).abs() <= 1e-13 * exact, "X[{i}] = {v} vs {want} (rel {:.2e})", (v - want).abs() / exact);
+    }
+    assert_eq!(env["trust"]["convergence"]["applicable"], true);
+}

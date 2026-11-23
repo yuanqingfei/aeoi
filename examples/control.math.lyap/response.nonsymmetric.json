@@ -4,7 +4,7 @@
   "dry_run": false,
   "operator": {
     "id": "control.math.lyap",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
   },
   "request_id": "req-lyap-003-nonsym",
@@ -35,6 +35,7 @@
     "residual": {
       "abs_fro": 5.4046085600257767e-14,
       "rel": 2.7688380751892327e-16,
+      "abs_fro_compensated": null,
       "X_asymmetry_before_symmetrization_rel": 4.532271276976042e-17,
       "schur_backward_rel": 7.913436479397167e-16,
       "definition": "rel = ‖A X + X Aᵀ + Q‖_F / (2‖A‖_F‖X‖_F + ‖Q‖_F)"
@@ -76,6 +77,6 @@
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.168792
+    "wall_ms": 0.197109
   }
 }

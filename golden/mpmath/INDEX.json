@@ -1,0 +1,23 @@
+{
+ "reference_env": {
+  "engine": "mpmath",
+  "mpmath": "1.4.1",
+  "dps": 50,
+  "numpy": "2.5.5",
+  "scipy": "1.18.1",
+  "python": "3.13.5",
+  "seed": 20261123,
+  "method": "lqr: Newton–Kleinman in 50 digits from scipy.linalg.solve_continuous_are until ‖ΔX‖/‖X‖ < 1e-40; lyap: Kronecker-form linear solve in 50 digits",
+  "note": "high-precision reference values computed on the Grok Bot box; NOT MATLAB output, NOT python-control"
+ },
+ "cases": {
+  "control.design.lqr / condR_1e12_decoupled_repro": 1,
+  "control.design.lqr / ill_conditioned_R_hp": 5,
+  "control.design.lqr / ill_conditioned_R_extreme": 8,
+  "control.design.lqr / ill_conditioned_R_cross_N": 2,
+  "control.math.lyap / discrete_rho_near_1": 8,
+  "control.math.lyap / discrete_rho_near_1_nonsymmetric_Q": 1,
+  "control.math.lyap / continuous_near_axis": 3
+ },
+ "total": 28
+}

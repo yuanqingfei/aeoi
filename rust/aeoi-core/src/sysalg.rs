@@ -393,70 +393,263 @@ pub struct LyapInfo {
     pub schur_residual: f64,
 }
 
+/// Complex Schur factorization A = U T Uᴴ prepared for Bartels–Stewart solves (reusable for iterative refinement).
+pub struct LyapSchur {
+    pub kind: LyapKind,
+    u: DMatrix<C64>,
+    t: DMatrix<C64>,
+    pub info: LyapInfo,
+}
+
+impl LyapSchur {
+    /// Factor A; Err(separation) if the equation is (numerically) singular, Err(NaN) if Schur fails.
+    pub fn new(a: &DMatrix<f64>, kind: LyapKind) -> Result<LyapSchur, f64> {
+        let n = a.nrows();
+        if n == 0 {
+            return Ok(LyapSchur { kind, u: DMatrix::zeros(0, 0), t: DMatrix::zeros(0, 0), info: LyapInfo { separation: f64::INFINITY, schur_residual: 0.0 } });
+        }
+        let ac = cplx(a);
+        // complex Schur from the robust real Schur: A = Q R Qᵀ, then triangularize R's 2×2 blocks
+        let (qr, rr) = crate::lti::schur_robust(a).ok_or(f64::NAN)?;
+        let schur = nalgebra::linalg::Schur::try_new(cplx(&rr), f64::EPSILON, 1000 * n.max(10)).ok_or(f64::NAN)?;
+        let (uz, mut t) = schur.unpack();
+        let u = cplx(&qr) * uz;
+        for i in 0..n {
+            for j in 0..i {
+                t[(i, j)] = C64::new(0.0, 0.0);
+            }
+        }
+        let schur_residual = (&u * &t * u.adjoint() - &ac).norm() / a.norm().max(f64::MIN_POSITIVE);
+        let anorm = a.norm().max(f64::MIN_POSITIVE);
+        let mut sep = f64::INFINITY;
+        for i in 0..n {
+            for j in 0..n {
+                let (li, lj) = (t[(i, i)], t[(j, j)]);
+                let s = match kind {
+                    LyapKind::Continuous => (li + lj.conj()).norm(),
+                    LyapKind::Discrete => (li * lj.conj() - 1.0).norm(),
+                };
+                sep = sep.min(s);
+            }
+        }
+        let thr = match kind {
+            LyapKind::Continuous => 1e3 * U * anorm,
+            LyapKind::Discrete => 1e3 * U * anorm.max(1.0).powi(2),
+        };
+        if sep <= thr {
+            return Err(sep);
+        }
+        Ok(LyapSchur { kind, u, t, info: LyapInfo { separation: sep, schur_residual } })
+    }
+
+    /// Solve A X + X Aᵀ + Q = 0 (continuous) or A X Aᵀ − X + Q = 0 (discrete) with the stored factorization.
+    pub fn solve(&self, q: &DMatrix<f64>) -> DMatrix<f64> {
+        let (u, t, kind) = (&self.u, &self.t, self.kind);
+        let n = t.nrows();
+        if n == 0 {
+            return DMatrix::zeros(0, 0);
+        }
+        let qt = u.adjoint() * cplx(q) * u;
+        let mut y = DMatrix::<C64>::zeros(n, n);
+        for j in (0..n).rev() {
+            let mut acc = DVector::<C64>::zeros(n);
+            for k in j + 1..n {
+                acc += y.column(k) * t[(j, k)].conj();
+            }
+            let tjj = t[(j, j)].conj();
+            let (m, rhs) = match kind {
+                LyapKind::Continuous => (t + DMatrix::<C64>::identity(n, n) * tjj, -qt.column(j) - acc),
+                LyapKind::Discrete => (t * tjj - DMatrix::<C64>::identity(n, n), -qt.column(j) - t * acc),
+            };
+            // back substitution (upper triangular)
+            let mut x = DVector::<C64>::zeros(n);
+            for i in (0..n).rev() {
+                let mut s = rhs[i];
+                for l in i + 1..n {
+                    s -= m[(i, l)] * x[l];
+                }
+                x[i] = s / m[(i, i)];
+            }
+            y.set_column(j, &x);
+        }
+        (u * y * u.adjoint()).map(|c| c.re)
+    }
+}
+
 /// Bartels–Stewart with a complex Schur form A = U T Uᴴ.
 /// Continuous: A X + X Aᵀ + Q = 0.  Discrete: A X Aᵀ − X + Q = 0.
 /// Err(separation) if the equation is (numerically) singular.
 pub fn lyap_bs(a: &DMatrix<f64>, q: &DMatrix<f64>, kind: LyapKind) -> Result<(DMatrix<f64>, LyapInfo), f64> {
+    let f = LyapSchur::new(a, kind)?;
+    let x = f.solve(q);
+    Ok((x, f.info))
+}
+
+// ---- compensated (double-f64) arithmetic for accurate residuals.
+// Error-free transformations (Knuth TwoSum, Dekker TwoProduct with Veltkamp splitting; no FMA so the
+// result is bitwise identical on every platform, wasm32 included) and Ogita–Rump–Oishi Dot2.
+/// Knuth TwoSum: a + b = s + e exactly.
+#[inline]
+pub fn two_sum(a: f64, b: f64) -> (f64, f64) {
+    let s = a + b;
+    let bb = s - a;
+    (s, (a - (s - bb)) + (b - bb))
+}
+
+#[inline]
+fn split(a: f64) -> (f64, f64) {
+    let c = 134217729.0 * a; // 2^27 + 1
+    let h = c - (c - a);
+    (h, a - h)
+}
+
+#[inline]
+fn two_prod(a: f64, b: f64) -> (f64, f64) {
+    let p = a * b;
+    let (ah, al) = split(a);
+    let (bh, bl) = split(b);
+    (p, al * bl - (((p - ah * bh) - al * bh) - ah * bl))
+}
+
+/// Accumulator for Σ xᵢ·yᵢ in roughly twice the working precision (Dot2). `value()` = hi + lo.
+#[derive(Clone, Copy, Default)]
+pub struct Dot2 {
+    s: f64,
+    c: f64,
+}
+
+impl Dot2 {
+    #[inline]
+    pub fn add_prod(&mut self, x: f64, y: f64) {
+        let (p, pe) = two_prod(x, y);
+        let (s, se) = two_sum(self.s, p);
+        self.s = s;
+        self.c += pe + se;
+    }
+    #[inline]
+    pub fn add(&mut self, x: f64) {
+        let (s, se) = two_sum(self.s, x);
+        self.s = s;
+        self.c += se;
+    }
+    #[inline]
+    pub fn hi_lo(&self) -> (f64, f64) {
+        two_sum(self.s, self.c)
+    }
+}
+
+/// Lyapunov residual computed in compensated arithmetic (Dot2), rounded to f64 at the end:
+/// continuous R = A X + X Aᵀ + Q, discrete R = A X Aᵀ − X + Q. Accurate to ~u·|R| + u²·(scale), so it
+/// can drive iterative refinement beyond the cond·u limit of a plain f64 residual.
+pub fn lyap_residual_dd(a: &DMatrix<f64>, q: &DMatrix<f64>, x: &DMatrix<f64>, kind: LyapKind) -> DMatrix<f64> {
     let n = a.nrows();
-    if n == 0 {
-        return Ok((DMatrix::zeros(0, 0), LyapInfo { separation: f64::INFINITY, schur_residual: 0.0 }));
-    }
-    let ac = cplx(a);
-    // complex Schur from the robust real Schur: A = Q R Qᵀ, then triangularize R's 2×2 blocks
-    let (qr, rr) = crate::lti::schur_robust(a).ok_or(f64::NAN)?;
-    let schur = nalgebra::linalg::Schur::try_new(cplx(&rr), f64::EPSILON, 1000 * n.max(10)).ok_or(f64::NAN)?;
-    let (uz, mut t) = schur.unpack();
-    let u = cplx(&qr) * uz;
-    for i in 0..n {
-        for j in 0..i {
-            t[(i, j)] = C64::new(0.0, 0.0);
-        }
-    }
-    let schur_residual = (&u * &t * u.adjoint() - &ac).norm() / a.norm().max(f64::MIN_POSITIVE);
-    let anorm = a.norm().max(f64::MIN_POSITIVE);
-    let mut sep = f64::INFINITY;
-    for i in 0..n {
-        for j in 0..n {
-            let (li, lj) = (t[(i, i)], t[(j, j)]);
-            let s = match kind {
-                LyapKind::Continuous => (li + lj.conj()).norm(),
-                LyapKind::Discrete => (li * lj.conj() - 1.0).norm(),
-            };
-            sep = sep.min(s);
-        }
-    }
-    let thr = match kind {
-        LyapKind::Continuous => 1e3 * U * anorm,
-        LyapKind::Discrete => 1e3 * U * anorm.max(1.0).powi(2),
-    };
-    if sep <= thr {
-        return Err(sep);
-    }
-    let qt = u.adjoint() * cplx(q) * &u;
-    let mut y = DMatrix::<C64>::zeros(n, n);
-    for j in (0..n).rev() {
-        let mut acc = DVector::<C64>::zeros(n);
-        for k in j + 1..n {
-            acc += y.column(k) * t[(j, k)].conj();
-        }
-        let tjj = t[(j, j)].conj();
-        let (m, rhs) = match kind {
-            LyapKind::Continuous => (&t + DMatrix::<C64>::identity(n, n) * tjj, -qt.column(j) - acc),
-            LyapKind::Discrete => (&t * tjj - DMatrix::<C64>::identity(n, n), -qt.column(j) - &t * acc),
-        };
-        // back substitution (upper triangular)
-        let mut x = DVector::<C64>::zeros(n);
-        for i in (0..n).rev() {
-            let mut s = rhs[i];
-            for l in i + 1..n {
-                s -= m[(i, l)] * x[l];
+    let mut r = DMatrix::<f64>::zeros(n, n);
+    match kind {
+        LyapKind::Continuous => {
+            for j in 0..n {
+                for i in 0..n {
+                    let mut d = Dot2::default();
+                    for k in 0..n {
+                        d.add_prod(a[(i, k)], x[(k, j)]);
+                        d.add_prod(x[(i, k)], a[(j, k)]);
+                    }
+                    d.add(q[(i, j)]);
+                    let (h, l) = d.hi_lo();
+                    r[(i, j)] = h + l;
+                }
             }
-            x[i] = s / m[(i, i)];
         }
-        y.set_column(j, &x);
+        LyapKind::Discrete => {
+            // Y = A X kept as an unevaluated sum Yh + Yl, then R = (Yh + Yl) Aᵀ − X + Q
+            let mut yh = DMatrix::<f64>::zeros(n, n);
+            let mut yl = DMatrix::<f64>::zeros(n, n);
+            for j in 0..n {
+                for i in 0..n {
+                    let mut d = Dot2::default();
+                    for k in 0..n {
+                        d.add_prod(a[(i, k)], x[(k, j)]);
+                    }
+                    let (h, l) = d.hi_lo();
+                    yh[(i, j)] = h;
+                    yl[(i, j)] = l;
+                }
+            }
+            for j in 0..n {
+                for i in 0..n {
+                    let mut d = Dot2::default();
+                    for k in 0..n {
+                        d.add_prod(yh[(i, k)], a[(j, k)]);
+                        d.add_prod(yl[(i, k)], a[(j, k)]);
+                    }
+                    d.add(-x[(i, j)]);
+                    d.add(q[(i, j)]);
+                    let (h, l) = d.hi_lo();
+                    r[(i, j)] = h + l;
+                }
+            }
+        }
     }
-    let x = (&u * y * u.adjoint()).map(|c| c.re);
-    Ok((x, LyapInfo { separation: sep, schur_residual }))
+    r
+}
+
+/// Result of [`lyap_refined`].
+pub struct LyapRefined {
+    pub x: DMatrix<f64>,
+    pub info: LyapInfo,
+    /// number of refinement corrections applied
+    pub steps: usize,
+    /// ‖δ‖_F/‖X‖_F of the last correction computed (applied or not); 0 if refinement was not triggered
+    pub last_correction_rel: f64,
+    /// whether refinement was triggered (heuristic forward-error estimate above `trigger_rel`)
+    pub triggered: bool,
+    /// compensated residual ‖R‖_F of the returned X (NaN when refinement was not triggered)
+    pub residual_dd: f64,
+}
+
+/// Bartels–Stewart followed by iterative refinement with a compensated residual (reusing the Schur factors):
+/// X ← X + δ, where δ solves the same equation with Q replaced by the residual R(X). Triggered only when the
+/// heuristic forward-error estimate ‖R‖_F/(sep·‖X‖_F) exceeds `trigger_rel` (near-singular equations,
+/// e.g. discrete with ρ(A) → 1); at most `max_steps` corrections, stopping when ‖δ‖ ≤ 2u‖X‖ or when a
+/// correction does not shrink by half (then it is not applied).
+pub fn lyap_refined(a: &DMatrix<f64>, q: &DMatrix<f64>, kind: LyapKind, trigger_rel: f64, max_steps: usize) -> Result<LyapRefined, f64> {
+    let f = LyapSchur::new(a, kind)?;
+    let mut x = f.solve(q);
+    let sep = f.info.separation;
+    let xn = x.norm().max(f64::MIN_POSITIVE);
+    // trigger on the plain f64 residual (cheap); its rounding floor u·scale/sep makes this fire exactly when sep is small
+    let est = lyap_residual(a, q, &x, kind).0 / sep / xn;
+    let mut out = LyapRefined { x: DMatrix::zeros(0, 0), info: f.info.clone(), steps: 0, last_correction_rel: 0.0, triggered: false, residual_dd: f64::NAN };
+    if !(est > trigger_rel) || !est.is_finite() {
+        out.x = x;
+        return Ok(out);
+    }
+    out.triggered = true;
+    let mut r = lyap_residual_dd(a, q, &x, kind);
+    let mut prev = f64::INFINITY;
+    for _ in 0..max_steps {
+        let d = f.solve(&r);
+        let dn = d.norm();
+        let xn = x.norm().max(f64::MIN_POSITIVE);
+        out.last_correction_rel = dn / xn;
+        if !dn.is_finite() || dn > 0.5 * prev {
+            break;
+        }
+        let xnew = &x + &d;
+        let rnew = lyap_residual_dd(a, q, &xnew, kind);
+        if !(rnew.norm() <= r.norm()) {
+            break;
+        }
+        x = xnew;
+        r = rnew;
+        out.steps += 1;
+        prev = dn;
+        if dn <= 2.0 * U * xn {
+            break;
+        }
+    }
+    out.residual_dd = r.norm();
+    out.x = x;
+    Ok(out)
 }
 
 /// Lyapunov residual ‖·‖_F and the scale used for the relative residual.

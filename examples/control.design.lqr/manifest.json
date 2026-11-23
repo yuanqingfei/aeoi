@@ -1,7 +1,7 @@
 {
   "spec": "aeoi/0.3",
   "id": "control.design.lqr",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "title": "Continuous-time LQR",
   "description": "求解连续时间代数 Riccati 方程 (CARE)，返回最优状态反馈增益 K（u=−Kx）、Riccati 解 S 与闭环极点，使 J=∫(xᵀQx+uᵀRu+2xᵀNu)dt 最小。",
   "category": "design",
@@ -24,7 +24,7 @@
     "siso_only": false
   },
   "provenance": {
-    "algorithm": "消去交叉项后构造 Hamiltonian 矩阵 H=[[A,−BR⁻¹Bᵀ],[−Q,−Aᵀ]]；用带行列式缩放的 Newton 迭代计算矩阵符号函数 sign(H)，由 (sign(H)+I) 的零空间得稳定不变子空间并最小二乘解出 S；随后做至多 3 步 Newton–Kleinman 修正（n ≤ 32，Kronecker 形式解 Lyapunov 方程），残差不降即停",
+    "algorithm": "消去交叉项后构造 Hamiltonian 矩阵 H=[[Ā,−BR⁻¹Bᵀ],[−Q̄,−Āᵀ]]。虚轴检验在辛对角平衡后的 H̃=D⁻¹HD 上做（D=diag(d,d⁻¹)，d_i 为 2 的幂，坐标下降最小化逐元 ℓ₁ 范数，等价于状态尺度变换）：min|Re λ(H̃)| ≤ 10³·u·‖H̃‖₁ 只作为怀疑，用 PBH 检验 (Q̄,Ā) 在近虚轴特征值处是否不可观来确认，否则照常求解并在事后检验闭环稳定裕度；在 H 上用带行列式缩放的 Newton 迭代计算 sign(H)，由 (sign(H)+I) 的零空间最小二乘解出 S；随后在原坐标做 K 形式 Newton–Kleinman 修正（缺陷校正形式）：K=R⁻¹(BᵀX+Nᵀ)（Cholesky + 补偿残差迭代精化），残差 E=(A−BK)ᵀX+X(A−BK)+Q−NK−KᵀNᵀ+KᵀRK 用补偿点积（Dot2）计算，ΔX 解 (A−BK)ᵀΔX+ΔX(A−BK)+E=0（复 Schur Bartels–Stewart），X←X+ΔX；‖ΔX‖_F ≤ 2ε‖X‖_F 或在 1e-8‖X‖_F 以下不再减小即停，至多 20 步，结果须保持 A−BK Hurwitz；最终 K 由 S 加一步未施加的 Newton 修正量（S 的低位部分）精化求得",
     "references": [
       {
         "type": "paper",
@@ -47,6 +47,16 @@
         "doi": "10.1109/TAC.1968.1098829"
       },
       {
+        "type": "paper",
+        "cite": "P. Benner, Symplectic balancing of Hamiltonian matrices, SIAM J. Sci. Comput. 22(5), 2001",
+        "doi": "10.1137/S1064827500367993"
+      },
+      {
+        "type": "paper",
+        "cite": "R. H. Bartels, G. W. Stewart, Solution of the matrix equation AX + XB = C, Comm. ACM 15(9), 1972",
+        "doi": "10.1145/361573.361582"
+      },
+      {
         "type": "textbook",
         "cite": "B. D. O. Anderson, J. B. Moore, Optimal Control: Linear Quadratic Methods, 1990"
       }
@@ -58,7 +68,7 @@
   },
   "backend": {
     "library": "aeoi-control (pure Rust) + nalgebra 0.33",
-    "routine": "lqr::solve_care (matrix sign function + Newton–Kleinman refinement)",
+    "routine": "lqr::solve_care (matrix sign function + K-form Newton–Kleinman defect correction; balanced imaginary-axis test)",
     "version": "0.2.0",
     "binding": "native",
     "license": "MIT OR Apache-2.0"
@@ -100,8 +110,9 @@
   },
   "limits": {
     "max_states": 200,
-    "max_states_for_refinement": 32,
-    "max_sign_iterations": 100
+    "max_states_for_refinement": 200,
+    "max_sign_iterations": 100,
+    "max_newton_iterations": 20
   },
   "input_schema": {
     "$ref": "./input.schema.json"
@@ -117,7 +128,7 @@
     "target": "A",
     "current": "B"
   },
-  "credentials": "aeoi://operators/control.design.lqr/0.2.0/credentials",
+  "credentials": "aeoi://operators/control.design.lqr/0.3.0/credentials",
   "errors": [
     "E.VALIDATION.SCHEMA",
     "E.VALIDATION.SHAPE",

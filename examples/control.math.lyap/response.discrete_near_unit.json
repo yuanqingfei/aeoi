@@ -1,0 +1,81 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.math.lyap",
+    "version": "0.4.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-lyap-004-rho-near-1",
+  "result": {
+    "X": {
+      "dtype": "f64",
+      "shape": [
+        2,
+        2
+      ],
+      "data": [
+        1048577.0000009537,
+        0.0,
+        0.0,
+        1048577.0000009537
+      ]
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": true,
+      "converged": true,
+      "iterations": 2,
+      "criterion": "迭代精化（补偿残差 Dot2，复用 Schur 分解）：启发式前向误差估计 > 1e-12 时触发，至多 4 步；‖δ‖_F ≤ 2u‖X‖_F 或修正量未减半即停",
+      "final_value": 8.67361737584506e-19
+    },
+    "residual": {
+      "abs_fro": 0.0,
+      "rel": 0.0,
+      "abs_fro_compensated": 1.2266347333466993e-18,
+      "X_asymmetry_before_symmetrization_rel": 0.0,
+      "schur_backward_rel": 3.3306722502490213e-16,
+      "definition": "rel = ‖A X Aᵀ − X + Q‖_F / (‖A‖_F²‖X‖_F + ‖X‖_F + ‖Q‖_F)"
+    },
+    "condition": {
+      "separation_min": 9.536734073556374e-07,
+      "separation_rel": 4.76837158424736e-07,
+      "definition": "min_{i,j}|λ_i λ̄_j − 1|"
+    },
+    "error_estimate": {
+      "X_abs_fro": 1.2862209681907079e-12,
+      "X_rel": 8.673617375845065e-19,
+      "basis": "启发式：‖残差‖_F / sep_min；A 为正规矩阵时 sep_min 即真实分离度，非正规时真实 sep 可能更小（估计偏乐观）"
+    },
+    "checks": {
+      "A_stable": true,
+      "X_symmetric": true,
+      "X_psd": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:e2b8e7db24d11f0ff14a190a76513f2f1f225377f78cd223752fed46e154df19",
+    "output_hash": "sha256:c1662d14676f4f730730efc10971df3e0fb163517120cd64a09bc2c2b5597303",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.195129
+  }
+}

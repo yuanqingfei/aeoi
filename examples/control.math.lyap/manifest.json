@@ -1,7 +1,7 @@
 {
   "spec": "aeoi/0.3",
   "id": "control.math.lyap",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "title": "Lyapunov equation",
   "description": "求解连续 Lyapunov 方程 A X + X Aᵀ + Q = 0 或离散 Lyapunov 方程 A X Aᵀ − X + Q = 0。",
   "category": "utility",
@@ -21,7 +21,7 @@
     "siso_only": false
   },
   "provenance": {
-    "algorithm": "Bartels–Stewart：复 Schur 分解 A = U T Uᴴ（T 上三角），Q̃ = Uᴴ Q U；连续逐列（j 从 n−1 到 0）解 (T + t̄_jj I) y_j = −q̃_j − Σ_{k>j} t̄_jk y_k，离散解 (t̄_jj T − I) y_j = −q̃_j − T Σ_{k>j} t̄_jk y_k，均为上三角回代；X = Re(U Y Uᴴ)。可解性分离度 sep_min = min|λ_i+λ̄_j|（离散 min|λ_i λ̄_j − 1|）≤ 10³·u·‖A‖_F（离散 10³·u·max(1,‖A‖_F)²）时报 E.DOMAIN.LYAP_SINGULAR。Q 对称时输出对称化",
+    "algorithm": "Bartels–Stewart：复 Schur 分解 A = U T Uᴴ（T 上三角），Q̃ = Uᴴ Q U；连续逐列（j 从 n−1 到 0）解 (T + t̄_jj I) y_j = −q̃_j − Σ_{k>j} t̄_jk y_k，离散解 (t̄_jj T − I) y_j = −q̃_j − T Σ_{k>j} t̄_jk y_k，均为上三角回代；X = Re(U Y Uᴴ)。当启发式前向误差估计 ‖R‖_F/(sep_min·‖X‖_F) > 1e-12（方程接近奇异，如离散 ρ(A) → 1）时做迭代精化：用补偿算术（Dot2，Dekker 无 FMA 乘法，跨平台逐位相同）计算残差 R(X)，复用同一 Schur 分解解修正量 δ，X ← X + δ，至多 4 步，‖δ‖_F ≤ 2u‖X‖_F 或修正量未减半即停。可解性分离度 sep_min = min|λ_i+λ̄_j|（离散 min|λ_i λ̄_j − 1|）≤ 10³·u·‖A‖_F（离散 10³·u·max(1,‖A‖_F)²）时报 E.DOMAIN.LYAP_SINGULAR。Q 对称时输出对称化",
     "references": [
       {
         "type": "paper",
@@ -36,6 +36,15 @@
         "type": "paper",
         "cite": "S. J. Hammarling, Numerical solution of the stable, non-negative definite Lyapunov equation, IMA J. Numer. Anal. 2(3), 1982",
         "doi": "10.1093/imanum/2.3.303"
+      },
+      {
+        "type": "paper",
+        "cite": "T. Ogita, S. M. Rump, S. Oishi, Accurate sum and dot product, SIAM J. Sci. Comput. 26(6), 2005",
+        "doi": "10.1137/030601818"
+      },
+      {
+        "type": "textbook",
+        "cite": "N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM, 2002（迭代精化，第 12 章）"
       }
     ],
     "clean_room": {
@@ -45,7 +54,7 @@
   },
   "backend": {
     "library": "aeoi-control (pure Rust) + nalgebra 0.33",
-    "routine": "sysalg::lyap_bs (complex Schur Bartels–Stewart)",
+    "routine": "sysalg::lyap_refined (complex Schur Bartels–Stewart + compensated-residual iterative refinement)",
     "version": "0.3.0",
     "binding": "native",
     "license": "MIT OR Apache-2.0"
@@ -74,7 +83,8 @@
     ]
   },
   "limits": {
-    "max_states": 300
+    "max_states": 300,
+    "max_refinement_steps": 4
   },
   "input_schema": {
     "$ref": "./input.schema.json"
@@ -90,7 +100,7 @@
     "target": "A",
     "current": "B"
   },
-  "credentials": "aeoi://operators/control.math.lyap/0.3.0/credentials",
+  "credentials": "aeoi://operators/control.math.lyap/0.4.0/credentials",
   "errors": [
     "E.VALIDATION.SCHEMA",
     "E.VALIDATION.SHAPE",

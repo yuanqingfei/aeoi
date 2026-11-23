@@ -1,0 +1,78 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.math.lyap",
+ "operator_version": "0.4.0",
+ "case_family": "discrete_rho_near_1_nonsymmetric_Q",
+ "reference_env": {
+  "engine": "mpmath",
+  "mpmath": "1.4.1",
+  "dps": 50,
+  "numpy": "2.5.5",
+  "scipy": "1.18.1",
+  "python": "3.13.5",
+  "seed": 20261123,
+  "method": "lqr: Newton–Kleinman in 50 digits from scipy.linalg.solve_continuous_are until ‖ΔX‖/‖X‖ < 1e-40; lyap: Kronecker-form linear solve in 50 digits",
+  "note": "high-precision reference values computed on the Grok Bot box; NOT MATLAB output, NOT python-control"
+ },
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    3,
+    3
+   ],
+   "data": [
+    0.23886971554239977,
+    0.051658687557638444,
+    -0.6617095310930355,
+    -0.5541641869201377,
+    0.7316031086375152,
+    0.13059444105012025,
+    0.677732784605749,
+    0.8158858197855882,
+    -0.13557062296488878
+   ]
+  },
+  "Q": {
+   "dtype": "f64",
+   "shape": [
+    3,
+    3
+   ],
+   "data": [
+    -0.4551248972774509,
+    -0.8852847463009059,
+    1.5382546153001497,
+    0.3547393038164955,
+    0.7774092685860584,
+    0.4481091365735021,
+    -1.331707087736693,
+    0.32851446214161983,
+    1.1764454136236169
+   ]
+  },
+  "type": "discrete"
+ },
+ "expected": {
+  "X": {
+   "dtype": "f64",
+   "shape": [
+    3,
+    3
+   ],
+   "data": [
+    49970.6040048624,
+    -136323.714110901,
+    -68118.11132320933,
+    -136320.9246986776,
+    371891.8546966638,
+    185838.5562518868,
+    -68124.29184322893,
+    185836.3325698528,
+    92865.1678592361
+   ]
+  },
+  "spectral_radius": 0.9999990000000001,
+  "scipy_forward_error_rel_max": 1.6470358467302898e-12
+ }
+}

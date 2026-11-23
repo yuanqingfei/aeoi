@@ -148,10 +148,15 @@ for op, (cls, cmp) in TOL.items():
         d = json.load(open(p)); fams[d["case_family"]] += 1
         if "expected_error" in d: errs[d["case_family"]] = d["expected_error"]
         if "expected_warnings" in d: warns[d["case_family"]] = d["expected_warnings"]
-    lines = [f"# Parity test spec — {op} 0.3.0 (AEOI v0.3-draft)", f"operator: {op}", "references:",
+    ver = json.load(open(root / "examples" / op / "manifest.json"))["version"]
+    hp = sorted(glob.glob(str(root / f"golden/mpmath/{op}/{ver}/*.json")))
+    lines = [f"# Parity test spec — {op} {ver} (AEOI v0.3-draft)" + (f"; python-control golden store generated for 0.3.0 and reused unchanged (V-3a)" if ver != "0.3.0" else ""), f"operator: {op}", "references:",
              '  - {engine: python-control, version: "0.10.2 (scipy 1.18.1, numpy 2.5.5)", role: dev_reference, status: active,',
              f'     generator: gen_golden_pycontrol_b2.py, golden_store: "golden/python-control/{op}/0.3.0/*.json",',
              '     note: "python-control/scipy reference values, NOT MATLAB output"}',
+             *([f'  - {{engine: mpmath, version: "50 digits", role: high_precision_reference, status: active, generator: gen_golden_mpmath.py,',
+                f'     golden_store: "golden/mpmath/{op}/{ver}/*.json", runner: "cargo test --release -p aeoi-control --test parity_hp",',
+                '     compare: "rel_fro ≤ 1e-12, no relaxation", note: "ill-conditioned families from the tpt-control cross-check; NOT MATLAB, NOT python-control"}'] if hp else []),
              '  - {engine: MATLAB, role: ground_truth, status: planned, note: "no generator script yet for batch 2"}',
              'runner: "cargo test --release -p aeoi-control --test parity_b2"', f"tolerance_class: {cls}", "compare:"]
     lines += [f'  "{k}": "{v}"' for k, v in cmp.items()]
@@ -160,6 +165,10 @@ for op, (cls, cmp) in TOL.items():
         extra = f", expect: {errs[f]}" if f in errs else (f", expect_warning: {warns[f]}" if f in warns else "")
         note = ', note: "non-symmetric matrices; the column-major (A(:)) request must deviate > 1e3 × tolerance"' if f == "memory_order_nonsymmetric" else ""
         lines.append(f"  - {{name: {f}, n: {n}{extra}{note}}}")
+    if hp:
+        hf = collections.Counter(json.load(open(p))["case_family"] for p in hp)
+        lines.append("case_families_high_precision:   # golden/mpmath, n = cases")
+        lines += [f"  - {{name: {f}, n: {n}}}" for f, n in sorted(hf.items())]
     if op == "control.lti.poles_zeros":
         lines.append('reference_postprocess: "python-control (no slycot) returns infinite generalized eigenvalues of the zero pencil as huge finite numbers; zeros with |z| > 1e10·(1+‖[A B; C D]‖_F) are dropped from the reference"')
     lines.append('pass_rule: "all cases within tolerance; expected-error cases return the same code; expected warnings present; every emitted code declared in the manifest; outputs validate against envelope+output schema"')

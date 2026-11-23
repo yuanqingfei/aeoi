@@ -1,6 +1,8 @@
-//! control.design.lqr — continuous-time LQR via matrix sign function + Newton–Kleinman refinement (spec 10.3).
+//! control.design.lqr — continuous-time LQR via matrix sign function + K-form Newton–Kleinman defect
+//! correction with compensated residuals; scale-independent (balanced) imaginary-axis test (spec 10.3).
 use aeoi_core::error::{ask_user, modify_input, OpError, Warning};
-use aeoi_core::linalg::{cond2, lyap_operator, lyap_solve, norm1, rel_asym, sort_poles, symmetrize};
+use aeoi_core::linalg::{cond2, lyap_operator, norm1, rel_asym, sort_poles, symmetrize};
+use aeoi_core::sysalg::{lyap_bs, pbh, Dot2, LyapKind};
 use aeoi_core::lti::{eigenvalues, C64};
 use aeoi_core::matrix::{complex_vector, dense_real, parse_array, to_real_matrix};
 use aeoi_core::{num, opt_num, ExecCtx, HostCtx, Operator, OperatorMeta, Output};
@@ -127,7 +129,7 @@ impl Operator for Lqr {
 
     fn estimate(&self, i: &LqrInput) -> Option<Value> {
         let n = i.a.nrows();
-        Some(json!({"states": n, "inputs": i.b.ncols(), "sign_iteration_flops_per_step": 2 * (2 * n).pow(3), "refinement": n <= 32}))
+        Some(json!({"states": n, "inputs": i.b.ncols(), "sign_iteration_flops_per_step": 2 * (2 * n).pow(3), "refinement": n <= self.meta.manifest["limits"]["max_states_for_refinement"].as_u64().unwrap_or(200) as usize}))
     }
 
     fn execute(&self, inp: LqrInput, ctx: &ExecCtx) -> Result<Output, OpError> {
@@ -181,107 +183,195 @@ impl Operator for Lqr {
                 }
             }
         }
-        // --- Hamiltonian ---
+        // --- imaginary-axis test on the symplectically balanced Hamiltonian (scale-independent, X-4a) ---
+        // state scaling x = D x̃ with D = diag(2^k) (exact in binary): Ã = D⁻¹ĀD, G̃ = D⁻¹GD⁻¹, Q̃ = DQ̄D, H̃ = diag(D⁻¹, D)·H·diag(D, D⁻¹)
+        let d = symplectic_balance(&abar, &g, &qbar);
+        let ab = DMatrix::from_fn(nx, nx, |i, j| abar[(i, j)] * d[j] / d[i]);
+        let gb = DMatrix::from_fn(nx, nx, |i, j| g[(i, j)] / (d[i] * d[j]));
+        let qb = DMatrix::from_fn(nx, nx, |i, j| qbar[(i, j)] * (d[i] * d[j]));
         let mut h = DMatrix::zeros(2 * nx, 2 * nx);
-        h.view_mut((0, 0), (nx, nx)).copy_from(&abar);
-        h.view_mut((0, nx), (nx, nx)).copy_from(&(-&g));
-        h.view_mut((nx, 0), (nx, nx)).copy_from(&(-&qbar));
-        h.view_mut((nx, nx), (nx, nx)).copy_from(&(-abar.transpose()));
+        h.view_mut((0, 0), (nx, nx)).copy_from(&ab);
+        h.view_mut((0, nx), (nx, nx)).copy_from(&(-&gb));
+        h.view_mut((nx, 0), (nx, nx)).copy_from(&(-&qb));
+        h.view_mut((nx, nx), (nx, nx)).copy_from(&(-ab.transpose()));
         let hn = norm1(&h).max(1e-300);
         let h_eigs = eigenvalues(&h);
         let min_re = h_eigs.iter().map(|l| l.re.abs()).fold(f64::INFINITY, f64::min);
-        if min_re <= 1e3 * f64::EPSILON * hn {
-            return Err(OpError::new(
+        let imag_err = |why: &str, ratio: f64| {
+            OpError::new(
                 "E.DOMAIN.HAMILTONIAN_IMAG_AXIS_EIG",
-                format!("Hamiltonian 矩阵在虚轴上（或数值上极接近虚轴）有特征值（min|Re λ| / ‖H‖₁ = {:.2e}），等价于 (Q, A) 在虚轴上有不可观模态，不存在稳定化解。", min_re / hn),
+                format!("Hamiltonian 矩阵在虚轴上（或数值上极接近虚轴）有特征值（平衡后 min|Re λ| / ‖H̃‖₁ = {ratio:.2e}；{why}），等价于 (Q, A) 在虚轴上有不可观模态，不存在稳定化解。"),
                 "在 Q 中给这些模态加权（例如 Q 加一个小的正定项 εI），或检查系统是否有纯虚极点未被 Q 观测。",
             )
             .path("/Q")
-            .detail("min_abs_real_rel", json!(min_re / hn))
-            .remedy(modify_input("regularize_q", "Q ← Q + 1e-6·I（小正则项，改变优化目标，需确认）", "medium", true, json!([{"op": "replace", "path": "/Q", "value": dense_real(&(&q + DMatrix::<f64>::identity(nx, nx) * 1e-6))}]))));
-        }
-        // --- matrix sign function (Newton with determinantal scaling) ---
-        let mut z = h.clone();
-        let mut scaling = true;
-        let mut iters = 0;
-        let mut last_diff = f64::INFINITY;
-        let max_it = self.meta.manifest["limits"]["max_sign_iterations"].as_u64().unwrap_or(100) as usize;
-        let mut converged = false;
-        while iters < max_it {
-            ctx.check()?;
-            iters += 1;
-            let lu = z.clone().lu();
-            let zinv = lu.try_inverse().ok_or_else(|| {
-                OpError::new("E.NUMERICAL.SINGULAR", "符号函数迭代中矩阵奇异。", "检查 Hamiltonian 是否有接近零的特征值（系统接近不可镇定/不可检测）；可在 Q 中加小正则项。").path("/Q")
-            })?;
-            let c = if scaling {
-                let u = z.clone().lu().u();
-                let logdet: f64 = (0..2 * nx).map(|i| u[(i, i)].abs().ln()).sum();
-                (-logdet / (2 * nx) as f64).exp()
-            } else {
-                1.0
-            };
-            let znew = (&z * c + &zinv * (1.0 / c)) * 0.5;
-            let diff = norm1(&(&znew - &z)) / norm1(&znew).max(1e-300);
-            z = znew;
-            if diff < 1e-2 {
-                scaling = false;
+            .detail("min_abs_real_rel", json!(ratio))
+            .detail("basis", json!(why))
+            .remedy(modify_input("regularize_q", "Q ← Q + 1e-6·I（小正则项，改变优化目标，需确认）", "medium", true, json!([{"op": "replace", "path": "/Q", "value": dense_real(&(&q + DMatrix::<f64>::identity(nx, nx) * 1e-6))}])))
+        };
+        // Near-axis eigenvalue of the balanced H is only a suspicion: confirm it directly (PBH observability of
+        // (Q̄, Ā) at near-axis eigenvalues of Ā), otherwise solve and decide post hoc on the closed loop.
+        let imag_suspect = min_re <= 1e3 * f64::EPSILON * hn;
+        if imag_suspect {
+            let an = abar.norm().max(1e-300);
+            for lam in eigenvalues(&abar) {
+                if lam.re.abs() <= 1e-6 * an {
+                    let smin = pbh(&abar.transpose(), &qbar, lam.conj());
+                    if smin <= 1e-10 {
+                        return Err(imag_err(&format!("Ā 的特征值 {:.6}{:+.6}j 在 Q̄ 下不可观（PBH 相对最小奇异值 {smin:.2e}）", lam.re, lam.im), min_re / hn)
+                            .detail("unobservable_eigenvalue", json!([lam.re, lam.im])));
+                    }
+                }
             }
-            if diff <= 1e-13 || (diff >= last_diff && last_diff <= 1e-9) {
-                converged = true;
-                last_diff = diff.min(last_diff);
-                break;
+            warnings.push(Warning::new("W.NUMERICAL.ILL_CONDITIONED", format!("平衡后 Hamiltonian 特征值接近虚轴（min|Re λ| / ‖H̃‖₁ = {:.2e}），已求解并事后检验闭环稳定性。", min_re / hn)).path("/Q"));
+        }
+        let sign = |h: &DMatrix<f64>| -> Result<(DMatrix<f64>, usize, f64), OpError> {
+            // --- matrix sign function (Newton with determinantal scaling) on the unbalanced H ---
+            // (the balanced H̃ is used only for the imaginary-axis test: in the parity runs the sign iteration on H̃
+            // lost stabilizability on a 100-state, 3-input case that the unbalanced iteration + Newton–Kleinman solves)
+            let mut z = h.clone();
+            let mut scaling = true;
+            let mut iters = 0;
+            let mut last_diff = f64::INFINITY;
+            let max_it = self.meta.manifest["limits"]["max_sign_iterations"].as_u64().unwrap_or(100) as usize;
+            let mut converged = false;
+            while iters < max_it {
+                ctx.check()?;
+                iters += 1;
+                let lu = z.clone().lu();
+                let zinv = lu.try_inverse().ok_or_else(|| {
+                    OpError::new("E.NUMERICAL.SINGULAR", "符号函数迭代中矩阵奇异。", "检查 Hamiltonian 是否有接近零的特征值（系统接近不可镇定/不可检测）；可在 Q 中加小正则项。").path("/Q")
+                })?;
+                let c = if scaling {
+                    let u = z.clone().lu().u();
+                    let logdet: f64 = (0..2 * nx).map(|i| u[(i, i)].abs().ln()).sum();
+                    (-logdet / (2 * nx) as f64).exp()
+                } else {
+                    1.0
+                };
+                let znew = (&z * c + &zinv * (1.0 / c)) * 0.5;
+                let diff = norm1(&(&znew - &z)) / norm1(&znew).max(1e-300);
+                z = znew;
+                if diff < 1e-2 {
+                    scaling = false;
+                }
+                if diff <= 1e-13 || (diff >= last_diff && last_diff <= 1e-9) {
+                    converged = true;
+                    last_diff = diff.min(last_diff);
+                    break;
+                }
+                last_diff = diff;
             }
-            last_diff = diff;
-        }
-        if !converged && last_diff > 1e-8 {
-            return Err(OpError::new("E.NUMERICAL.NO_CONVERGENCE", format!("矩阵符号函数迭代 {iters} 步未收敛（最后相对变化 {last_diff:.2e}）。"), "问题可能极度病态（Hamiltonian 特征值接近虚轴）。尝试对状态做尺度归一化、在 Q 中加正则项，或增大 exec.timeout_ms。")
-                .detail("iterations", json!(iters))
-                .detail("last_relative_change", json!(last_diff))
-                .remedy(ask_user("ask", "与用户确认是否可以对模型做尺度归一化")));
-        }
-        // stable invariant subspace: (W + I)[I; S] = 0  ->  [W12; W22+I] S = -[W11+I; W21]
-        let id = DMatrix::<f64>::identity(nx, nx);
-        let mut lhs = DMatrix::zeros(2 * nx, nx);
-        lhs.view_mut((0, 0), (nx, nx)).copy_from(&z.view((0, nx), (nx, nx)));
-        lhs.view_mut((nx, 0), (nx, nx)).copy_from(&(z.view((nx, nx), (nx, nx)) + &id));
-        let mut rhs = DMatrix::zeros(2 * nx, nx);
-        rhs.view_mut((0, 0), (nx, nx)).copy_from(&(-(z.view((0, 0), (nx, nx)) + &id)));
-        rhs.view_mut((nx, 0), (nx, nx)).copy_from(&(-z.view((nx, 0), (nx, nx)).into_owned()));
-        let svd = lhs.svd(true, true);
-        let mut s = svd.solve(&rhs, 1e-14).map_err(|_| OpError::new("E.NUMERICAL.SINGULAR", "由符号函数求 S 的最小二乘问题失败。", "问题可能极度病态。"))?;
+            if !converged && last_diff > 1e-8 {
+                return Err(OpError::new("E.NUMERICAL.NO_CONVERGENCE", format!("矩阵符号函数迭代 {iters} 步未收敛（最后相对变化 {last_diff:.2e}）。"), "问题可能极度病态（Hamiltonian 特征值接近虚轴）。尝试对状态做尺度归一化、在 Q 中加正则项，或增大 exec.timeout_ms。")
+                    .detail("iterations", json!(iters))
+                    .detail("last_relative_change", json!(last_diff))
+                    .remedy(ask_user("ask", "与用户确认是否可以对模型做尺度归一化")));
+            }
+            // stable invariant subspace: (W + I)[I; S] = 0  ->  [W12; W22+I] S = -[W11+I; W21]
+            let id = DMatrix::<f64>::identity(nx, nx);
+            let mut lhs = DMatrix::zeros(2 * nx, nx);
+            lhs.view_mut((0, 0), (nx, nx)).copy_from(&z.view((0, nx), (nx, nx)));
+            lhs.view_mut((nx, 0), (nx, nx)).copy_from(&(z.view((nx, nx), (nx, nx)) + &id));
+            let mut rhs = DMatrix::zeros(2 * nx, nx);
+            rhs.view_mut((0, 0), (nx, nx)).copy_from(&(-(z.view((0, 0), (nx, nx)) + &id)));
+            rhs.view_mut((nx, 0), (nx, nx)).copy_from(&(-z.view((nx, 0), (nx, nx)).into_owned()));
+            let svd = lhs.svd(true, true);
+            let sb = svd.solve(&rhs, 1e-14).map_err(|_| OpError::new("E.NUMERICAL.SINGULAR", "由符号函数求 S 的最小二乘问题失败。", "问题可能极度病态。"))?;
+            Ok((sb, iters, last_diff))
+        };
+        let h0 = {
+            let mut h0 = DMatrix::zeros(2 * nx, 2 * nx);
+            h0.view_mut((0, 0), (nx, nx)).copy_from(&abar);
+            h0.view_mut((0, nx), (nx, nx)).copy_from(&(-&g));
+            h0.view_mut((nx, 0), (nx, nx)).copy_from(&(-&qbar));
+            h0.view_mut((nx, nx), (nx, nx)).copy_from(&(-abar.transpose()));
+            h0
+        };
+        let (mut s, iters, last_diff) = match sign(&h0) {
+            Ok(v) => v,
+            Err(e) if imag_suspect && e.code.starts_with("E.NUMERICAL") => return Err(imag_err("符号函数迭代失败", min_re / hn).detail("numerical_failure", json!(e.code))),
+            Err(e) => return Err(e),
+        };
         let asym_raw = rel_asym(&s);
         s = symmetrize(&s);
         let resid = |s: &DMatrix<f64>| symmetrize(&(abar.transpose() * s + s * &abar - s * &g * s + &qbar));
-        let mut res = resid(&s);
-        let sign_res = res.norm();
-        // --- Newton–Kleinman refinement ---
-        let max_ref = self.meta.manifest["limits"]["max_states_for_refinement"].as_u64().unwrap_or(32) as usize;
+        let sign_res = resid(&s).norm();
+        // --- Newton–Kleinman refinement in K-form, as defect correction (original coordinates, N explicit) ---
+        // K = R⁻¹(BᵀX + Nᵀ) by Cholesky; E(X) = (A−BK)ᵀX + X(A−BK) + Q − NK − KᵀNᵀ + KᵀRK is the CARE residual
+        // (stationary in K, so the cond(R) error of K enters only quadratically), evaluated in compensated
+        // arithmetic; ΔX solves (A−BK)ᵀΔX + ΔX(A−BK) + E = 0 (Bartels–Stewart), X ← X + ΔX — algebraically the
+        // Newton step, but the Lyapunov solve now only has to get the small correction right.
+        // Stop when ‖ΔX‖_F ≤ 2ε‖X‖_F or when ‖ΔX‖ stops decreasing below 1e-8‖X‖_F (rounding floor; that step is not applied).
+        let gain = |x: &DMatrix<f64>| chol.solve(&(b.transpose() * x + nm.transpose()));
+        let hurwitz = |x: &DMatrix<f64>| eigenvalues(&(&a - &b * gain(x))).iter().all(|p| p.re < 0.0);
+        let max_ref = self.meta.manifest["limits"]["max_states_for_refinement"].as_u64().unwrap_or(200) as usize;
+        let max_nk = self.meta.manifest["limits"]["max_newton_iterations"].as_u64().unwrap_or(20) as usize;
         let mut newton_steps = 0;
-        if nx <= max_ref {
-            for _ in 0..3 {
+        let mut nk_change = f64::NAN;
+        let mut res_dd = f64::NAN;
+        // low-order part of S: one more (unapplied) Newton correction once S is at its f64 rounding floor,
+        // so that S + S_lo ≈ S* beyond f64 — used only to form an accurate K
+        let mut s_lo = DMatrix::<f64>::zeros(nx, nx);
+        let zero = DMatrix::<f64>::zeros(nx, nx);
+        if nx <= max_ref && hurwitz(&s) {
+            let mut x = s.clone();
+            let mut prev = f64::INFINITY;
+            for _ in 0..max_nk {
                 ctx.check()?;
-                let ak = &abar - &g * &s;
-                let c = -(&qbar + &s * &g * &s);
-                let Some(x) = lyap_solve(&ak, &c) else { break };
-                let x = symmetrize(&x);
-                let rx = resid(&x);
-                if rx.norm() < res.norm() {
-                    s = x;
-                    res = rx;
-                    newton_steps += 1;
-                } else {
+                // accurate K keeps the quadratic term (K − R⁻¹P)ᵀR(K − R⁻¹P) ~ (cond(R)·u)²·‖KᵀRK‖ out of E
+                let k = gain_refined(&chol, &r, &b, &nm, &x, &zero);
+                let e = care_residual_kform(&a, &b, &q, &r, &nm, &x, &k);
+                res_dd = e.norm();
+                let ak = &a - &b * &k;
+                let Ok((dx, _)) = lyap_bs(&ak.transpose(), &e, LyapKind::Continuous) else { break };
+                let dx = symmetrize(&dx);
+                let dn = dx.norm();
+                // ‖ΔX‖ may grow in the first (global) Newton steps; only near the rounding floor does a
+                // non-decreasing correction mean "converged" (that correction is then not applied)
+                if !dn.is_finite() || (dn >= prev && dn <= 1e-8 * x.norm()) {
+                    break;
+                }
+                x = symmetrize(&(&x + &dx));
+                newton_steps += 1;
+                nk_change = dn / x.norm().max(1e-300);
+                prev = dn;
+                if nk_change <= 2.0 * f64::EPSILON {
                     break;
                 }
             }
+            if newton_steps > 0 {
+                if hurwitz(&x) {
+                    let kx = gain_refined(&chol, &r, &b, &nm, &x, &zero);
+                    let e = care_residual_kform(&a, &b, &q, &r, &nm, &x, &kx);
+                    res_dd = e.norm();
+                    if let Ok((dx, _)) = lyap_bs(&(&a - &b * &kx).transpose(), &e, LyapKind::Continuous) {
+                        let dx = symmetrize(&dx);
+                        if dx.norm() <= 1e-12 * x.norm() {
+                            s_lo = dx;
+                        }
+                    }
+                    s = x;
+                } else {
+                    newton_steps = 0;
+                    nk_change = f64::NAN;
+                    res_dd = f64::NAN;
+                }
+            }
         }
-        let k = chol.solve(&(b.transpose() * &s + nm.transpose()));
+        let res = resid(&s);
+        let k = gain_refined(&chol, &r, &b, &nm, &s, &s_lo);
         let acl = &a - &b * &k;
         let mut cl = eigenvalues(&acl);
         sort_poles(&mut cl);
         let cl_stable = cl.iter().all(|p| p.re < 0.0);
         let s_eigs = s.clone().symmetric_eigenvalues();
         let s_psd = s_eigs.min() >= -1e-10 * s.norm().max(1e-300);
+        if imag_suspect {
+            let margin = cl.iter().map(|p| -p.re).fold(f64::INFINITY, f64::min);
+            if !cl_stable || margin <= 1e3 * f64::EPSILON * norm1(&acl).max(1e-300) {
+                return Err(imag_err(&format!("求解后闭环最大实部 {:.2e}，没有稳定裕度", -margin), min_re / hn));
+            }
+        }
         if !cl_stable {
             return Err(OpError::new("E.NUMERICAL.NO_CONVERGENCE", "求得的解没有使闭环稳定（数值失败）。", "问题可能极度病态；尝试对状态做尺度归一化，或在 Q 中加正则项。")
                 .detail("closed_loop_max_real", json!(cl.iter().map(|p| p.re).fold(f64::NEG_INFINITY, f64::max)))
@@ -298,7 +388,9 @@ impl Operator for Lqr {
             let l = lyap_operator(&(&abar - &g * &s));
             let sv = l.svd(false, false).singular_values;
             let sep = sv.min();
-            (Some(sep), if sep > 0.0 { Some(res_f / sep) } else { None })
+            // compensated residual after refinement (the f64 residual sits at its rounding floor), plus the f64 representation error of S
+            let r_est = if res_dd.is_finite() { res_dd } else { res_f };
+            (Some(sep), if sep > 0.0 { Some(r_est / sep + 0.5 * f64::EPSILON * s_f) } else { None })
         } else {
             (None, None)
         };
@@ -315,13 +407,14 @@ impl Operator for Lqr {
         let result = json!({"K": dense_real(&k), "S": dense_real(&s), "closed_loop_poles": complex_vector(&cl)});
         let trust = json!({
             "convergence": {"applicable": true, "converged": true, "iterations": iters, "criterion": "‖Z_{k+1}−Z_k‖₁/‖Z_{k+1}‖₁ ≤ 1e-13 或停滞", "final_value": last_diff,
-                            "newton_kleinman_steps": newton_steps, "sign_function_residual_fro": sign_res},
+                            "newton_kleinman_steps": newton_steps, "care_residual_compensated_fro": opt_num(if res_dd.is_finite() { Some(res_dd) } else { None }), "newton_kleinman_final_change_rel": opt_num(if nk_change.is_nan() { None } else { Some(nk_change) }), "sign_function_residual_fro": sign_res,
+                            "symplectic_balancing_log2_range": [d.iter().map(|v| v.log2()).fold(f64::INFINITY, f64::min), d.iter().map(|v| v.log2()).fold(f64::NEG_INFINITY, f64::max)]},
             "residual": {"care_abs_fro": res_f, "care_rel": res_f / s_f, "care_rel_scaled": scaled, "S_asymmetry_before_symmetrization_rel": asym_raw,
                          "definition": "care_rel = ‖ĀᵀS+SĀ−SGS+Q̄‖_F/‖S‖_F；care_rel_scaled 分母为 ‖Q̄‖_F+2‖Ā‖_F‖S‖_F+‖G‖_F‖S‖_F²（Ā=A−BR⁻¹Nᵀ, G=BR⁻¹Bᵀ, Q̄=Q−NR⁻¹Nᵀ）"},
             "condition": {"cond_R": num(cond_r), "cond_S": num(cond_s), "pbh_min_sv_rel_unstable_modes": opt_num(pbh_unstable), "pbh_min_sv_rel_all_modes": num(pbh_all),
-                          "sep_closed_loop_lyapunov": opt_num(sep), "hamiltonian_min_abs_real_rel": min_re / hn},
+                          "sep_closed_loop_lyapunov": opt_num(sep), "hamiltonian_min_abs_real_rel": min_re / hn, "hamiltonian_balanced": true},
             "error_estimate": match est {
-                Some(e) => json!({"S_abs_fro": e, "S_rel": e / s_f, "basis": "一阶后验估计：Newton 修正量 ‖δS‖_F ≈ ‖Res‖_F / σ_min(I⊗A_clᵀ + A_clᵀ⊗I)，忽略二次项；非严格上界"}),
+                Some(e) => json!({"S_abs_fro": e, "S_rel": e / s_f, "basis": "一阶后验估计：Newton 修正量 ‖δS‖_F ≈ ‖Res‖_F / σ_min(I⊗A_clᵀ + A_clᵀ⊗I) + u‖S‖_F（Res 在 Newton–Kleinman 修正后用补偿算术计算，否则为 f64 残差），忽略二次项；非严格上界"}),
                 None => Value::Null
             },
             "checks": {"S_symmetric": asym_raw <= 1e-8, "S_psd": s_psd, "closed_loop_stable": cl_stable},
@@ -330,4 +423,150 @@ impl Operator for Lqr {
         });
         Ok(Output { result, trust, warnings })
     }
+}
+
+/// Symplectic diagonal balancing for H = [[Ā, −G], [−Q̄, −Āᵀ]]: D = diag(d, d⁻¹) with d_i powers of two,
+/// chosen by coordinate descent to minimise the entrywise ℓ₁ norm of D⁻¹HD (a convex function of log d).
+/// Makes the imaginary-axis test and the sign iteration independent of the state scaling
+/// (e.g. R = diag(1, 1e-12) puts 1e12 into G and only 1 into Q).
+fn symplectic_balance(a: &DMatrix<f64>, g: &DMatrix<f64>, q: &DMatrix<f64>) -> Vec<f64> {
+    let n = a.nrows();
+    let mut d = vec![1.0f64; n];
+    const MAX_LOG2: i32 = 60;
+    for _sweep in 0..30 {
+        let mut changed = false;
+        for i in 0..n {
+            // contributions of index i that scale like f, f², 1/f, 1/f² when d_i ← f·d_i
+            let (mut up, mut dn) = (0.0f64, 0.0f64);
+            for j in 0..n {
+                if j == i {
+                    continue;
+                }
+                up += 2.0 * (a[(j, i)] * d[i] / d[j]).abs() + 2.0 * (q[(i, j)] * d[i] * d[j]).abs();
+                dn += 2.0 * (a[(i, j)] * d[j] / d[i]).abs() + 2.0 * (g[(i, j)] / (d[i] * d[j])).abs();
+            }
+            let up2 = (q[(i, i)] * d[i] * d[i]).abs();
+            let dn2 = (g[(i, i)] / (d[i] * d[i])).abs();
+            let tot = |f: f64| up * f + up2 * f * f + dn / f + dn2 / (f * f);
+            let k0 = d[i].log2().round() as i32;
+            let mut k = 0i32;
+            while k0 + k < MAX_LOG2 && tot(2f64.powi(k + 1)) < 0.95 * tot(2f64.powi(k)) {
+                k += 1;
+            }
+            if k == 0 {
+                while k0 + k > -MAX_LOG2 && tot(2f64.powi(k - 1)) < 0.95 * tot(2f64.powi(k)) {
+                    k -= 1;
+                }
+            }
+            if k != 0 {
+                d[i] *= 2f64.powi(k);
+                changed = true;
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+    d
+}
+
+/// CARE residual in K-form, E = AᵀX + XA + Q − KᵀP − PᵀK + KᵀRK with P = BᵀX + Nᵀ, evaluated with compensated
+/// dot products (Dot2; P and RK kept as unevaluated double-f64 sums). Equals the CARE residual up to the
+/// quadratic term (K − R⁻¹P)ᵀR(K − R⁻¹P).
+fn care_residual_kform(a: &DMatrix<f64>, b: &DMatrix<f64>, q: &DMatrix<f64>, r: &DMatrix<f64>, nm: &DMatrix<f64>, x: &DMatrix<f64>, k: &DMatrix<f64>) -> DMatrix<f64> {
+    let (n, m) = (a.nrows(), b.ncols());
+    // P = BᵀX + Nᵀ and T = RK as hi/lo pairs; D = T − P (small) rounded once
+    let mut ph = DMatrix::<f64>::zeros(m, n);
+    let mut pl = DMatrix::<f64>::zeros(m, n);
+    let mut dd = DMatrix::<f64>::zeros(m, n);
+    for j in 0..n {
+        for i in 0..m {
+            let mut p = Dot2::default();
+            for l in 0..n {
+                p.add_prod(b[(l, i)], x[(l, j)]);
+            }
+            p.add(nm[(j, i)]);
+            let (h, lo) = p.hi_lo();
+            ph[(i, j)] = h;
+            pl[(i, j)] = lo;
+            let mut t = Dot2::default();
+            for l in 0..m {
+                t.add_prod(r[(i, l)], k[(l, j)]);
+            }
+            t.add(-h);
+            t.add(-lo);
+            let (th, tl) = t.hi_lo();
+            dd[(i, j)] = th + tl;
+        }
+    }
+    // E = AᵀX + XA + Q + KᵀD − PᵀK   (KᵀRK − KᵀP − PᵀK = KᵀD − PᵀK)
+    let mut e = DMatrix::<f64>::zeros(n, n);
+    for j in 0..n {
+        for i in 0..n {
+            let mut s = Dot2::default();
+            for l in 0..n {
+                s.add_prod(a[(l, i)], x[(l, j)]);
+                s.add_prod(x[(i, l)], a[(l, j)]);
+            }
+            s.add(q[(i, j)]);
+            for l in 0..m {
+                s.add_prod(k[(l, i)], dd[(l, j)]);
+                s.add_prod(-ph[(l, i)], k[(l, j)]);
+                s.add_prod(-pl[(l, i)], k[(l, j)]);
+            }
+            let (h, lo) = s.hi_lo();
+            e[(i, j)] = h + lo;
+        }
+    }
+    symmetrize(&e)
+}
+
+/// K = R⁻¹(Bᵀ(S + S_lo) + Nᵀ) with iterative refinement (S_lo: low-order part of S kept from the last Newton step): the Cholesky solve alone has forward error ~cond(R)·u
+/// (1e-4 at cond(R) = 1e12); corrections K ← K + R⁻¹(P − RK) with P and the residual in compensated arithmetic
+/// reach ~u while cond(R)·u < 1. At most 4 corrections, stopping when they stop shrinking.
+fn gain_refined(chol: &nalgebra::Cholesky<f64, nalgebra::Dyn>, r: &DMatrix<f64>, b: &DMatrix<f64>, nm: &DMatrix<f64>, s: &DMatrix<f64>, s_lo: &DMatrix<f64>) -> DMatrix<f64> {
+    let (n, m) = (s.nrows(), b.ncols());
+    let mut ph = DMatrix::<f64>::zeros(m, n);
+    let mut pl = DMatrix::<f64>::zeros(m, n);
+    for j in 0..n {
+        for i in 0..m {
+            let mut p = Dot2::default();
+            for l in 0..n {
+                p.add_prod(b[(l, i)], s[(l, j)]);
+                p.add_prod(b[(l, i)], s_lo[(l, j)]);
+            }
+            p.add(nm[(j, i)]);
+            let (h, lo) = p.hi_lo();
+            ph[(i, j)] = h;
+            pl[(i, j)] = lo;
+        }
+    }
+    let mut k = chol.solve(&ph);
+    let mut prev = f64::INFINITY;
+    for _ in 0..4 {
+        let mut res = DMatrix::<f64>::zeros(m, n);
+        for j in 0..n {
+            for i in 0..m {
+                let mut t = Dot2::default();
+                t.add(ph[(i, j)]);
+                t.add(pl[(i, j)]);
+                for l in 0..m {
+                    t.add_prod(-r[(i, l)], k[(l, j)]);
+                }
+                let (h, lo) = t.hi_lo();
+                res[(i, j)] = h + lo;
+            }
+        }
+        let dk = chol.solve(&res);
+        let dn = dk.norm();
+        if !dn.is_finite() || dn >= prev || dn == 0.0 {
+            break;
+        }
+        k += dk;
+        prev = dn;
+        if dn <= f64::EPSILON * k.norm() {
+            break;
+        }
+    }
+    k
 }

@@ -19,7 +19,7 @@ OVERLAP = [
     ("control.math.lyap", "tpt_ctrl_core::lyapunov::{solve_lyapunov, solve_discrete_lyapunov}", "full",
      "AEOI: A X + X Aᵀ + Q = 0 / A X Aᵀ − X + Q = 0；tpt: Aᵀ X + X A = −Q / Aᵀ X A − X = −Q → 传 Aᵀ。tpt 离散用平方/倍增级数（ρ(A) ≥ 1 时 NoConvergence），连续用实 Schur Bartels–Stewart"),
     ("control.design.lqr", "tpt_ctrl_optimal::{care, lqr}", "full（N 交叉项经标准约化）",
-     "同一 CARE 约定 AᵀX + XA − XBR⁻¹BᵀX + Q = 0，K = R⁻¹BᵀX，u = −Kx。tpt 无 N：Ā = A − BR⁻¹Nᵀ、Q̄ = Q − NR⁻¹Nᵀ，K = R⁻¹(BᵀX + Nᵀ)。tpt 用 DARE(ZOH) 求初始镇定增益 + Newton–Kleinman；AEOI 用矩阵符号函数 + 最多 3 步 Newton–Kleinman"),
+     "同一 CARE 约定 AᵀX + XA − XBR⁻¹BᵀX + Q = 0，K = R⁻¹BᵀX，u = −Kx。tpt 无 N：Ā = A − BR⁻¹Nᵀ、Q̄ = Q − NR⁻¹Nᵀ，K = R⁻¹(BᵀX + Nᵀ)。tpt 用 DARE(ZOH) 求初始镇定增益 + Newton–Kleinman；AEOI（lqr 0.3.0）用矩阵符号函数 + 补偿残差的 K 形式 Newton–Kleinman 缺陷校正（≤ 20 步，n ≤ 200）"),
     ("control.design.dlqr", "tpt_ctrl_optimal::{dare, dlqr}", "full（N 同上）",
      "同一 DARE 约定，K = (R + BᵀXB)⁻¹BᵀXA。tpt 用结构保持倍增（SDA）"),
     ("control.lti.c2d", "tpt_ctrl_core::discretize::{zoh, tustin}", "ss 输入、zoh/tustin、无 prewarp",

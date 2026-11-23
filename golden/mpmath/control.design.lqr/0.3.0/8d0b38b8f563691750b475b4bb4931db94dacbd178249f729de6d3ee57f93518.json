@@ -1,0 +1,114 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.design.lqr",
+ "operator_version": "0.3.0",
+ "case_family": "condR_1e12_decoupled_repro",
+ "reference_env": {
+  "engine": "mpmath",
+  "mpmath": "1.4.1",
+  "dps": 50,
+  "numpy": "2.5.5",
+  "scipy": "1.18.1",
+  "python": "3.13.5",
+  "seed": 20261123,
+  "method": "lqr: Newton–Kleinman in 50 digits from scipy.linalg.solve_continuous_are until ‖ΔX‖/‖X‖ < 1e-40; lyap: Kronecker-form linear solve in 50 digits",
+  "note": "high-precision reference values computed on the Grok Bot box; NOT MATLAB output, NOT python-control"
+ },
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    -0.1,
+    0.0,
+    0.0,
+    -1.0
+   ]
+  },
+  "B": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    0.1,
+    0.0,
+    0.0,
+    1.0
+   ]
+  },
+  "Q": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    1.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  },
+  "R": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    1.0,
+    0.0,
+    0.0,
+    1e-12
+   ]
+  }
+ },
+ "expected": {
+  "K": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    0.41421356237309503,
+    0.0,
+    0.0,
+    999999.0000005
+   ]
+  },
+  "S": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    4.14213562373095,
+    0.0,
+    0.0,
+    9.999990000004999e-07
+   ]
+  },
+  "closed_loop_poles": [
+   [
+    -1000000.0000005,
+    0.0
+   ],
+   [
+    -0.1414213562373095,
+    0.0
+   ]
+  ],
+  "cond_R": 1000000000000.0,
+  "cond_S": 4142139.765868645,
+  "scipy_forward_error_rel_max": 1.0731220685985143e-17,
+  "newton_iterations_50_digits": 3
+ },
+ "note": "AEOI lqr 0.2.0 returned E.DOMAIN.HAMILTONIAN_IMAG_AXIS_EIG (min|Re λ|/‖H‖₁ = 1.41e-13); exact S = diag(4.142135623730952, 9.99999e-7)"
+}

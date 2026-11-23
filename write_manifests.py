@@ -84,36 +84,39 @@ step_out={"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"aeoi:/
  "properties":{"t":{"oneOf":[{"type":"null"},Q]},"y":{"oneOf":[{"type":"null"},dict(Q,description="shape [ny,nu,nt]")]},
  "n_grid_points":{"type":"integer"},
  "info":{"type":["object","array","null"],"description":"SISO 为单个对象；MIMO 为 [ny][nu] 嵌套数组，元素可为 null（该通道不稳定或 DC 增益无穷）"}}}
-lqr={"spec":SPEC,"id":"control.design.lqr","version":"0.2.0","title":"Continuous-time LQR",
+LQR_V="0.3.0"  # 0.2.0 → 0.3.0 (G-2: accuracy improvement; false HAMILTONIAN_IMAG_AXIS_EIG fixed)
+lqr={"spec":SPEC,"id":"control.design.lqr","version":LQR_V,"title":"Continuous-time LQR",
  "description":"求解连续时间代数 Riccati 方程 (CARE)，返回最优状态反馈增益 K（u=−Kx）、Riccati 解 S 与闭环极点，使 J=∫(xᵀQx+uᵀRu+2xᵀNu)dt 最小。",
  "category":"design","tags":["optimal-control","riccati","lti"],
  "applicability":{"preconditions":["R 对称正定","Q 对称；[[Q,N],[Nᵀ,R]] 对称半正定","(A,B) 可镇定","Hamiltonian 矩阵在虚轴上无特征值（等价于 (Q−NR⁻¹Nᵀ, A−BR⁻¹Nᵀ) 在虚轴上无不可观模态）"],
    "not_for":["离散系统（将来用 control.design.dlqr）","有约束的 MPC"],"siso_only":False},
- "provenance":{"algorithm":"消去交叉项后构造 Hamiltonian 矩阵 H=[[A,−BR⁻¹Bᵀ],[−Q,−Aᵀ]]；用带行列式缩放的 Newton 迭代计算矩阵符号函数 sign(H)，由 (sign(H)+I) 的零空间得稳定不变子空间并最小二乘解出 S；随后做至多 3 步 Newton–Kleinman 修正（n ≤ 32，Kronecker 形式解 Lyapunov 方程），残差不降即停",
+ "provenance":{"algorithm":"消去交叉项后构造 Hamiltonian 矩阵 H=[[Ā,−BR⁻¹Bᵀ],[−Q̄,−Āᵀ]]。虚轴检验在辛对角平衡后的 H̃=D⁻¹HD 上做（D=diag(d,d⁻¹)，d_i 为 2 的幂，坐标下降最小化逐元 ℓ₁ 范数，等价于状态尺度变换）：min|Re λ(H̃)| ≤ 10³·u·‖H̃‖₁ 只作为怀疑，用 PBH 检验 (Q̄,Ā) 在近虚轴特征值处是否不可观来确认，否则照常求解并在事后检验闭环稳定裕度；在 H 上用带行列式缩放的 Newton 迭代计算 sign(H)，由 (sign(H)+I) 的零空间最小二乘解出 S；随后在原坐标做 K 形式 Newton–Kleinman 修正（缺陷校正形式）：K=R⁻¹(BᵀX+Nᵀ)（Cholesky + 补偿残差迭代精化），残差 E=(A−BK)ᵀX+X(A−BK)+Q−NK−KᵀNᵀ+KᵀRK 用补偿点积（Dot2）计算，ΔX 解 (A−BK)ᵀΔX+ΔX(A−BK)+E=0（复 Schur Bartels–Stewart），X←X+ΔX；‖ΔX‖_F ≤ 2ε‖X‖_F 或在 1e-8‖X‖_F 以下不再减小即停，至多 20 步，结果须保持 A−BK Hurwitz；最终 K 由 S 加一步未施加的 Newton 修正量（S 的低位部分）精化求得",
    "references":[{"type":"paper","cite":"J. D. Roberts, Linear model reduction and solution of the algebraic Riccati equation by use of the sign function, Int. J. Control 32(4), 1980","doi":"10.1080/00207178008922881"},
      {"type":"paper","cite":"R. Byers, Solving the algebraic Riccati equation with the matrix sign function, Linear Algebra Appl. 85, 1987","doi":"10.1016/0024-3795(87)90222-9"},
      {"type":"paper","cite":"C. S. Kenney, A. J. Laub, The matrix sign function, IEEE TAC 40(8), 1995","doi":"10.1109/9.402226"},
      {"type":"paper","cite":"D. L. Kleinman, On an iterative technique for Riccati equation computations, IEEE TAC 13(1), 1968","doi":"10.1109/TAC.1968.1098829"},
+     {"type":"paper","cite":"P. Benner, Symplectic balancing of Hamiltonian matrices, SIAM J. Sci. Comput. 22(5), 2001","doi":"10.1137/S1064827500367993"},
+     {"type":"paper","cite":"R. H. Bartels, G. W. Stewart, Solution of the matrix equation AX + XB = C, Comm. ACM 15(9), 1972","doi":"10.1145/361573.361582"},
      {"type":"textbook","cite":"B. D. O. Anderson, J. B. Moore, Optimal Control: Linear Quadratic Methods, 1990"}],
    "clean_room":CLEAN},
- "backend":BACK("lqr::solve_care (matrix sign function + Newton–Kleinman refinement)"),
+ "backend":BACK("lqr::solve_care (matrix sign function + K-form Newton–Kleinman defect correction; balanced imaginary-axis test)"),
  "determinism":"platform_bitwise","tolerance_class":"T2",
  "sparse_support":{p:{"policy":"densify","max_dense_elements":1000000} for p in ["/A","/B","/Q","/R","/N"]},"encodings":ENC,
- "limits":{"max_states":200,"max_states_for_refinement":32,"max_sign_iterations":100},
+ "limits":{"max_states":200,"max_states_for_refinement":200,"max_sign_iterations":100,"max_newton_iterations":20},
  "input_schema":{"$ref":"./input.schema.json"},"output_schema":{"$ref":"./output.schema.json"},
  "conformance":{"target":"L3","current":"L2"},"accuracy_grade":{"target":"A","current":"B"},
- "credentials":"aeoi://operators/control.design.lqr/0.2.0/credentials",
+ "credentials":f"aeoi://operators/control.design.lqr/{LQR_V}/credentials",
  "errors":["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.NOT_SYMMETRIC","E.VALIDATION.SPARSE_STRUCTURE","E.VALIDATION.DIGEST_MISMATCH","E.VALIDATION.REF_UNSUPPORTED","E.VALIDATION.REF_FORBIDDEN",
    "E.DOMAIN.R_NOT_POSITIVE_DEFINITE","E.DOMAIN.WEIGHT_NOT_PSD","E.DOMAIN.NOT_STABILIZABLE","E.DOMAIN.HAMILTONIAN_IMAG_AXIS_EIG","E.NUMERICAL.NO_CONVERGENCE","E.NUMERICAL.SINGULAR","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
  "warnings":["W.NUMERICAL.LARGE_RESIDUAL","W.NUMERICAL.NEAR_UNCONTROLLABLE","W.NUMERICAL.ILL_CONDITIONED","W.VALIDATION.SYMMETRIZED","W.PERFORMANCE.SPARSE_DENSIFIED"],
  "mcp":{"tool_name":"control_design_lqr","annotations":ANN}}
-lqr_in={"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"aeoi://schemas/control.design.lqr/0.2.0/input","type":"object","additionalProperties":False,
+lqr_in={"$schema":"https://json-schema.org/draft/2020-12/schema","$id":f"aeoi://schemas/control.design.lqr/{LQR_V}/input","type":"object","additionalProperties":False,
  "required":["A","B","Q","R"],"properties":{k:{"$ref":C+"Matrix"} for k in ["A","B","Q","R","N"]}|{
   "symmetry_tolerance":{"type":"number","exclusiveMinimum":0,"default":1e-10,"description":"相对容差 ‖X−Xᵀ‖_F ≤ tol·‖X‖_F；超出即 E.VALIDATION.NOT_SYMMETRIC，范围内（但非精确对称）对称化并给 W.VALIDATION.SYMMETRIZED"},
   "exec":{"$ref":C+"ExecOptions"}},
  "x-aeoi-shape-constraints":["A: [n,n]","B: [n,m]","Q: [n,n]","R: [m,m]","N: [n,m]，缺省为 0"]}
 M={"$ref":C+"Matrix"}
-lqr_out={"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"aeoi://schemas/control.design.lqr/0.2.0/output","type":"object","required":["K","S","closed_loop_poles"],
+lqr_out={"$schema":"https://json-schema.org/draft/2020-12/schema","$id":f"aeoi://schemas/control.design.lqr/{LQR_V}/output","type":"object","required":["K","S","closed_loop_poles"],
  "properties":{"K":dict(M,description="[m,n]，u=−Kx"),"S":dict(M,description="[n,n] 对称半正定"),
  "closed_loop_poles":dict(M,description="c128 向量 [n]，按实部升序、虚部降序排列")}}
 
@@ -236,13 +239,20 @@ imp_out=outs("control.lti.impulse",{"t":{"oneOf":[{"type":"null"},Q]},"y":{"oneO
 # ---- control.math.lyap
 ly=man("control.math.lyap","Lyapunov equation","求解连续 Lyapunov 方程 A X + X Aᵀ + Q = 0 或离散 Lyapunov 方程 A X Aᵀ − X + Q = 0。","utility",["matrix-equation","lyapunov"],
  ["A 方阵，Q 同形","连续：λ_i + λ̄_j ≠ 0（对所有特征值对）；离散：λ_i·λ̄_j ≠ 1"],["Sylvester 方程（v0.3 未暴露）","大规模稀疏（低秩 ADI 类方法）"],
- "Bartels–Stewart：复 Schur 分解 A = U T Uᴴ（T 上三角），Q̃ = Uᴴ Q U；连续逐列（j 从 n−1 到 0）解 (T + t̄_jj I) y_j = −q̃_j − Σ_{k>j} t̄_jk y_k，离散解 (t̄_jj T − I) y_j = −q̃_j − T Σ_{k>j} t̄_jk y_k，均为上三角回代；X = Re(U Y Uᴴ)。可解性分离度 sep_min = min|λ_i+λ̄_j|（离散 min|λ_i λ̄_j − 1|）≤ 10³·u·‖A‖_F（离散 10³·u·max(1,‖A‖_F)²）时报 E.DOMAIN.LYAP_SINGULAR。Q 对称时输出对称化",
- [R_BS,R_GVL,{"type":"paper","cite":"S. J. Hammarling, Numerical solution of the stable, non-negative definite Lyapunov equation, IMA J. Numer. Anal. 2(3), 1982","doi":"10.1093/imanum/2.3.303"}],
- "sysalg::lyap_bs (complex Schur Bartels–Stewart)","T2",{"max_states":300},MAT_ERR+["E.DOMAIN.LYAP_SINGULAR","E.NUMERICAL.NO_CONVERGENCE"]+TAIL_ERR,
+ "Bartels–Stewart：复 Schur 分解 A = U T Uᴴ（T 上三角），Q̃ = Uᴴ Q U；连续逐列（j 从 n−1 到 0）解 (T + t̄_jj I) y_j = −q̃_j − Σ_{k>j} t̄_jk y_k，离散解 (t̄_jj T − I) y_j = −q̃_j − T Σ_{k>j} t̄_jk y_k，均为上三角回代；X = Re(U Y Uᴴ)。当启发式前向误差估计 ‖R‖_F/(sep_min·‖X‖_F) > 1e-12（方程接近奇异，如离散 ρ(A) → 1）时做迭代精化：用补偿算术（Dot2，Dekker 无 FMA 乘法，跨平台逐位相同）计算残差 R(X)，复用同一 Schur 分解解修正量 δ，X ← X + δ，至多 4 步，‖δ‖_F ≤ 2u‖X‖_F 或修正量未减半即停。可解性分离度 sep_min = min|λ_i+λ̄_j|（离散 min|λ_i λ̄_j − 1|）≤ 10³·u·‖A‖_F（离散 10³·u·max(1,‖A‖_F)²）时报 E.DOMAIN.LYAP_SINGULAR。Q 对称时输出对称化",
+ [R_BS,R_GVL,{"type":"paper","cite":"S. J. Hammarling, Numerical solution of the stable, non-negative definite Lyapunov equation, IMA J. Numer. Anal. 2(3), 1982","doi":"10.1093/imanum/2.3.303"},
+  {"type":"paper","cite":"T. Ogita, S. M. Rump, S. Oishi, Accurate sum and dot product, SIAM J. Sci. Comput. 26(6), 2005","doi":"10.1137/030601818"},
+  {"type":"textbook","cite":"N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM, 2002（迭代精化，第 12 章）"}],
+ "sysalg::lyap_refined (complex Schur Bartels–Stewart + compensated-residual iterative refinement)","T2",{"max_states":300,"max_refinement_steps":4},MAT_ERR+["E.DOMAIN.LYAP_SINGULAR","E.NUMERICAL.NO_CONVERGENCE"]+TAIL_ERR,
  ["W.DOMAIN.UNSTABLE_SYSTEM","W.NUMERICAL.ILL_CONDITIONED","W.NUMERICAL.LARGE_RESIDUAL","W.VALIDATION.SYMMETRIZED","W.PERFORMANCE.SPARSE_DENSIFIED"],
  sparse={p:{"policy":"densify","max_dense_elements":1000000} for p in ["/A","/Q"]})
 ly_in=ins("control.math.lyap",{"A":M,"Q":M,"type":{"enum":["continuous","discrete"],"default":"continuous"}},["A","Q"],{"x-aeoi-shape-constraints":["A: [n,n]","Q: [n,n]"]})
 ly_out=outs("control.math.lyap",{"X":dict(M,description="[n,n]；Q 对称时 X 对称")},["X"])
+# 0.3.0 → 0.4.0 (G-2: accuracy improvement — iterative refinement near singularity)
+LYAP_V="0.4.0"
+for _d in (ly,ly_in,ly_out):
+    for _k in ("version","credentials","$id"):
+        if _k in _d: _d[_k]=_d[_k].replace(V3,LYAP_V)
 
 # ---- control.design.place
 pl=man("control.design.place","Pole placement","求状态反馈增益 K（u = −Kx）使 A − BK 的特征值为给定极点；多输入时用 KNV 方法 0 选择条件数较小的特征向量组（鲁棒配置）。","design",["pole-placement","state-feedback","lti"],
