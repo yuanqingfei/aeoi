@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.lti.pade/0.3.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "delay",
+    "order"
+  ],
+  "properties": {
+    "delay": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "x-aeoi-provenance": "supplied",
+      "description": "纯时滞 θ（秒），必须 > 0。没有默认值。用户没给、题目也算不出时先询问，不得假设 0.1 或 1。这不是采样周期那种必须逐字引用的测量值：由 t1、t2 算出的 θ 可以填在这里"
+    },
+    "order": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20,
+      "x-aeoi-provenance": "supplied",
+      "description": "对角 Padé 阶次 N（1 到 20）。没有默认值，不得假设 N=1。题目没指定时先询问；设计评测的提示若写明了用哪个 N，按提示填写"
+    },
+    "lineage": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 8,
+      "description": "可选。上游 receipt 指纹，只回显"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+    }
+  }
+}

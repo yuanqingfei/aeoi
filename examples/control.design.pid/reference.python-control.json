@@ -1,0 +1,14 @@
+{
+  "request.json": {
+    "num": [
+      3,
+      1,
+      2
+    ],
+    "den": [
+      1,
+      0
+    ]
+  },
+  "note": "hand / python-control / mpmath closed form; not MATLAB"
+}

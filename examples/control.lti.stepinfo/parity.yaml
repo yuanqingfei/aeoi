@@ -1,0 +1,17 @@
+# Parity — control.lti.stepinfo 0.3.0
+operator: control.lti.stepinfo
+references:
+  - {engine: python-control, version: "0.10.2", role: dev_reference, status: active, generator: gen_golden_b3.py, golden_store: "golden/python-control/control.lti.stepinfo/0.3.0/*.json", note: "grid definition. not_settled is the spec definition (python-control step_info raises when the 90% level is never crossed). NOT MATLAB."}
+runner: "cargo test --release -p aeoi-control --test parity_b3"
+tolerance_class: T2
+compare:
+  "time metrics": "grid abscissae; abs ≤ 1e-8 against the same definition (quantization ≤ dt is not an error)"
+  "peak / overshoot / steady state": "relative ≤ 1e-8"
+case_families:
+  - {name: first_order, n: 1}
+  - {name: second_order, n: 1}
+  - {name: unstable, n: 1, expect_warning: W.DOMAIN.UNSTABLE_SYSTEM}
+  - {name: not_settled, n: 1, expect_warning: W.DOMAIN.NOT_SETTLED}
+  - {name: memory_order_nonsymmetric, n: 1}
+  - {name: memory_order_with_mistake, n: 1}
+pass_rule: "metrics match; unstable and not-settled follow the documented null rules; column-major mistake deviates by > 1e3 × tolerance"

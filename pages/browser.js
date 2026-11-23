@@ -1,6 +1,6 @@
 // In-browser backend for the GitHub Pages build of the AEOI test bench.
 //
-// The 12 operators and the tool bridge (function declarations, F-5 grounding check, error
+// The operators and the tool bridge (function declarations, F-5 grounding check, error
 // envelopes, provider wire formats) are the Rust code of aeoi-bridge/aeoi-control compiled to
 // WebAssembly (rust/aeoi-wasm). This file only does what the axum server + reqwest do natively:
 // the agent loop (mirrors rust/aeoi-web/src/agent.rs) and HTTP to the model provider.

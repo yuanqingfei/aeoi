@@ -1,0 +1,149 @@
+{
+  "spec": "aeoi/0.3",
+  "id": "control.lti.pade",
+  "version": "0.3.0",
+  "title": "Padé delay approximation",
+  "description": "e^{-θ s} 的 [N/N] Padé 近似，返回 proper 的 biproper tf。delay 与 order 都没有默认值。逼近误差写在 result.approximation，与系数舍入分开。",
+  "category": "transform",
+  "tags": [
+    "delay",
+    "pade",
+    "lti"
+  ],
+  "applicability": {
+    "preconditions": [
+      "delay > 0 由调用方给出，算子不假设",
+      "order N ∈ 1..=20 由调用方给出，算子不假设 N=1",
+      "只做对角近似（分子分母同阶），因此 |R(jω)| 在精确算术下为 1",
+      "结果是对 e^{-θ s} 的近似，不是舍入意义下的精确延迟"
+    ],
+    "not_for": [
+      "非对角 Padé（分子阶次 ≠ N）",
+      "把逼近误差写成系数的舍入界"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "Golub & Van Loan 算法 11.3.1 的递推：降幂系数，常数项初值 1，第 k 步乘以 ∓θ·(N−k+1)/((2N−k+1)·k)，再把分母首项归一为 1。匹配 e^{-θ s} 的泰勒级数到 s^{2N}。result.approximation.next_coefficient 是 s^{2N+1} 的系数差；certificate 是 ω_k=(1/θ)·10^{−2+4k/31}（k=0..31）上 |e^{-jωθ}−R(jω)| 的最大值，bound 为 null（没有在本规范里证明的严格上界）。",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "G. H. Golub, C. F. Van Loan, Matrix Computations, 3rd ed., Johns Hopkins, 1996, Algorithm 11.3.1（指数函数的 Padé 分子递推）"
+      },
+      {
+        "type": "paper",
+        "cite": "M. Vajta, Some remarks on Padé-approximations, 3rd TEMPUS-INTCOM Symposium, 2000"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献；MATLAB 仅作为黑盒参考（公开 API），v0.2 的 parity 参考为 python-control/scipy"
+    }
+  },
+  "backend": {
+    "library": "aeoi-control (pure Rust) + nalgebra 0.33",
+    "routine": "pade::pade_tf",
+    "version": "0.3.0",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {
+    "/system/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_order": 20
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/control.lti.pade/0.3.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.RANGE",
+    "E.VALIDATION.NON_FINITE",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC"
+  ],
+  "warnings": [],
+  "mcp": {
+    "tool_name": "control_lti_pade",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:pade:golub-van-loan-11.3.1",
+    "assumptions": [
+      {
+        "id": "delay",
+        "statement": "delay 由调用方给出，不是假设值",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "order",
+        "statement": "阶次由调用方给出，不是假设值",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "diagonal",
+        "statement": "只做 [N/N] 对角近似",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "approximation",
+        "statement": "结果逼近 e^{-θs}，逼近误差在 approximation，不在系数舍入界里",
+        "enforced_by": "validation"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_priori"
+    },
+    "postconditions": [
+      "taylor_matched",
+      "dc_is_one",
+      "all_finite"
+    ]
+  }
+}

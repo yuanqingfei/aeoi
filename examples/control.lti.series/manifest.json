@@ -1,0 +1,199 @@
+{
+  "spec": "aeoi/0.3",
+  "id": "control.lti.series",
+  "version": "0.3.0",
+  "title": "Series interconnection",
+  "description": "串联：sys1 的输出接到 sys2 的输入，结果是 sys2·sys1。SISO 用多项式，状态空间用块公式。结果 system 可直接送给其他算子。",
+  "category": "transform",
+  "tags": [
+    "lti",
+    "interconnection"
+  ],
+  "applicability": {
+    "preconditions": [
+      "两个操作数的 ts 必须完全相同（连续都是 0，或同一个采样周期）",
+      "维度按串联 / 并联 / 反馈的规则匹配",
+      "不做零极点对消；minimal 为 null",
+      "improper 的 tf/zpk（相对阶 ≤ 8）可以作为操作数，但 ss 输出会报 E.DOMAIN.IMPROPER_SYSTEM"
+    ],
+    "not_for": [
+      "自动零极点对消（minreal）",
+      "不同采样周期"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "SISO 且两个操作数都是 tf 或 zpk：多项式算术，不对消。y = sys2(sys1(u)) 即 num = conv(num2, num1)、den = conv(den2, den1)。任一操作数为 ss、MIMO，或 output_kind=ss：块公式 A=[[A1,0],[B2 C1, A2]]，B=[[B1],[B2 D1]]，C=[D2 C1, C2]，D=D2 D1。状态按 sys1 在前。",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "K. Ogata, Modern Control Engineering, 5th ed., Prentice-Hall（串联、并联、反馈；阶跃指标）"
+      },
+      {
+        "type": "textbook",
+        "cite": "T. Kailath, Linear Systems, Prentice-Hall 1980（实现、可控/可观、PBH 判据）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献；MATLAB 仅作为黑盒参考（公开 API），v0.2 的 parity 参考为 python-control/scipy"
+    }
+  },
+  "backend": {
+    "library": "aeoi-control (pure Rust) + nalgebra 0.33",
+    "routine": "connect::series_ss / polynomial product",
+    "version": "0.3.0",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {
+    "/sys1/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys1/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys1/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys1/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys2/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys2/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys2/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys2/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_states": 200,
+    "max_degree": 64,
+    "max_relative_degree": 8
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/control.lti.series/0.3.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ZERO_DENOMINATOR",
+    "E.VALIDATION.NOT_CONJUGATE",
+    "E.VALIDATION.SPARSE_STRUCTURE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.DOMAIN.IMPROPER_SYSTEM",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.DOMAIN.SAMPLE_TIME_MISMATCH",
+    "E.VALIDATION.SHAPE"
+  ],
+  "warnings": [
+    "W.DOMAIN.IMPROPER_OPERAND",
+    "W.DOMAIN.IMPROPER_RESULT",
+    "W.DOMAIN.NONMINIMAL_REALIZATION",
+    "W.NUMERICAL.ILL_CONDITIONED",
+    "W.VALIDATION.LEADING_ZEROS_STRIPPED",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "control_lti_series",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:series:polynomial-or-block",
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "输入系统准确描述被研究对象",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "improper",
+        "statement": "相对阶 ≤ 8 的 improper tf 可作为操作数；ss 输出仍拒绝",
+        "enforced_by": "error:E.DOMAIN.IMPROPER_SYSTEM"
+      },
+      {
+        "id": "same_ts",
+        "statement": "两个系统采样周期相同",
+        "enforced_by": "error:E.DOMAIN.SAMPLE_TIME_MISMATCH"
+      },
+      {
+        "id": "dims",
+        "statement": "sys1 的输出数 = sys2 的输入数",
+        "enforced_by": "error:E.VALIDATION.SHAPE"
+      },
+      {
+        "id": "no_cancel",
+        "statement": "不做零极点对消",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "lineage",
+        "statement": "lineage 若给出，由调用方保证它指向这些操作数；算子不核验",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_priori"
+    },
+    "postconditions": [
+      "response_consistent",
+      "sample_times_equal",
+      "all_finite"
+    ]
+  }
+}

@@ -1,0 +1,56 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.lti.feedback",
+ "operator_version": "0.3.0",
+ "case_family": "siso_tf",
+ "request": {
+  "sys1": {
+   "kind": "tf",
+   "num": [
+    1.584594779781114,
+    -4.435521152639944
+   ],
+   "den": [
+    1.0,
+    1.1336413786262634
+   ],
+   "ts": 0.0,
+   "time_unit": "s"
+  },
+  "sys2": {
+   "kind": "tf",
+   "num": [
+    1.8129042369321582,
+    -3.44788516035699
+   ],
+   "den": [
+    1.0,
+    2.897048055868186
+   ],
+   "ts": 0.0,
+   "time_unit": "s"
+  },
+  "sign": -1
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "numpy": "2.5.5",
+  "python": "3.12.3",
+  "seed": 20261123,
+  "note": "python-control reference values; NOT MATLAB output"
+ },
+ "expected": {
+  "num": [
+   1.584594779781114,
+   0.15512607346380847,
+   -12.849917932017764
+  ],
+  "den": [
+   3.8727185900857615,
+   -9.473986482515173,
+   18.57738111263774
+  ],
+  "kind": "tf"
+ }
+}

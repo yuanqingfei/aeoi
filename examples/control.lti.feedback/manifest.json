@@ -1,0 +1,208 @@
+{
+  "spec": "aeoi/0.3",
+  "id": "control.lti.feedback",
+  "version": "0.3.0",
+  "title": "Feedback interconnection",
+  "description": "反馈：sys1 在前向通道，sys2 在反馈通道。sign = -1（默认）为负反馈，+1 为正反馈。省略 sys2 表示单位反馈。",
+  "category": "transform",
+  "tags": [
+    "lti",
+    "interconnection",
+    "feedback"
+  ],
+  "applicability": {
+    "preconditions": [
+      "两个操作数的 ts 必须完全相同（连续都是 0，或同一个采样周期）",
+      "维度按串联 / 并联 / 反馈的规则匹配",
+      "不做零极点对消；minimal 为 null",
+      "improper 的 tf/zpk（相对阶 ≤ 8）可以作为操作数，但 ss 输出会报 E.DOMAIN.IMPROPER_SYSTEM",
+      "sign ∈ {+1,-1}，默认 -1；这是定义默认值，不是测量值",
+      "E = I − sign·D₂·D₁ 可逆"
+    ],
+    "not_for": [
+      "自动零极点对消",
+      "把 sign 留空时当成 0"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "方程（规范 I-5）：u1 = u + sign·y2，y1 = sys1(u1)，u2 = y1，y2 = sys2(u2)，y = y1。sign 默认 -1（负反馈）。SISO tf：num = conv(num1, den2)，den = conv(den1, den2) − sign·conv(num1, num2)。省略 sys2 表示与 sys1 同维的单位增益。代数环 E = I − sign·D2·D1 的 rcond ≤ n·u·1e4 时报 E.DOMAIN.ALGEBRAIC_LOOP。",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "K. Ogata, Modern Control Engineering, 5th ed., Prentice-Hall（串联、并联、反馈；阶跃指标）"
+      },
+      {
+        "type": "textbook",
+        "cite": "T. Kailath, Linear Systems, Prentice-Hall 1980（实现、可控/可观、PBH 判据）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献；MATLAB 仅作为黑盒参考（公开 API），v0.2 的 parity 参考为 python-control/scipy"
+    }
+  },
+  "backend": {
+    "library": "aeoi-control (pure Rust) + nalgebra 0.33",
+    "routine": "connect::feedback_ss / polynomial feedback",
+    "version": "0.3.0",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T2",
+  "sparse_support": {
+    "/sys1/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys1/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys1/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys1/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys2/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys2/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys2/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys2/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_states": 200,
+    "max_degree": 64,
+    "max_relative_degree": 8
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/control.lti.feedback/0.3.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ZERO_DENOMINATOR",
+    "E.VALIDATION.NOT_CONJUGATE",
+    "E.VALIDATION.SPARSE_STRUCTURE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.DOMAIN.IMPROPER_SYSTEM",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.DOMAIN.SAMPLE_TIME_MISMATCH",
+    "E.VALIDATION.SHAPE",
+    "E.DOMAIN.ALGEBRAIC_LOOP"
+  ],
+  "warnings": [
+    "W.DOMAIN.IMPROPER_OPERAND",
+    "W.DOMAIN.IMPROPER_RESULT",
+    "W.DOMAIN.NONMINIMAL_REALIZATION",
+    "W.NUMERICAL.ILL_CONDITIONED",
+    "W.VALIDATION.LEADING_ZEROS_STRIPPED",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "control_lti_feedback",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:feedback:polynomial-or-block",
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "输入系统准确描述被研究对象",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "improper",
+        "statement": "相对阶 ≤ 8 的 improper tf 可作为操作数；ss 输出仍拒绝",
+        "enforced_by": "error:E.DOMAIN.IMPROPER_SYSTEM"
+      },
+      {
+        "id": "same_ts",
+        "statement": "两个系统采样周期相同",
+        "enforced_by": "error:E.DOMAIN.SAMPLE_TIME_MISMATCH"
+      },
+      {
+        "id": "dims",
+        "statement": "反馈维度匹配",
+        "enforced_by": "error:E.VALIDATION.SHAPE"
+      },
+      {
+        "id": "sign",
+        "statement": "sign 为 -1 或 +1，默认 -1",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "well_posed",
+        "statement": "代数环可逆",
+        "enforced_by": "error:E.DOMAIN.ALGEBRAIC_LOOP"
+      },
+      {
+        "id": "lineage",
+        "statement": "lineage 只回显，不核验",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "response_consistent",
+      "sample_times_equal",
+      "all_finite"
+    ]
+  }
+}

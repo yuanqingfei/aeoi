@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.lti.feedback/0.3.0/output",
+  "type": "object",
+  "required": [
+    "system",
+    "realization",
+    "proper",
+    "composition"
+  ],
+  "properties": {
+    "system": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "互联后的系统，含 ts 与 time_unit，可直接作为下一个算子的 system"
+    },
+    "realization": {
+      "enum": [
+        "polynomial_feedback",
+        "feedback_block",
+        "ss2tf_characteristic_polynomial"
+      ],
+      "description": "多项式算术或块状态空间公式，见 spec I-6"
+    },
+    "minimal": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "proper": {
+      "type": "boolean"
+    },
+    "composition": {
+      "type": "object",
+      "description": "operation、operands[].sha256（操作数 JSON 的 JCS 哈希）、sign、implicit_unity、lineage（只回显，不核验）"
+    }
+  }
+}

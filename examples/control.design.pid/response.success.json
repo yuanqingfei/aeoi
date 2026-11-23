@@ -1,0 +1,153 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok_with_warnings",
+  "dry_run": false,
+  "operator": {
+    "id": "control.design.pid",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-pid-001",
+  "result": {
+    "system": {
+      "kind": "tf",
+      "num": [
+        3.0,
+        1.0,
+        2.0
+      ],
+      "den": [
+        1.0,
+        0.0
+      ],
+      "ts": 0.0,
+      "time_unit": "s"
+    },
+    "realization": "pid_closed_form",
+    "minimal": null,
+    "proper": false,
+    "parameters": {
+      "form": "parallel",
+      "Kp": 1.0,
+      "Ki": 2.0,
+      "Kd": 3.0,
+      "Tf": 0.0
+    },
+    "composition": {
+      "operation": "pid",
+      "operands": [],
+      "parameters_sha256": "sha256:574f3a72cbd5c066eb97734b5ccf4f43a2b9a743cff7babdd5c2a335d693bca6",
+      "lineage": null,
+      "lineage_checked": false
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "formula_rel": 0.0,
+      "definition": "|C(1) − 闭式| / max(1, |闭式|)"
+    },
+    "condition": {},
+    "error_estimate": {
+      "formula_rel": 0.0,
+      "basis": "增益到有理系数是有限次乘加；在 s=1 处复核闭式"
+    },
+    "checks": {
+      "formula_matches": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {}
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:pid:closed-form",
+      "routine": "pid::parallel / pid::standard",
+      "provenance": "aeoi://operators/control.design.pid/0.3.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "gains",
+        "statement": "Kp 以及用到的 Ki/Kd/Ti/Td/Tf 由调用方给定；0 表示该项不出现，不是猜测的物理增益",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "form",
+        "statement": "parallel 与 standard 的参数不混用",
+        "enforced_by": "error:E.VALIDATION.OPTION_CONFLICT"
+      },
+      {
+        "id": "no_tune",
+        "statement": "本算子不自动整定增益",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_priori",
+      "bound": {
+        "formula_rel": 0.0
+      },
+      "basis": "增益到有理系数是有限次乘加；在 s=1 处复核闭式"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "formula_matches": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null
+    },
+    "fingerprint": {
+      "request": "sha256:5983dfcf884fa0a95facddcf0d1fa42b476fec798e1078191bdb60034c163ed1",
+      "result": "sha256:736482e380d95f493acd0f3403a620c22038e820bc60e97f729d2e5d7de765e5",
+      "output_hash": "sha256:99aef018ad76687d7586893b3267197d3436bcc2674afcd2488eb1f920a4ee8d",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.design.pid@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "platform": "x86_64-linux",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [
+    {
+      "code": "W.DOMAIN.IMPROPER_RESULT",
+      "message": "C(s) 含理想微分（Tf = 0）。结果是 tf，step/bode/margin 会拒绝它；与严格真对象串联或闭环后通常变为 proper，或设置 Tf > 0。",
+      "path": "/Tf"
+    }
+  ],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:c372131f009d2609a6c9805b78ef6dc6a57dda364baa0de1d0f78c1535604f61",
+    "output_hash": "sha256:99aef018ad76687d7586893b3267197d3436bcc2674afcd2488eb1f920a4ee8d",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.132946
+  }
+}

@@ -286,6 +286,117 @@ dl_out["properties"]["closed_loop_poles"]["description"]="c128 向量 [n]，eig(
 B2={"control.lti.convert":(convert,convert_in,convert_out),"control.lti.poles_zeros":(pz,pz_in,pz_out),"control.analysis.ctrb_obsv":(co,co_in,co_out),
  "control.analysis.margin":(mg,mg_in,mg_out),"control.lti.c2d":(c2d,c2d_in,c2d_out),"control.lti.impulse":(imp,imp_in,imp_out),
  "control.math.lyap":(ly,ly_in,ly_out),"control.design.place":(pl,pl_in,pl_out),"control.design.dlqr":(dl,dl_in,dl_out)}
+
+# =====================================================================================  batch 3 (v0.3.5): interconnection, pid, stepinfo, pade
+CONN_SPARSE={p:{"policy":"densify","max_dense_elements":1000000} for p in
+ ["/sys1/A","/sys1/B","/sys1/C","/sys1/D","/sys2/A","/sys2/B","/sys2/C","/sys2/D"]}
+CONN_ERR=COMMON_LTI_ERR+["E.DOMAIN.SAMPLE_TIME_MISMATCH","E.VALIDATION.SHAPE"]
+CONN_WARN=["W.DOMAIN.IMPROPER_OPERAND","W.DOMAIN.IMPROPER_RESULT","W.DOMAIN.NONMINIMAL_REALIZATION","W.NUMERICAL.ILL_CONDITIONED"]+LW
+CONN_PRE=["两个操作数的 ts 必须完全相同（连续都是 0，或同一个采样周期）","维度按串联 / 并联 / 反馈的规则匹配","不做零极点对消；minimal 为 null","improper 的 tf/zpk（相对阶 ≤ 8）可以作为操作数，但 ss 输出会报 E.DOMAIN.IMPROPER_SYSTEM"]
+def conn_out(id_, reals):
+    return outs(id_, {
+        "system": dict(LTI, description="互联后的系统，含 ts 与 time_unit，可直接作为下一个算子的 system"),
+        "realization": {"enum": reals, "description": "多项式算术或块状态空间公式，见 spec I-6"},
+        "minimal": {"type": ["boolean", "null"]},
+        "proper": {"type": "boolean"},
+        "composition": {"type": "object", "description": "operation、operands[].sha256（操作数 JSON 的 JCS 哈希）、sign、implicit_unity、lineage（只回显，不核验）"},
+    }, ["system", "realization", "proper", "composition"])
+OUTK={"enum":["same","tf","ss"],"default":"same","description":"same：SISO 的 tf/zpk 用多项式，否则用 ss 块公式；tf：SISO 多项式或 ss2tf；ss：块公式"}
+LINEAGE={"type":"array","items":{"type":"string"},"maxItems":8,"description":"可选。上游 receipt.fingerprint.request 列表。只写入 composition.lineage，算子不核验，缺省不是错误。"}
+def conn_in(id_, extra, req):
+    props={"sys1":LTI,"sys2":LTI,"output_kind":dict(OUTK),"lineage":LINEAGE}
+    props.update(extra)
+    return ins(id_, props, req)
+ALG="SISO 且两个操作数都是 tf 或 zpk：多项式算术，不对消。y = sys2(sys1(u)) 即 num = conv(num2, num1)、den = conv(den2, den1)。任一操作数为 ss、MIMO，或 output_kind=ss：块公式 A=[[A1,0],[B2 C1, A2]]，B=[[B1],[B2 D1]]，C=[D2 C1, C2]，D=D2 D1。状态按 sys1 在前。"
+ALG_P="SISO tf/zpk：num = conv(num1, den2)+conv(num2, den1)，den = conv(den1, den2)（低次项对齐）。ss / MIMO：A=diag(A1,A2)，B=[[B1],[B2]]，C=[C1 C2]，D=D1+D2。"
+ALG_F="方程（规范 I-5）：u1 = u + sign·y2，y1 = sys1(u1)，u2 = y1，y2 = sys2(u2)，y = y1。sign 默认 -1（负反馈）。SISO tf：num = conv(num1, den2)，den = conv(den1, den2) − sign·conv(num1, num2)。省略 sys2 表示与 sys1 同维的单位增益。代数环 E = I − sign·D2·D1 的 rcond ≤ n·u·1e4 时报 E.DOMAIN.ALGEBRAIC_LOOP。"
+R_GVL_PADE={"type":"textbook","cite":"G. H. Golub, C. F. Van Loan, Matrix Computations, 3rd ed., Johns Hopkins, 1996, Algorithm 11.3.1（指数函数的 Padé 分子递推）"}
+R_VAJTA={"type":"paper","cite":"M. Vajta, Some remarks on Padé-approximations, 3rd TEMPUS-INTCOM Symposium, 2000"}
+R_OGATA={"type":"textbook","cite":"K. Ogata, Modern Control Engineering, 5th ed., Prentice-Hall（串联、并联、反馈；阶跃指标）"}
+series=man("control.lti.series","Series interconnection","串联：sys1 的输出接到 sys2 的输入，结果是 sys2·sys1。SISO 用多项式，状态空间用块公式。结果 system 可直接送给其他算子。","transform",["lti","interconnection"],
+ CONN_PRE,["自动零极点对消（minreal）","不同采样周期"],ALG,[R_OGATA,R_KAI],"connect::series_ss / polynomial product","T1",{"max_states":200,"max_degree":64,"max_relative_degree":8},
+ CONN_ERR,CONN_WARN,sparse=CONN_SPARSE)
+series_in=conn_in("control.lti.series",{},["sys1","sys2"])
+series_out=conn_out("control.lti.series",["polynomial_product","series_block","ss2tf_characteristic_polynomial"])
+par=man("control.lti.parallel","Parallel interconnection","并联：同一输入，输出相加，结果是 sys1+sys2。","transform",["lti","interconnection"],
+ CONN_PRE,["自动零极点对消","不同采样周期"],ALG_P,[R_OGATA,R_KAI],"connect::parallel_ss / polynomial sum","T1",{"max_states":200,"max_degree":64,"max_relative_degree":8},
+ CONN_ERR,CONN_WARN,sparse=CONN_SPARSE)
+par_in=conn_in("control.lti.parallel",{},["sys1","sys2"])
+par_out=conn_out("control.lti.parallel",["polynomial_sum","parallel_block","ss2tf_characteristic_polynomial"])
+fb=man("control.lti.feedback","Feedback interconnection","反馈：sys1 在前向通道，sys2 在反馈通道。sign = -1（默认）为负反馈，+1 为正反馈。省略 sys2 表示单位反馈。","transform",["lti","interconnection","feedback"],
+ CONN_PRE+["sign ∈ {+1,-1}，默认 -1；这是定义默认值，不是测量值","E = I − sign·D₂·D₁ 可逆"],["自动零极点对消","把 sign 留空时当成 0"],ALG_F,[R_OGATA,R_KAI],"connect::feedback_ss / polynomial feedback","T2",{"max_states":200,"max_degree":64,"max_relative_degree":8},
+ CONN_ERR+["E.DOMAIN.ALGEBRAIC_LOOP"],CONN_WARN,sparse=CONN_SPARSE)
+fb_in=conn_in("control.lti.feedback",{"sign":{"enum":[-1,1],"default":-1,"x-aeoi-provenance":"convention"}},["sys1"])
+fb_out=conn_out("control.lti.feedback",["polynomial_feedback","feedback_block","ss2tf_characteristic_polynomial"])
+pid=man("control.design.pid","PID controller","按 parallel 或 standard 形式构造 PID，返回可被其他算子使用的 tf（或 proper 时的 ss）。Tf = 0 表示不加微分滤波，微分项非零时结果 improper。","design",["pid","lti"],
+ ["form=parallel：C = Kp + Ki/s + Kd·s/(Tf·s+1)；Ki 或 Kd 为 0 时该项不出现（精确去掉引入的因子，不是数值对消）","form=standard：C = Kp·(1 + 1/(Ti·s) + Td·s/(Tf·s+1))；省略 Ti 表示没有积分","Tf = 0 且有微分项时结果 improper，并给出 W.DOMAIN.IMPROPER_RESULT","增益是调用方给出的设计参数，没有安全默认值"],
+ ["pidtune（目标函数、对象类和唯一性都还没写成规范，见 §12.2）","离散 PID"],
+ "parallel：分子 [Kd, Kp, Ki]、分母 [1, 0]，Ki=0 时约去 s；Tf>0 时分母为 s(Tf·s+1)。standard 把同一分解写成 Kp、Ti、Td。零增益项按定义删除。",
+ [R_OGATA,{"type":"textbook","cite":"K. J. Åström, T. Hägglund, Advanced PID Control, ISA, 2006（parallel 与 standard 两种参数化）"}],
+ "pid::parallel / pid::standard","T1",{"max_relative_degree":1},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.RANGE","E.VALIDATION.OPTION_CONFLICT","E.DOMAIN.IMPROPER_SYSTEM","E.VALIDATION.NON_FINITE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
+ ["W.DOMAIN.IMPROPER_RESULT"],sparse={})
+pid_in=ins("control.design.pid",{
+ "form":{"enum":["parallel","standard"],"default":"parallel","x-aeoi-provenance":"convention"},
+ "Kp":{"type":"number","x-aeoi-provenance":"supplied"},
+ "Ki":{"type":"number","default":0,"x-aeoi-provenance":"convention"},
+ "Kd":{"type":"number","default":0,"x-aeoi-provenance":"convention"},
+ "Ti":{"type":"number","exclusiveMinimum":0,"x-aeoi-provenance":"supplied"},
+ "Td":{"type":"number","minimum":0,"default":0,"x-aeoi-provenance":"convention"},
+ "Tf":{"type":"number","minimum":0,"default":0,"x-aeoi-provenance":"convention"},
+ "output_kind":{"enum":["tf","ss"],"default":"tf"},
+ "lineage":LINEAGE,
+},["Kp"])
+pid_out=outs("control.design.pid",{
+ "system":dict(LTI,description="控制器，ts=0。proper 时也可为 ss"),
+ "realization":{"enum":["pid_closed_form","controllable_canonical"]},
+ "minimal":{"type":["boolean","null"]},
+ "proper":{"type":"boolean"},
+ "parameters":{"type":"object","description":"回显的形式与增益，含规范默认值（Ki/Kd/Tf 缺省为 0）"},
+ "composition":{"type":"object"},
+},["system","realization","proper","parameters","composition"])
+si=man("control.lti.stepinfo","Step-response metrics","在显式时间网格上给出阶跃指标：上升时间、调节时间、超调、欠调、峰值、峰值时间、稳态值。阈值有规范默认值。不稳定或不在窗口内调节的通道把依赖稳态的指标设为 null，峰值仍给出。","analysis",["time-domain","lti","stepinfo"],
+ ["采样与 control.lti.step 相同（连续为 ZOH 精确递推）","时间指标是网格点，不插值：与连续穿越点之差 ≤ dt，记为 time_quantization_s，不占用 T2 的 rtol","rise_time_limits 默认 [0.1, 0.9]，settling_threshold 默认 0.02；这是指标定义，不是被测对象的物理参数","稳态值取 DC 增益，不取最后一个采样"],
+ ["把未调节写成 Inf（窗口太短只说明没观察到，不说明永不调节）","插值到网格之间"],
+ "先调用与 step 相同的递推得到 y[k]。上升时间 = t[k_hi]−t[k_lo]，k_lo/k_hi 是 sgn·(y−阈值·y∞) 第一次 ≥ 0 的下标。调节时间 = 最后一次 |y/y∞−1| ≥ 阈值 的下一格；若末点仍在带外则为 null，并给 W.DOMAIN.NOT_SETTLED。超调、欠调为百分数。不稳定：依赖 y∞ 的字段为 null，peak 为窗口内 max|y|，window_limited=true。",
+ [R_OGATA,{"type":"software","cite":"python-control 0.10 step_info 文档（仅作网格定义对照：不插值、百分数超调）"}],
+ "stepinfo::channel","T2",{"max_grid_points":10000000,"max_states":200},
+ COMMON_LTI_ERR+["E.VALIDATION.GRID","E.VALIDATION.RANGE","E.RESOURCE.COMPUTE_LIMIT","E.RESOURCE.OUTPUT_TOO_LARGE"],
+ ["W.DOMAIN.UNSTABLE_SYSTEM","W.DOMAIN.NOT_SETTLED","W.DOMAIN.INFINITE_DC_GAIN","W.DOMAIN.ZERO_DC_GAIN","W.ACCURACY.GRID_TOO_COARSE","W.ACCURACY.AUTO_GRID"]+LW)
+si_in=ins("control.lti.stepinfo",{
+ "system":LTI,
+ "time":step_in["properties"]["time"],
+ "rise_time_limits":{"type":"array","items":{"type":"number","minimum":0,"maximum":1},"minItems":2,"maxItems":2,"default":[0.1,0.9],"x-aeoi-provenance":"convention"},
+ "settling_threshold":{"type":"number","exclusiveMinimum":0,"maximum":0.5,"default":0.02,"x-aeoi-provenance":"convention"},
+},["system","time"])
+si_out=outs("control.lti.stepinfo",{
+ "definition":{"type":"object","description":"回显的阈值、grid_point 量化、超调单位 %、稳态来源 dcgain"},
+ "stable":{"type":"boolean"},
+ "n_grid_points":{"type":"integer"},
+ "info":{"description":"SISO 为一个对象；MIMO 为 [ny][nu]。字段：rise_time、settling_time、settling_min、settling_max、overshoot（%）、undershoot（%）、peak、peak_time、steady_state、settled、window_limited。不适用的 value 为 null；无界稳态为 \"Inf\"。"},
+},["definition","stable","n_grid_points","info"])
+pade=man("control.lti.pade","Padé delay approximation","e^{-θ s} 的 [N/N] Padé 近似，返回 proper 的 biproper tf。delay 与 order 都没有默认值。逼近误差写在 result.approximation，与系数舍入分开。","transform",["delay","pade","lti"],
+ ["delay > 0 由调用方给出，算子不假设","order N ∈ 1..=20 由调用方给出，算子不假设 N=1","只做对角近似（分子分母同阶），因此 |R(jω)| 在精确算术下为 1","结果是对 e^{-θ s} 的近似，不是舍入意义下的精确延迟"],
+ ["非对角 Padé（分子阶次 ≠ N）","把逼近误差写成系数的舍入界"],
+ "Golub & Van Loan 算法 11.3.1 的递推：降幂系数，常数项初值 1，第 k 步乘以 ∓θ·(N−k+1)/((2N−k+1)·k)，再把分母首项归一为 1。匹配 e^{-θ s} 的泰勒级数到 s^{2N}。result.approximation.next_coefficient 是 s^{2N+1} 的系数差；certificate 是 ω_k=(1/θ)·10^{−2+4k/31}（k=0..31）上 |e^{-jωθ}−R(jω)| 的最大值，bound 为 null（没有在本规范里证明的严格上界）。",
+ [R_GVL_PADE,R_VAJTA],"pade::pade_tf","T1",{"max_order":20},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.RANGE","E.VALIDATION.NON_FINITE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
+ [])
+pade_in=ins("control.lti.pade",{
+ "delay":{"type":"number","exclusiveMinimum":0,"x-aeoi-provenance":"supplied"},
+ "order":{"type":"integer","minimum":1,"maximum":20,"x-aeoi-provenance":"supplied"},
+ "lineage":LINEAGE,
+},["delay","order"])
+pade_out=outs("control.lti.pade",{
+ "system":dict(LTI,description="连续 tf，ts=0，分母首项为 1"),
+ "realization":{"const":"pade_coefficients"},
+ "minimal":{"type":["boolean","null"]},
+ "proper":{"const":True},
+ "approximation":{"type":"object","description":"target、method、matched_order、next_coefficient、certificate、bound（无严格界时为 null）"},
+ "composition":{"type":"object"},
+},["system","realization","proper","approximation","composition"])
+B3={"control.lti.series":(series,series_in,series_out),"control.lti.parallel":(par,par_in,par_out),"control.lti.feedback":(fb,fb_in,fb_out),
+ "control.design.pid":(pid,pid_in,pid_out),"control.lti.stepinfo":(si,si_in,si_out),"control.lti.pade":(pade,pade_in,pade_out)}
 # v0.4 rule L-1: every top-level input property carries a description (meaning, shape, unit, enum values)
 # so that function-calling consumers — which drop unknown keywords such as x-aeoi-shape-constraints —
 # still see it. DESC wins over a shorter inline description (the inline c2d.ts text lacked the ask-the-user rule).
@@ -304,9 +415,16 @@ DESC={
  "control.analysis.ctrb_obsv":{"system":SYS_D+"。判断可控性只需 A、B：用户没给 C、D 时用 kind=\"ss\"，C = {dtype:\"f64\", shape:[1,n], data:[0,…,0]}、D = {dtype:\"f64\", shape:[1,m], data:[0,…,0]}（不影响可控性结果，回答时只报告可控性）；判断可观性只需 A、C：没给 B、D 时 B 取 shape [n,1] 全零","gramians":"是否额外计算可控/可观 Gramian（要求系统稳定），默认 false"},
  "control.analysis.margin":{"system":"开环 SISO 系统 L(s)（单位负反馈）；tf/ss/zpk，ts>0 为离散"},
  "control.lti.c2d":{"system":"待离散化的连续系统（ts 必须为 0）","ts":"采样周期 T（单位 s，> 0）。必须是用户在对话中明确给出的数值；用户没给时不要调用本工具，先询问用户，绝不假设 0.1、0.01 等常用值","method":"离散化方法：zoh（零阶保持，默认）、foh（一阶保持/三角保持）、tustin（双线性，可配合 prewarp_frequency）","output_kind":"输出表示：same（与输入相同，默认）、tf、ss、zpk"},
+ "control.lti.series":{"sys1":"前向第一个系统（输出接到 sys2）。tf 系数降幂；ss 为 row-major。ts 必须与 sys2 相同","sys2":"第二个系统。结果是 sys2·sys1，不是 sys1·sys2","output_kind":"same（默认：SISO tf/zpk 用多项式，否则 ss 块公式）、tf 或 ss","lineage":"可选。上游调用的 receipt.fingerprint.request。只回显，不核验；没有就不要编"},
+ "control.lti.parallel":{"sys1":"并联支路 1，与 sys2 输入数、输出数都相同","sys2":"并联支路 2。结果是 sys1+sys2","output_kind":"same（默认）、tf 或 ss","lineage":"可选。上游 receipt.fingerprint.request，只回显，不核验"},
+ "control.lti.feedback":{"sys1":"前向通道。省略 sys2 时必须是方的（单位反馈）","sys2":"反馈通道。省略表示单位增益 D=I。负反馈是默认，不是把 sys2 写成负号","sign":"反馈符号，只能是 -1（负反馈，默认，规范定义）或 +1（正反馈）。这是定义默认值，不是测量值，不需要引用用户原话","output_kind":"same（默认）、tf 或 ss","lineage":"可选。上游 receipt.fingerprint.request，只回显，不核验"},
+ "control.design.pid":{"form":"parallel（默认）：C=Kp+Ki/s+Kd·s/(Tf·s+1)。standard：C=Kp·(1+1/(Ti·s)+Td·s/(Tf·s+1))。这是定义默认值","Kp":"比例增益。设计参数，没有默认值；由调用方给定，不需要在用户原话里逐字出现，但不得在用户和题目都没给时擅自假设","Ki":"parallel 的积分增益，默认 0（该项不出现）。不是测量值","Kd":"parallel 的微分增益，默认 0。Tf=0 且 Kd≠0 时结果 improper","Ti":"standard 的积分时间（秒）。省略表示没有积分；给出时必须 > 0","Td":"standard 的微分时间（秒），默认 0","Tf":"微分滤波时间常数（秒），默认 0（不加滤波）。有微分项时 Tf=0 得到理想微分","output_kind":"tf（默认）或 ss。improper 时 ss 会报错","lineage":"可选。上游 receipt 指纹，只回显"},
+ "control.lti.stepinfo":{"system":SYS_D,"time":"时间网格，与 step 相同：uniform（t_final、dt，单位 s）或 auto。指标相对这个网格定义","rise_time_limits":"上升时间的低/高阈值，默认 [0.1, 0.9]（10% 到 90%）。这是指标定义，不是对象的物理参数；省略即用默认，不必询问","settling_threshold":"调节带半宽，默认 0.02（2%）。定义默认值，省略即用默认"},
+ "control.lti.pade":{"delay":"纯时滞 θ（秒），必须 > 0。没有默认值。用户没给、题目也算不出时先询问，不得假设 0.1 或 1。这不是采样周期那种必须逐字引用的测量值：由 t1、t2 算出的 θ 可以填在这里","order":"对角 Padé 阶次 N（1 到 20）。没有默认值，不得假设 N=1。题目没指定时先询问；设计评测的提示若写明了用哪个 N，按提示填写","lineage":"可选。上游 receipt 指纹，只回显"},
 }
+ALL_OPS={"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2|B3
 for op,props in DESC.items():
-    for (m_,i_,o_) in [({"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2)[op]]:
+    for (m_,i_,o_) in [ALL_OPS[op]]:
         for k,d in props.items():
             assert k in i_["properties"], (op,k)
             old=i_["properties"][k].get("description")
@@ -343,8 +461,20 @@ RECEIPT={
    "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["pole_mapping_consistent"]},
  "control.design.place":{"method_id":"aeoi:place:knv0-complex","assumptions":[A("controllable","(A,B) 可控","error:E.DOMAIN.NOT_CONTROLLABLE"),A("multiplicity","期望极点重数 ≤ rank(B)","error:E.DOMAIN.POLE_MULTIPLICITY"),A("nonunique","多输入时 K 不唯一：结果是满足极点配置的一个 K","caller")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["poles_placed","conjugate_closed"]},
+ "control.lti.series":{"method_id":"aeoi:series:polynomial-or-block","assumptions":[A("lti_model","输入系统准确描述被研究对象","caller"),A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("improper","相对阶 ≤ 8 的 improper tf 可作为操作数；ss 输出仍拒绝","error:E.DOMAIN.IMPROPER_SYSTEM"),A("same_ts","两个系统采样周期相同","error:E.DOMAIN.SAMPLE_TIME_MISMATCH"),A("dims","sys1 的输出数 = sys2 的输入数","error:E.VALIDATION.SHAPE"),A("no_cancel","不做零极点对消","caller"),A("lineage","lineage 若给出，由调用方保证它指向这些操作数；算子不核验","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["response_consistent","sample_times_equal","all_finite"]},
+ "control.lti.parallel":{"method_id":"aeoi:parallel:polynomial-or-block","assumptions":[A("lti_model","输入系统准确描述被研究对象","caller"),A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("improper","相对阶 ≤ 8 的 improper tf 可作为操作数；ss 输出仍拒绝","error:E.DOMAIN.IMPROPER_SYSTEM"),A("same_ts","两个系统采样周期相同","error:E.DOMAIN.SAMPLE_TIME_MISMATCH"),A("dims","输入数与输出数都相同","error:E.VALIDATION.SHAPE"),A("no_cancel","不做零极点对消","caller"),A("lineage","lineage 只回显，不核验","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["response_consistent","sample_times_equal","all_finite"]},
+ "control.lti.feedback":{"method_id":"aeoi:feedback:polynomial-or-block","assumptions":[A("lti_model","输入系统准确描述被研究对象","caller"),A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("improper","相对阶 ≤ 8 的 improper tf 可作为操作数；ss 输出仍拒绝","error:E.DOMAIN.IMPROPER_SYSTEM"),A("same_ts","两个系统采样周期相同","error:E.DOMAIN.SAMPLE_TIME_MISMATCH"),A("dims","反馈维度匹配","error:E.VALIDATION.SHAPE"),A("sign","sign 为 -1 或 +1，默认 -1","validation"),A("well_posed","代数环可逆","error:E.DOMAIN.ALGEBRAIC_LOOP"),A("lineage","lineage 只回显，不核验","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["response_consistent","sample_times_equal","all_finite"]},
+ "control.design.pid":{"method_id":"aeoi:pid:closed-form","assumptions":[A("gains","Kp 以及用到的 Ki/Kd/Ti/Td/Tf 由调用方给定；0 表示该项不出现，不是猜测的物理增益","caller"),A("form","parallel 与 standard 的参数不混用","error:E.VALIDATION.OPTION_CONFLICT"),A("no_tune","本算子不自动整定增益","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["formula_matches","all_finite"]},
+ "control.lti.stepinfo":{"method_id":"aeoi:stepinfo:zoh-grid-metrics","assumptions":LTI_A+[A("grid_definition","时间指标是网格点，不插值；量化误差 ≤ dt","validation"),A("thresholds","阈值用请求里的值；省略则是规范默认 10–90% 与 2%","validation"),A("steady","稳态取 DC 增益，不取最后采样","validation")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["samples_finite","settling_matches_definition"]},
+ "control.lti.pade":{"method_id":"aeoi:pade:golub-van-loan-11.3.1","assumptions":[A("delay","delay 由调用方给出，不是假设值","caller"),A("order","阶次由调用方给出，不是假设值","caller"),A("diagonal","只做 [N/N] 对角近似","validation"),A("approximation","结果逼近 e^{-θs}，逼近误差在 approximation，不在系数舍入界里","validation")],
+   "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["taylor_matched","dc_is_one","all_finite"]},
 }
-for op,(m,i,o) in ({"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2).items():
+for op,(m,i,o) in ALL_OPS.items():
     m["receipt"]=RECEIPT[op]
     d=f"examples/{op}/"; w(d+"manifest.json",m); w(d+"input.schema.json",i); w(d+"output.schema.json",o)
 print("ok")

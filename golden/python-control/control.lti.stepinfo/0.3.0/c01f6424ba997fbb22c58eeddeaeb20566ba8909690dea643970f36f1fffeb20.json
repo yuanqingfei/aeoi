@@ -1,0 +1,47 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.lti.stepinfo",
+ "operator_version": "0.3.0",
+ "case_family": "unstable",
+ "request": {
+  "system": {
+   "kind": "tf",
+   "num": [
+    1.0
+   ],
+   "den": [
+    1.0,
+    -1.0
+   ],
+   "ts": 0.0,
+   "time_unit": "s"
+  },
+  "time": {
+   "mode": "uniform",
+   "t_final": 1.0,
+   "dt": 0.05,
+   "unit": "s"
+  }
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "numpy": "2.5.5",
+  "python": "3.12.3",
+  "seed": 20261123,
+  "note": "python-control reference values; NOT MATLAB output"
+ },
+ "expected": {
+  "rise_time": null,
+  "settling_time": null,
+  "overshoot": null,
+  "undershoot": null,
+  "peak": 1.7182818284590469,
+  "peak_time": 1.0,
+  "steady_state": null,
+  "stable": false
+ },
+ "expected_warnings": [
+  "W.DOMAIN.UNSTABLE_SYSTEM"
+ ]
+}

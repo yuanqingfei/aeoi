@@ -4,7 +4,7 @@
 
 - `spec-v0.3.md` — 规范全文（源稿 `spec-src.md`，`python3 build_spec.py` 生成；`spec-v0.2.md`、`spec-v0.1.md` 为历史版本）
 - `schemas/` — JSON Schema（common / manifest / envelope / error）
-- `examples/` — 12 个示例算子：v0.2 的 `control.lti.bode`、`control.lti.step`、`control.design.lqr`；v0.3 新增 `control.lti.convert`、`control.lti.poles_zeros`、`control.analysis.ctrb_obsv`、`control.analysis.margin`、`control.lti.c2d`、`control.lti.impulse`、`control.math.lyap`、`control.design.place`、`control.design.dlqr`
+- `examples/` — 18 个示例算子：v0.2 的 `control.lti.bode`、`control.lti.step`、`control.design.lqr`；v0.3 的 `control.lti.convert`、`control.lti.poles_zeros`、`control.analysis.ctrb_obsv`、`control.analysis.margin`、`control.lti.c2d`、`control.lti.impulse`、`control.math.lyap`、`control.design.place`、`control.design.dlqr`；v0.3.5 的 `control.lti.series`、`control.lti.parallel`、`control.lti.feedback`、`control.design.pid`、`control.lti.stepinfo`、`control.lti.pade`
 - `golden/python-control/` — 对照参考用例（参考值来自 python-control/scipy，**非 MATLAB**）
 - `matlab/` — MATLAB golden 生成脚本（尚未在 MATLAB 中运行）
 - `rust/` — cargo workspace：`aeoi-core`、`aeoi-control`、`aeoi-mcp`（stdio MCP server）、`aeoi-web`（LLM 端到端测试台 + 评测）
@@ -26,7 +26,7 @@ cargo test --release -p aeoi-control --test parity_b2 -- --nocapture
 
 ## LLM 端到端测试台（`aeoi-web`）
 
-一个本地网页：云端 LLM（默认 Gemini）通过函数调用使用 12 个 AEOI 算子。左侧是中文对话，右侧是调用轨迹：模型选了哪个工具、请求 JSON、AEOI 响应（result / trust / warnings / error + remediation）、耗时与 token 用量；bode、step、impulse 的结果会自动画图（Plotly basic，已内置在仓库里，不走 CDN；加载失败时退回内置的简易 SVG 图）。没有 key 时可以选 `mock:demo` 模型，看一段脚本化的演示（含一次报错 → 按 remediation 自我纠错）。
+一个本地网页：云端 LLM（默认 Gemini）通过函数调用使用 18 个 AEOI 算子。左侧是中文对话，右侧是调用轨迹：模型选了哪个工具、请求 JSON、AEOI 响应（result / trust / warnings / error + remediation）、耗时与 token 用量；bode、step、impulse 的结果会自动画图（Plotly basic，已内置在仓库里，不走 CDN；加载失败时退回内置的简易 SVG 图）。没有 key 时可以选 `mock:demo` 模型，看一段脚本化的演示（含一次报错 → 按 remediation 自我纠错）。
 
 纯 Rust（axum + tokio + reqwest/rustls-ring），静态页面编译进二进制，不需要 npm，也不依赖 Linux 专有库，Windows 应可直接构建：已在 Linux 上交叉编译 `x86_64-pc-windows-gnu` 通过（得到 `aeoi-web.exe`），但还没在真 Windows 机器上运行过，MSVC 工具链未验证。
 
@@ -103,12 +103,12 @@ cargo run --release -p aeoi-web -- design --model openrouter:nvidia/nemotron-3-u
 
 ### 浏览器版（GitHub Pages）
 
-不想装 Rust 时可以直接打开 **https://yuanqingfei.github.io/aeoi/** （会跳转到账号的自定义域名 https://yuanqingfei.me/aeoi/ ）：12 个算子与工具桥编译成 WebAssembly 在浏览器里运行，Agent 循环也在页面里，没有任何服务器。
+不想装 Rust 时可以直接打开 **https://yuanqingfei.github.io/aeoi/** （会跳转到账号的自定义域名 https://yuanqingfei.me/aeoi/ ）：18 个算子与工具桥编译成 WebAssembly 在浏览器里运行，Agent 循环也在页面里，没有任何服务器。
 
 - 不填 key：选 `mock:demo`，离线演示（4 次工具调用，含一次自我纠错，带 Plotly 图）。
 - 用真实模型：点右上角"API key"填自己的 Gemini 或 OpenRouter key。key **只保存在这个浏览器的 localStorage**，由页面直接发给 Google / OpenRouter（两家都允许跨域调用），不经过 AEOI 的任何服务器，也不在仓库里；"忘记 key"按钮会清除它。公用电脑上请不要保存。
 - 与本地版是同一份 Rust 代码（`rust/aeoi-bridge`：函数声明、F-5 核对、provider 线格式、系统提示词），轨迹面板与画图相同。浏览器版没有评测 CLI。
-- 数值：与 x86_64 原生版在 681 个 golden/示例请求中 74% 逐位相同（lqr、lyap 全部逐位相同），其余差异 ≤ 1.5e-14（多输入 `place` 的 K 不唯一，极点相同），见 `reports/parity-wasm-vs-native.json` 与规范 §8.5。
+- 数值：与 x86_64 原生版在 755 个 golden/示例请求中 566 个逐位相同（串联、并联、反馈、pid、stepinfo 全部逐位相同；lqr、lyap 也是）。状态或错误码不一致的用例是 0。其余差异是末位舍入；多输入 `place` 的 K 不唯一，极点相同。见 `reports/parity-wasm-vs-native.json` 与规范 §8.5。
 - 体积：wasm 2.97 MB（gzip 1.07 MB）+ Plotly basic 1.07 MB（gzip 354 KB）。
 
 本地构建（需要 `rustup target add wasm32-unknown-unknown`、wasm-bindgen CLI 0.2.130，可选 binaryen 的 wasm-opt）：

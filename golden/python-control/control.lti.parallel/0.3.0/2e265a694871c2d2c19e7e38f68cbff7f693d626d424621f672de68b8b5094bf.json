@@ -1,0 +1,57 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.lti.parallel",
+ "operator_version": "0.3.0",
+ "case_family": "siso_tf",
+ "request": {
+  "sys1": {
+   "kind": "tf",
+   "num": [
+    1.5926057594696779,
+    -4.349934942109941
+   ],
+   "den": [
+    1.0,
+    1.084130464177816
+   ],
+   "ts": 0.0,
+   "time_unit": "s"
+  },
+  "sys2": {
+   "kind": "tf",
+   "num": [
+    0.835060259599737
+   ],
+   "den": [
+    1.0,
+    3.2733953269168086,
+    1.8680297966569996
+   ],
+   "ts": 0.0,
+   "time_unit": "s"
+  }
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "numpy": "2.5.5",
+  "python": "3.12.3",
+  "seed": 20261123,
+  "note": "python-control reference values; NOT MATLAB output"
+ },
+ "expected": {
+  "num": [
+   1.5926057594696779,
+   0.8632933085588972,
+   -10.428961439278174,
+   -7.220493818524501
+  ],
+  "den": [
+   1.0,
+   4.357525791094624,
+   5.4168173918648135,
+   2.0251880105477444
+  ],
+  "kind": "tf"
+ }
+}

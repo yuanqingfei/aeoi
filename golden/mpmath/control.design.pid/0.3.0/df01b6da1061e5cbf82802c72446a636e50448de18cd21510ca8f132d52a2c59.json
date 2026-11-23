@@ -1,0 +1,27 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.design.pid",
+ "operator_version": "0.3.0",
+ "case_family": "parallel_pi",
+ "request": {
+  "Kp": 3,
+  "Ki": 1.2
+ },
+ "reference_env": {
+  "engine": "mpmath",
+  "mpmath": "1.3.0",
+  "dps": 50,
+  "python": "3.12.3",
+  "note": "50-decimal closed form, rounded to float64; NOT MATLAB output"
+ },
+ "expected": {
+  "num": [
+   3.0,
+   1.2
+  ],
+  "den": [
+   1.0,
+   0.0
+  ]
+ }
+}

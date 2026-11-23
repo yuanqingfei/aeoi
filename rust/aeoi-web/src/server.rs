@@ -163,7 +163,7 @@ mod tests {
         let pl = c.get(format!("http://{addr}/vendor/plotly-basic-2.35.2.min.js")).send().await.unwrap().text().await.unwrap();
         assert!(pl.len() > 500_000 && pl.contains("plotly.js"));
         let tools: Value = c.get(format!("http://{addr}/api/tools")).send().await.unwrap().json().await.unwrap();
-        assert_eq!(tools.as_array().unwrap().len(), 12);
+        assert_eq!(tools.as_array().unwrap().len(), 18);
         let r: Value = c.post(format!("http://{addr}/api/call")).json(&json!({"tool":"control_lti_poles_zeros","args":{"system":{"kind":"tf","num":[1],"den":[1,3,2],"ts":0}}})).send().await.unwrap().json().await.unwrap();
         assert_eq!(r["response"]["status"], "ok", "{r}");
         // offline demo provider streams the full event sequence

@@ -1,0 +1,199 @@
+{
+  "spec": "aeoi/0.3",
+  "id": "control.lti.parallel",
+  "version": "0.3.0",
+  "title": "Parallel interconnection",
+  "description": "并联：同一输入，输出相加，结果是 sys1+sys2。",
+  "category": "transform",
+  "tags": [
+    "lti",
+    "interconnection"
+  ],
+  "applicability": {
+    "preconditions": [
+      "两个操作数的 ts 必须完全相同（连续都是 0，或同一个采样周期）",
+      "维度按串联 / 并联 / 反馈的规则匹配",
+      "不做零极点对消；minimal 为 null",
+      "improper 的 tf/zpk（相对阶 ≤ 8）可以作为操作数，但 ss 输出会报 E.DOMAIN.IMPROPER_SYSTEM"
+    ],
+    "not_for": [
+      "自动零极点对消",
+      "不同采样周期"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "SISO tf/zpk：num = conv(num1, den2)+conv(num2, den1)，den = conv(den1, den2)（低次项对齐）。ss / MIMO：A=diag(A1,A2)，B=[[B1],[B2]]，C=[C1 C2]，D=D1+D2。",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "K. Ogata, Modern Control Engineering, 5th ed., Prentice-Hall（串联、并联、反馈；阶跃指标）"
+      },
+      {
+        "type": "textbook",
+        "cite": "T. Kailath, Linear Systems, Prentice-Hall 1980（实现、可控/可观、PBH 判据）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献；MATLAB 仅作为黑盒参考（公开 API），v0.2 的 parity 参考为 python-control/scipy"
+    }
+  },
+  "backend": {
+    "library": "aeoi-control (pure Rust) + nalgebra 0.33",
+    "routine": "connect::parallel_ss / polynomial sum",
+    "version": "0.3.0",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {
+    "/sys1/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys1/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys1/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys1/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys2/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys2/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys2/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sys2/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_states": 200,
+    "max_degree": 64,
+    "max_relative_degree": 8
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/control.lti.parallel/0.3.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ZERO_DENOMINATOR",
+    "E.VALIDATION.NOT_CONJUGATE",
+    "E.VALIDATION.SPARSE_STRUCTURE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.DOMAIN.IMPROPER_SYSTEM",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.DOMAIN.SAMPLE_TIME_MISMATCH",
+    "E.VALIDATION.SHAPE"
+  ],
+  "warnings": [
+    "W.DOMAIN.IMPROPER_OPERAND",
+    "W.DOMAIN.IMPROPER_RESULT",
+    "W.DOMAIN.NONMINIMAL_REALIZATION",
+    "W.NUMERICAL.ILL_CONDITIONED",
+    "W.VALIDATION.LEADING_ZEROS_STRIPPED",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "control_lti_parallel",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:parallel:polynomial-or-block",
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "输入系统准确描述被研究对象",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "improper",
+        "statement": "相对阶 ≤ 8 的 improper tf 可作为操作数；ss 输出仍拒绝",
+        "enforced_by": "error:E.DOMAIN.IMPROPER_SYSTEM"
+      },
+      {
+        "id": "same_ts",
+        "statement": "两个系统采样周期相同",
+        "enforced_by": "error:E.DOMAIN.SAMPLE_TIME_MISMATCH"
+      },
+      {
+        "id": "dims",
+        "statement": "输入数与输出数都相同",
+        "enforced_by": "error:E.VALIDATION.SHAPE"
+      },
+      {
+        "id": "no_cancel",
+        "statement": "不做零极点对消",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "lineage",
+        "statement": "lineage 只回显，不核验",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_priori"
+    },
+    "postconditions": [
+      "response_consistent",
+      "sample_times_equal",
+      "all_finite"
+    ]
+  }
+}

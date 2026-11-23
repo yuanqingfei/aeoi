@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.lti.stepinfo/0.3.0/output",
+  "type": "object",
+  "required": [
+    "definition",
+    "stable",
+    "n_grid_points",
+    "info"
+  ],
+  "properties": {
+    "definition": {
+      "type": "object",
+      "description": "回显的阈值、grid_point 量化、超调单位 %、稳态来源 dcgain"
+    },
+    "stable": {
+      "type": "boolean"
+    },
+    "n_grid_points": {
+      "type": "integer"
+    },
+    "info": {
+      "description": "SISO 为一个对象；MIMO 为 [ny][nu]。字段：rise_time、settling_time、settling_min、settling_max、overshoot（%）、undershoot（%）、peak、peak_time、steady_state、settled、window_limited。不适用的 value 为 null；无界稳态为 \"Inf\"。"
+    }
+  }
+}

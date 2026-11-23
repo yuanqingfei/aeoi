@@ -1,0 +1,129 @@
+{
+  "spec": "aeoi/0.3",
+  "id": "control.design.pid",
+  "version": "0.3.0",
+  "title": "PID controller",
+  "description": "按 parallel 或 standard 形式构造 PID，返回可被其他算子使用的 tf（或 proper 时的 ss）。Tf = 0 表示不加微分滤波，微分项非零时结果 improper。",
+  "category": "design",
+  "tags": [
+    "pid",
+    "lti"
+  ],
+  "applicability": {
+    "preconditions": [
+      "form=parallel：C = Kp + Ki/s + Kd·s/(Tf·s+1)；Ki 或 Kd 为 0 时该项不出现（精确去掉引入的因子，不是数值对消）",
+      "form=standard：C = Kp·(1 + 1/(Ti·s) + Td·s/(Tf·s+1))；省略 Ti 表示没有积分",
+      "Tf = 0 且有微分项时结果 improper，并给出 W.DOMAIN.IMPROPER_RESULT",
+      "增益是调用方给出的设计参数，没有安全默认值"
+    ],
+    "not_for": [
+      "pidtune（目标函数、对象类和唯一性都还没写成规范，见 §12.2）",
+      "离散 PID"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "parallel：分子 [Kd, Kp, Ki]、分母 [1, 0]，Ki=0 时约去 s；Tf>0 时分母为 s(Tf·s+1)。standard 把同一分解写成 Kp、Ti、Td。零增益项按定义删除。",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "K. Ogata, Modern Control Engineering, 5th ed., Prentice-Hall（串联、并联、反馈；阶跃指标）"
+      },
+      {
+        "type": "textbook",
+        "cite": "K. J. Åström, T. Hägglund, Advanced PID Control, ISA, 2006（parallel 与 standard 两种参数化）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献；MATLAB 仅作为黑盒参考（公开 API），v0.2 的 parity 参考为 python-control/scipy"
+    }
+  },
+  "backend": {
+    "library": "aeoi-control (pure Rust) + nalgebra 0.33",
+    "routine": "pid::parallel / pid::standard",
+    "version": "0.3.0",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {},
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_relative_degree": 1
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/control.design.pid/0.3.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.RANGE",
+    "E.VALIDATION.OPTION_CONFLICT",
+    "E.DOMAIN.IMPROPER_SYSTEM",
+    "E.VALIDATION.NON_FINITE",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC"
+  ],
+  "warnings": [
+    "W.DOMAIN.IMPROPER_RESULT"
+  ],
+  "mcp": {
+    "tool_name": "control_design_pid",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:pid:closed-form",
+    "assumptions": [
+      {
+        "id": "gains",
+        "statement": "Kp 以及用到的 Ki/Kd/Ti/Td/Tf 由调用方给定；0 表示该项不出现，不是猜测的物理增益",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "form",
+        "statement": "parallel 与 standard 的参数不混用",
+        "enforced_by": "error:E.VALIDATION.OPTION_CONFLICT"
+      },
+      {
+        "id": "no_tune",
+        "statement": "本算子不自动整定增益",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_priori"
+    },
+    "postconditions": [
+      "formula_matches",
+      "all_finite"
+    ]
+  }
+}

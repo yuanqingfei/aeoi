@@ -1,0 +1,225 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.lti.feedback",
+    "version": "0.3.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-feedback-003",
+  "result": {
+    "system": {
+      "kind": "ss",
+      "A": {
+        "dtype": "f64",
+        "shape": [
+          3,
+          3
+        ],
+        "data": [
+          -1.0,
+          0.4,
+          0.0,
+          -0.709090909090909,
+          -2.0,
+          0.04545454545454547,
+          -0.18181818181818182,
+          -0.3,
+          -1.5909090909090908
+        ]
+      },
+      "B": {
+        "dtype": "f64",
+        "shape": [
+          3,
+          1
+        ],
+        "data": [
+          0.0,
+          0.9090909090909091,
+          0.18181818181818182
+        ]
+      },
+      "C": {
+        "dtype": "f64",
+        "shape": [
+          1,
+          3
+        ],
+        "data": [
+          0.9090909090909091,
+          0.0,
+          0.45454545454545453
+        ]
+      },
+      "D": {
+        "dtype": "f64",
+        "shape": [
+          1,
+          1
+        ],
+        "data": [
+          0.09090909090909091
+        ]
+      },
+      "ts": 0.0,
+      "time_unit": "s"
+    },
+    "realization": "feedback_block",
+    "minimal": null,
+    "proper": true,
+    "composition": {
+      "operation": "feedback",
+      "operands": [
+        {
+          "role": "sys1",
+          "sha256": "sha256:810e9f3d8824b6e84b31e1be7248f366fca90ec1085b4dd1e0d8a3aaa838bde9"
+        },
+        {
+          "role": "sys2",
+          "sha256": "sha256:22a50c4022a6e54a408ae24af03577c7a782094c9caf45d3ad2cae0aad18e9d1"
+        }
+      ],
+      "sign": -1.0,
+      "implicit_unity": true,
+      "lineage": null,
+      "lineage_checked": false
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "identity_rel": 2.0630688525055996e-16,
+      "definition": "在若干测试点上 ‖互联恒等式残差‖ / max(‖结果‖, ‖期望‖)"
+    },
+    "condition": {
+      "identity_points": 6,
+      "algebraic_loop_rcond": 1.0
+    },
+    "error_estimate": {
+      "identity_rel": 2.0630688525055996e-16,
+      "basis": "多项式算术或块公式在测试点上的相对残差；不是严格上界。系数本身是有限次乘加。"
+    },
+    "checks": {
+      "response_consistent": true,
+      "sample_times_equal": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "sign": -1.0
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:feedback:polynomial-or-block",
+      "routine": "connect::feedback_ss / polynomial feedback",
+      "provenance": "aeoi://operators/control.lti.feedback/0.3.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "输入系统准确描述被研究对象",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "improper",
+        "statement": "相对阶 ≤ 8 的 improper tf 可作为操作数；ss 输出仍拒绝",
+        "enforced_by": "error:E.DOMAIN.IMPROPER_SYSTEM"
+      },
+      {
+        "id": "same_ts",
+        "statement": "两个系统采样周期相同",
+        "enforced_by": "error:E.DOMAIN.SAMPLE_TIME_MISMATCH"
+      },
+      {
+        "id": "dims",
+        "statement": "反馈维度匹配",
+        "enforced_by": "error:E.VALIDATION.SHAPE"
+      },
+      {
+        "id": "sign",
+        "statement": "sign 为 -1 或 +1，默认 -1",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "well_posed",
+        "statement": "代数环可逆",
+        "enforced_by": "error:E.DOMAIN.ALGEBRAIC_LOOP"
+      },
+      {
+        "id": "lineage",
+        "statement": "lineage 只回显，不核验",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "identity_rel": 2.0630688525055996e-16
+      },
+      "basis": "多项式算术或块公式在测试点上的相对残差；不是严格上界。系数本身是有限次乘加。"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "response_consistent": true,
+        "sample_times_equal": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null
+    },
+    "fingerprint": {
+      "request": "sha256:3ab53d6961fb8a885465a19ca0d003a6939dd1f2108c52ea8b4b04ea3c6fb1da",
+      "result": "sha256:e11ffe1fb3e98a8a86ee28251650ce81bb059e8818412ebacee84e4a30b87865",
+      "output_hash": "sha256:75d97ccf594a630cf252f85f5090cd72869d6330b7cd0aaa6d674c53a9a9aed6",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.lti.feedback@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "platform": "x86_64-linux",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:d1c4180f7584c98ebf8c1847b78915cc808d65b029768d6bb5eed73abe39bc97",
+    "output_hash": "sha256:75d97ccf594a630cf252f85f5090cd72869d6330b7cd0aaa6d674c53a9a9aed6",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.356387
+  }
+}

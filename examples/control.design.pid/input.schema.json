@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.design.pid/0.3.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "Kp"
+  ],
+  "properties": {
+    "form": {
+      "enum": [
+        "parallel",
+        "standard"
+      ],
+      "default": "parallel",
+      "x-aeoi-provenance": "convention",
+      "description": "parallel（默认）：C=Kp+Ki/s+Kd·s/(Tf·s+1)。standard：C=Kp·(1+1/(Ti·s)+Td·s/(Tf·s+1))。这是定义默认值"
+    },
+    "Kp": {
+      "type": "number",
+      "x-aeoi-provenance": "supplied",
+      "description": "比例增益。设计参数，没有默认值；由调用方给定，不需要在用户原话里逐字出现，但不得在用户和题目都没给时擅自假设"
+    },
+    "Ki": {
+      "type": "number",
+      "default": 0,
+      "x-aeoi-provenance": "convention",
+      "description": "parallel 的积分增益，默认 0（该项不出现）。不是测量值"
+    },
+    "Kd": {
+      "type": "number",
+      "default": 0,
+      "x-aeoi-provenance": "convention",
+      "description": "parallel 的微分增益，默认 0。Tf=0 且 Kd≠0 时结果 improper"
+    },
+    "Ti": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "x-aeoi-provenance": "supplied",
+      "description": "standard 的积分时间（秒）。省略表示没有积分；给出时必须 > 0"
+    },
+    "Td": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "x-aeoi-provenance": "convention",
+      "description": "standard 的微分时间（秒），默认 0"
+    },
+    "Tf": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "x-aeoi-provenance": "convention",
+      "description": "微分滤波时间常数（秒），默认 0（不加滤波）。有微分项时 Tf=0 得到理想微分"
+    },
+    "output_kind": {
+      "enum": [
+        "tf",
+        "ss"
+      ],
+      "default": "tf",
+      "description": "tf（默认）或 ss。improper 时 ss 会报错"
+    },
+    "lineage": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 8,
+      "description": "可选。上游 receipt 指纹，只回显"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "reference": "python-control 0.10.2 for interconnection and stepinfo; mpmath 1.3.0 (50 dps) for pid and pade. Not MATLAB.",
+  "results": {
+    "control.lti.series": {
+      "cases": 11,
+      "passed": 11,
+      "max_error_over_tolerance": 0.00017027300001204654,
+      "tolerance": 1e-12,
+      "failures": []
+    },
+    "control.lti.parallel": {
+      "cases": 10,
+      "passed": 10,
+      "max_error_over_tolerance": 0.00010502380684825996,
+      "tolerance": 1e-12,
+      "failures": []
+    },
+    "control.lti.feedback": {
+      "cases": 11,
+      "passed": 11,
+      "max_error_over_tolerance": 1.3833248847284553e-6,
+      "tolerance": 1e-10,
+      "failures": []
+    },
+    "control.lti.stepinfo": {
+      "cases": 6,
+      "passed": 6,
+      "max_error_over_tolerance": 7.061195281110759e-7,
+      "tolerance": 1e-8,
+      "failures": []
+    },
+    "control.design.pid": {
+      "cases": 10,
+      "passed": 10,
+      "max_error_over_tolerance": 0.0,
+      "tolerance": 1e-12,
+      "failures": []
+    },
+    "control.lti.pade": {
+      "cases": 10,
+      "passed": 10,
+      "max_error_over_tolerance": 0.0003281036672763594,
+      "tolerance": 1e-12,
+      "failures": []
+    }
+  }
+}

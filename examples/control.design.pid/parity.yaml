@@ -1,0 +1,21 @@
+# Parity — control.design.pid 0.3.0
+operator: control.design.pid
+references:
+  - {engine: mpmath, version: "1.3.0 dps=50", role: high_precision, status: active, generator: gen_golden_b3.py, golden_store: "golden/mpmath/control.design.pid/0.3.0/*.json", note: "closed form of the parallel/standard formulas; NOT MATLAB. No matrix input, so memory_order_nonsymmetric is not applicable (spec §0, v0.3.5)."}
+runner: "cargo test --release -p aeoi-control --test parity_b3"
+tolerance_class: T1
+memory_order_nonsymmetric: not_applicable
+compare:
+  "tf coefficients": "exact closed form, max |Δ| / max(1, max|ref|) ≤ 1e-12"
+case_families:
+  - {name: parallel_terms, n: 1}
+  - {name: parallel_pi, n: 1}
+  - {name: parallel_pd_improper, n: 1, expect_warning: W.DOMAIN.IMPROPER_RESULT}
+  - {name: parallel_p, n: 1}
+  - {name: parallel_filtered_d, n: 1}
+  - {name: standard_full, n: 1}
+  - {name: standard_pi, n: 1}
+  - {name: standard_pd_improper, n: 1, expect_warning: W.DOMAIN.IMPROPER_RESULT}
+  - {name: option_conflict, n: 1, expect: E.VALIDATION.OPTION_CONFLICT}
+  - {name: filter_without_derivative, n: 1, expect: E.VALIDATION.OPTION_CONFLICT}
+pass_rule: "coefficients match the 50-digit closed form within T1"

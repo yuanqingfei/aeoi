@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.lti.series/0.3.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sys1",
+    "sys2"
+  ],
+  "properties": {
+    "sys1": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "前向第一个系统（输出接到 sys2）。tf 系数降幂；ss 为 row-major。ts 必须与 sys2 相同"
+    },
+    "sys2": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "第二个系统。结果是 sys2·sys1，不是 sys1·sys2"
+    },
+    "output_kind": {
+      "enum": [
+        "same",
+        "tf",
+        "ss"
+      ],
+      "default": "same",
+      "description": "same（默认：SISO tf/zpk 用多项式，否则 ss 块公式）、tf 或 ss"
+    },
+    "lineage": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 8,
+      "description": "可选。上游调用的 receipt.fingerprint.request。只回显，不核验；没有就不要编"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+    }
+  }
+}

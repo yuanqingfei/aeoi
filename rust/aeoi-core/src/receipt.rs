@@ -80,6 +80,20 @@ pub fn build(m: &OperatorMeta, input_hash: &str, output_hash: &str, trust: &Valu
     let conv = &trust["convergence"];
     let req = request_fingerprint(&m.id, &m.version, input_hash);
     let res = result_fingerprint(&req, output_hash);
+    let mut evidence = json!({
+        "claim": claim,
+        "postconditions": Value::Object(post),
+        "failed": failed,
+        "convergence": if conv["applicable"] == Value::Bool(true) { json!({"converged": conv["converged"].clone(), "iterations": conv["iterations"].clone()}) } else { Value::Null },
+        "accuracy_grade": trust["accuracy_grade"].clone(),
+        "tolerance_class": m.tolerance_class,
+        "credentials": trust["credentials"].clone(),
+    });
+    // spec 4.3 / A-1: only approximation operators set trust.approximation. Omitting the key
+    // keeps every existing operator's receipt byte-for-byte unchanged.
+    if let Some(a) = trust.get("approximation").filter(|v| !v.is_null()) {
+        evidence["approximation"] = a.clone();
+    }
     json!({
         "format": RECEIPT_FORMAT,
         "method": {
@@ -89,15 +103,7 @@ pub fn build(m: &OperatorMeta, input_hash: &str, output_hash: &str, trust: &Valu
         },
         "assumptions": decl["assumptions"].clone(),
         "exactness": exactness(&decl["exactness"], trust),
-        "evidence": {
-            "claim": claim,
-            "postconditions": Value::Object(post),
-            "failed": failed,
-            "convergence": if conv["applicable"] == Value::Bool(true) { json!({"converged": conv["converged"].clone(), "iterations": conv["iterations"].clone()}) } else { Value::Null },
-            "accuracy_grade": trust["accuracy_grade"].clone(),
-            "tolerance_class": m.tolerance_class,
-            "credentials": trust["credentials"].clone(),
-        },
+        "evidence": evidence,
         "fingerprint": {
             "request": req,
             "result": res,

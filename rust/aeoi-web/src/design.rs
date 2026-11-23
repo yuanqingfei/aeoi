@@ -21,11 +21,16 @@ pub const SUBMIT: &str = "submit_design";
 
 pub const DESIGN_ADDENDUM: &str = "\n\n## 设计评测模式\n\
 这是一次自动化的工程设计评测：没有用户可以追问，题目里的数值就是全部已知条件，不要提问。\n\
-流程：先给出设计（如 C(s) 的系数），用工具检查（control_lti_step 看调节时间/超调，control_analysis_margin 看裕度，\
-control_lti_bode 看幅频，control_lti_poles_zeros 看闭环极点），不满足就修改再检查，满足后调用 submit_design 提交，\
-answer 里按要求的字段给出数值。只能提交一次，提交即结束。\n\
-工具只做分析，不做传递函数运算，需要你自己算多项式：串联 G·C：num = conv(Ng, Nc)，den = conv(Dg, Dc)；\
-单位负反馈 T = L/(1+L)：num = NL，den = DL + NL（低次项对齐相加）。离散系统把 ts 设为采样周期。\n\
+流程：先给出设计，用工具把对象和控制器接起来再检查，不满足就修改，满足后调用 submit_design 提交。\
+只能提交一次。\n\
+传递函数运算用工具，不要手算多项式：\
+control_design_pid 由 Kp、Ki、Kd（parallel）或 Kp、Ti、Td（standard）得到 C(s)，Tf 省略就是不加滤波；\
+control_lti_series 是 sys2·sys1（把对象接到控制器后面或反过来，看谁的输出进谁）；\
+control_lti_parallel 是相加；control_lti_feedback 默认 sign=-1 的负反馈，省略 sys2 就是单位反馈。\
+把上一个工具返回的 result.system 原样作为下一个的 sys1 或 sys2。\
+指标用 control_lti_stepinfo（10%–90% 上升、2% 调节带是定义默认值，不用改），裕度仍用 control_analysis_margin，\
+频响用 control_lti_bode，极点用 control_lti_poles_zeros。\
+时滞用 control_lti_pade：delay 填题目给出或由题目算出的秒数，order 题目没写时用 10 并在说明里声明（这是本评测提示的约定，不是算子默认值）。\n\
 数值请直接写成数字（不要写表达式）。";
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -1037,5 +1042,65 @@ mod tests {
         assert_eq!(rep["results"][1]["submitted"], true);
         assert_eq!(rep["results"][1]["submission"]["Kp"], 1.0);
         assert!(rep["aborted"].is_null());
+    }
+
+    /// The EngDesign tasks that were blocked on hand-multiplied polynomials can be written as
+    /// operator calls: pid / pade → series → feedback → stepinfo. No network, no API key.
+    #[tokio::test]
+    async fn reference_solutions_use_the_new_operators() {
+        let b = Bridge::new();
+        let plant = json!({"kind":"tf","num":[1.0],"den":[1.0,10.0,20.0],"ts":0.0,"time_unit":"s"});
+        let (pid, _) = b.call("control_design_pid", &json!({"Kp": 800.0, "Ki": 2000.0, "Kd": 60.0}));
+        assert!(!is_error(&pid), "{}", pid["error"]);
+        let (open, _) = b.call("control_lti_series", &json!({"sys1": pid["result"]["system"], "sys2": plant}));
+        assert!(!is_error(&open), "{}", open["error"]);
+        let (closed, _) = b.call("control_lti_feedback", &json!({"sys1": open["result"]["system"]}));
+        assert!(!is_error(&closed), "{}", closed["error"]);
+        assert_eq!(closed["result"]["composition"]["sign"], -1.0);
+        assert_eq!(closed["result"]["composition"]["implicit_unity"], true);
+        let (info, _) = b.call("control_lti_stepinfo", &json!({"system": closed["result"]["system"], "time": {"mode":"uniform","t_final":2.0,"dt":0.0005,"unit":"s"}}));
+        assert!(!is_error(&info), "{}", info["error"]);
+        let ts = info["result"]["info"]["settling_time"]["value"].as_f64().unwrap();
+        let os = info["result"]["info"]["overshoot"]["value"].as_f64().unwrap();
+        assert!(info["result"]["stable"] == true && ts < 0.2 && os < 5.0, "XG_13 chain Ts={ts} OS={os}");
+
+        // Ziheng_03: PID on 1/((0.5s+1)(s+1)(2s+1)), then the same loop, must come back stable.
+        let (pidz, _) = b.call("control_design_pid", &json!({"Kp": 10.0, "Ki": 1.55, "Kd": 9.5}));
+        let g = json!({"kind":"tf","num":[1.0],"den":[1.0, 3.5, 3.5, 1.0],"ts":0.0});
+        // (0.5s+1)(s+1)(2s+1) = (0.5s+1)(2s^2+3s+1) = s^3 + 3.5 s^2 + 3.5 s + 1
+        let (oz, _) = b.call("control_lti_series", &json!({"sys1": pidz["result"]["system"], "sys2": g}));
+        let (cz, _) = b.call("control_lti_feedback", &json!({"sys1": oz["result"]["system"]}));
+        assert!(!is_error(&cz), "{}", cz["error"]);
+        let (iz, _) = b.call("control_lti_stepinfo", &json!({"system": cz["result"]["system"], "time": {"mode":"uniform","t_final":20.0,"dt":0.01,"unit":"s"}, "settling_threshold": 0.05}));
+        assert!(iz["result"]["stable"] == true, "{}", iz);
+
+        // XG_05: Padé of the identified delay, then series with 1/(τs+1). Order is supplied, not defaulted.
+        let (pd, _) = b.call("control_lti_pade", &json!({"delay": 16.5, "order": 10}));
+        assert!(!is_error(&pd), "{}", pd["error"]);
+        assert!(pd["result"]["approximation"]["certificate"]["value"].as_f64().unwrap() >= 0.0);
+        assert!(pd["result"]["approximation"]["bound"].is_null());
+        let lag = json!({"kind":"tf","num":[1.0],"den":[19.5, 1.0],"ts":0.0});
+        let (plant5, _) = b.call("control_lti_series", &json!({"sys1": pd["result"]["system"], "sys2": lag}));
+        assert!(!is_error(&plant5), "{}", plant5["error"]);
+
+        // Offline design loop: the same XG_13 chain, then the reference submission, must pass.
+        let script = json!([
+            {"calls":[{"name":"control_design_pid","args":{"Kp":800.0,"Ki":2000.0,"Kd":60.0}}]},
+            {"calls":[{"name":"control_lti_series","args":{"sys1": pid["result"]["system"], "sys2": plant}}]},
+            {"calls":[{"name":"control_lti_feedback","args":{"sys1": open["result"]["system"]}}]},
+            {"calls":[{"name":"control_lti_stepinfo","args":{"system": closed["result"]["system"], "time":{"mode":"uniform","t_final":2.0,"dt":0.001,"unit":"s"}}}]},
+            {"calls":[{"name":"submit_design","args":{"answer": reference("XG_13"), "summary":"链式检查后提交参考增益"}}]}
+        ]);
+        let path = std::env::temp_dir().join(format!("aeoi-design-chain-{}.json", std::process::id()));
+        std::fs::write(&path, serde_json::to_string(&script).unwrap()).unwrap();
+        let p = crate::provider::ScriptMock::from_file(path.to_str().unwrap()).unwrap();
+        let rep = run_design(&p, &b, &[task("XG_13")], &opts(8), |_| {}).await;
+        let r = &rep["results"][0];
+        assert_eq!(r["stopped"], "submitted", "{r}");
+        assert!(r["tool_errors"].as_array().unwrap().is_empty(), "{}", r["tool_errors"]);
+        assert!(r["tool_calls"].as_array().unwrap().iter().any(|t| t == "control_design_pid"));
+        assert!(r["tool_calls"].as_array().unwrap().iter().any(|t| t == "control_lti_stepinfo"));
+        assert_eq!(r["pass"], true, "{}", r["details"]);
+        let _ = std::fs::remove_file(&path);
     }
 }

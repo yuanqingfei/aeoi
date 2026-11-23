@@ -1,0 +1,35 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.lti.pade",
+ "operator_version": "0.3.0",
+ "case_family": "n5",
+ "request": {
+  "delay": 0.8,
+  "order": 5
+ },
+ "reference_env": {
+  "engine": "mpmath",
+  "mpmath": "1.3.0",
+  "dps": 50,
+  "python": "3.12.3",
+  "note": "50-decimal closed form, rounded to float64; NOT MATLAB output"
+ },
+ "expected": {
+  "num": [
+   -1.0,
+   37.5,
+   -656.2499999999999,
+   6562.499999999999,
+   -36914.06249999999,
+   92285.15624999997
+  ],
+  "den": [
+   1.0,
+   37.5,
+   656.2499999999999,
+   6562.499999999999,
+   36914.06249999999,
+   92285.15624999997
+  ]
+ }
+}

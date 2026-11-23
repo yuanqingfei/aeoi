@@ -259,7 +259,7 @@ mod tests {
     #[test]
     fn twelve_tools_with_names_valid_for_all_providers() {
         let b = Bridge::new();
-        assert_eq!(b.tools.len(), 12);
+        assert_eq!(b.tools.len(), 18);
         for t in &b.tools {
             assert!(t.name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'), "{}", t.name);
             assert!(t.name.len() <= 64);

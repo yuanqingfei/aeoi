@@ -1,7 +1,7 @@
 {
   "generated_by": "rust/aeoi-control/tests/receipt.rs",
-  "golden_successes": 615,
-  "golden_errors": 30,
+  "golden_successes": 664,
+  "golden_errors": 39,
   "claims_by_operator": {
     "control.analysis.ctrb_obsv": {
       "verified": 26
@@ -15,6 +15,9 @@
     "control.design.lqr": {
       "verified": 80
     },
+    "control.design.pid": {
+      "verified": 8
+    },
     "control.design.place": {
       "verified": 25
     },
@@ -27,14 +30,29 @@
     "control.lti.convert": {
       "verified": 74
     },
+    "control.lti.feedback": {
+      "verified": 10
+    },
     "control.lti.impulse": {
       "verified": 27
+    },
+    "control.lti.pade": {
+      "verified": 8
+    },
+    "control.lti.parallel": {
+      "verified": 8
     },
     "control.lti.poles_zeros": {
       "unchecked": 46
     },
+    "control.lti.series": {
+      "verified": 9
+    },
     "control.lti.step": {
       "verified": 85
+    },
+    "control.lti.stepinfo": {
+      "verified": 6
     },
     "control.math.lyap": {
       "unchecked": 41
