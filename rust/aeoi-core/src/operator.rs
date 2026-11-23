@@ -122,7 +122,7 @@ pub fn error_envelope(m: &OperatorMeta, request_id: &Value, e: &OpError, warning
     json!({
         "spec": SPEC, "status": "error", "dry_run": false,
         "operator": op_header(m), "request_id": request_id, "result": Value::Null,
-        "trust": Value::Null, "reproducibility": Value::Null,
+        "trust": Value::Null, "receipt": Value::Null, "reproducibility": Value::Null,
         "error": e.to_json(),
         "warnings": warnings.iter().map(|w| w.to_json()).collect::<Vec<_>>(),
         "timing": {"wall_ms": t0.elapsed().as_secs_f64() * 1e3}
@@ -174,7 +174,7 @@ impl<T: Operator> DynOperator for T {
             return json!({
                 "spec": SPEC, "status": if warnings.is_empty() {"ok"} else {"ok_with_warnings"}, "dry_run": true,
                 "operator": op_header(m), "request_id": request_id, "result": Value::Null, "estimate": est,
-                "trust": Value::Null, "reproducibility": Value::Null, "error": Value::Null,
+                "trust": Value::Null, "receipt": Value::Null, "reproducibility": Value::Null, "error": Value::Null,
                 "warnings": warnings.iter().map(|w| w.to_json()).collect::<Vec<_>>(),
                 "input_hash": input_hash,
                 "timing": {"wall_ms": t0.elapsed().as_secs_f64() * 1e3}
@@ -189,6 +189,8 @@ impl<T: Operator> DynOperator for T {
         warnings.extend(out.warnings);
         let mut result = out.result;
         let output_hash = hash_value(&canonicalize_for_hash(&result, host));
+        // spec 4.3 receipt + E-11 (no evidence, no success claim): may append W.EVIDENCE.POSTCONDITION_FAILED
+        let receipt = crate::receipt::build(m, &input_hash, &output_hash, &out.trust, &mut warnings, &build_string(), &platform());
         if exec.get("output_encoding").and_then(|x| x.as_str()) == Some("b64") {
             encode_b64_inplace(&mut result, host);
         }
@@ -200,6 +202,7 @@ impl<T: Operator> DynOperator for T {
             "request_id": request_id,
             "result": result,
             "trust": out.trust,
+            "receipt": receipt,
             "warnings": warnings.iter().map(|w| w.to_json()).collect::<Vec<_>>(),
             "error": Value::Null,
             "reproducibility": {

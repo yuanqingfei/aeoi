@@ -34,7 +34,8 @@ fn mcp_stdio_session() {
     let tools = tl["result"]["tools"].as_array().unwrap();
     let names: Vec<&str> = tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
     println!("tools/list: {names:?}");
-    assert_eq!(names.len(), 12);
+    assert_eq!(names.len(), 13, "12 operators + aeoi_verify");
+    assert!(names.contains(&"aeoi_verify"));
     for t in tools {
         assert_eq!(t["inputSchema"]["type"], "object");
         assert_eq!(t["outputSchema"]["type"], "object");
@@ -62,12 +63,32 @@ fn mcp_stdio_session() {
             } else {
                 assert!(env["trust"]["accuracy_grade"].is_string());
                 assert_eq!(env["reproducibility"]["output_hash"], want["reproducibility"]["output_hash"], "{op}: MCP result differs from the published example");
+                assert_eq!(env["receipt"]["fingerprint"]["request"], want["receipt"]["fingerprint"]["request"], "{op}: receipt request fingerprint differs");
+            }
+            // replay-verify the published example envelope through the MCP verifier tool
+            let v = rpc("tools/call", json!({"name": "aeoi_verify", "arguments": {"operator": op, "arguments": ex(&format!("{op}/{req}")), "envelope": want}}));
+            let verdict = v["result"]["structuredContent"]["verdict"].as_str().unwrap_or("").to_string();
+            assert_eq!(v["result"]["isError"], false, "{op} {req}: verify verdict {verdict}");
+            if expect_err {
+                assert_eq!(verdict, "error_reproduced");
+            } else {
+                assert_eq!(verdict, "bitwise_match");
             }
         }
     }
     // schema-level error (missing required field) is also an AEOI envelope, not a JSON-RPC error
     let r = rpc("tools/call", json!({"name":"control_lti_bode","arguments":{"frequency":{"mode":"explicit","values":[1.0]}}}));
     assert_eq!(r["result"]["structuredContent"]["error"]["code"], "E.VALIDATION.SCHEMA");
+    // tampered result → result_tampered; changed input → request_mismatch
+    let mut bad = ex("control.design.lqr/response.success.json");
+    bad["result"]["K"]["data"][0] = json!(123.0);
+    let v = rpc("tools/call", json!({"name": "aeoi_verify", "arguments": {"operator": "control.design.lqr", "arguments": ex("control.design.lqr/request.json"), "envelope": bad}}));
+    assert_eq!(v["result"]["structuredContent"]["verdict"], "result_tampered");
+    assert_eq!(v["result"]["isError"], true);
+    let mut req2 = ex("control.design.lqr/request.json");
+    req2["Q"]["data"][0] = json!(2.0);
+    let v = rpc("tools/call", json!({"name": "aeoi_verify", "arguments": {"operator": "control.design.lqr", "arguments": req2, "envelope": ex("control.design.lqr/response.success.json")}}));
+    assert_eq!(v["result"]["structuredContent"]["verdict"], "request_mismatch");
     // unknown tool → JSON-RPC invalid params
     let r = rpc("tools/call", json!({"name":"nope","arguments":{}}));
     assert_eq!(r["error"]["code"], -32602);

@@ -132,5 +132,42 @@
       "idempotentHint": true,
       "openWorldHint": false
     }
+  },
+  "receipt": {
+    "method_id": "aeoi:impulse:zoh-expm-pade13-recursion",
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "输入系统准确描述被研究对象（单位、符号、row-major 录入）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "proper",
+        "statement": "系统为 proper（deg num ≤ deg den）",
+        "enforced_by": "error:E.DOMAIN.IMPROPER_SYSTEM"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "convention",
+        "statement": "python-control 冲激约定（连续 x0 = B、忽略 D；离散按 discrete_scaling）",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "grid",
+        "statement": "时间网格足以分辨动态",
+        "enforced_by": "warning:W.ACCURACY.GRID_TOO_COARSE"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "all_finite"
+    ]
   }
 }

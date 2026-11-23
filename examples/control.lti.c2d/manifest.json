@@ -137,5 +137,32 @@
       "idempotentHint": true,
       "openWorldHint": false
     }
+  },
+  "receipt": {
+    "method_id": "aeoi:c2d:expm-pade13-or-tustin-lu",
+    "assumptions": [
+      {
+        "id": "ts_from_user",
+        "statement": "采样周期 ts 来自用户（不是假设值）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "continuous",
+        "statement": "输入为连续系统",
+        "enforced_by": "error:E.DOMAIN.NOT_CONTINUOUS"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_priori"
+    },
+    "postconditions": [
+      "pole_mapping_consistent"
+    ]
   }
 }

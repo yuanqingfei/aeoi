@@ -67,6 +67,67 @@
     "accuracy_grade": "B",
     "credentials": null
   },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:place:knv0-complex",
+      "routine": "place::knv0",
+      "provenance": "aeoi://operators/control.design.place/0.3.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "controllable",
+        "statement": "(A,B) 可控",
+        "enforced_by": "error:E.DOMAIN.NOT_CONTROLLABLE"
+      },
+      {
+        "id": "multiplicity",
+        "statement": "期望极点重数 ≤ rank(B)",
+        "enforced_by": "error:E.DOMAIN.POLE_MULTIPLICITY"
+      },
+      {
+        "id": "nonunique",
+        "statement": "多输入时 K 不唯一：结果是满足极点配置的一个 K",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "poles_rel": 5.813203227122745e-16
+      },
+      "basis": "max(后验极点偏差, u·cond(X))；闭环极点的一阶扰动界 ∝ cond(X)·‖ΔA‖（Bauer–Fike）"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "poles_placed": true,
+        "conjugate_closed": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null
+    },
+    "fingerprint": {
+      "request": "sha256:03cb75e677cd411717fe432149eadcc60e9f3557180ce5f06503dc5519a53398",
+      "result": "sha256:6d3bca4667f58d0ef11c17fa215f096ec0009402eb40a696eb265eb118b283b4",
+      "output_hash": "sha256:8353eccf88599846e3653216dd6efce8df922a38183be90044a3afab0a59a59c",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.design.place@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "platform": "x86_64-linux",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
   "warnings": [],
   "error": null,
   "reproducibility": {

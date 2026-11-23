@@ -75,6 +75,8 @@ jobs:
             const r = JSON.parse(w.call_tool("control_lti_poles_zeros", JSON.stringify({system:{kind:"tf",num:[1],den:[1,3,2],ts:0}}), null, 120));
             console.log(r.envelope.status, JSON.stringify(r.envelope.result.poles));
             if (r.is_error) process.exit(1);'
+          # spec 4.3: every published (native) example envelope must replay-verify inside wasm
+          node rust/aeoi-wasm/parity/verify_examples.mjs /tmp/pkg-node "$GITHUB_WORKSPACE"
       - uses: actions/configure-pages@v5
         if: steps.pages.outputs.enabled == 'true'
       - uses: actions/upload-pages-artifact@v3

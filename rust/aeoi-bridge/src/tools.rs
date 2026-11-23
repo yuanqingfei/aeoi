@@ -95,6 +95,19 @@ impl Bridge {
 
     /// Run one tool call; always returns an AEOI envelope (bridge-level failures are wrapped in the
     /// same error shape so the model sees a uniform `isError` + remediation contract).
+    /// Replay-verify an envelope's receipt (spec 4.3) for a tool call; `_user_quote` is stripped as in `call`.
+    pub fn verify(&self, name_or_id: &str, args: &Value, envelope: &Value) -> Value {
+        let mut args = args.clone();
+        if let Some(o) = args.as_object_mut() {
+            o.remove(USER_QUOTE);
+        }
+        let id = self.tool(name_or_id).map(|t| t.operator_id.clone()).unwrap_or_else(|| name_or_id.to_string());
+        match self.reg.iter().find(|o| o.meta().id == id) {
+            Some(op) => aeoi_core::receipt::verify(op.as_ref(), &args, envelope, &self.host),
+            None => json!({"verdict": "unknown_operator", "operator": {"id": id}}),
+        }
+    }
+
     pub fn call(&self, name: &str, args: &Value) -> (Value, f64) {
         self.call_grounded(name, args, None)
     }
@@ -218,7 +231,24 @@ pub fn compact_for_model(env: &Value, max_len: usize) -> Value {
             _ => v.clone(),
         }
     }
-    walk(env, max_len)
+    let mut out = walk(env, max_len);
+    if let Some(r) = env.get("receipt").filter(|r| r.is_object()) {
+        out["receipt"] = receipt_for_model(r);
+    }
+    out
+}
+
+/// The model sees a short form of the receipt (spec 4.3): the evidence claim, failed post-conditions,
+/// exactness class, the assumptions the operator does NOT check (the model must make sure they hold or
+/// say so), and the result fingerprint to cite.
+pub fn receipt_for_model(r: &Value) -> Value {
+    let caller: Vec<Value> = r["assumptions"].as_array().into_iter().flatten()
+        .filter(|a| a["enforced_by"] == "caller").map(|a| a["statement"].clone()).collect();
+    json!({
+        "claim": r["evidence"]["claim"], "failed_postconditions": r["evidence"]["failed"],
+        "exactness": {"class": r["exactness"]["class"], "bound_kind": r["exactness"]["bound_kind"]},
+        "unchecked_assumptions": caller, "method": r["method"]["id"], "fingerprint": r["fingerprint"]["result"],
+    })
 }
 
 #[cfg(test)]
@@ -234,6 +264,20 @@ mod tests {
             assert!(t.name.len() <= 64);
             assert!(t.description.len() > 20);
         }
+    }
+
+    #[test]
+    fn receipt_short_form_and_verify() {
+        let b = Bridge::new();
+        let args = json!({"A":{"dtype":"f64","shape":[2,2],"data":[0,1,0,0]},"B":{"dtype":"f64","shape":[2,1],"data":[0,1]},"Q":{"dtype":"f64","shape":[2,2],"data":[1,0,0,1]},"R":{"dtype":"f64","shape":[1,1],"data":[1]}});
+        let (env, _) = b.call("control_design_lqr", &args);
+        let short = compact_for_model(&env, 120);
+        assert_eq!(short["receipt"]["claim"], "verified");
+        assert!(short["receipt"]["unchecked_assumptions"].as_array().unwrap().len() >= 1);
+        assert!(short["receipt"].get("assumptions").is_none(), "model gets the short form only");
+        let mut with_quote = args.clone();
+        with_quote["_user_quote"] = json!({});
+        assert_eq!(b.verify("control_design_lqr", &with_quote, &env)["verdict"], "bitwise_match");
     }
 
     #[test]

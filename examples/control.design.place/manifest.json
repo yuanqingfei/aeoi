@@ -126,5 +126,33 @@
       "idempotentHint": true,
       "openWorldHint": false
     }
+  },
+  "receipt": {
+    "method_id": "aeoi:place:knv0-complex",
+    "assumptions": [
+      {
+        "id": "controllable",
+        "statement": "(A,B) 可控",
+        "enforced_by": "error:E.DOMAIN.NOT_CONTROLLABLE"
+      },
+      {
+        "id": "multiplicity",
+        "statement": "期望极点重数 ≤ rank(B)",
+        "enforced_by": "error:E.DOMAIN.POLE_MULTIPLICITY"
+      },
+      {
+        "id": "nonunique",
+        "statement": "多输入时 K 不唯一：结果是满足极点配置的一个 K",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "poles_placed",
+      "conjugate_closed"
+    ]
   }
 }

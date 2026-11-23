@@ -110,6 +110,67 @@
     "accuracy_grade": "B",
     "credentials": null
   },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:poles-zeros:balanced-qr+emami-naeini-van-dooren",
+      "routine": "poles_zeros::analyze",
+      "provenance": "aeoi://operators/control.lti.poles_zeros/0.3.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "输入系统准确描述被研究对象（单位、符号、row-major 录入）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "proper",
+        "statement": "系统为 proper（deg num ≤ deg den）",
+        "enforced_by": "error:E.DOMAIN.IMPROPER_SYSTEM"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "nondegenerate",
+        "statement": "系统满法秩（零点有定义）",
+        "enforced_by": "error:E.DOMAIN.DEGENERATE_SYSTEM"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none",
+      "bound": null,
+      "basis": "未给出逐根误差界：特征值/多项式根对扰动的敏感度取决于（未计算的）特征向量条件数；重根的误差可达 O(u^{1/k})"
+    },
+    "evidence": {
+      "claim": "unchecked",
+      "postconditions": {},
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null
+    },
+    "fingerprint": {
+      "request": "sha256:fffdeada438dcd5f544abf5e56dc2e2c221c76a0586a65b34ece82901384d2bd",
+      "result": "sha256:b87556264465922e0396f24bb434415873c3be9d7f44b5750953f8a130a5871b",
+      "output_hash": "sha256:c24e028be4ef0460dc5307f9edc603842812bc169143f1edaa29d4fcf868ebd7",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.lti.poles_zeros@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "platform": "x86_64-linux",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
   "warnings": [],
   "error": null,
   "reproducibility": {

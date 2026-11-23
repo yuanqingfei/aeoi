@@ -18,6 +18,8 @@ into the binaries we build. Regenerate the crate table with `python3 tools/gen_t
 | mpmath | 50-digit reference values in `golden/mpmath/` (`gen_golden_mpmath.py`) | BSD-3-Clause |
 | tpt-control (rev 10e4320, © TPT Solutions) | `tools/xcheck-tpt/` cross-check harness, referenced by git rev; no source copied | MIT OR Apache-2.0 |
 
+Ideas borrowed, no code copied: result receipts and verify-by-replay (spec 4.3) from bicmath (https://github.com/nikoma/bicmath, MIT); "no evidence, no success claim" (spec E-11) from matlab-mcp-extensions (https://github.com/zws20070309/matlab-mcp-extensions).
+
 
 ## Rust crates
 
@@ -33,20 +35,20 @@ into the binaries we build. Regenerate the crate table with `python3 tools/gen_t
 | Apache-2.0 | 4 |
 | Zlib OR Apache-2.0 OR MIT | 4 |
 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | 3 |
-| MIT OR Apache-2.0 OR LGPL-2.1-or-later | 2 |
-| BSD-2-Clause OR Apache-2.0 OR MIT | 2 |
-| ISC | 2 |
 | Unlicense OR MIT | 2 |
 | Apache-2.0 OR ISC OR MIT | 2 |
+| BSD-2-Clause OR Apache-2.0 OR MIT | 2 |
+| ISC | 2 |
+| MIT OR Apache-2.0 OR LGPL-2.1-or-later | 2 |
+| Apache-2.0 AND ISC | 1 |
+| MIT OR Apache-2.0 OR Zlib | 1 |
 | Zlib | 1 |
+| MIT AND BSD-3-Clause | 1 |
 | Apache-2.0 OR BSL-1.0 | 1 |
 | Apache-2.0/MIT | 1 |
-| BSD-3-Clause | 1 |
-| Apache-2.0 AND ISC | 1 |
 | (MIT OR Apache-2.0) AND Unicode-3.0 | 1 |
 | CDLA-Permissive-2.0 | 1 |
-| MIT AND BSD-3-Clause | 1 |
-| MIT OR Apache-2.0 OR Zlib | 1 |
+| BSD-3-Clause | 1 |
 
 | Crate | Version | License | In browser build |
 |---|---|---|---|

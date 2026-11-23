@@ -366,6 +366,79 @@
       "branch_center_deg": 0.0
     }
   },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:bode:horner-or-complex-lu",
+      "routine": "bode::evaluate (Horner / zpk product / complex LU)",
+      "provenance": "aeoi://operators/control.lti.bode/0.2.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "输入系统准确描述被研究对象（单位、符号、row-major 录入）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "proper",
+        "statement": "系统为 proper（deg num ≤ deg den）",
+        "enforced_by": "error:E.DOMAIN.IMPROPER_SYSTEM"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "grid",
+        "statement": "频率网格与单位为调用方所需（rad/s 或 Hz）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "no_pole_on_grid",
+        "statement": "频点不落在极点上",
+        "enforced_by": "warning:W.NUMERICAL.NEAR_POLE"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_priori",
+      "bound": {
+        "rel_max": 4.303467566012482e-14,
+        "magnitude_db_abs": 3.7379444339376774e-13,
+        "phase_deg_abs": 2.465705288039522e-12
+      },
+      "basis": "启发式估计 4·n·u·κ₂(sI−A)（逐频点），不是严格上界；dB 误差 ≈ 8.686×相对误差"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "all_finite": true,
+        "frequencies_strictly_increasing": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T3",
+      "credentials": null
+    },
+    "fingerprint": {
+      "request": "sha256:5566f920ce5458e01f363753434b155696f2554d91128621bb30fd9605588b37",
+      "result": "sha256:f498fb92c289f4184292d5dce86f6a27a018f6d9b010e1c08049c8340acbffc5",
+      "output_hash": "sha256:558ecd503f0a2eeeeb705ee174c6796f4a1ff540c50504c0606fa81e4cb85919",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.lti.bode@0.2.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "platform": "x86_64-linux",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
   "warnings": [],
   "error": null,
   "reproducibility": {

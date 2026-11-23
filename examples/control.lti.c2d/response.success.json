@@ -85,6 +85,64 @@
     "accuracy_grade": "B",
     "credentials": null
   },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:c2d:expm-pade13-or-tustin-lu",
+      "routine": "c2d::discretize",
+      "provenance": "aeoi://operators/control.lti.c2d/0.3.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "ts_from_user",
+        "statement": "采样周期 ts 来自用户（不是假设值）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "continuous",
+        "statement": "输入为连续系统",
+        "enforced_by": "error:E.DOMAIN.NOT_CONTINUOUS"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": "expm（Padé-13 + scaling & squaring）后向误差 ≤ u（Higham 2005）；tustin 的误差 ≈ u·cond(I−αA)。极点映射残差为后验旁证"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "pole_mapping_consistent": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null
+    },
+    "fingerprint": {
+      "request": "sha256:b9508f2734c8aeec7cecd604c7c6b9c737851643b73787c8c9c4e48f8b706609",
+      "result": "sha256:6e54c3c76a781e6dce56daa439dc91a39f77a13d636a219f21d5014c9be1cdd4",
+      "output_hash": "sha256:dba22c18d22875927dfe4ecdf33bf0c537a4081e6b61c91bf9e64936e92a9935",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.lti.c2d@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "platform": "x86_64-linux",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
   "warnings": [],
   "error": null,
   "reproducibility": {

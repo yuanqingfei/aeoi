@@ -38,6 +38,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/chat", post(chat))
         .route("/api/reset", post(reset))
         .route("/api/call", post(direct_call))
+        .route("/api/verify", post(verify))
         .with_state(state)
 }
 
@@ -122,6 +123,18 @@ struct CallReq {
 async fn direct_call(State(st): State<Arc<AppState>>, Json(r): Json<CallReq>) -> Json<Value> {
     let (env, ms) = st.bridge.call(&r.tool, &r.args);
     Json(json!({"response": env, "latency_ms": ms}))
+}
+
+#[derive(serde::Deserialize)]
+struct VerifyReq {
+    tool: String,
+    args: Value,
+    envelope: Value,
+}
+
+/// spec 4.3: re-run a traced tool call and compare with its receipt.
+async fn verify(State(st): State<Arc<AppState>>, Json(r): Json<VerifyReq>) -> Json<Value> {
+    Json(st.bridge.verify(&r.tool, &r.args, &r.envelope))
 }
 
 pub async fn serve(addr: &str, default_model: String) -> std::io::Result<()> {

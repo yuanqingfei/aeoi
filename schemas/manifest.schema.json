@@ -327,6 +327,77 @@
       "additionalProperties": {
         "type": "number"
       }
+    },
+    "receipt": {
+      "type": "object",
+      "description": "结果收据的静态部分（4.3，v0.3.3）：方法 id、假设、精确性类、必须成立的后置条件（trust.checks 的键）",
+      "required": [
+        "method_id",
+        "assumptions",
+        "exactness",
+        "postconditions"
+      ],
+      "properties": {
+        "method_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_.:+-]+$"
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "statement",
+              "enforced_by"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "statement": {
+                "type": "string"
+              },
+              "enforced_by": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "exactness": {
+          "type": "object",
+          "required": [
+            "class",
+            "bound_kind"
+          ],
+          "properties": {
+            "class": {
+              "enum": [
+                "exact",
+                "correctly_rounded",
+                "approximate"
+              ]
+            },
+            "bound_kind": {
+              "enum": [
+                "rigorous",
+                "a_priori",
+                "a_posteriori_heuristic",
+                "none"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "postconditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

@@ -1,0 +1,44 @@
+{
+  "generated_by": "rust/aeoi-control/tests/receipt.rs",
+  "golden_successes": 615,
+  "golden_errors": 30,
+  "claims_by_operator": {
+    "control.analysis.ctrb_obsv": {
+      "verified": 26
+    },
+    "control.analysis.margin": {
+      "verified": 44
+    },
+    "control.design.dlqr": {
+      "verified": 22
+    },
+    "control.design.lqr": {
+      "verified": 80
+    },
+    "control.design.place": {
+      "verified": 25
+    },
+    "control.lti.bode": {
+      "verified": 100
+    },
+    "control.lti.c2d": {
+      "verified": 45
+    },
+    "control.lti.convert": {
+      "verified": 74
+    },
+    "control.lti.impulse": {
+      "verified": 27
+    },
+    "control.lti.poles_zeros": {
+      "unchecked": 46
+    },
+    "control.lti.step": {
+      "verified": 85
+    },
+    "control.math.lyap": {
+      "unchecked": 41
+    }
+  },
+  "replay_verdict": "bitwise_match on every golden success; error_reproduced on every error"
+}

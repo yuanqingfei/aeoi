@@ -9,6 +9,7 @@ pub mod schema;
 pub mod linalg;
 pub mod operator;
 pub mod poly;
+pub mod receipt;
 pub mod sysalg;
 
 pub const SPEC: &str = "aeoi/0.3";

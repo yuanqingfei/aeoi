@@ -15,6 +15,7 @@ const serverBackend = {
   kind: "server",
   config: () => fetch("/api/config").then((r) => r.json()),
   tools: () => fetch("/api/tools").then((r) => r.json()),
+  verify: (tool, args, envelope) => fetch("/api/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tool, args, envelope }) }).then((r) => r.json()),
   reset: (sid) => fetch("/api/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sid }) }),
   async chat(req, onEvent) {
     const resp = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req) });
@@ -194,10 +195,42 @@ function renderTool(s) {
     c.dataset.plot = pid;
     setTimeout(() => plot && drawPlot(pid, plot, env.result, s.tool), 0);
   }
+  if (env.receipt) body += receiptBox(env.receipt);
   if (env.trust) body += `<details><summary>trust（可信度元数据）</summary><pre>${esc(JSON.stringify(env.trust, null, 2))}</pre></details>`;
   body += `<details><summary>完整 AEOI 响应信封</summary><pre>${esc(JSON.stringify(env, null, 2))}</pre></details>`;
   c.innerHTML = body;
+  const vb = c.querySelector(".verify-btn");
+  if (vb) vb.addEventListener("click", async () => {
+    const out = c.querySelector(".verify-out");
+    vb.disabled = true; out.textContent = "重放中…";
+    try {
+      const v = await B.verify(s.tool, s.request, env);
+      const good = ["bitwise_match", "tolerance_match", "error_reproduced"].includes(v.verdict);
+      out.innerHTML = `<span class="badge ${good ? "ok" : "bad"}">${esc(v.verdict)}</span> ` +
+        `<span class="muted">同 build：${v.same_build ? "是" : "否"} · 同平台：${v.same_platform ? "是" : "否"}${v.max_rel_diff != null ? " · 最大相对差 " + Number(v.max_rel_diff).toExponential(1) : ""}${v.note ? " · " + esc(v.note) : ""}</span>`;
+    } catch (e) { out.textContent = "验证失败：" + (e.message || e); }
+    vb.disabled = false;
+  });
   $("#trace").appendChild(c);
+}
+
+// spec 4.3: result receipt — evidence claim, exactness, unchecked assumptions, fingerprint, replay button
+const CLAIM_TEXT = { verified: ["ok", "已验证：后置条件全部通过"], unchecked: ["warn", "未检查：该算子没有独立后验检查"], unverified: ["bad", "未通过：后置条件不满足"] };
+function receiptBox(r) {
+  const ev = r.evidence || {}, ex = r.exactness || {}, fp = r.fingerprint || {};
+  const [cls, txt] = CLAIM_TEXT[ev.claim] || ["warn", ev.claim];
+  const post = Object.entries(ev.postconditions || {}).map(([k, v]) => `<code>${esc(k)}</code> ${v === true ? "✓" : "✗"}`).join("　");
+  const caller = (r.assumptions || []).filter((a) => a.enforced_by === "caller").map((a) => `<li>${esc(a.statement)}</li>`).join("");
+  const checked = (r.assumptions || []).filter((a) => a.enforced_by !== "caller").map((a) => `<li>${esc(a.statement)} <span class="muted">← ${esc(a.enforced_by)}</span></li>`).join("");
+  const bound = ex.bound ? Object.entries(ex.bound).map(([k, v]) => `${esc(k)} ≈ ${Number(v).toExponential(1)}`).join("，") : "无数值界";
+  return `<details class="receipt" open><summary>收据（receipt）<span class="badge ${cls}">${esc(txt)}</span></summary>
+    <div class="kvs"><div><span class="muted">方法</span> <code>${esc(r.method && r.method.id)}</code></div>
+    <div><span class="muted">精确性</span> ${esc(ex.class)} · ${esc(ex.bound_kind)} · ${bound}</div>
+    ${post ? `<div><span class="muted">后置条件</span> ${post}</div>` : ""}
+    <div><span class="muted">结果指纹</span> <code title="${esc(fp.scheme)}">${esc((fp.result || "").slice(0, 23))}…</code> <span class="muted">${esc(r.replay && r.replay.platform)}</span></div></div>
+    ${caller ? `<div class="muted">算子不检查、由调用方负责的前提：</div><ul>${caller}</ul>` : ""}
+    ${checked ? `<details><summary>已由算子检查的前提</summary><ul>${checked}</ul></details>` : ""}
+    <div><button class="verify-btn" type="button">重放验证</button> <span class="verify-out muted"></span></div></details>`;
 }
 
 // ---------------------------------------------------------------- plots

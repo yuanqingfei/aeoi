@@ -10,6 +10,7 @@
   "request_id": "req-step-002",
   "result": null,
   "trust": null,
+  "receipt": null,
   "reproducibility": null,
   "error": {
     "code": "E.RESOURCE.COMPUTE_LIMIT",

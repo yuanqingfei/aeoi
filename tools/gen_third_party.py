@@ -32,6 +32,7 @@ out = ["# Third-party notices", "",
 "| mpmath | 50-digit reference values in `golden/mpmath/` (`gen_golden_mpmath.py`) | BSD-3-Clause |",
 "| tpt-control (rev 10e4320, © TPT Solutions) | `tools/xcheck-tpt/` cross-check harness, referenced by git rev; no source copied | MIT OR Apache-2.0 |",
 "",
+"Ideas borrowed, no code copied: result receipts and verify-by-replay (spec 4.3) from bicmath (https://github.com/nikoma/bicmath, MIT); \"no evidence, no success claim\" (spec E-11) from matlab-mcp-extensions (https://github.com/zws20070309/matlab-mcp-extensions).", "",
 "", "## Rust crates", "",
 f"{len(allc)} crates across the workspace ({len(wasm)} of them in the browser build `aeoi-wasm`). All are permissively licensed; where a crate offers a choice we use it under MIT or Apache-2.0.", ""]
 c = collections.Counter(pk[i]["license"] for i in allc)

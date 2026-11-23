@@ -135,5 +135,43 @@
       "idempotentHint": true,
       "openWorldHint": false
     }
+  },
+  "receipt": {
+    "method_id": "aeoi:bode:horner-or-complex-lu",
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "输入系统准确描述被研究对象（单位、符号、row-major 录入）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "proper",
+        "statement": "系统为 proper（deg num ≤ deg den）",
+        "enforced_by": "error:E.DOMAIN.IMPROPER_SYSTEM"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "grid",
+        "statement": "频率网格与单位为调用方所需（rad/s 或 Hz）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "no_pole_on_grid",
+        "statement": "频点不落在极点上",
+        "enforced_by": "warning:W.NUMERICAL.NEAR_POLE"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_priori"
+    },
+    "postconditions": [
+      "all_finite",
+      "frequencies_strictly_increasing"
+    ]
   }
 }

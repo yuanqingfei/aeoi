@@ -114,6 +114,17 @@
         "object",
         "null"
       ]
+    },
+    "receipt": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/Receipt"
+        }
+      ],
+      "description": "结果收据（4.3，v0.3.3）：非 dry-run 的成功信封 SHOULD 给出（参考实现总是给出）；错误与 dry-run 信封为 null"
     }
   },
   "allOf": [
@@ -341,6 +352,190 @@
             "type": "string"
           },
           "description": "影响数值内核分派的 CPU 特性（如 avx2, fma）；platform_bitwise 的“平台”= target triple + 该特性集合"
+        }
+      }
+    },
+    "Receipt": {
+      "type": "object",
+      "required": [
+        "format",
+        "method",
+        "assumptions",
+        "exactness",
+        "evidence",
+        "fingerprint",
+        "replay"
+      ],
+      "properties": {
+        "format": {
+          "const": "aeoi-receipt/1"
+        },
+        "method": {
+          "type": "object",
+          "required": [
+            "id",
+            "routine",
+            "provenance"
+          ],
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "routine": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "provenance": {
+              "type": "string",
+              "description": "指向 manifest provenance 的 URI"
+            }
+          }
+        },
+        "assumptions": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "statement",
+              "enforced_by"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "statement": {
+                "type": "string"
+              },
+              "enforced_by": {
+                "type": "string",
+                "description": "validation | error:<code> | check:<key> | warning:<code> | caller（算子不检查，由调用方负责）"
+              }
+            }
+          }
+        },
+        "exactness": {
+          "type": "object",
+          "required": [
+            "class",
+            "bound_kind"
+          ],
+          "properties": {
+            "class": {
+              "enum": [
+                "exact",
+                "correctly_rounded",
+                "approximate"
+              ]
+            },
+            "bound_kind": {
+              "enum": [
+                "rigorous",
+                "a_priori",
+                "a_posteriori_heuristic",
+                "none",
+                "none_reported"
+              ]
+            },
+            "bound": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "basis": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "evidence": {
+          "type": "object",
+          "required": [
+            "claim",
+            "postconditions",
+            "failed"
+          ],
+          "properties": {
+            "claim": {
+              "enum": [
+                "verified",
+                "unverified",
+                "unchecked"
+              ]
+            },
+            "postconditions": {
+              "type": "object",
+              "additionalProperties": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            },
+            "failed": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "fingerprint": {
+          "type": "object",
+          "required": [
+            "request",
+            "result",
+            "output_hash",
+            "scheme"
+          ],
+          "properties": {
+            "request": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "result": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "output_hash": {
+              "type": "string"
+            },
+            "scheme": {
+              "type": "string"
+            },
+            "stable_across": {
+              "type": "string"
+            }
+          }
+        },
+        "replay": {
+          "type": "object",
+          "required": [
+            "build",
+            "platform"
+          ],
+          "properties": {
+            "build": {
+              "type": "string"
+            },
+            "platform": {
+              "type": "string"
+            },
+            "verify": {
+              "type": "object"
+            }
+          }
         }
       }
     }

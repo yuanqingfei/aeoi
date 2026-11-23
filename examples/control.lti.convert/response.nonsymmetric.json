@@ -51,6 +51,71 @@
     "accuracy_grade": "B",
     "credentials": null
   },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:convert:canonical-realization+companion-roots",
+      "routine": "sysalg::convert",
+      "provenance": "aeoi://operators/control.lti.convert/0.3.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "输入系统准确描述被研究对象（单位、符号、row-major 录入）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "proper",
+        "statement": "系统为 proper（deg num ≤ deg den）",
+        "enforced_by": "error:E.DOMAIN.IMPROPER_SYSTEM"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "nonminimal",
+        "statement": "不做零极点对消（MIMO 结果为非最小实现）",
+        "enforced_by": "warning:W.DOMAIN.NONMINIMAL_REALIZATION"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "response_rel": 1.0834614708373917e-14
+      },
+      "basis": "后验：等于上述响应残差（非严格上界；对根与系数本身的误差不作保证）"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "response_consistent": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null
+    },
+    "fingerprint": {
+      "request": "sha256:91af333af58eb71abbf21e90223c7a2d0d9b5e6dfd632f5368d0cd10692a8554",
+      "result": "sha256:0a7f1b7442ef5d168ccc2872db6ab9a65424f52cf777f0e4ce3c872e130d20f3",
+      "output_hash": "sha256:1292c603e7b50714525f57929ccc2bf7ecba369755b54b9740bd741baaf8d718",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.lti.convert@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "platform": "x86_64-linux",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
   "warnings": [],
   "error": null,
   "reproducibility": {

@@ -97,6 +97,81 @@
     "accuracy_grade": "B",
     "credentials": null
   },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:lqr:sign-function+kform-newton-kleinman-dot2",
+      "routine": "lqr::solve_care (matrix sign function + K-form Newton–Kleinman defect correction; balanced imaginary-axis test)",
+      "provenance": "aeoi://operators/control.design.lqr/0.3.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "weights",
+        "statement": "Q 对称半正定、R 对称正定、[[Q,N],[Nᵀ,R]] ⪰ 0",
+        "enforced_by": "error:E.DOMAIN.WEIGHT_NOT_PSD"
+      },
+      {
+        "id": "R_pd",
+        "statement": "R 正定",
+        "enforced_by": "error:E.DOMAIN.R_NOT_POSITIVE_DEFINITE"
+      },
+      {
+        "id": "stabilizable",
+        "statement": "(A,B) 可镇定",
+        "enforced_by": "error:E.DOMAIN.NOT_STABILIZABLE"
+      },
+      {
+        "id": "no_imag_axis_unobservable",
+        "statement": "(Q̄,Ā) 在虚轴上没有不可观模态",
+        "enforced_by": "error:E.DOMAIN.HAMILTONIAN_IMAG_AXIS_EIG"
+      },
+      {
+        "id": "model",
+        "statement": "A、B、Q、R、N 准确描述设计问题（单位一致、row-major）",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "S_abs_fro": 1.1909882822008556e-15,
+        "S_rel": 2.875300063516657e-16
+      },
+      "basis": "一阶后验估计：Newton 修正量 ‖δS‖_F ≈ ‖Res‖_F / σ_min(I⊗A_clᵀ + A_clᵀ⊗I) + u‖S‖_F（Res 在 Newton–Kleinman 修正后用补偿算术计算，否则为 f64 残差），忽略二次项；非严格上界"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "S_psd": true,
+        "closed_loop_stable": true
+      },
+      "failed": [],
+      "convergence": {
+        "converged": true,
+        "iterations": 3
+      },
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null
+    },
+    "fingerprint": {
+      "request": "sha256:09d5d6efe8d00a22f38c3ec0ddc982dd689c277072eab0460a48282296b67340",
+      "result": "sha256:422da972ffcea76c9884150546aedbd035aa3e40fb54a57d462326a0792735bf",
+      "output_hash": "sha256:915462abad5ffbc12e65de792235a517269145f53ce18126bfe90a7aefede69c",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.design.lqr@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "platform": "x86_64-linux",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
   "warnings": [
     {
       "code": "W.NUMERICAL.ILL_CONDITIONED",

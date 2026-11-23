@@ -20,6 +20,8 @@ cargo test --release -p aeoi-control --test parity_b2 -- --nocapture
 ./target/release/aeoi-mcp
 ```
 
+每个成功结果都带**结果收据**（`receipt`，规范 §4.3）：方法 id、前提（以及由谁保证）、精确性类与误差界、后置条件证据（只有全部通过才是 `verified`）、请求/结果两层指纹。复核：`./target/release/aeoi-call verify control.design.lqr ../examples/control.design.lqr/request.json ../examples/control.design.lqr/response.success.json`，或 MCP 工具 `aeoi_verify`，或网页轨迹面板的"重放验证"按钮。
+
 与独立的纯 Rust 实现 [tpt-control](https://github.com/tpt-solutions/tpt-control)（MIT OR Apache-2.0）的交叉验证见 `reports/parity-tpt-control.md`（开发工具 `tools/xcheck-tpt/`，不是任何 aeoi crate 的依赖）。
 
 ## LLM 端到端测试台（`aeoi-web`）

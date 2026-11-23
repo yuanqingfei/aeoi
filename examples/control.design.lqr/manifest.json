@@ -163,5 +163,43 @@
       "idempotentHint": true,
       "openWorldHint": false
     }
+  },
+  "receipt": {
+    "method_id": "aeoi:lqr:sign-function+kform-newton-kleinman-dot2",
+    "assumptions": [
+      {
+        "id": "weights",
+        "statement": "Q 对称半正定、R 对称正定、[[Q,N],[Nᵀ,R]] ⪰ 0",
+        "enforced_by": "error:E.DOMAIN.WEIGHT_NOT_PSD"
+      },
+      {
+        "id": "R_pd",
+        "statement": "R 正定",
+        "enforced_by": "error:E.DOMAIN.R_NOT_POSITIVE_DEFINITE"
+      },
+      {
+        "id": "stabilizable",
+        "statement": "(A,B) 可镇定",
+        "enforced_by": "error:E.DOMAIN.NOT_STABILIZABLE"
+      },
+      {
+        "id": "no_imag_axis_unobservable",
+        "statement": "(Q̄,Ā) 在虚轴上没有不可观模态",
+        "enforced_by": "error:E.DOMAIN.HAMILTONIAN_IMAG_AXIS_EIG"
+      },
+      {
+        "id": "model",
+        "statement": "A、B、Q、R、N 准确描述设计问题（单位一致、row-major）",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "S_psd",
+      "closed_loop_stable"
+    ]
   }
 }

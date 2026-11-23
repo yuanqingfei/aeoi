@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Independent (python-jsonschema) validation of all v0.3 examples (12 operators) against the schemas —
 cross-checks the Rust validator. Exit code 1 on any failure."""
-import json, glob, sys
+import json, glob, sys, hashlib
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 L = lambda p: json.load(open(p))
@@ -13,6 +13,29 @@ for d in docs["common"]["$defs"]:  # aeoi://schemas/common/0.3/<Def> shorthand u
     reg = reg.with_resource(f"aeoi://schemas/common/0.3/{d}", Resource.from_contents(
         {"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": f"aeoi://schemas/common/0.3#/$defs/{d}"}))
 bad = 0
+# framework-level codes (spec E-7a): emitted by the pipeline, not by an operator, so not listed per manifest
+FRAMEWORK_CODES = ["W.EVIDENCE.POSTCONDITION_FAILED"]
+H = lambda o: "sha256:" + hashlib.sha256(json.dumps(o, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+def check_receipt(e, m, label):
+    """Independent re-derivation of the receipt fingerprints (spec 4.3 R-3) and the E-11 claim."""
+    global bad
+    r, msgs = e.get("receipt"), []
+    if e["status"] == "error" or e.get("dry_run"):
+        msgs += [] if r is None else ["error/dry-run envelope must have receipt null"]
+    else:
+        rp = e["reproducibility"]
+        req = H({"operator": m["id"], "version": m["version"], "input_hash": rp["input_hash"]})
+        if r["fingerprint"]["request"] != req: msgs.append("request fingerprint")
+        if r["fingerprint"]["output_hash"] != rp["output_hash"]: msgs.append("output_hash")
+        if r["fingerprint"]["result"] != H({"request": req, "output_hash": rp["output_hash"]}): msgs.append("result fingerprint")
+        post = m["receipt"]["postconditions"]; ch = e["trust"].get("checks") or {}
+        failed = [k for k in post if ch.get(k) is not True]
+        claim = "unchecked" if not post else ("unverified" if failed else "verified")
+        if r["evidence"]["claim"] != claim or r["evidence"]["failed"] != failed: msgs.append(f"claim {r['evidence']['claim']} != {claim}")
+        if failed and "W.EVIDENCE.POSTCONDITION_FAILED" not in [w["code"] for w in e["warnings"]]: msgs.append("E-11 warning missing")
+        if r["assumptions"] != m["receipt"]["assumptions"]: msgs.append("assumptions differ from manifest")
+    bad += bool(msgs)
+    print(("OK  " if not msgs else "FAIL"), label, "receipt", msgs or "")
 def check(schema, inst, label):
     global bad
     errs = list(Draft202012Validator(schema, registry=reg).iter_errors(inst))
@@ -29,12 +52,13 @@ for d in sorted(glob.glob("examples/*/")):
         check(docs["envelope"], e, f"{op} {rs.split('/')[-1]} envelope")
         if e["result"] is not None:
             check(outs, e["result"], f"{op} {rs.split('/')[-1]} result vs output schema")
+        check_receipt(e, L(d + "manifest.json"), f"{op} {rs.split('/')[-1]}")
     # every emitted error/warning code must be declared in the manifest
     m = L(d + "manifest.json")
     for rs in sorted(glob.glob(d + "response*.json")):
         e = L(rs)
         codes = ([e["error"]["code"]] if e.get("error") else []) + [w["code"] for w in e.get("warnings", [])]
-        undeclared = [c for c in codes if c not in m["errors"] + m["warnings"]]
+        undeclared = [c for c in codes if c not in m["errors"] + m["warnings"] + FRAMEWORK_CODES]
         bad += bool(undeclared)
         print(("OK  " if not undeclared else "FAIL"), op, rs.split("/")[-1], "codes declared", undeclared or "")
 # golden requests: all batch-2 (0.3.0) requests incl. column-major mistake variants; a sample of batch-1 (0.2.0);

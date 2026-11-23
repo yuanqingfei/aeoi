@@ -195,6 +195,7 @@ async function boot() {
       },
       tools: async () => toolList,
       reset: async (sid) => { sessions.delete(sid); },
+      verify: async (tool, args, envelope) => JSON.parse(W.verify_tool_call(tool, JSON.stringify(args), JSON.stringify(envelope))),
       chat: runAgent,
     };
     window.__aeoiBackend.res(backend);

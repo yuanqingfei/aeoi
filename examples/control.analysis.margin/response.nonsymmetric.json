@@ -96,6 +96,74 @@
       }
     }
   },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:margin:crossing-polynomial-roots+secant",
+      "routine": "margin::compute",
+      "provenance": "aeoi://operators/control.analysis.margin/0.3.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "输入系统准确描述被研究对象（单位、符号、row-major 录入）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "proper",
+        "statement": "系统为 proper（deg num ≤ deg den）",
+        "enforced_by": "error:E.DOMAIN.IMPROPER_SYSTEM"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "siso",
+        "statement": "开环 SISO、单位负反馈",
+        "enforced_by": "error:E.DOMAIN.MIMO_NOT_SUPPORTED"
+      },
+      {
+        "id": "no_delay",
+        "statement": "没有时滞",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none",
+      "bound": null,
+      "basis": "交越频率为多项式实根（伴随矩阵特征值 + Newton），再在 G 上做割线修正；残差见 residual。相切/近重根时交越频率误差可达 O(√u)"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "grid_audit_clean": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T3",
+      "credentials": null
+    },
+    "fingerprint": {
+      "request": "sha256:8ee5497b0a2ea930615c96a853a553657a67893b0ddfe71e47f15aeb8d3a1ace",
+      "result": "sha256:311a24e3299c4d504e3f77d6f811f049363da473f45a25928796aa59fdee9725",
+      "output_hash": "sha256:d426ccfd3e6e9cf7459c08cc409ed39706b6d9ea9c3b83965b78a17bfd025fb9",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.analysis.margin@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "platform": "x86_64-linux",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
   "warnings": [],
   "error": null,
   "reproducibility": {

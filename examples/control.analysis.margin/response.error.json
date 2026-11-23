@@ -10,6 +10,7 @@
   "request_id": "req-margin-002",
   "result": null,
   "trust": null,
+  "receipt": null,
   "reproducibility": null,
   "error": {
     "code": "E.DOMAIN.MIMO_NOT_SUPPORTED",

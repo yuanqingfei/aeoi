@@ -53,6 +53,60 @@
     "accuracy_grade": "B",
     "credentials": null
   },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:lyap:complex-schur-bartels-stewart+dot2-refinement",
+      "routine": "sysalg::lyap_refined (complex Schur Bartels–Stewart + compensated-residual iterative refinement)",
+      "provenance": "aeoi://operators/control.math.lyap/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "nonsingular",
+        "statement": "方程非奇异（连续 λᵢ + λ̄ⱼ ≠ 0，离散 λᵢλ̄ⱼ ≠ 1）",
+        "enforced_by": "error:E.DOMAIN.LYAP_SINGULAR"
+      },
+      {
+        "id": "convention",
+        "statement": "方程约定 A X + X Aᵀ + Q = 0 / A X Aᵀ − X + Q = 0（不是 Aᵀ X + X A）",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "X_abs_fro": 1.1102230246251565e-16,
+        "X_rel": 1.5923643861285e-16
+      },
+      "basis": "启发式：‖残差‖_F / sep_min；A 为正规矩阵时 sep_min 即真实分离度，非正规时真实 sep 可能更小（估计偏乐观）"
+    },
+    "evidence": {
+      "claim": "unchecked",
+      "postconditions": {},
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null
+    },
+    "fingerprint": {
+      "request": "sha256:b140ca8e6e9f777ee672f8c6343e5833c13cf645220489bd98a68fc318333bf6",
+      "result": "sha256:e9031e4cd6e0611f037773ec30fa73522363086d56dfc456f67e7eed9c45488b",
+      "output_hash": "sha256:9d4ad79f58f7e2b4020863e3410d440ad79dfc587df3347b4da5439babe82214",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.math.lyap@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "platform": "x86_64-linux",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
   "warnings": [],
   "error": null,
   "reproducibility": {

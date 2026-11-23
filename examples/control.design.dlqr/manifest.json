@@ -142,5 +142,38 @@
       "idempotentHint": true,
       "openWorldHint": false
     }
+  },
+  "receipt": {
+    "method_id": "aeoi:dlqr:sda+newton-hewer",
+    "assumptions": [
+      {
+        "id": "weights",
+        "statement": "Q 对称半正定、R 对称正定",
+        "enforced_by": "error:E.DOMAIN.WEIGHT_NOT_PSD"
+      },
+      {
+        "id": "stabilizable",
+        "statement": "(A,B) 可镇定",
+        "enforced_by": "error:E.DOMAIN.NOT_STABILIZABLE"
+      },
+      {
+        "id": "no_unit_circle_unobservable",
+        "statement": "单位圆上没有不被 Q 观测的模态",
+        "enforced_by": "error:E.DOMAIN.SYMPLECTIC_UNIT_CIRCLE_EIG"
+      },
+      {
+        "id": "model",
+        "statement": "离散模型 x[k+1] = A x[k] + B u[k] 与采样周期由调用方保证",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "S_psd",
+      "closed_loop_stable"
+    ]
   }
 }

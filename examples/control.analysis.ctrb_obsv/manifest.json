@@ -130,5 +130,38 @@
       "idempotentHint": true,
       "openWorldHint": false
     }
+  },
+  "receipt": {
+    "method_id": "aeoi:ctrb-obsv:krylov-svd-rank+pbh+bartels-stewart-gramian",
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "输入系统准确描述被研究对象（单位、符号、row-major 录入）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "proper",
+        "statement": "系统为 proper（deg num ≤ deg den）",
+        "enforced_by": "error:E.DOMAIN.IMPROPER_SYSTEM"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "rank_threshold",
+        "statement": "数值秩阈值 max(n,m)·u·σ₁ 有意义（不在阈值附近）",
+        "enforced_by": "warning:W.NUMERICAL.RANK_AMBIGUOUS"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none"
+    },
+    "postconditions": [
+      "pbh_agrees_ctrb",
+      "pbh_agrees_obsv"
+    ]
   }
 }

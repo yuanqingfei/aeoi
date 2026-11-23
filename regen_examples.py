@@ -25,5 +25,10 @@ for opdir in sorted((root / "examples").iterdir()):
     for p in sorted(opdir.glob("request*.json")):
         out = subprocess.check_output([str(bin_), op, str(p)])
         env = json.loads(out)
-        (opdir / resp_name(p.name)).write_text(json.dumps(env, indent=2, ensure_ascii=False) + "\n")
+        dst = opdir / resp_name(p.name)
+        if dst.exists():  # keep the published timing when the result did not change (avoids wall_ms churn)
+            prev = json.loads(dst.read_text())
+            if prev.get("status") == env.get("status") and (prev.get("reproducibility") or {}).get("output_hash") == (env.get("reproducibility") or {}).get("output_hash"):
+                env["timing"] = prev.get("timing", env.get("timing"))
+        dst.write_text(json.dumps(env, indent=2, ensure_ascii=False) + "\n")
         print(op, p.name, "->", env["status"], env.get("error") and env["error"]["code"])

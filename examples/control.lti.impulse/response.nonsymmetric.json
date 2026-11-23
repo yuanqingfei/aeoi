@@ -300,6 +300,76 @@
       "t_end": 5.0
     }
   },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:impulse:zoh-expm-pade13-recursion",
+      "routine": "step::simulate_impulse (expm Padé-13 + recursion)",
+      "provenance": "aeoi://operators/control.lti.impulse/0.3.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "输入系统准确描述被研究对象（单位、符号、row-major 录入）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "proper",
+        "statement": "系统为 proper（deg num ≤ deg den）",
+        "enforced_by": "error:E.DOMAIN.IMPROPER_SYSTEM"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "convention",
+        "statement": "python-control 冲激约定（连续 x0 = B、忽略 D；离散按 discrete_scaling）",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "grid",
+        "statement": "时间网格足以分辨动态",
+        "enforced_by": "warning:W.ACCURACY.GRID_TOO_COARSE"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "y_abs": 1.492770435048583e-14
+      },
+      "basis": "启发式：max(N·u, 终点一致性偏差) × max|y|；expm 后向误差 ≤ u（Higham 2005）。非严格上界"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null
+    },
+    "fingerprint": {
+      "request": "sha256:7cd9d801adb4950165963cb8d69c09608ee6405a33d3eebdd3e6fdda0ffc79c3",
+      "result": "sha256:2f1a392cbe0db2721414224e1ae8b0360957935d0b02fb50485f40ba8b946aa2",
+      "output_hash": "sha256:b7343a2ede00b01831772741ee051ca5d57df06d03ead79f60b0284cfd347d4c",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.lti.impulse@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "platform": "x86_64-linux",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
   "warnings": [
     {
       "code": "W.ACCURACY.GRID_TOO_COARSE",

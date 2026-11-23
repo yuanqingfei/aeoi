@@ -87,6 +87,76 @@
     "accuracy_grade": "B",
     "credentials": null
   },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:dlqr:sda+newton-hewer",
+      "routine": "dlqr::solve_dare (SDA + Newton–Hewer)",
+      "provenance": "aeoi://operators/control.design.dlqr/0.3.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "weights",
+        "statement": "Q 对称半正定、R 对称正定",
+        "enforced_by": "error:E.DOMAIN.WEIGHT_NOT_PSD"
+      },
+      {
+        "id": "stabilizable",
+        "statement": "(A,B) 可镇定",
+        "enforced_by": "error:E.DOMAIN.NOT_STABILIZABLE"
+      },
+      {
+        "id": "no_unit_circle_unobservable",
+        "statement": "单位圆上没有不被 Q 观测的模态",
+        "enforced_by": "error:E.DOMAIN.SYMPLECTIC_UNIT_CIRCLE_EIG"
+      },
+      {
+        "id": "model",
+        "statement": "离散模型 x[k+1] = A x[k] + B u[k] 与采样周期由调用方保证",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "S_abs_fro": 1.283931360983302e-14,
+        "S_rel": 4.436743480654644e-16
+      },
+      "basis": "启发式：‖Res‖_F / min|λ_iλ̄_j − 1|（λ ∈ eig(A_cl)），A_cl 非正规时偏乐观；非严格上界"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "S_psd": true,
+        "closed_loop_stable": true
+      },
+      "failed": [],
+      "convergence": {
+        "converged": true,
+        "iterations": 9
+      },
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null
+    },
+    "fingerprint": {
+      "request": "sha256:04936b75ccf9e7edde2f9867c0c1cd6c5f80f1a54cc3e180b3b5091e2253862c",
+      "result": "sha256:2c77621ec891caf6d35954e83618ae7b950e818616ecb089f2cb93682df9b020",
+      "output_hash": "sha256:2ba88e6c6340c1954eba51085c802ae5b720418c9edb3f5af707dd573a2aade3",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.design.dlqr@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "platform": "x86_64-linux",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
   "warnings": [],
   "error": null,
   "reproducibility": {

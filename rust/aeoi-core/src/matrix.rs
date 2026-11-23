@@ -530,6 +530,27 @@ pub fn encode_b64_inplace(v: &mut Value, host: &HostCtx) {
     }
 }
 
+/// Inverse of `encode_b64_inplace` for comparisons (receipt::verify): every DenseMatrixB64 / ref array is
+/// decoded back to the inline JSON form; anything unparseable is left as-is.
+pub fn decode_b64_for_hash(v: &Value, host: &HostCtx) -> Value {
+    if matches!(encoding_of(v), Some(Encoding::B64) | Some(Encoding::Ref)) {
+        if let Ok(Array::Dense(d)) = parse_array(v, "", host, true) {
+            let data: Vec<Value> = match &d.data {
+                Elems::F64(x) => x.iter().map(|a| num(*a)).collect(),
+                Elems::C128(x) => x.iter().map(|c| json!([num(c.re), num(c.im)])).collect(),
+                Elems::I64(x) => x.iter().map(|a| Value::from(*a)).collect(),
+                Elems::Bool(x) => x.iter().map(|a| Value::from(*a)).collect(),
+            };
+            return json!({"dtype": d.dtype.name(), "shape": d.shape, "data": data});
+        }
+    }
+    match v {
+        Value::Object(o) => Value::Object(o.iter().map(|(k, x)| (k.clone(), decode_b64_for_hash(x, host))).collect()),
+        Value::Array(a) => Value::Array(a.iter().map(|x| decode_b64_for_hash(x, host)).collect()),
+        _ => v.clone(),
+    }
+}
+
 /// Helper for tests/clients: build a DenseMatrixB64 object from a row-major f64 slice.
 pub fn b64_f64(shape: &[usize], data: &[f64]) -> Value {
     let bytes = Elems::F64(data.to_vec()).to_le_bytes();

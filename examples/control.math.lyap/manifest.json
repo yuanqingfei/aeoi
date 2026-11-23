@@ -130,5 +130,25 @@
       "idempotentHint": true,
       "openWorldHint": false
     }
+  },
+  "receipt": {
+    "method_id": "aeoi:lyap:complex-schur-bartels-stewart+dot2-refinement",
+    "assumptions": [
+      {
+        "id": "nonsingular",
+        "statement": "方程非奇异（连续 λᵢ + λ̄ⱼ ≠ 0，离散 λᵢλ̄ⱼ ≠ 1）",
+        "enforced_by": "error:E.DOMAIN.LYAP_SINGULAR"
+      },
+      {
+        "id": "convention",
+        "statement": "方程约定 A X + X Aᵀ + Q = 0 / A X Aᵀ − X + Q = 0（不是 Aᵀ X + X A）",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": []
   }
 }

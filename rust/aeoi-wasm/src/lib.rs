@@ -96,6 +96,26 @@ pub fn run_operator(id: &str, request_json: &str) -> Result<String, JsError> {
     Ok(op.call(&req, &aeoi_core::HostCtx::default()).to_string())
 }
 
+/// Bridge-level verify for a traced tool call (tool name, model args incl. `_user_quote`, envelope).
+#[wasm_bindgen]
+pub fn verify_tool_call(name: &str, args_json: &str, envelope_json: &str) -> Result<String, JsError> {
+    let args = parse(args_json, "args")?;
+    let env = parse(envelope_json, "envelope")?;
+    Ok(BRIDGE.with(|b| b.verify(name, &args, &env)).to_string())
+}
+
+/// Replay-verify a receipt in the browser (spec 4.3): re-runs `request_json` on operator `id` and compares with
+/// `envelope_json` (an envelope with `receipt`, or a bare receipt). A native-produced envelope typically yields
+/// `bitwise_match` or `tolerance_match` (platform wasm32-unknown vs x86_64-linux).
+#[wasm_bindgen]
+pub fn verify(id: &str, request_json: &str, envelope_json: &str) -> Result<String, JsError> {
+    let req = parse(request_json, "request")?;
+    let claimed = parse(envelope_json, "envelope")?;
+    let reg = aeoi_control::registry();
+    let op = aeoi_control::find(&reg, id).ok_or_else(|| JsError::new(&format!("unknown operator {id}")))?;
+    Ok(aeoi_core::receipt::verify(op, &req, &claimed, &aeoi_core::HostCtx::default()).to_string())
+}
+
 #[wasm_bindgen]
 pub fn nudge_text(why: &str) -> String {
     llm::nudge_text(why)

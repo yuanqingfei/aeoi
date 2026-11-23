@@ -25,6 +25,8 @@ fn ok(id: &Value, result: Value) -> Value {
     json!({"jsonrpc": "2.0", "id": id, "result": result})
 }
 
+const VERIFY_TOOL: &str = "aeoi_verify";
+
 impl Server {
     fn tool_name(o: &dyn aeoi_core::operator::DynOperator) -> String {
         o.meta().manifest["mcp"]["tool_name"].as_str().map(String::from).unwrap_or_else(|| o.meta().id.replace('.', "_"))
@@ -52,11 +54,45 @@ impl Server {
                 })
             })
             .collect();
+        let mut tools = tools;
+        tools.push(Self::verify_tool());
         json!({"tools": tools})
+    }
+
+    /// spec 4.3 R-5: replay a request and compare with a claimed envelope / receipt.
+    fn verify_tool() -> Value {
+        json!({
+            "name": VERIFY_TOOL,
+            "title": "Verify an AEOI result receipt",
+            "description": "重新运行一次 AEOI 算子调用，并与给出的信封（或其中的 receipt）比较：请求指纹必须一致；结果指纹一致为 bitwise_match，否则按算子容差类逐字段比较（tolerance_match / mismatch）；信封中的 result 与收据 output_hash 不符时为 result_tampered。错误信封比较错误码（error_reproduced / status_mismatch）。",
+            "inputSchema": {"type": "object", "additionalProperties": false, "required": ["operator", "arguments", "envelope"],
+                "properties": {"operator": {"type": "string", "description": "算子 id（如 control.design.lqr）或 MCP 工具名"},
+                               "arguments": {"type": "object", "description": "原调用的 arguments（与产生该收据时相同）"},
+                               "envelope": {"type": "object", "description": "被验证的 AEOI 信封（含 receipt 与 result），或单独的 receipt 对象"}}},
+            "outputSchema": {"type": "object", "required": ["verdict", "operator"],
+                "properties": {"verdict": {"enum": ["bitwise_match", "tolerance_match", "mismatch", "request_mismatch", "result_tampered", "error_reproduced", "status_mismatch"]},
+                               "operator": {"type": "object"}, "max_rel_diff": {"type": "number"}, "note": {"type": "string"}}},
+            "annotations": {"readOnlyHint": true, "idempotentHint": true, "openWorldHint": false},
+            "_meta": {"aeoi/spec": aeoi_core::SPEC, "aeoi/kind": "verifier"},
+        })
     }
 
     fn tools_call(&self, id: &Value, params: &Value) -> Value {
         let name = params["name"].as_str().unwrap_or("");
+        if name == VERIFY_TOOL {
+            let a = &params["arguments"];
+            let target = a["operator"].as_str().unwrap_or("");
+            let Some(op) = self.reg.iter().find(|o| Self::tool_name(o.as_ref()) == target || o.meta().id == target) else {
+                return ok(id, json!({"content": [{"type": "text", "text": format!("unknown operator: {target}")}], "isError": true}));
+            };
+            let v = aeoi_core::receipt::verify(op.as_ref(), &a["arguments"], &a["envelope"], &self.host);
+            let good = matches!(v["verdict"].as_str(), Some("bitwise_match" | "tolerance_match" | "error_reproduced"));
+            return ok(id, json!({
+                "content": [{"type": "text", "text": format!("AEOI verify {} → {}", op.meta().id, v["verdict"].as_str().unwrap_or("?"))},
+                            {"type": "text", "text": serde_json::to_string(&v).unwrap()}],
+                "structuredContent": v, "isError": !good,
+            }));
+        }
         let Some(op) = self.reg.iter().find(|o| Self::tool_name(o.as_ref()) == name || o.meta().id == name) else {
             return rpc_err(id, -32602, &format!("Unknown tool: {name}"));
         };

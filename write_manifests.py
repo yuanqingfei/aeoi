@@ -312,6 +312,39 @@ for op,props in DESC.items():
             old=i_["properties"][k].get("description")
             if old and old!=d: print(f"  {op}.{k}: description {old!r} → DESC")
             i_["properties"][k]=dict(json.loads(json.dumps(i_["properties"][k])),description=d)  # copy: property dicts are shared
+# ---- result receipts (spec 4.3, v0.3.3): static part of every receipt. postconditions = trust.checks keys that
+# MUST be true for a "verified" claim (E-11); diagnostic/property checks (e.g. *_symmetric before symmetrization,
+# asymptotically_stable) are deliberately not post-conditions. enforced_by: validation | error:<code> |
+# warning:<code> | check:<key> | caller (not checked by the operator).
+A=lambda i,st,by:{"id":i,"statement":st,"enforced_by":by}
+LTI_A=[A("lti_model","输入系统准确描述被研究对象（单位、符号、row-major 录入）","caller"),A("proper","系统为 proper（deg num ≤ deg den）","error:E.DOMAIN.IMPROPER_SYSTEM"),A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE")]
+RECEIPT={
+ "control.lti.bode":{"method_id":"aeoi:bode:horner-or-complex-lu","assumptions":LTI_A+[A("grid","频率网格与单位为调用方所需（rad/s 或 Hz）","caller"),A("no_pole_on_grid","频点不落在极点上","warning:W.NUMERICAL.NEAR_POLE")],
+   "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["all_finite","frequencies_strictly_increasing"]},
+ "control.lti.step":{"method_id":"aeoi:step:zoh-expm-pade13-recursion","assumptions":LTI_A+[A("zoh_exact","阶跃输入在 ZOH 下无离散化误差（只有 expm 与递推舍入）","validation"),A("grid","时间网格足以分辨动态","warning:W.ACCURACY.GRID_TOO_COARSE")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["all_finite"]},
+ "control.lti.impulse":{"method_id":"aeoi:impulse:zoh-expm-pade13-recursion","assumptions":LTI_A+[A("convention","python-control 冲激约定（连续 x0 = B、忽略 D；离散按 discrete_scaling）","validation"),A("grid","时间网格足以分辨动态","warning:W.ACCURACY.GRID_TOO_COARSE")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["all_finite"]},
+ "control.design.lqr":{"method_id":"aeoi:lqr:sign-function+kform-newton-kleinman-dot2","assumptions":[A("weights","Q 对称半正定、R 对称正定、[[Q,N],[Nᵀ,R]] ⪰ 0","error:E.DOMAIN.WEIGHT_NOT_PSD"),A("R_pd","R 正定","error:E.DOMAIN.R_NOT_POSITIVE_DEFINITE"),A("stabilizable","(A,B) 可镇定","error:E.DOMAIN.NOT_STABILIZABLE"),A("no_imag_axis_unobservable","(Q̄,Ā) 在虚轴上没有不可观模态","error:E.DOMAIN.HAMILTONIAN_IMAG_AXIS_EIG"),A("model","A、B、Q、R、N 准确描述设计问题（单位一致、row-major）","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["S_psd","closed_loop_stable"]},
+ "control.design.dlqr":{"method_id":"aeoi:dlqr:sda+newton-hewer","assumptions":[A("weights","Q 对称半正定、R 对称正定","error:E.DOMAIN.WEIGHT_NOT_PSD"),A("stabilizable","(A,B) 可镇定","error:E.DOMAIN.NOT_STABILIZABLE"),A("no_unit_circle_unobservable","单位圆上没有不被 Q 观测的模态","error:E.DOMAIN.SYMPLECTIC_UNIT_CIRCLE_EIG"),A("model","离散模型 x[k+1] = A x[k] + B u[k] 与采样周期由调用方保证","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["S_psd","closed_loop_stable"]},
+ "control.math.lyap":{"method_id":"aeoi:lyap:complex-schur-bartels-stewart+dot2-refinement","assumptions":[A("nonsingular","方程非奇异（连续 λᵢ + λ̄ⱼ ≠ 0，离散 λᵢλ̄ⱼ ≠ 1）","error:E.DOMAIN.LYAP_SINGULAR"),A("convention","方程约定 A X + X Aᵀ + Q = 0 / A X Aᵀ − X + Q = 0（不是 Aᵀ X + X A）","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":[]},
+ "control.lti.convert":{"method_id":"aeoi:convert:canonical-realization+companion-roots","assumptions":LTI_A+[A("nonminimal","不做零极点对消（MIMO 结果为非最小实现）","warning:W.DOMAIN.NONMINIMAL_REALIZATION")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["response_consistent"]},
+ "control.lti.poles_zeros":{"method_id":"aeoi:poles-zeros:balanced-qr+emami-naeini-van-dooren","assumptions":LTI_A+[A("nondegenerate","系统满法秩（零点有定义）","error:E.DOMAIN.DEGENERATE_SYSTEM")],
+   "exactness":{"class":"approximate","bound_kind":"none"},"postconditions":[]},
+ "control.analysis.ctrb_obsv":{"method_id":"aeoi:ctrb-obsv:krylov-svd-rank+pbh+bartels-stewart-gramian","assumptions":LTI_A+[A("rank_threshold","数值秩阈值 max(n,m)·u·σ₁ 有意义（不在阈值附近）","warning:W.NUMERICAL.RANK_AMBIGUOUS")],
+   "exactness":{"class":"approximate","bound_kind":"none"},"postconditions":["pbh_agrees_ctrb","pbh_agrees_obsv"]},
+ "control.analysis.margin":{"method_id":"aeoi:margin:crossing-polynomial-roots+secant","assumptions":LTI_A+[A("siso","开环 SISO、单位负反馈","error:E.DOMAIN.MIMO_NOT_SUPPORTED"),A("no_delay","没有时滞","caller")],
+   "exactness":{"class":"approximate","bound_kind":"none"},"postconditions":["grid_audit_clean"]},
+ "control.lti.c2d":{"method_id":"aeoi:c2d:expm-pade13-or-tustin-lu","assumptions":[A("ts_from_user","采样周期 ts 来自用户（不是假设值）","caller"),A("continuous","输入为连续系统","error:E.DOMAIN.NOT_CONTINUOUS"),A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE")],
+   "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["pole_mapping_consistent"]},
+ "control.design.place":{"method_id":"aeoi:place:knv0-complex","assumptions":[A("controllable","(A,B) 可控","error:E.DOMAIN.NOT_CONTROLLABLE"),A("multiplicity","期望极点重数 ≤ rank(B)","error:E.DOMAIN.POLE_MULTIPLICITY"),A("nonunique","多输入时 K 不唯一：结果是满足极点配置的一个 K","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["poles_placed","conjugate_closed"]},
+}
 for op,(m,i,o) in ({"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2).items():
+    m["receipt"]=RECEIPT[op]
     d=f"examples/{op}/"; w(d+"manifest.json",m); w(d+"input.schema.json",i); w(d+"output.schema.json",o)
 print("ok")
