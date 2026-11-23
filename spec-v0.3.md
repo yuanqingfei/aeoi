@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.3.3-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.3.4-draft
 
-> 状态：Draft v0.3.3 · 2026-11-23 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.3.4 · 2026-11-23 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.3.4 只增加设计任务评测的说明（8.4、第 13 章），线协议标识仍为 `aeoi/0.3`，不新增算子。
 > SPDX-License-Identifier: CC-BY-4.0 · © 2026 Qingfei Yuan。规范文本按 CC-BY-4.0 许可（`LICENSE-CC-BY-4.0`）；规范中的代码片段、JSON Schema 与参考实现按 MIT OR Apache-2.0 许可（`LICENSE-MIT`、`LICENSE-APACHE`）。
 > 定位：叠加在 MCP 之上的"工程计算语义层"。MCP 负责传输与工具调用；AEOI 规定工程算子如何描述自己、如何表达带物理意义的输入输出、如何报告结果可信度、如何报错、如何复现、如何证明与参考实现一致。
 > 冻结条件：用 5–10 个真实控制算子跑通后再升级为 v1.0。v0.x 期间任何条款都可能被修改。
@@ -538,6 +540,8 @@ pub trait Operator: Send + Sync + 'static {
 **来源核对（F-5(c)）**：对 `x-aeoi-provenance: "user"` 的参数（v0.3.1 只有 `c2d.ts`），函数声明多一个必填参数 `_user_quote`，工具描述末尾写明"必须由用户给出、不得假设的参数：ts（用户没给时先询问，不要调用本工具）"。绑定层在调用算子前核对引用：把用户本人的消息（不含"（系统提示）"开头的注入提示）与引用都去掉空白、`$`、`{}` 等 LaTeX 符号后做子串匹配，并要求引用中有与参数相同的数值（`ms`/`μs` 按单位换算）。不通过则返回 `E.VALIDATION.UNGROUNDED_INPUT`（`details.field/value/quote`，remediation 只有 `ask_user`），不调用算子。直接在网页上调用算子（`/api/call`）与 `rescore` 重算旧报告时不做核对，只移除 `_user_quote`。
 
 **评测**：`eval/questions.zh.json` 29 道中文题，覆盖 12 个算子，其中 7 道是陷阱题（MATLAB 列优先数据 ×2、缺采样周期、Hz 与 rad/s、离散系统误当连续、不可镇定系统）。期望值不手抄：评测时用题目里的 `reference.args` 直接调用算子得到（算子已与 python-control/scipy 对照，见第 11 章；**不是 MATLAB**）。四个指标：工具选择（期望工具出现在调用中；澄清题要求不带猜测地调用）、参数正确性（对每个检查量，取含该量的最新一次成功调用，其输出与参考调用一致；例如先算 ω = 10 再画整条 Bode 曲线时取前一次）、最终回答（回答文本中能找到期望数值：识别 LaTeX `\frac{a}{b}`、`3.2 \times 10^{-3}`、`0{,}9048`、`±`、unicode 负号与上标指数；容差取相对 2% 与"印出精度的半个末位"（至少 2 位有效数字）中的较大者，期望值为 0 时绝对 1e-3；`z − 0.9048` 这类因式写法对系数检查允许符号相反；澄清题要求最终消息是一个问题且没有带猜测值的成功调用；报错题要求解释原因）、自我纠错次数。单元测试另外验证每道陷阱题的"典型错误"确实会得到不同的数值。
+
+**设计评测（v0.3.4）**：`aeoi-web design` 把同一条 Agent 循环用在设计题上。模型拿到题目和 `submit_design` 伪工具，用现有 12 个算子检查设计，提交一次后由 `design.rs` 按该题的评分细则打分（通过/不通过，以及细则里的百分制）。EngDesign 的 10 道控制/DSP 题以 MIT 许可原文放在 `eval/design/engdesign.json`；ControlEval 没有许可证，题目在运行时下载到 gitignore 的 `eval/design/upstream/`，不进入仓库。没有 key 时用 `mock:design` 或 `mock:script` 离线跑通循环。单次请求和单题都有时限；每日配额立即停止；报告在每题开始和每个模型回合后落盘。试点里缺哪些算子、评分器修了什么，见 `reports/design-pilot.md`。本模式不新增算子。
 
 **结果（2026-11-22，temperature 0，报告在 `reports/`，对比表见 `reports/eval-comparison.md`）**：
 
@@ -7000,6 +7004,7 @@ rust/                         cargo workspace（resolver 3，Rust 1.85，纯 Rus
 │   ├── src/provider.rs       Provider trait（reqwest）；Gemini、OpenAI 兼容（OpenRouter/Groq/Ollama/OpenAI）、Mock
 │   ├── src/agent.rs          Agent 循环
 │   ├── src/eval.rs           评测（eval/questions.zh.json，期望值来自直接调用算子）
+│   ├── src/design.rs         （v0.3.4）设计题循环与评分（eval/design/，不新增算子）
 │   └── static/               index.html、app.js、style.css、vendor/plotly-basic（编译期嵌入，不走 CDN）
 └── aeoi-wasm/                （v0.3.1）wasm-bindgen 导出（8.5）；examples/golden_dump.rs 与 parity/parity.mjs
 pages/                        GitHub Pages 页面：index.html、browser.js（浏览器内 Agent 循环与 BYOK）、build.sh
@@ -7028,6 +7033,7 @@ python3 build_spec.py                     # spec-src.md → spec-v0.3.md（内�
 python3 validate_examples.py              # 独立的 Python jsonschema 校验
 cd rust && cargo run --release -p aeoi-web                              # 网页测试台 http://127.0.0.1:8787/（需 GEMINI_API_KEY）
 cargo run --release -p aeoi-web -- eval --model gemini:gemini-2.5-flash  # LLM 评测，写 reports/eval-<model>.json
+cargo run --release -p aeoi-web -- design --model mock:design --engdesign ZC_02  # 设计评测，离线；见 8.4
 cargo run --release -p aeoi-web -- tools --losses                       # 函数声明有损映射汇总
 ```
 
@@ -7035,7 +7041,7 @@ MCP 客户端配置示例：`{"command": "/path/to/aeoi-mcp", "args": ["--data-r
 
 ### 11.3 测试结果（2026-11-23，v0.3.2，x86_64-linux，cpu_features avx/avx2/fma/avx512f）
 
-全部通过（`cargo test --release`）：aeoi-core 单元测试 23 个，aeoi-control 单元测试 12 个，解析解测试 12 个（`analytic_b2.rs`：非方系统零点、Tustin 标量闭式解、离散 SM 的 Nyquist 端点、标量 DLQR = 黄金比例等；v0.3.2 新增 3 个，均在旧实现上失败：cond(R) = 1e12 解耦 CARE 的闭式解、尺度 ×1e3 / ×1e-3 的不可观虚轴模态仍报错、ρ = 1 − 2⁻²⁰ 的离散 Lyapunov 精确解），示例测试 5 个（12 个算子的示例请求 vs python-control/scipy 参考值与已发布响应的 `output_hash`），parity 测试 3 个（v0.2：264 例；v0.3：353 例；v0.3.2 高精度：28 例，`parity_hp.rs`，S/K/X 容差 1e-12，实测 lqr S、K ≤ 3.1e-19、lyap X ≤ 6.7e-15），MCP 端到端测试 1 个（12 个算子工具 + `aeoi_verify`，每个算子的成功与错误请求，以及对已发布示例信封的重放验证、篡改结果 → `result_tampered`、改输入 → `request_mismatch`），收据测试 3 个（v0.3.3，`receipt.rs`：全部 645 个 golden 请求的指纹、claim 与同机重放；跨平台容差比较、b64 编码无关性、比较规则），aeoi-bridge 测试 11 个（v0.3.3 +1：收据短形式与 bridge 重放验证）与 aeoi-web 测试 14 个（v0.3.1：schema 转换、工具桥与 F-5 来源核对、回答数值识别、Mock provider 驱动的 Agent 循环与评测打分、陷阱题判别性、HTTP 端点）。独立 Python 校验器（`validate_examples.py`，v0.3.3 起独立重算收据指纹并核对 E-11 claim）180 项 + 392 个 golden 请求（含 28 个 mpmath）全部通过。
+全部通过（`cargo test --release`）：aeoi-core 单元测试 23 个，aeoi-control 单元测试 12 个，解析解测试 12 个（`analytic_b2.rs`：非方系统零点、Tustin 标量闭式解、离散 SM 的 Nyquist 端点、标量 DLQR = 黄金比例等；v0.3.2 新增 3 个，均在旧实现上失败：cond(R) = 1e12 解耦 CARE 的闭式解、尺度 ×1e3 / ×1e-3 的不可观虚轴模态仍报错、ρ = 1 − 2⁻²⁰ 的离散 Lyapunov 精确解），示例测试 5 个（12 个算子的示例请求 vs python-control/scipy 参考值与已发布响应的 `output_hash`），parity 测试 3 个（v0.2：264 例；v0.3：353 例；v0.3.2 高精度：28 例，`parity_hp.rs`，S/K/X 容差 1e-12，实测 lqr S、K ≤ 3.1e-19、lyap X ≤ 6.7e-15），MCP 端到端测试 1 个（12 个算子工具 + `aeoi_verify`，每个算子的成功与错误请求，以及对已发布示例信封的重放验证、篡改结果 → `result_tampered`、改输入 → `request_mismatch`），收据测试 3 个（v0.3.3，`receipt.rs`：全部 645 个 golden 请求的指纹、claim 与同机重放；跨平台容差比较、b64 编码无关性、比较规则），aeoi-bridge 测试 11 个（v0.3.3 +1：收据短形式与 bridge 重放验证）与 aeoi-web 测试 30 个（v0.3.1：schema 转换、工具桥与 F-5 来源核对、回答数值识别、Mock provider 驱动的 Agent 循环与评测打分、陷阱题判别性、HTTP 端点；v0.3.4 另有设计评测：10 道 EngDesign 参考答案、XG_02 部分分、`mock:design`、`max_steps`、单次请求/单题超时、429 日配额立即停止与重试预算）。独立 Python 校验器（`validate_examples.py`，v0.3.3 起独立重算收据指纹并核对 E-11 claim）180 项 + 392 个 golden 请求（含 28 个 mpmath）全部通过。
 
 v0.2 算子的 parity（参考 = python-control 0.10.2 / scipy 1.18.1，**不是 MATLAB**）：
 
@@ -7111,6 +7117,7 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
   - OpenAI 兼容 provider 用真实 OpenRouter 跑过 3 个免费模型的 8 题子集；Groq、Ollama 只做了 Mock 层面的请求/响应格式测试。OpenRouter 免费账号每天 50 次请求（所有免费模型合计），许多免费模型经常因上游共享额度返回 429。
   - `_user_quote` 核对只能确认数值出现在用户原话里，不能确认模型摘取的是对的那个数（例如用户同时给了采样周期和仿真步长）；它只覆盖 `x-aeoi-provenance: "user"` 标出的参数（目前只有 `c2d.ts`）。
   - 模型文本不流式输出（轨迹按步骤用 SSE 推送）；会话只保存在内存；Plotly basic 2.35.2 已内置（`static/vendor/`，MIT），加载失败时退回内置的简易 SVG 图（无缩放、悬停）。
+  - **设计评测（v0.3.4）**不新增算子：模型要自己做传递函数串联/反馈，没有 `pid`/`pidtune`、Padé、闭环 stepinfo 便利函数、MIMO 裕度。ControlEval 题库无许可证，不能随仓库分发。一次真实模型的试点见 `reports/design-pilot.md`。
 - **浏览器版（8.5）的限制**：
   - wasm 2.97 MB + Plotly 1.07 MB（gzip 后约 1.4 MB），首次打开需要下载；没有 Service Worker 离线缓存。
   - 结果与原生不逐位相同（26% 用例末几位不同，多输入 `place` 的 K 不同；v0.3.2 起 lqr、lyap 全部逐位相同，不再有 warning 不一致），见 8.5。
@@ -7143,11 +7150,22 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 2. ~~修复 `lqr` 病态 R 的精度差距~~（v0.3.2 用补偿 Newton–Kleinman 完成）；剩余：平衡 + 有序 Schur（或广义特征值）作为符号函数不收敛时的后备路径，以及 `dlqr` 的同类精化
 3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；剩余：`lsim`、`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
-5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；下一步扩充题库、加入"Agent + 裸 scipy"对照组，并用多个模型（含本地 Ollama）比较
+5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；v0.3.4 另有 `aeoi-web design`（EngDesign 已入库，ControlEval 运行时下载）。下一步是设计试点指出的算子（串联/反馈、pid、闭环 stepinfo、Padé；见 `reports/design-pilot.md`），以及扩充问答题、加入"Agent + 裸 scipy"对照组
 6. 用 Tauri 打包 `aeoi-web` 为桌面应用（复用 axum 服务与静态页面）
 7. 根据以上反馈修订，冻结 v1.0
 
 ## 13. Changelog
+
+### v0.3.4-draft（2026-11-23）
+
+起因：问答评测只检查"会不会调用对的算子"。设计评测让模型迭代出一个控制器再提交，用独立评分器打分。线协议标识保持 `aeoi/0.3`，不新增算子，已发布示例的 `output_hash` 不变。
+
+| # | 改动 | 原因 |
+|---|---|---|
+| 1 | 8.4 增加设计评测：`aeoi-web design`、`submit_design`、EngDesign（MIT，原文入库）与 ControlEval（无许可证，运行时下载，不入库） | 问答对了不等于能设计 |
+| 2 | 循环有单次请求时限、单题时限、429/5xx 重试预算；每日配额立即停止；报告在每题开始和每个模型回合后落盘。离线路径 `mock:design` 与 `mock:script` | 一次 ControlEval 试跑在空报告上停了约一小时：单次 HTTP 超时 180 秒再重试 6 次，报告却要等整道题结束才写 |
+| 3 | XG_02 按细则给部分分（带宽 40、增益裕度 30、相位裕度 30）；非有限裕度写成 `"Inf"` / `"NaN"` 而不是 JSON null | 试点里一个稳定但带宽不对的控制器被打成 0 分；无穷相位裕度在报告里变成 null，看起来像缺字段，比较时却已经算通过 |
+| 4 | 11 章、12.2 与 `reports/design-pilot.md`：7 道 EngDesign 试点的失败分类，以及按影响排序的缺失能力（串联/反馈、pid、闭环 stepinfo、Padé、带宽、控制器 c2d、MIMO 裕度）。这些算子不在本版实现 | 0/7 通过。多数是模型没交或交错，不是评分器把对的判错；缺的是让模型少做多项式手算的算子 |
 
 ### v0.3.3-draft（2026-11-23）
 

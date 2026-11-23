@@ -75,6 +75,32 @@ cargo test --release -p aeoi-control --test parity_b2 -- --nocapture
 
 免费层按模型分别限额。`gemini-2.5-flash` 每天只有 20 次请求（每道题至少 2 次），网页里聊几句就会用完；用完后 API 返回 429（`GenerateRequestsPerDayPerProjectPerModel-FreeTier`），`aeoi-web` 会立即报错而不是等十几个小时。日常试用建议在下拉框里选 `gemini-3.1-flash-lite`（额度大得多，29 题评测一次跑完）。
 
+### 设计任务评测（`aeoi-web design`）
+
+问答评测检查模型会不会用对算子。设计评测检查另一件事：给一段工程设计题（设计控制器 C(s)、滤波器、增益），模型用分析算子反复检查，再调用 `submit_design` 提交，由独立评分器打分。算子只做分析，不做传递函数运算，串联和闭环要模型自己算多项式。任务来源、与上游评分的差异、以及为什么 ControlEval 的题不能进仓库，见 `eval/design/README.md`。
+
+```
+cd rust
+# 离线，不需要 key，也不访问网络。mock:design 先调用一次 poles_zeros，再按题目字段交占位答案
+# （数字都是 1；ZC_02 的 alpha=1 会通过，其余题照常评分，多半不通过）
+cargo run --release -p aeoi-web -- design --model mock:design --engdesign ZC_02,XG_13
+# 自己的脚本：JSON 数组，元素为 {"calls":[{"name","args"}]}、{"text":"..."} 或 {"error":"QUOTA_EXHAUSTED: ..."}
+cargo run --release -p aeoi-web -- design --mock-script turns.json --engdesign ZC_02
+
+# 真实模型（key 只放环境变量，不要写进仓库）
+export GEMINI_API_KEY=...          # 或 OPENROUTER_API_KEY
+cargo run --release -p aeoi-web -- design --model gemini:gemini-3.1-flash-lite \
+    --engdesign all --rpm 10 --max-steps 10 --call-timeout 150 --task-timeout 600
+cargo run --release -p aeoi-web -- design --model openrouter:nvidia/nemotron-3-ultra-550b-a55b:free \
+    --engdesign XG_13,ZC_02 --rpm 8 --max-steps 8
+```
+
+额度与问答评测相同：Gemini 免费层按模型分开计算，`gemini-2.5-flash` 每天约 20 次请求，设计题每题最多 `--max-steps` 次（默认 10），用 `gemini-3.1-flash-lite`；OpenRouter 免费模型（id 以 `:free` 结尾）没买额度的账号每天合计约 50 次请求，而且经常因上游共享池返回 429。每日配额（Gemini 的 `PerDay`、OpenRouter 的 `free-models-per-day`）会立刻停止并在报告的 `aborted.not_run` 里列出还没开始的题。短暂的 429/503 会按服务端的 `retryDelay` 退避，但单次请求的重试总时间有上限（默认 150 秒），到了就记 `provider_error` 并进入下一题。
+
+报告在每道题开始时、以及每个模型回合之后写入 `reports/design-<model>.json`（先写临时文件再改名，中途杀掉进程会留下上一份完整检查点）。`--call-timeout`（默认 150 秒）限制单次模型请求，`--task-timeout`（默认 600 秒）限制一整道题。这两项是为了避免一次挂起的连接把整次 ControlEval 跑卡死、报告却一直是空的。试点结论见 `reports/design-pilot.md`。
+
+只给提交、不调用模型：`aeoi-web design-score submissions.json`（`[{id, answer}]`；ControlEval 要另带 `controleval_task`）。EngDesign 的参考答案由单元测试覆盖；`eval/design/pyscore.py` 用 python-control / scipy 对同一份提交再打一遍，核对通过/不通过是否一致。
+
 ### 浏览器版（GitHub Pages）
 
 不想装 Rust 时可以直接打开 **https://yuanqingfei.github.io/aeoi/** （会跳转到账号的自定义域名 https://yuanqingfei.me/aeoi/ ）：12 个算子与工具桥编译成 WebAssembly 在浏览器里运行，Agent 循环也在页面里，没有任何服务器。

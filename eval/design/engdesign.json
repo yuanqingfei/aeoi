@@ -1,0 +1,492 @@
+{
+ "$comment": "Vendored from EngDesign (MIT) by tools/vendor_engdesign.py; see eval/design/README.md.",
+ "upstream": {
+  "repo": "https://github.com/AGI4Engineering/EngDesign",
+  "commit": "c8ec338cc5f846d792d93728b00c9448111139e5",
+  "license": "MIT",
+  "license_file": "eval/design/LICENSE-EngDesign"
+ },
+ "tasks": [
+  {
+   "id": "engdesign/XG_13",
+   "source": {
+    "benchmark": "EngDesign",
+    "task": "XG_13",
+    "path": "tasks/XG_13",
+    "url": "https://github.com/AGI4Engineering/EngDesign/tree/c8ec338cc5f846d792d93728b00c9448111139e5/tasks/XG_13",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2025 EngDesign Benchmark Team"
+   },
+   "domain": "PID Controller Design",
+   "prompt": "## Background\nControl systems play a critical role in stabilizing and regulating the behavior of dynamic systems, such as robotic arms and autonomous vehicles. In this task, you will design a proportional-integral-derivative (PID) controller for a mass-spring-damper system. The system is described by the following physical parameters:\n- Mass: $m = 1\\, \\text{kg}$  \n- Damping coefficient: $b = 10\\, \\text{N s/m}$ \n- Spring constant: $k = 20\\, \\text{N/m}$ \n- External force: $F = 1\\, \\text{N}$\nAn illustrative diagram is provided to help visualize the system.\n\n## Task Description\nPlease design a PID controller for the given mass-spring-damper system, such that the closed-loop system satisfies the following performance requirements:\n   - **Settling time:** $T_s < 0.2\\, \\text{seconds}$\n   - **Overshoot:** $M_p < 5\\%$\n   - **Steady-state error:** Zero\n**Note:** You may choose to implement a simplified controller by setting one or more of the PID parameters (i.e., $K_i$ or $K_d$) to zero, effectively designing a PI, PD, or P controller as needed.",
+   "fields": [
+    {
+     "name": "Kp",
+     "type": "number",
+     "python_type": "float",
+     "description": "The proportional gain."
+    },
+    {
+     "name": "Ki",
+     "type": "number",
+     "python_type": "float",
+     "description": "The integral gain."
+    },
+    {
+     "name": "Kd",
+     "type": "number",
+     "python_type": "float",
+     "description": "The derivative gain."
+    }
+   ],
+   "rubric": "## Rubric for Evaluating Controller Design Response\n\nStability: 40 points\n- Settling time: 30 points\n- Overshoot: 30 points",
+   "reference_solution": "The following is a reference PID design that meets the performance requirements:\n  $$K(s) = 350 + \\frac{300}{s} + 50$$",
+   "scorer": "pid_unity",
+   "expected_blockers": [
+    "feedback/series (tf arithmetic)"
+   ],
+   "scoring_notes": "Pass = the prompt's specs (stable, 2% settling < 0.2 s, overshoot < 5 %). Upstream evaluate.py uses Ts < 2 s and Overshoot < 0.05 (python-control reports percent, so 0.05 %); that literal verdict is reported as upstream_literal_pass."
+  },
+  {
+   "id": "engdesign/Ziheng_03",
+   "source": {
+    "benchmark": "EngDesign",
+    "task": "Ziheng_03",
+    "path": "tasks/Ziheng_03",
+    "url": "https://github.com/AGI4Engineering/EngDesign/tree/c8ec338cc5f846d792d93728b00c9448111139e5/tasks/Ziheng_03",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2025 EngDesign Benchmark Team"
+   },
+   "domain": "Control Engineering: PID controller",
+   "prompt": "## Task Description\nYou need to design a PID controller for a magnetic levitation system in which an electromagnet holds a steel ball at a desired height. Near the operating point, the nonlinear dynamics can be linearized and modeled by the transfer function:\nG = K / ((tau1*s + 1)*(tau2*s + 1)*(tau3*s + 1));\nwhere:\nK  = 1;\ntau1 = 0.5;\ntau2 = 1.0;\ntau3 = 2.0;\n\nDesign a PID controller so that the closed‑loop system meets all of the following specifications:\n1. Settling time Ts (to within plus or minus 5 percent) < 5s\n2. Overshoot < 20 percent\n3. Zero steady state error to a unit step input\n4. Gain margin > 10dB\n5. Phase margin > 45 degrees\n\n## Output format\nYou need to give me your Kp, Ki, and Kd in numerical form.",
+   "fields": [
+    {
+     "name": "Kp",
+     "type": "number",
+     "python_type": "float",
+     "description": "Proportional gain (Kp) as a plain number"
+    },
+    {
+     "name": "Ki",
+     "type": "number",
+     "python_type": "float",
+     "description": "Integral gain (Ki) as a plain number"
+    },
+    {
+     "name": "Kd",
+     "type": "number",
+     "python_type": "float",
+     "description": "Derivative gain (Kd) as a plain number"
+    }
+   ],
+   "rubric": "## Rubric for Evaluating RSLQR Controller Design Response\nAssess how good the controller is at tracking the step input and the performance.\n| Criterion | Points | Description |\n|------------|---------|--------------|\n| Settling time | 30 | The 5% settling time of the system is faster than 5s |\n| Overshoot | 20 | The overshoot of the system is smaller than 20% |\n| Error | 30 | The error of the final value is 0 |\n| Gain margin | 10 | The gain margin should be bigger than 10 dB |\n| Phase margin | 10 |The phase margin should be bigger than 45 degrees |\n\nNote: If the system is unstable, the score will be 0, no matter how good the performance is.",
+   "reference_solution": "Kp = 10;\nKi = 1.55;\nKd = 9.5;",
+   "scorer": "pid_unity",
+   "expected_blockers": [
+    "feedback/series (tf arithmetic)",
+    "pid constructor"
+   ],
+   "scoring_notes": "5 % settling band, overshoot < 20 %, |e_ss| < 1e-3, GM > 10 dB, PM > 45° as in the prompt. Upstream evaluate_pid.m compares MATLAB margin()'s absolute gain margin with 10 (= 20 dB); that literal verdict is upstream_literal_pass."
+  },
+  {
+   "id": "engdesign/XG_05",
+   "source": {
+    "benchmark": "EngDesign",
+    "task": "XG_05",
+    "path": "tasks/XG_05",
+    "url": "https://github.com/AGI4Engineering/EngDesign/tree/c8ec338cc5f846d792d93728b00c9448111139e5/tasks/XG_05",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2025 EngDesign Benchmark Team"
+   },
+   "domain": "Control Engineering: controller design",
+   "prompt": "## Task Description\nIn this task, you are required to design a feedback controller to regulate the temperature of a chemical reactor using a heat exchanger system. The reactor, modeled as a stirred tank, is shown in the accompanying figure. A liquid stream enters the tank from the top inlet and is continuously mixed. To maintain the liquid at a desired constant temperature, the amount of steam supplied to the heat exchanger (located at the bottom of the tank) must be adjusted. This is achieved by modulating the control valve that governs steam flow. Your objective is to design a controller that ensures the reactor temperature remains stable and responds effectively to disturbances and setpoint changes.\n\n### Task 1\nYour first task is to derive a first-order with delay transfer function $G(s) = exp(-theta*s)/(1+tau*s)$ to model the dynamics of the stirred tank. The second figure shows a measured step response of the stirred tank, with $t_1 = 23$ s and $t_2 = 36$ s. The values of $t_1$ and $t_2$ are the times where the step response reaches 28.3% and 63.2% of its final value, respectively. Please determine the value of $\\theta$ and $\\tau$ from the step response figure using the given information. Then the transfer function will be $G(s) = exp(-theta*s)/(1+tau*s)$.\n\n### Task 2\nYour second task is to design a feedback controller to regulate the temperature of the stirred tank using the model you derived in Task 1 that satisfies the following requirements:\n- Gain margin: >= 7 dB\n- Phase margin: >= 60 degrees\n- Overshoot: <= 10% (for a step reference input)\n- Settling time: <= 150 s (for a step reference input)",
+   "fields": [
+    {
+     "name": "theta",
+     "type": "number",
+     "python_type": "float",
+     "description": "The value of theta"
+    },
+    {
+     "name": "tau",
+     "type": "number",
+     "python_type": "float",
+     "description": "The value of tau"
+    },
+    {
+     "name": "num",
+     "type": "array",
+     "python_type": "list[float]",
+     "description": "The numerator of the transfer function of the controller"
+    },
+    {
+     "name": "den",
+     "type": "array",
+     "python_type": "list[float]",
+     "description": "The denominator of the transfer function of the controller"
+    }
+   ],
+   "rubric": "## Evaluation Rubric\n- tau: 10 points\n- theta: 10 points\n- gain margin: 20 points\n- phase margin: 20 points\n- overshoot: 20 points\n- settling time: 20 points",
+   "reference_solution": "## theta and tau:\ntau = 3/2 * ( t2 - t1 ) = 3/2 * ( 36 - 23 ) = 19.5 (\\pm 2)\ntheta = t2 - tau = 36 - 19.5 = 16.5 (\\pm 2)\n\n## Required Current:\nThe following PI controller provided a satisfactory response with tau = 21.3 and theta = 14.7:\n\nnum = [23.24, 0.9]\nden = [25.82, 0]",
+   "scorer": "fopdt_controller",
+   "expected_blockers": [
+    "time delay / pade",
+    "feedback/series (tf arithmetic)"
+   ],
+   "scoring_notes": "Delay approximated by a 10th-order Padé (as upstream). theta, tau within ±2 of 16.5, 19.5."
+  },
+  {
+   "id": "engdesign/XG_11",
+   "source": {
+    "benchmark": "EngDesign",
+    "task": "XG_11",
+    "path": "tasks/XG_11",
+    "url": "https://github.com/AGI4Engineering/EngDesign/tree/c8ec338cc5f846d792d93728b00c9448111139e5/tasks/XG_11",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2025 EngDesign Benchmark Team"
+   },
+   "domain": "Control Engineering: Attenuation of a Plant Resonance",
+   "prompt": "## Task Description\nConsider the following third-order plant:\n\\[\nG(s) = \\frac{0.5}{s}\\frac{169}{s^2 + 0.26s + 169},\n\\]\nAssuming the desired loop bandwidth is $ \\omega_{L} = 1 $ rad/sec. An initial loop shaping controller using controller gain and integral boost is given as:\n- gain: $ K_g = \\frac{1}{|G(j\\omega_L)|}$,\n- integral boost: $ K_i(s) =  \\frac{\\beta_b s + \\omega_L}{s \\sqrt{\\beta_b^2 + 1}}$ with $ \\beta_b = \\sqrt{10}$.\nAnd the initial loop shaping controller is:\n\\[\nC(s) = K_g \\cdot K_i(s)\n\\]\n\n### Task 1\nYour first task is to obtain the explicit transfer function of the initial loop shaping controller. Please provide the complete transfer function of \\( C(s) \\) as part of your response in the form of numerator and denominator coefficients.\n\n### Task 2\nThe initial design yeilds a unstable closed-loop system since there are additional gain crossings at 12.5 and 13.4 rad/sec. Your task is to build upon the initial controller, add a second-order roll-off element $K_r(s)$. A typical roll-off element has the form:\n\\[\nK_r(s) = \\frac{F_r(s)}{|F_r(j\\omega_r)|},\n\\]\nwhere \\( F_r(s) = \\frac{(\\beta_r \\omega_r)^2}{s^2 + \\sqrt{2}\\beta_r \\omega_r s + (\\beta_r \\omega_r)^2} \\). You need to design this roll-off by choosing \\( \\beta_r \\) and \\( \\omega_r \\). Then the final controller is given by:\n\\[\nC(s) = K_g \\cdot K_i(s) \\cdot K_r(s)\n\\].\n\nYou need to design the roll-off element to achieve the following requirements:\n- The closed-loop system is stable.\n- The desired loop bandwidth is 1 rad/sec.\n- The closed-loop system should have a phase margin of at least 50 degrees.\n- The closed-loop system should have a gain margin of at least 3 dB.",
+   "fields": [
+    {
+     "name": "C_num",
+     "type": "array",
+     "python_type": "list[float]",
+     "description": "numerator coefficients of the controller C(s) with shape [1,2]"
+    },
+    {
+     "name": "C_den",
+     "type": "array",
+     "python_type": "list[float]",
+     "description": "denominator coefficients of the controller C(s) with shape [1,2]"
+    },
+    {
+     "name": "omega_r",
+     "type": "number",
+     "python_type": "float",
+     "description": "parameter of the roll-off filter"
+    },
+    {
+     "name": "beta_r",
+     "type": "number",
+     "python_type": "float",
+     "description": "parameter of the roll-off filter"
+    }
+   ],
+   "rubric": "## Evaluation Rubric\n- numerator coefficients of the PI controller: 20 points\n- denominator coefficients of the PI controller: 20 points\n- system stability: 20 points\n- phase margin: 20 points\n- gain margin: 20 points",
+   "reference_solution": "% Reference solution\nK_num = [6.2871 1.9882]\nK_den = [3.3166, 0]\nomega_r = 1.0\nbeta_r = 4.7",
+   "scorer": "loopshape_rolloff",
+   "expected_blockers": [
+    "feedback/series (tf arithmetic)"
+   ],
+   "scoring_notes": "C(s) coefficients within 0.1 (2-norm) of the expected Kg·Ki; loop with the roll-off stable, PM ≥ 50°, GM ≥ 3 dB. Upstream takes max() over all crossings; we report both the minimum (classical) margins and the upstream-style maxima and pass on the upstream-style ones."
+  },
+  {
+   "id": "engdesign/XG_12",
+   "source": {
+    "benchmark": "EngDesign",
+    "task": "XG_12",
+    "path": "tasks/XG_12",
+    "url": "https://github.com/AGI4Engineering/EngDesign/tree/c8ec338cc5f846d792d93728b00c9448111139e5/tasks/XG_12",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2025 EngDesign Benchmark Team"
+   },
+   "domain": "Control Engineering: Notch Filter Design",
+   "prompt": "## Task Description\nConsider the following plant with a resonance:\n\\[\nG(s) = \\frac{0.5}{s}\\frac{169}{s^2 + 0.26s + 169},\n\\]\nThis plant has a resonance around 13 rad/sec. Assuming the desired loop bandwidth is $ \\omega_{L} = 3 $ rad/sec. An initial loop shaping controller using controller gain and integral boost is given as:\n- gain: $ K_g = \\frac{1}{|G(j\\omega_L)|}$,\n- integral boost: $ K_i(s) =  \\frac{\\beta_b s + \\omega_L}{s \\sqrt{\\beta_b^2 + 1}}$ with $ \\beta_b = \\sqrt{10}$.\nAnd the initial loop shaping controller is:\n\\[\nC(s) = K_g \\cdot K_i(s)\n\\]\n\n### Task 1\nYour first task is to obtain the explicit transfer function of the initial loop shaping controller. Please provide the complete transfer function of \\( C(s) \\) as part of your response in the form of numerator and denominator coefficients.\n\n### Task 2\nThe initial design yeilds a unstable closed-loop system since there are additional gain crossings at 11.3 and 14.2 rad/sec. Your task is to build upon the initial controller, add a notch filter to attenuate the resonance. A notch filter with three parameters (\\omega_n, \\alpha_n, f_n) is given as:\n\\[\nK_n(s) = \\frac{s^2 + (f_n \\omega_n \\sqrt{\\alpha_n})s + \\omega_n^2}{s^2 + ((f_n \\omega_n)/(\\sqrt{\\alpha_n}))s + \\omega_n^2}.\n\\]\nNow your goal is to determine the parameters of the notch filter to attenuate the resonance. Here are some information may help you design the notch filter:\n- The resonance frequency is 13 rad/sec.\n- The loop without notch filter has a magnitude of 21 dB near the resonance frequency.\n\n\nYou need to design the notch filter to achieve the following requirements:\n- The closed-loop system is stable.\n- The closed-loop system should have a phase margin of at least 60 degrees.\n- The closed-loop system should have a gain margin of at least 2 dB.",
+   "fields": [
+    {
+     "name": "C_num",
+     "type": "array",
+     "python_type": "list[float]",
+     "description": "numerator coefficients of the controller C(s)"
+    },
+    {
+     "name": "C_den",
+     "type": "array",
+     "python_type": "list[float]",
+     "description": "denominator coefficients of the controller C(s)"
+    },
+    {
+     "name": "omega_n",
+     "type": "number",
+     "python_type": "float",
+     "description": "parameter of the notch filter"
+    },
+    {
+     "name": "alpha_n",
+     "type": "number",
+     "python_type": "float",
+     "description": "parameter of the notch filter"
+    },
+    {
+     "name": "f_n",
+     "type": "number",
+     "python_type": "float",
+     "description": "parameter of the notch filter"
+    }
+   ],
+   "rubric": "## Evaluation Rubric\n- numerator coefficients of the PI controller: 20 points\n- denominator coefficients of the PI controller: 20 points\n- system stability: 20 points\n- phase margin: 20 points\n- gain margin: 20 points",
+   "reference_solution": "% Reference solution\nK_num = [17.96 17.04]\nK_den = [3.3166, 0]\nomega_n = 13\nalpha_n = 0.04\nf_n = 0.1",
+   "scorer": "loopshape_notch",
+   "expected_blockers": [
+    "feedback/series (tf arithmetic)"
+   ],
+   "scoring_notes": "As XG_11 with the notch; PM ≥ 60°, GM ≥ 2 dB."
+  },
+  {
+   "id": "engdesign/XG_02",
+   "source": {
+    "benchmark": "EngDesign",
+    "task": "XG_02",
+    "path": "tasks/XG_02",
+    "url": "https://github.com/AGI4Engineering/EngDesign/tree/c8ec338cc5f846d792d93728b00c9448111139e5/tasks/XG_02",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2025 EngDesign Benchmark Team"
+   },
+   "domain": "Control Engineering: Robust Control",
+   "prompt": "Consider a nanopositioning stage modeled by the following seventh-order linear state-space system. This model is fitted to frequency response data collected from the physical device:\nA = \\begin{bmatrix}\n-3360.27884342382 & 24650.4407238876 & -24650.4407238876 & 24650.4407238876 & -24650.4407238876 & 24650.4407238876 & -6162.61018097190 \\\\\n-3270.26403683917 & 10278.7248098086 & -7476.39347226054 & 7476.39347226054 & -7476.39347226054 & 7476.39347226054 & -1869.09836806513 \\\\\n-2657.10970968037 & 10628.4388387215 & -13430.7701762696 & 16233.1015138177 & -16233.1015138177 & 16233.1015138177 & -4058.27537845441 \\\\\n-3954.03177459846 & 15816.1270983939 & -15816.1270983939 & 13013.7957608458 & -10211.4644232977 & 10211.4644232977 & -2552.86610582443 \\\\\n-2325.45756017668 & 9301.83024070671 & -9301.83024070671 & 9301.83024070671 & -12104.1615782548 & 14906.4929158029 & -3726.62322895072 \\\\\n-1665.81075466004 & 6663.24301864017 & -6663.24301864017 & 6663.24301864017 & -6663.24301864017 & 3860.91168109210 & -264.645085886005 \\\\\n-1596.51916299641 & 6386.07665198562 & -6386.07665198562 & 6386.07665198562 & -6386.07665198562 & 6386.07665198562 & -4398.85050054448 \\\\\n\\end{bmatrix},\nB = \\begin{bmatrix}\n33.1501 \\\\\n29.2147 \\\\\n49.7430 \\\\\n55.4071 \\\\\n43.2351 \\\\\n22.8726 \\\\\n24.9153 \\\\\n\\end{bmatrix},\nC = \\begin{bmatrix}\n41.1585 & -164.6342 & 164.6342 & -164.6342 & 164.6342 & -164.6342 & 41.1585\n\\end{bmatrix}\nD = \\begin{bmatrix}\n0\n\\end{bmatrix}.\n\nYour task is to design a robust feedback controller using the loop shaping method that satisfies the following frequency-domain performance requirements:\n-Closed-loop bandwidth: approximately 85 Hz (±10 Hz tolerance)\n-Gain margin: greater than 1.5 dB\n-Phase margin: greater than 60 degrees",
+   "fields": [
+    {
+     "name": "num",
+     "type": "array",
+     "python_type": "list[float]",
+     "description": "List of numerator coefficients of the controller transfer function"
+    },
+    {
+     "name": "den",
+     "type": "array",
+     "python_type": "list[float]",
+     "description": "List of denominator coefficients of the controller transfer function"
+    }
+   ],
+   "rubric": "## Rubric for Evaluating Controller Design Response\n\nAssess how well the returned controller meets the frequency-domain requirements.\n\n| Criterion | Points | Description |\n|----------|--------|-------------|\n| Bandwidth Match | 40 | Closed-loop bandwidth is near 85 Hz (±10 Hz acceptable). |\n| Gain Margin | 30 | Controller provides gain margin > 1.5 dB. |\n| Phase Margin | 30 | Controller provides phase margin > 60°. |",
+   "reference_solution": "The following controller parameters provides a satisfactory response to the given requirements:\nnum = [1.4493e+03, 5.0291e+05, 8.1368e+09, 2.5012e+12]\nden = [1, 1.8372e+03, 6.8929e+06, 2.4391e+09, -7.0209e+11]",
+   "scorer": "loopshape_bandwidth",
+   "expected_blockers": [
+    "ss→tf series with a controller (tf arithmetic)",
+    "bandwidth"
+   ],
+   "scoring_notes": "Stable closed loop, first 0 dB crossing of L in [75, 95] Hz (40), GM > 1.5 dB (30), PM > 60° (30); unstable scores 0. Upstream MATLAB names margin()'s absolute gain margin Gm_db and compares it with 1.5; we use dB as the prompt and the rubric say, and report that literal verdict as upstream_literal_pass. A missing crossover is an infinite margin (JSON \"Inf\"), which meets a lower bound."
+  },
+  {
+   "id": "engdesign/LX_02",
+   "source": {
+    "benchmark": "EngDesign",
+    "task": "LX_02",
+    "path": "tasks/LX_02",
+    "url": "https://github.com/AGI4Engineering/EngDesign/tree/c8ec338cc5f846d792d93728b00c9448111139e5/tasks/LX_02",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2025 EngDesign Benchmark Team"
+   },
+   "domain": "Main domain: control systems\nSub-topic: control in magnetic levitation systems such as maglev train",
+   "prompt": "Magnetic levitation systems suspend a ferromagnetic ball beneath an electromagnet by balancing gravitational and magnetic forces.  The fundamental nonlinear dynamics are given by\n\\[\nm\\ddot y=mg-\\frac{kI^2}{y^2},\n\\]\nwhere \\(y(t)\\) is the ball’s vertical displacement and \\(I(t)\\) the coil current.  Around an operating point \\((y_0,I_0)\\), a first‑order Taylor expansion and appropriate nondimensionalization yield a normalized second‑order linear model suitable for controller design.  In this task, you are required to analyze that linearized model and then validate the controller on the original nonlinear dynamics.\n\nTo simplify the problem, consider the following equation:\n\\[\n\\ddot y=1-\\frac{u^2}{y^2}.\n\\]\n\n\\begin{enumerate}\n  \\item Linearize the nonlinear equation around the operating point $y = 1, u=1$. You need to give $a_{11},a_{12},a_{21},a_{22},b_{11},b_{21}$, where\n  \\[\\dot{x}=\\begin{bmatrix}\n      a_{11}&a_{12}\\\\\n      a_{21}&a_{22}\n  \\end{bmatrix}x+\\begin{bmatrix}\n      b_{11}\\\\\n      b_{21}\n  \\end{bmatrix}u.\\]\n  \\item Determine a feedback gain $K=(k1\\ k2)$ that places the closed‑loop poles at \\(-1\\pm j1\\).\n  \\item The ball position $x_1$ can be measured using a photocell, but the velocity $x_2$ is more difficult to obtain. Therefore, suppose the output is $y=x_1$. Design a full-order observer $L = (l1\\ l2)'$ having eigenvalues at $-5, -6$, and use the observer feedback to produce closed-loop eigenvalues at $-1\\pm j1, -5, -6$. \n  \\item Simulate your controller for the nonlinear model\n  \\[\n    \\ddot{y} = 1 -\\frac{u^2}{y^2},\n  \\]\n  with nominal equilibrium \\(y_0=u_0=1\\). With the initial condition $(x(0),\\dot{x}(0))$ set as $(1,0)$ for the observer, you need to identify whether the following initial conditions $(x(0),\\dot{x}(0))$ for the real system are within the region of asymptotic stability -- the set of initial states from which the closed‑loop system converges to the equilibrium. You need to use $1$ as yes and $0$ as no.\n  \\begin{enumerate}\n      \\item $(2, 2)$\n      \\item $(2.5, 0)$\n      \\item $(0.8, 0)$\n      \\item $(0.9, -1)$\n  \\end{enumerate}\n\\end{enumerate}",
+   "fields": [
+    {
+     "name": "a11",
+     "type": "number",
+     "python_type": "float",
+     "description": "an element in A"
+    },
+    {
+     "name": "a12",
+     "type": "number",
+     "python_type": "float",
+     "description": "an element in A"
+    },
+    {
+     "name": "a21",
+     "type": "number",
+     "python_type": "float",
+     "description": "an element in A"
+    },
+    {
+     "name": "a22",
+     "type": "number",
+     "python_type": "float",
+     "description": "an element in A"
+    },
+    {
+     "name": "b11",
+     "type": "number",
+     "python_type": "float",
+     "description": "an element in B"
+    },
+    {
+     "name": "b21",
+     "type": "number",
+     "python_type": "float",
+     "description": "an element in B"
+    },
+    {
+     "name": "k1",
+     "type": "number",
+     "python_type": "float",
+     "description": "an element in K"
+    },
+    {
+     "name": "k2",
+     "type": "number",
+     "python_type": "float",
+     "description": "an element in K"
+    },
+    {
+     "name": "l1",
+     "type": "number",
+     "python_type": "float",
+     "description": "an element in L"
+    },
+    {
+     "name": "l2",
+     "type": "number",
+     "python_type": "float",
+     "description": "an element in L"
+    },
+    {
+     "name": "s1",
+     "type": "integer",
+     "python_type": "int",
+     "description": "is i.c.(a) within the region of asymptotic stability"
+    },
+    {
+     "name": "s2",
+     "type": "integer",
+     "python_type": "int",
+     "description": "is i.c.(b) within the region of asymptotic stability"
+    },
+    {
+     "name": "s3",
+     "type": "integer",
+     "python_type": "int",
+     "description": "is i.c.(c) within the region of asymptotic stability"
+    },
+    {
+     "name": "s4",
+     "type": "integer",
+     "python_type": "int",
+     "description": "is i.c.(d) within the region of asymptotic stability"
+    }
+   ],
+   "rubric": "## Evaluation Rubric\n- A (a11, a12, a21, a22) correct: 8 points\n- B (b11, b21) correct: 8 points\n- K (k1, k2) correct: 10 points\n- L (l1, l2) correct: 10 points\n- stability correct: 16 points for each of 4 sets of initial condition",
+   "reference_solution": "## A, B:\na11 = 0\na12 = 1\na21 = 2\na22 = 0\nb11 = 0\nb21 = -2\n\n## K:\nk1 = -2\nk2 = -1\n\n## L:\nl1 = 11\nl2 = 32\n\n## asymptotic stability:\n(a): 1\n(b): 0\n(c): 1\n(d): 0",
+   "scorer": "maglev_observer",
+   "expected_blockers": [
+    "nonlinear simulation (region of attraction)"
+   ],
+   "scoring_notes": "A, B, K, L compared with the reference to 1e-6 (upstream: isequal); s1..s4 against the reference answers (1, 0, 1, 0)."
+  },
+  {
+   "id": "engdesign/AV_02",
+   "source": {
+    "benchmark": "EngDesign",
+    "task": "AV_02",
+    "path": "tasks/AV_02",
+    "url": "https://github.com/AGI4Engineering/EngDesign/tree/c8ec338cc5f846d792d93728b00c9448111139e5/tasks/AV_02",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2025 EngDesign Benchmark Team"
+   },
+   "domain": "Digital Signal Processing - IIR filter design",
+   "prompt": "## Task Description\nIn this task, you are required to design a digital IIR filter, used to eliminate a particular resonant frequency that is affecting a sensor reading.\n\n### Design Constraints\nThe sensor signal is being sampled at a rate of 2000Hz.\nThe resonant frequency you should eliminate is 120Hz.\nYour filter should strongly attenuate the resonant frequency. (Attenuation more than 40dB)\nYour filter should minimally affect frequencies more than 5Hz below the resonant frequency. (Attenuation less than 3dB at 115Hz)\nYour filter should minimally affect frequencies more than 5Hz above the resonant frequency. (Attenuation less than 3dB at 125Hz)\n\n### Response Specifications\nProvide the following information as your response.\n- The filter order\n- A list of the filter's numerator coefficients (Provide ALL of them)\n- A list of the filter's denominator coefficients (Provide ALL of them)",
+   "fields": [
+    {
+     "name": "order",
+     "type": "number",
+     "python_type": "float",
+     "description": "The order of the filter"
+    },
+    {
+     "name": "coeffs_numerator",
+     "type": "array",
+     "python_type": "list[float]",
+     "description": "The list of filter numerator coefficients"
+    },
+    {
+     "name": "coeffs_denominator",
+     "type": "array",
+     "python_type": "list[float]",
+     "description": "The list of filter denominator coefficients"
+    }
+   ],
+   "rubric": "## Evaluation Rubric\n- reasonable order (below 60): 10\n- number of numerator and denominator coefficients (each) = order + 1: 10\n- target frequency attenuation appropriate: 40\n- frequency attenuation below (target frequency - 5) appropriate: 20\n- frequency attenuation above (target frequency + 5) appropriate: 20",
+   "reference_solution": "## order and coefficients:\norder = 8\ncoeffs_numerator = [0.971987554400379, -7.23074141988472, 24.0593587574556, -46.7018447646062, 57.8028554708087, -46.7018447646062, 24.0593587574556, -7.23074141988472, 0.971987554400379]\ncoeffs_denominator = [1, -7.38629070277517, 24.4025053599328, -47.0320991049601, 57.7993568733735, -46.3686717935595, 23.7189260553057, -7.07811076768760, 0.944759805909239]\n\n## description:\nThis filter is designed to the provided specifications",
+   "scorer": "iir_notch",
+   "expected_blockers": [
+    "filter design (iirnotch/butter)"
+   ],
+   "scoring_notes": "Same checks and weights as upstream, magnitude evaluated with control.lti.bode on the discrete tf (ts = 1/2000 s) at the upstream grid points."
+  },
+  {
+   "id": "engdesign/AV_03",
+   "source": {
+    "benchmark": "EngDesign",
+    "task": "AV_03",
+    "path": "tasks/AV_03",
+    "url": "https://github.com/AGI4Engineering/EngDesign/tree/c8ec338cc5f846d792d93728b00c9448111139e5/tasks/AV_03",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2025 EngDesign Benchmark Team"
+   },
+   "domain": "Digital Signal Processing - Anti-Aliasing system design",
+   "prompt": "## Task Description\nIn this task, you are required to design a system to downsample a digital audio signal from 48kHz to 8kHz. Before downsampling, we need an anti-aliasing filter. Design this filter.\n\n### Design Constraints\nThe input signal is sampled at 48kHz.\nThe output signal is sampled at 8kHz.\nThe useful frequency bandwidth of the original signal is between 0 and 3.5kHz, and it must be preserved with minimal distortion (Attenuation less than 3dB, Ripple amplitude less than 3dB)\nYou must ensure that the useful frequency bandwidth is unaffected by aliasing. Thus, determine the beginning frequency of the stopband.\nEnsure that your filter is FIR.\n\n### Response Specifications\nProvide the following information as your response.\n- The filter order\n- A list of the filter's coefficients\n- The beginning frequency of the stopband\n- The decimation factor",
+   "fields": [
+    {
+     "name": "order",
+     "type": "number",
+     "python_type": "float",
+     "description": "The order of the filter"
+    },
+    {
+     "name": "coeffs",
+     "type": "array",
+     "python_type": "list[float]",
+     "description": "The list of filter coefficients"
+    },
+    {
+     "name": "stpbnd",
+     "type": "number",
+     "python_type": "float",
+     "description": "The beginning frequency of the stopband"
+    },
+    {
+     "name": "decim",
+     "type": "number",
+     "python_type": "float",
+     "description": "The decimation factor"
+    }
+   ],
+   "rubric": "## Evaluation Rubric\n- reasonable order (below 60): 10\n- number of coefficients = order + 1: 10\n- stopband placement appropriate: 20\n- decimation factor appropriate: 10\n- transition band attenuation appropriate: 10\n- passband frequency attenuation appropriate: 20\n- stopband frequency attenuation appropriate: 20",
+   "reference_solution": "## order and coefficients:\norder = 152\ncoeffs = [\n 0.00232738107555552, 0.00922695722813153, 0.00773033917903762, 0.011467831400938,\n 0.0130519186698972, 0.0142389626702959, 0.0141145009286556, 0.0127583114233367,\n 0.0101950629216487, 0.00673092905298647, 0.00281708981094565, -0.000989111837913679,\n -0.00412542696720445, -0.00613245484652375, -0.00673660822454754, -0.00591291832328676,\n -0.0038953392590717, -0.00113926230890725, 0.00176396710143443, 0.00419786351015542,\n 0.00564840166073773, 0.00580756594621445, 0.00464445298669579, 0.00241228167119975,\n -0.000397669974056063, -0.00315982882169413, -0.00524744854759474, -0.00616986696094999,\n -0.00568247559741705, -0.00385592454536345, -0.00106403936072277, 0.00208332493247689,\n 0.00487403487574822, 0.00664694705563115, 0.00694721768045664, 0.00563545948236604,\n 0.0029367766419419, -0.000594710231142497, -0.00417976478398229, -0.00698840207668458,\n -0.00831987312345981, -0.00777957197983195, -0.00537445654384982, -0.00154892311762374,\n 0.00290028621208456, 0.00697325912690389, 0.00969398673006019, 0.0103270091241112,\n 0.00857004984320211, 0.00464620894288635, -0.000701784673323982, -0.00633825404810223,\n -0.0109688379389773, -0.0134143833101943, -0.0129019693176223, -0.00925627777003295,\n -0.00301675399545622, 0.00463235208238579, 0.0120480796329622, 0.0174615092828941,\n 0.0193499478544405, 0.0167930690495342, 0.00976493801295727, -0.000765219115060084,\n -0.0128992159389074, -0.0240790927115354, -0.0315059134402624, -0.0326387641547852,\n -0.0257112150757533, -0.0101072713378632, 0.0134159322827348, 0.0427294055451825,\n 0.0746102579926494, 0.105187437495629, 0.130520665714103, 0.147243791678331,\n 0.153086920312013, 0.147243791678331, 0.130520665714103, 0.105187437495629,\n 0.0746102579926494, 0.0427294055451825, 0.0134159322827348, -0.0101072713378632,\n -0.0257112150757533, -0.0326387641547852, -0.0315059134402624, -0.0240790927115354,\n -0.0128992159389074, -0.000765219115060084, 0.00976493801295727, 0.0167930690495342,\n 0.0193499478544405, 0.0174615092828941, 0.0120480796329622, 0.00463235208238579,\n -0.00301675399545622, -0.00925627777003295, -0.0129019693176223, -0.0134143833101943,\n -0.0109688379389773, -0.00633825404810223, -0.000701784673323982, 0.00464620894288635,\n 0.00857004984320211, 0.0103270091241112, 0.00969398673006019, 0.00697325912690389,\n 0.00290028621208456, -0.00154892311762374, -0.00537445654384982, -0.00777957197983195,\n -0.00831987312345981, -0.00698840207668458, -0.00417976478398229, -0.000594710231142497,\n 0.0029367766419419, 0.00563545948236604, 0.00694721768045664, 0.00664694705563115,\n 0.00487403487574822, 0.00208332493247689, -0.00106403936072277, -0.00385592454536345,\n -0.00568247559741705, -0.00616986696094999, -0.00524744854759474, -0.00315982882169413,\n -0.000397669974056063, 0.00241228167119975, 0.00464445298669579, 0.00580756594621445,\n 0.00564840166073773, 0.00419786351015542, 0.00176396710143443, -0.00113926230890725,\n -0.0038953392590717, -0.00591291832328676, -0.00673660822454754, -0.00613245484652375,\n -0.00412542696720445, -0.000989111837913679, 0.00281708981094565, 0.00673092905298647,\n 0.0101950629216487, 0.0127583114233367, 0.0141145009286556, 0.0142389626702959,\n 0.0130519186698972, 0.011467831400938, 0.00773033917903762, 0.00922695722813153,\n 0.00232738107555552\n]\nstpbnd = 3900\ndecim = 6\n\n## description:\nThis filter is designed to the provided specifications, it is a low-pass anti aliasing filter. The stopband beginning frequency is placed between 3500 and 4000 Hz. The decimation factor is calculated by dividing the initial frequency by the final.",
+   "scorer": "fir_antialias",
+   "expected_blockers": [
+    "FIR filter design (firwin/remez)"
+   ],
+   "scoring_notes": "Same checks and weights as upstream, magnitude via control.lti.bode on the FIR as a discrete tf."
+  },
+  {
+   "id": "engdesign/ZC_02",
+   "source": {
+    "benchmark": "EngDesign",
+    "task": "ZC_02",
+    "path": "tasks/ZC_02",
+    "url": "https://github.com/AGI4Engineering/EngDesign/tree/c8ec338cc5f846d792d93728b00c9448111139e5/tasks/ZC_02",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2025 EngDesign Benchmark Team"
+   },
+   "domain": "Main domain: Control theory\nSub domain: Robust control theory",
+   "prompt": "## Task Description\nConsider the discrete‐time Lurye feedback interconnection composed of the following blocks:\n\nNonlinear block:\n  \\[\n    w_k = \\phi(v_k), \n    \\quad\n    \\phi:\\mathbb R\\to\\mathbb R\\text{ satisfies }\n    0 \\;\\le\\; \\frac{\\phi(v_1)-\\phi(v_2)}{v_1-v_2}\\;\\le\\;1,\n    \\;\\forall v_1\\neq v_2.\n  \\]\n  \nLinear time‐invariant block:\n  \\[\n    \\begin{cases}\n      x_{k+1} = A\\,x_k + \\alpha\\,B\\,w_k,\\\\\n      y_k      = C\\,x_k + D\\,w_k,\n    \\end{cases}\n    \\quad\n    \\alpha>0\\text{ multiplies the input matrix }B,\n  \\]\n  with numerical values\n  \\[\n    A = \\begin{bmatrix}0.5000 & 0 \\\\1.0000 & 0\\end{bmatrix},\n    B = \\begin{bmatrix}1 \\\\0\\end{bmatrix},\\quad\n    C = \\begin{bmatrix}2.0000 & 0.9200\\end{bmatrix},\n    D = [\\,0\\,].\n  \\]\n  \nInterconnection：\n  \\[\n    v_k = d_k - y_k,\\qquad\n    w_k = \\phi(v_k),\\qquad\n    e_k = w_k.\n  \\]\n  \n### Task \nCalculate the $\\alpha$ where\n\\[\n    \\alpha_{\\max}\n    = \\max\\bigl\\{\\alpha>0 \\mid \\text{the closed‐loop is absolutely stable for all }\\phi\\text{ in the sector}\\bigr\\}.\n\\]\nPlease note the properties of the nonlinear operator $\\phi$, you are encouraged to use semidefinite programming and bisection.",
+   "fields": [
+    {
+     "name": "alpha",
+     "type": "number",
+     "python_type": "float",
+     "description": "The stability margin"
+    }
+   ],
+   "rubric": "## Evaluation Rubric\n\nIf the alpha provided by the LLM is greater than 1.087, the score is 0.\nIf the alpha falls within the range [0.651,1.087], the score is 95.\nIf the alpha achieves between 90% and 99% of 0.651, the score is 90.\nIf the alpha achieves between 80% and 89% of 0.651, the score is 80, and so on.\nIf the alpha is less than 50% of 0.651, the score is 0.\n\nThe LLM is considered to have passed the test if and only if its score is greater than or equal to 90.",
+   "reference_solution": "## Required Current: \n\nThe following alpha is the optimal solution: \n\nalpha = 1.087.",
+   "scorer": "alpha_range",
+   "expected_blockers": [
+    "SDP / LMI solver (absolute stability)"
+   ],
+   "scoring_notes": "Pass if 0.651 ≤ alpha ≤ 1.087, the range upstream verifyalpha.m accepts."
+  }
+ ]
+}

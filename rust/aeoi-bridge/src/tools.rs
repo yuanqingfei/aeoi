@@ -11,6 +11,7 @@ use web_time::Instant;
 
 static CALLS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
+#[derive(Clone)]
 pub struct ToolDef {
     pub name: String,
     pub operator_id: String,
