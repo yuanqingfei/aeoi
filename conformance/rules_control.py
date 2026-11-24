@@ -185,10 +185,21 @@ def rule_bode(case, env, manifest, req=None, expected=None):
         return [fail("magnitude: shape [ny, nu, nw]", f"got magnitude {gm.shape}, phase {gph.shape}, w {gw.shape}; reference {shape}, w {ww.shape}")]
     k = _bode_kappa(req, ww)                                               # per frequency, broadcast over channels
     em = np.abs(gm.reshape(-1, shape[-1]) - wm.reshape(-1, shape[-1])) / k
-    ep = np.abs((gph.reshape(-1, shape[-1]) - wph.reshape(-1, shape[-1]) + 180.0) % 360.0 - 180.0) / k
+    # Phase is compared on the branch the spec fixes (10.x: first point in (c-180, c+180], then numpy-style unwrap;
+    # unwrap=false: every point in that interval), not modulo 360 (spec 12.1 item 22). Only where the reference sits
+    # within 1e-6 deg of the branch boundary, so that rounding alone may put a correct answer on the other side, is
+    # the comparison modulo 360: the whole channel when unwrapping (the first point decides it), else that point.
+    c = num(req.get("branch_center_deg", 0.0)); unwrap = req.get("unwrap", True) is not False
+    dp = gph.reshape(-1, shape[-1]) - wph.reshape(-1, shape[-1])
+    wr = wph.reshape(-1, shape[-1])
+    edge = np.minimum(np.abs(wr - (c - 180.0)), np.abs(wr - (c + 180.0))) < 1e-6
+    if unwrap:
+        edge = np.repeat(edge[:, :1], shape[-1], axis=1)
+    dp = np.where(edge, (dp + 180.0) % 360.0 - 180.0, dp)
+    ep = np.abs(dp) / k
     ew = np.max(np.abs(gw - ww) / np.abs(ww)) if ww.size else 0.0
     return [check("magnitude: |Δ dB| ≤ 1e-9·κ(ω)", float(np.max(em)) if em.size else 0.0, 1e-9),
-            check("phase: |Δ| mod 360 ≤ 1e-8·κ(ω) deg", float(np.max(ep)) if ep.size else 0.0, 1e-8),
+            check("phase on the spec's branch (not mod 360): |Δ| ≤ 1e-8·κ(ω) deg", float(np.max(ep)) if ep.size else 0.0, 1e-8),
             check("w: relative ≤ 1e-14 (rad/s)", ew, 1e-14)]
 
 
@@ -261,20 +272,18 @@ def rule_lqr(case, env, manifest, req=None, expected=None):
     S, K, P = arr(r["S"]), arr(r["K"]), arr(r["closed_loop_poles"]).ravel()
     eS, eK, eP = arr(e["S"]), arr(e["K"]), arr(e["closed_loop_poles"]).ravel()
     A, B, Q, R, N = _lqr_matrices(req)
-    if case.get("_engine") == "mpmath":                                     # 50-digit truth: not loosened (parity.yaml)
-        tS = tK = 1e-12
-        Acl = A - B @ eK
-        tP = max(1e-10, 1e2 * EPS * np.linalg.norm(Acl))
-        tag = "mpmath, fixed"
-    else:
-        c = max(1.0, num(e["cond_S"]) / 1e2)                               # cond_S of the reference solution
-        tS, tK, tP = 1e-10 * c, 1e-9 * c, 1e-8 * c
-        tag = "T2·max(1, cond_S/100)"
+    # Same kappa-scaled tolerance for every reference engine (spec 12.1 item 23): the 50-digit mpmath values are a
+    # more accurate reference, not a stricter requirement. "1e-12, not loosened" in parity.yaml is the reference
+    # implementation's own target (cargo test parity_hp); a backward-stable solver without refinement does not meet
+    # it on these families (SciPy: up to 3.7e-9, golden field scipy_forward_error_rel_max). Justified larger
+    # deviations go to the declaration's known_deviations (CF-7).
+    c = max(1.0, num(e["cond_S"]) / 1e2)                                   # cond_S of the reference solution
+    tS, tK, tP = 1e-10 * c, 1e-9 * c, 1e-8 * c
     pairs = match(P, eP)
     pe = max((abs(g - w) / max(1.0, abs(w)) for w, g in pairs), default=0.0) if pairs is not None else np.inf
-    out = [check(f"S: rel_fro (python-control: 1e-10·max(1, cond_S/100); mpmath: 1e-12)", rel_fro(S, eS), tS),
-           check(f"K: rel_fro (python-control: 10 × S tolerance; mpmath: 1e-12)", rel_fro(K, eK), tK),
-           check(f"closed_loop_poles: matched set, |Δ|/max(1,|p|)  [V-5]", pe, tP)]
+    out = [check("S: rel_fro ≤ 1e-10·max(1, cond_S/100)", rel_fro(S, eS), tS),
+           check("K: rel_fro ≤ 1e-9·max(1, cond_S/100)", rel_fro(K, eK), tK),
+           check("closed_loop_poles: matched set, |Δ|/max(1,|p|) ≤ 1e-8·max(1, cond_S/100)  [V-5]", pe, tP)]
     # independent invariants on the implementation's own S and K (CF-8, recommended): no reference value needed.
     # Residuals are normalised by the size of the terms (backward-error form), so that cond(R) up to 1e12 does not
     # turn the runner's own rounding into a failure; R is never inverted.

@@ -10,7 +10,7 @@
 | `aeoi_hash.py` | 规范 3.7 / 4.3 R-3 / P-2 的独立重写（RFC 8785 JCS、数组摘要、请求指纹）。运行器用它重算指纹，不采信被测实现自报的值 |
 | `rules_control.py` | `poles_zeros`、`bode`、`step`、`lqr`、`c2d` 的数值规则（v0.2）；`lyap` 的规则在运行器里 |
 | `impls/python_scipy/server.py` | 第二实现：Python + SciPy，只做 `lyap`，线级（MCP stdio） |
-| `tests/test_runner_catches_mutants.py` | 证明规则既不太松也不太严：对第二实现注入 7 种缺陷；再经 `proxy_mutant.py` 对参考实现做 8 种改写，错误答案必须失败，等价答案（换极点顺序、相似变换、tf 分子分母同乘常数）必须通过 |
+| `tests/test_runner_catches_mutants.py` | 证明规则既不太松也不太严：对第二实现注入 7 种缺陷；再经 `proxy_mutant.py` 对参考实现做 9 种改写，错误答案（含相位整体加 360°）必须失败，等价答案（换极点顺序、相似变换、tf 分子分母同乘常数）必须通过 |
 | `tests/proxy_mutant.py` | 包住参考实现的 MCP 代理，按 `$AEOI_MUTANT` 改写一个算子的结果并重算 `output_hash` |
 
 ## 运行
@@ -59,6 +59,6 @@ python3 conformance/tests/test_runner_catches_mutants.py
 1. ~~已解决（规范 v0.4.1，3.9 J-1）：所有 schema 改为标准引用，运行器不再改写，遇到无法解析的引用判失败。~~ 原问题：输出（和输入）schema 里的引用写成 `aeoi://schemas/common/0.4/Matrix`，按标准 JSON Schema 解析不了（应为 `…/0.3#/$defs/Matrix`），3.9 也没有说明这种约定。运行器自己改写后才能校验。
 2. `lyap`：input schema 把 Q 描述为“对称”，算法说明却写“Q 非对称也可解”；`W.VALIDATION.SYMMETRIZED` 在 manifest 里声明了，但没有规定什么时候发。第二实现第一版就是因为把非对称 Q 对称化而在 4 个用例上失败。
 3. `lyap` 的 `type` 有默认值 `continuous`，golden 里没有一个用例省略它，所以套件不检验默认值。第二实现第一版因此把它当必填也没被发现（读 input schema 时才发现）。
-4. （v0.2 规则发现）`bode` 的 `parity.yaml` 按“模 360”比较相位，所以 `branch_center_deg` 定的分支约定（规范 3.x）不被检验：相位整体差 360° 的实现会通过。见规范 12.1 第 22 项。
-5. （v0.2 规则发现）`lyap` 的 mpmath 用例，`parity.yaml` 写的是“rel_fro ≤ 1e-12，不放宽”，运行器的 `lyap` 规则对所有引擎都用 T2 × max(1, κ/100)。二者要统一。见规范 12.1 第 23 项。
+4. ~~已解决（规范 v0.4.3，12.1 第 22 项）：相位改为在 10.x 规定的分支上比较，不取模；只在参考值距分支边界 1e-6° 以内时取模。变异测试 `bode_phase_360` 必须失败。~~ 原问题：`bode` 的 `parity.yaml` 按“模 360”比较相位，分支约定不被检验。
+5. ~~已解决（规范 v0.4.3，12.1 第 23 项）：1e-12 是参考实现自己的精度目标（它做精化，实测 ≤ 7e-15），不是一致性门槛；一致性对所有引擎用同一个 κ 缩放容差，`lqr` 的 mpmath 分支也改成这样。标准 SciPy 在 `lyap` κ ≈ 1.6e8 时误差 7.5e-9、在 `lqr` cond(R) = 1e11 时 3.7e-9，属于后向稳定算法的正常表现；超出容差的个别用例走 CF-7 的 `known_deviations`。~~ 原问题：`lyap` 的 mpmath 用例 `parity.yaml` 写 1e-12，规则用 T2 × max(1, κ/100)。
 6. （v0.2 规则发现）CF-6 说每个顶层字段默认按 `rel_fro` 比较，而 `bode`（dB 与度的绝对差）、`step`（相对 max|y_ref| 的最大差）在 `parity.yaml` 里另有写法；规则按 `parity.yaml`。规范 v0.4.2 已写明以 `parity.yaml` 为准。

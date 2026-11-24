@@ -37,6 +37,6 @@ case_families_high_precision:   # golden/mpmath, n = cases
   - {name: ill_conditioned_R_extreme, n: 8, params: "n∈[2,6], m∈[2,3], cond(R)∈{1e10,1e11,1e12}"}
   - {name: ill_conditioned_R_cross_N, n: 2, params: "cond(R)∈{1e9,1e11}，带交叉项 N"}
 conformance_compare:   # spec 9.4 CF-6, CF-8; conformance/rules_control.py. No trust.error_estimate (CF-6)
-  python-control: "S rel_fro ≤ 1e-10·max(1, cond_S/100) (cond_S of the reference); K ≤ 10× that; closed_loop_poles matched set ≤ 1e-8·max(1, cond_S/100)"
-  mpmath: "S, K rel_fro ≤ 1e-12, not loosened; closed_loop_poles ≤ max(1e-10, 1e2·ε·‖A − B·K_ref‖_F)"
+  all engines: "S rel_fro ≤ 1e-10·max(1, cond_S/100) (cond_S of the reference); K ≤ 10× that; closed_loop_poles matched set ≤ 1e-8·max(1, cond_S/100)"
+  mpmath: "same tolerance as python-control (spec 12.1 item 23). The '1e-12, not loosened' above is the reference implementation's own target under cargo test parity_hp, not a conformance requirement: SciPy's CARE solver reaches 3.7e-9 on one family member (cond(R) = 1e11, field scipy_forward_error_rel_max), 6.5× this tolerance; such a case is declared under known_deviations (CF-7)"
   invariants: "recomputed by the runner from the returned S, K and the request (no reference value): ‖AᵀS + SA − KᵀRK + Q‖₂ / (2‖A‖‖S‖ + ‖K‖²‖R‖ + ‖Q‖) ≤ 1e-12; ‖RK − (BᵀS + Nᵀ)‖ / (‖R‖‖K‖ + ‖BᵀS + Nᵀ‖) ≤ 1e-12; S symmetric ≤ 1e-12; A − BK stable. R is never inverted."

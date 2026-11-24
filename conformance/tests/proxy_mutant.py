@@ -58,6 +58,11 @@ def m_bode_mag_wrong(r):                    # 1e-6 dB on one point
     _data(r["magnitude"])[0] += 1e-6
 
 
+def m_bode_phase_360(r):                    # every phase + 360 deg: equal modulo 360, wrong branch (10.x)
+    d = _data(r["phase"])
+    d[:] = [x + 360.0 for x in d]
+
+
 def m_step_y_wrong(r):                      # y scaled by 1 + 1e-8
     d = _data(r["y"])
     d[:] = [x * (1 + 1e-8) for x in d]
@@ -93,6 +98,7 @@ MUTANTS = {
     "pz_pole_wrong": ("control.lti.poles_zeros", m_pz_pole_wrong),
     "pz_reordered": ("control.lti.poles_zeros", m_pz_reordered),
     "bode_mag_wrong": ("control.lti.bode", m_bode_mag_wrong),
+    "bode_phase_360": ("control.lti.bode", m_bode_phase_360),
     "step_y_wrong": ("control.lti.step", m_step_y_wrong),
     "lqr_S_wrong": ("control.design.lqr", m_lqr_S_wrong),
     "lqr_poles_reordered": ("control.design.lqr", m_lqr_poles_reordered),

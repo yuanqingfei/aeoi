@@ -21,6 +21,7 @@ PROXY_EXPECT = {
     "pz_pole_wrong": ("control.lti.poles_zeros", "poles: matched set"),
     "pz_reordered": ("control.lti.poles_zeros", None),
     "bode_mag_wrong": ("control.lti.bode", "magnitude"),
+    "bode_phase_360": ("control.lti.bode", "phase on the spec's branch"),
     "step_y_wrong": ("control.lti.step", "y: max"),
     "lqr_S_wrong": ("control.design.lqr", "S: rel_fro"),
     "lqr_poles_reordered": ("control.design.lqr", None),
