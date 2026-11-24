@@ -1,7 +1,7 @@
 {
   "generated_by": "rust/aeoi-control/tests/receipt.rs",
-  "golden_successes": 675,
-  "golden_errors": 40,
+  "golden_successes": 698,
+  "golden_errors": 50,
   "claims_by_operator": {
     "control.analysis.ctrb_obsv": {
       "verified": 26
@@ -38,6 +38,9 @@
     },
     "control.lti.impulse": {
       "verified": 27
+    },
+    "control.lti.lsim": {
+      "verified": 23
     },
     "control.lti.pade": {
       "verified": 8

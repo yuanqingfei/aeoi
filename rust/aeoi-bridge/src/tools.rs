@@ -298,9 +298,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn twelve_tools_with_names_valid_for_all_providers() {
+    fn one_tool_per_operator_with_names_valid_for_all_providers() {
         let b = Bridge::new();
-        assert_eq!(b.tools.len(), 19);
+        assert_eq!(b.tools.len(), aeoi_control::registry().len());
         for t in &b.tools {
             assert!(t.name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'), "{}", t.name);
             assert!(t.name.len() <= 64);

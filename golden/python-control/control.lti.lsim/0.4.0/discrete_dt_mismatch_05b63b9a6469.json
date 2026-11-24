@@ -1,0 +1,44 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "control.lti.lsim",
+ "operator_version": "0.4.0",
+ "case_family": "discrete_dt_mismatch",
+ "request": {
+  "system": {
+   "kind": "tf",
+   "num": [
+    1.0
+   ],
+   "den": [
+    1.0,
+    -0.5
+   ],
+   "ts": 0.1
+  },
+  "u": {
+   "dtype": "f64",
+   "shape": [
+    3
+   ],
+   "data": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  "time": {
+   "dt": 0.05,
+   "unit": "s"
+  }
+ },
+ "reference_env": {
+  "engine": "scipy.signal.lsim / dlsim (cross-checked: python-control forced_response)",
+  "scipy": "1.18.1",
+  "python_control": "0.10.2",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261124,
+  "note": "scipy reference values; NOT MATLAB output"
+ },
+ "expected_error": "E.VALIDATION.GRID"
+}

@@ -1,0 +1,211 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "control.lti.lsim",
+  "version": "0.4.0",
+  "title": "Response to an arbitrary input",
+  "description": "计算 LTI 系统对任意采样输入 u 的响应（斜坡、正弦、扰动、实测数据），可给初始状态。采样之间的输入按 interpolation 解释：foh（线性，缺省）或 zoh（保持）；对这个解释，采样点上的响应没有离散化误差。",
+  "category": "analysis",
+  "tags": [
+    "time-domain",
+    "lti",
+    "simulation"
+  ],
+  "applicability": {
+    "preconditions": [
+      "system 为 proper",
+      "u 的形状 [nu, nt]（第 i 行 = 第 i 个输入通道，第 k 列 = t_k = t0 + k·dt 时刻）；nu = 1 时也可给一维 [nt]",
+      "均匀网格：t_k = t0 + k·dt，k = 0..nt−1；非均匀时间戳先重采样",
+      "离散系统要求 dt = ts（相对误差 1e-9），interpolation 不适用（给出即 E.VALIDATION.OPTION_CONFLICT，F-8）",
+      "x0 只用于 kind = ss 的系统：状态坐标由给定实现定义；tf/zpk 没有状态坐标，给 x0 即 E.VALIDATION.OPTION_CONFLICT（先用 control.lti.convert 转成 ss，那个实现有规范定义）"
+    ],
+    "not_for": [
+      "非均匀采样的输入",
+      "非线性系统",
+      "带时滞的系统（用 control.lti.pade 近似后串联）",
+      "采样之间输入形状既不是线性也不是常数时的精确响应（结果对 foh/zoh 的解释精确，对真实输入的误差取决于采样）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "连续系统：对增广矩阵 M = [[A·dt, B·dt, 0], [0, 0, I], [0, 0, 0]] 求矩阵指数（Padé 13 阶 + scaling & squaring），E = expm(M)，Φ = E[x,x]，F1 = E[x,u1]，F2 = E[x,u2]；foh：x_{k+1} = Φx_k + (F1 − F2)u_k + F2·u_{k+1}；zoh：x_{k+1} = Φx_k + F1·u_k（M 去掉第三块）。离散系统：x_{k+1} = Ax_k + Bu_k。y_k = Cx_k + Du_k，x_0 = x0（缺省 0）。与 scipy.signal.lsim（interp=True/False）及 python-control forced_response 的公式相同。tf/zpk 先转为可控标准型实现（与 control.lti.step 相同）。后验检查：在 dt/2 上重新离散化，用同一插值输入跑前 64 步，偶数步状态须与原递推一致",
+    "references": [
+      {
+        "type": "paper",
+        "cite": "C. Van Loan, Computing integrals involving the matrix exponential, IEEE TAC 23(3), 1978",
+        "doi": "10.1109/TAC.1978.1101743"
+      },
+      {
+        "type": "paper",
+        "cite": "N. J. Higham, The scaling and squaring method for the matrix exponential revisited, SIMAX 26(4), 2005",
+        "doi": "10.1137/04061101X"
+      },
+      {
+        "type": "textbook",
+        "cite": "G. F. Franklin, J. D. Powell, M. Workman, Digital Control of Dynamic Systems, 3rd ed., 1998（ZOH/FOH/Tustin 与预畸变）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-control (pure Rust) + nalgebra 0.33",
+    "routine": "lsim::simulate (block expm Padé-13 + recursion)",
+    "version": "0.4.0",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T2",
+  "sparse_support": {
+    "/system/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/u": {
+      "policy": "densify",
+      "max_dense_elements": 10000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_grid_points": 10000000,
+    "max_output_values": 1000000,
+    "half_step_check_steps": 64
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/control.lti.lsim/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ZERO_DENOMINATOR",
+    "E.VALIDATION.NOT_CONJUGATE",
+    "E.VALIDATION.SPARSE_STRUCTURE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.DOMAIN.IMPROPER_SYSTEM",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.GRID",
+    "E.VALIDATION.OPTION_CONFLICT",
+    "E.RESOURCE.COMPUTE_LIMIT",
+    "E.RESOURCE.OUTPUT_TOO_LARGE",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.DOMAIN.UNSTABLE_SYSTEM",
+    "W.ACCURACY.GRID_TOO_COARSE",
+    "W.VALIDATION.LEADING_ZEROS_STRIPPED",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "control_lti_lsim",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:lsim:block-expm-pade13-recursion",
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "输入系统准确描述被研究对象（单位、符号、row-major 录入）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "proper",
+        "statement": "系统为 proper（deg num ≤ deg den）",
+        "enforced_by": "error:E.DOMAIN.IMPROPER_SYSTEM"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "interpolation",
+        "statement": "采样之间的输入按 foh（线性）或 zoh（保持）解释；响应对这个解释精确",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "uniform_grid",
+        "statement": "均匀网格 t_k = t0 + k·dt；离散系统 dt = ts",
+        "enforced_by": "error:E.VALIDATION.GRID"
+      },
+      {
+        "id": "x0_coordinates",
+        "statement": "x0 属于给定的 ss 实现",
+        "enforced_by": "error:E.VALIDATION.OPTION_CONFLICT"
+      },
+      {
+        "id": "input_sampling",
+        "statement": "输入采样足以描述真实输入（结果对真实输入的误差取决于采样）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "grid",
+        "statement": "dt 足以分辨系统动态",
+        "enforced_by": "warning:W.ACCURACY.GRID_TOO_COARSE"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "all_finite",
+      "half_step_consistent"
+    ],
+    "coverage": {
+      "half_step_consistent": "test_points"
+    },
+    "guards": {
+      "half_step_consistent": [
+        "/y",
+        "/x"
+      ]
+    }
+  }
+}

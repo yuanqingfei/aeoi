@@ -27,6 +27,8 @@ PROXY_EXPECT = {
     "lqr_poles_reordered": ("control.design.lqr", None),
     "c2d_A_wrong": ("control.lti.c2d", "transfer-function values"),
     "c2d_equivalent": ("control.lti.c2d", None),
+    "lsim_y_wrong": ("control.lti.lsim", "y: max"),
+    "lsim_interp_mislabeled": ("control.lti.lsim", "interpolation equals"),
 }
 
 # mutant -> substring that must appear among the names of the failed checks

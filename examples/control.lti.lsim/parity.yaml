@@ -1,0 +1,37 @@
+# Parity test spec — control.lti.lsim 0.4.0 (AEOI v0.4.5-draft)
+operator: control.lti.lsim
+references:
+  - {engine: scipy, version: "scipy 1.18.1, numpy 2.5.3", role: dev_reference, status: active,
+     generator: gen_golden_lsim.py, golden_store: "golden/python-control/control.lti.lsim/0.4.0/*.json",
+     note: "NOT MATLAB output. scipy.signal.lsim (interp=True: foh, interp=False: zoh) and dlsim; every continuous foh case cross-checked with python-control 0.10.2 forced_response (≤ 1e-11 relative, generator asserts)"}
+  - {engine: MATLAB, role: ground_truth, status: planned,
+     note: "MATLAB lsim picks foh/zoh automatically from the input's smoothness when 'method' is omitted; AEOI has a fixed default (foh). Compare with an explicit method"}
+runner: "cargo test --release -p aeoi-control --test parity_lsim"
+tolerance_class: T2
+compare:
+  t: {atol: 1.0e-12}
+  y: {rtol: 1.0e-10, scale: "max(1, max|y_ref|)"}
+  x: {rtol: 1.0e-10, scale: "max(1, max|x_ref|)", note: "only when return_states; coordinates of the given ss (x0 is rejected for tf/zpk)"}
+  n_grid_points: exact
+  interpolation: exact
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. No trust.* value of the implementation is used
+  y: "shape [ny, nt] exact; max|Δ| / max(1, max|y_ref|) ≤ 1e-10"
+  t: "|Δ| ≤ 1e-12"
+  x: "when the reference has states: shape [n, nt] exact, max|Δ| / max(1, max|x_ref|) ≤ 1e-10"
+  n_grid_points / interpolation: exact
+case_families:
+  - {name: siso_ramp_foh, n: 1, note: "foh is exact for a ramp"}
+  - {name: siso_sine_foh / siso_sine_zoh, n: 2}
+  - {name: siso_square_zoh / siso_square_foh, n: 2, note: "jumps: the two interpretations give different, each exact, answers"}
+  - {name: siso_feedthrough_foh, n: 1, note: "biproper, D ≠ 0"}
+  - {name: siso_t0_nonzero, n: 1}
+  - {name: siso_stiff_foh, n: 1, expect_warning: W.ACCURACY.GRID_TOO_COARSE}
+  - {name: siso_unstable_foh, n: 1, expect_warning: W.DOMAIN.UNSTABLE_SYSTEM}
+  - {name: siso_explicit_default, n: 1, note: "interpolation: foh written out"}
+  - {name: ss_x0_free / ss_x0_forced_zoh, n: 2, note: "x0 and states"}
+  - {name: mimo_random_foh, n: 3, note: "column_major_mistake_request (section 0)"}
+  - {name: mimo_states_zoh, n: 1}
+  - {name: siso_random_noise_foh, n: 4}
+  - {name: discrete_tf / discrete_ss_x0, n: 2}
+  - {name: siso_long_b64, n: 1, note: "20000 samples, u as DenseMatrixB64 (3.6)"}
+  - {name: errors, n: 10, expect: "OPTION_CONFLICT (x0 with tf; interpolation on discrete), GRID, SHAPE ×3, IMPROPER_SYSTEM, SCHEMA ×2, NON_FINITE"}

@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.4-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.5-draft
 
-> 状态：Draft v0.4.4 · 2026-11-24 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.5 · 2026-11-24 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.5 新增第 20 个算子 `control.lti.lsim`（任意输入的响应，10.15）：输入按 [nu, nt] 给出并可用 b64 / ref；采样之间按 foh（缺省）或 zoh 解释，不按数据自动选择；`x0` 只用于 ss，因为 tf/zpk 没有状态坐标。一致性规则覆盖 7 / 20 = 35% 的算子。
 >
 > v0.4.4 定下开放问题 20、21：`lyap` 的 Q 可以不对称，实现必须按原样求解、不得对称化 Q，`lyap` 不发 `W.VALIDATION.SYMMETRIZED`；一致性套件从 golden 用例派生“省略默认值 / 写出默认值”的变体，结果必须与原请求逐位相同。
 >
@@ -1400,6 +1402,57 @@ tf ↔ ss ↔ zpk 互转。
 
 缺少 `plant` → `E.VALIDATION.SCHEMA`。12 个 golden 用例（含非单位反馈、只有对象、闭环不稳定、6 个随机 PID）上与 python-control 的最大相对差：系数 0、穿越频率/裕度/带宽 9.7e-13、阶跃指标 1.1e-12（`tests/parity_loopsens.rs`，`reports/parity-loopsens.json`）。
 
+## 10.15 `control.lti.lsim`：任意输入的响应（v0.4.5）
+
+`step`、`impulse` 只回答两种标准输入。`lsim` 回答任意采样输入：斜坡、正弦、扰动、实测数据，可带初始状态。参考值来自 scipy（`signal.lsim`、`signal.dlsim`），每个连续 foh 用例另与 python-control 0.10.2 `forced_response` 交叉核对，不是 MATLAB。
+
+**规范性条款**
+
+- LS-1 **输入布局**。`u` 是 `Matrix`，形状 `[nu, nt]`：第 i 行是第 i 个输入通道，第 k 列是 t_k 时刻的值。nu = 1 时也可给一维 `[nt]`。行数不等于 nu MUST 报 `E.VALIDATION.SHAPE`，`details.expected_rows = nu`（最常见的错误是按表格习惯给成 `[nt, nu]`）。`u` 可以用 b64 或 `ref` 编码（3.6），长数据不必内联成 JSON。
+- LS-2 **时间网格**。均匀网格 t_k = t0 + k·dt，k = 0…nt−1；`time = {dt, t0（缺省 0）, unit: "s"}`，nt 由 `u` 决定。非均匀时间戳不在本算子范围内，先重采样。离散系统 `dt` MUST 等于 `ts`（相对 1e-9），否则 `E.VALIDATION.GRID`。
+- LS-3 **采样之间的输入**。连续系统按 `interpolation` 解释：`foh`，u 在 (t_k, u_k) 与 (t_{k+1}, u_{k+1}) 之间线性；`zoh`，u(t) = u_k，t ∈ [t_k, t_{k+1})。缺省 `foh`，与 `scipy.signal.lsim`（interp=True）和 python-control 相同；实现 MUST NOT 根据输入数据自动选择（MATLAB 不给 method 时会按输入是否光滑自动选），因为同一个请求必须是同一个问题。离散系统没有“采样之间”，写出 `interpolation` MUST 报 `E.VALIDATION.OPTION_CONFLICT`（F-8，`conflicting_fields = ["interpolation"]`）。`result.interpolation` 回显实际使用的值，离散系统为 `none`。
+- LS-4 **初始状态的坐标**。`x0` 是状态向量，它的坐标由状态空间实现决定，所以 MUST 只用于 `kind = ss` 的系统。tf、zpk 没有状态坐标，给 `x0` MUST 报 `E.VALIDATION.OPTION_CONFLICT`（`conflicting_fields = ["x0"]`），提示先用 `control.lti.convert` 转成 ss：那个实现有规范定义（可控标准型，10.4），这样 `x0` 才有确定的含义。`return_states = true` 时返回 `x [n, nt]`，坐标所属的实现写在 `result.realization`（`given ss` 或 tf/zpk 的可控标准型）。
+- LS-5 **精确性与后置条件**。对 LS-3 解释下的输入，采样点上的响应没有离散化误差：连续系统用增广矩阵指数 expm([[A·dt, B·dt, 0], [0, 0, I], [0, 0, 0]]) 递推（Van Loan 1978），离散系统直接递推。后置条件 `half_step_consistent`：在 dt/2 上重新离散化，对同一个插值输入跑前 64 步，偶数步状态与原递推之差 ≤ 1e-9（相对 max‖x‖）；它检验的是每一步都用到的离散化矩阵，所以 E-12 的覆盖记为 `test_points`。结果相对真实输入的误差取决于输入采样，不在算子能检查的范围内（receipt 假设 `input_sampling`，`enforced_by: caller`）。
+- LS-6 **规模**。`limits.max_grid_points = 10⁷`（超出报 `E.RESOURCE.COMPUTE_LIMIT`，提示分段计算、用上一段的末状态作 `x0`）；返回值个数 nt × (ny + 返回状态时的 n) 受 `limits.max_output_values = 10⁶` 限制，超出报 `E.RESOURCE.OUTPUT_TOO_LARGE` 并给抽样返回的补丁（`output.return_samples = decimated`，与 `step` 相同）。
+
+**Manifest** — `examples/control.lti.lsim/manifest.json`
+
+```json
+{{jsonc:examples/control.lti.lsim/manifest.json}}
+```
+
+**请求**（G(s) = 2/(s² + 3s + 2)，u = sin 2t，0–10 s，dt = 0.05，foh）
+
+```json
+{{file:examples/control.lti.lsim/request.json}}
+```
+
+**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 scipy 值之差 ≤ 1e-10，claim `verified`，半步检查残差 3.4e-15）
+
+```json
+{{jsonc:examples/control.lti.lsim/response.success.json}}
+```
+
+**错误请求与响应**（tf 系统给了 `x0`：LS-4）
+
+```json
+{{jsonc:examples/control.lti.lsim/request.error.json}}
+```
+
+```json
+{{jsonc:examples/control.lti.lsim/response.error.json}}
+```
+
+**初始状态与状态轨迹（内存序回归用例）** — `request.ss_x0.json`：非对称 A = [[0, 1], [−4, −0.4]]，x0 = [1, 0]，u = 0.5，zoh，`return_states = true`；响应见 `response.ss_x0.json`，`realization = "given ss"`。
+
+**Parity 测试规格** — `examples/control.lti.lsim/parity.yaml`
+
+```yaml
+{{file:examples/control.lti.lsim/parity.yaml}}
+```
+
+33 个 golden 用例（23 个成功、10 个错误；含 MIMO、x0 与状态、刚性、不稳定、直通、离散、20000 点 b64 输入）上与 scipy 的最大差：y 9.2e-14（相对 max|y|）、x 9.5e-15、t 0（`tests/parity_lsim.rs`，`reports/parity-lsim.json`）。
+
 ## 11. Rust 参考实现（v0.3）
 
 ### 11.1 结构
@@ -1584,7 +1637,7 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 
 1. 在有授权的机器上运行 `matlab/gen_golden_bode.m`（并补 step/lqr 脚本），先核对 `memory_order_nonsymmetric` 用例与 python-control 一致，再跑通第一份 A 级凭证
 2. ~~修复 `lqr` 病态 R 的精度差距~~（v0.3.2 用补偿 Newton–Kleinman 完成）；剩余：平衡 + 有序 Schur（或广义特征值）作为符号函数不收敛时的后备路径，以及 `dlqr` 的同类精化
-3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；剩余：`lsim`、`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
+3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），下一个是 `pidtune`（须先满足 A-4）；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
 5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；v0.3.4 另有 `aeoi-web design`。v0.3.5 实现了试点里排在前面的算子（串联、并联、反馈、PID 构造、stepinfo、Padé），v0.3.6 加了具名角色、`loopsens`（含带宽读数）和回合预算。下一步是按 A-4 写 `pidtune`（必须先声明对象类、指标和唯一性），以及控制器离散化和 MIMO 裕度；扩充问答题、加入"Agent + 裸 scipy"对照组。非线性吸引域仍不做。
 6. 用 Tauri 打包 `aeoi-web` 为桌面应用（复用 axum 服务与静态页面）
@@ -1592,6 +1645,33 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 8. 根据以上反馈修订，冻结 v1.0
 
 ## 13. Changelog
+
+### v0.4.5-draft（2026-11-24）
+
+起因：作者决定按用途广度补算子，第一个是 `lsim`（任意输入的响应）：`step`、`impulse` 只回答两种标准输入，实际工作里更常见的是斜坡、正弦、扰动和实测数据。线协议标识与核心 schema 不变。
+
+**规范改动**
+
+| # | 条款 | 改动 | 原因 |
+|---|---|---|---|
+| 1 | 10.15 LS-1 – LS-6 | 新算子 `control.lti.lsim` 0.4.0 | 见上 |
+| 2 | LS-3 | 采样之间的输入解释有固定缺省（foh），实现不得按数据自动选择；离散系统写出即 F-8 冲突 | MATLAB 不给 method 时自动选择，同一个请求会因数据不同而换问题 |
+| 3 | LS-4 | `x0` 只用于 ss；tf/zpk 报 `OPTION_CONFLICT` 并指向 `convert` | tf/zpk 没有状态坐标，`x0` 的含义取决于实现选哪个状态空间实现 |
+| 4 | LS-5 | 后置条件 `half_step_consistent`（dt/2 重新离散化），覆盖记 `test_points` | 原先 `step` 只有 `all_finite`；这是对离散化矩阵的独立检查 |
+
+**已做的改动**
+
+| 位置 | 改动 |
+|---|---|
+| `write_manifests.py` | `lsim` 的 manifest、输入输出 schema、L-1 字段描述、receipt（假设、后置条件、覆盖、guards） |
+| `rust/aeoi-control/src/lsim.rs`（新）、`lib.rs` | 实现与注册；6 个单元测试（斜坡 foh 精确到 1e-13、常值 zoh 等于阶跃、x0 规则、离散规则、转置的 u） |
+| `rust/aeoi-{bridge,mcp,web}` | 三处写死的“19 个工具”改为跟注册表数量一致 |
+| `gen_golden_lsim.py`（新）、`golden/python-control/control.lti.lsim/0.4.0` | 33 个用例；foh 用例与 python-control 交叉核对 ≤ 1e-11；同时生成示例请求与参考值 |
+| `rust/aeoi-control/tests/parity_lsim.rs`（新）、`examples.rs` 的 `lsim_example` | parity 与示例测试 |
+| `examples/control.lti.lsim/` | manifest、schema、三个示例请求与响应、`parity.yaml`（含 `conformance_compare`） |
+| `conformance/rules_control.py`、`tests/proxy_mutant.py`、`test_runner_catches_mutants.py` | `lsim` 的一致性规则；变异 `lsim_y_wrong`、`lsim_interp_mislabeled` |
+
+**结果**：`cargo test` 158 / 0；parity 33 / 33（y 9.2e-14）；参考实现一致性 568 通过 / 0 失败 / 284 跳过（`lsim` 33 + 方法选择 1 + 默认值 5 通过、2 跳过）；变异测试 19 / 19；有数值规则的算子 7 / 20 = 35%。
 
 ### v0.4.4-draft（2026-11-24）
 

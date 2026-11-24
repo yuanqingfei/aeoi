@@ -1,0 +1,100 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "control.lti.lsim",
+ "operator_version": "0.4.0",
+ "case_family": "u_one_d_for_mimo",
+ "request": {
+  "system": {
+   "kind": "ss",
+   "A": {
+    "dtype": "f64",
+    "shape": [
+     3,
+     3
+    ],
+    "data": [
+     -1.4942342796424353,
+     0.4093020007951119,
+     0.05159150958269728,
+     1.1350943968713167,
+     -0.1094049173859254,
+     -1.9520270848018202,
+     1.1887187253194773,
+     0.4328762876517918,
+     -2.18470711665421
+    ]
+   },
+   "B": {
+    "dtype": "f64",
+    "shape": [
+     3,
+     2
+    ],
+    "data": [
+     2.179303369008706,
+     0.546981732312828,
+     0.7195311424225862,
+     0.04131370677186846,
+     -0.12894066603302828,
+     0.767548287549058
+    ]
+   },
+   "C": {
+    "dtype": "f64",
+    "shape": [
+     1,
+     3
+    ],
+    "data": [
+     -0.7633289273112068,
+     0.6797322285380233,
+     0.5632211893596473
+    ]
+   },
+   "D": {
+    "dtype": "f64",
+    "shape": [
+     1,
+     2
+    ],
+    "data": [
+     0.0,
+     0.0
+    ]
+   },
+   "ts": 0.0
+  },
+  "u": {
+   "dtype": "f64",
+   "shape": [
+    10
+   ],
+   "data": [
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  "time": {
+   "dt": 0.1,
+   "unit": "s"
+  }
+ },
+ "reference_env": {
+  "engine": "scipy.signal.lsim / dlsim (cross-checked: python-control forced_response)",
+  "scipy": "1.18.1",
+  "python_control": "0.10.2",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261124,
+  "note": "scipy reference values; NOT MATLAB output"
+ },
+ "expected_error": "E.VALIDATION.SHAPE"
+}

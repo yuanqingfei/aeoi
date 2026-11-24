@@ -300,3 +300,32 @@ fn batch3_examples() {
         }
     }
 }
+
+/// v0.4.5: control.lti.lsim examples. request.json (sine input, foh) and request.ss_x0.json (non-symmetric A,
+/// x0, zoh, states) reproduce scipy.signal.lsim (reference.python-control.json, NOT MATLAB) and their published
+/// responses bit-for-bit on the same platform; request.error.json (x0 with a tf system) is an F-8 option conflict.
+#[test]
+fn lsim_example() {
+    let h = HostCtx::default();
+    let op = "control.lti.lsim";
+    let dir = format!("examples/{op}");
+    let rf = read(&format!("{dir}/reference.python-control.json"));
+    for (rq, rs) in [("request.json", "response.success.json"), ("request.ss_x0.json", "response.ss_x0.json")] {
+        let env = call(op, &read(&format!("{dir}/{rq}")), &h);
+        assert_eq!(env["status"], "ok", "{rq}: {}", env["error"]);
+        assert_hash_on_same_platform(&env, &read(&format!("{dir}/{rs}")), &format!("{op} {rq}: bitwise example"));
+        let y = fvec(&env["result"]["y"]["value"]["data"]);
+        let w = fvec(&rf[rq]["y"]);
+        let err = maxabs(&y, &w) / w.iter().map(|x| x.abs()).fold(1.0, f64::max);
+        assert!(err <= 1e-10, "{rq}: y vs scipy {err:e}");
+        if let Some(xr) = rf[rq].get("x") {
+            let x = fvec(&env["result"]["x"]["data"]);
+            assert!(maxabs(&x, &fvec(xr)) <= 1e-10, "{rq}: x vs scipy");
+        }
+        assert_eq!(env["trust"]["checks"]["half_step_consistent"], true, "{rq}");
+    }
+    let e = call(op, &read(&format!("{dir}/request.error.json")), &h);
+    assert_eq!(e["error"]["code"], read(&format!("{dir}/response.error.json"))["error"]["code"]);
+    assert_eq!(e["error"]["code"], "E.VALIDATION.OPTION_CONFLICT");
+    assert!(!e["error"]["remediation"].as_array().unwrap().is_empty(), "remediation");
+}

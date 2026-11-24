@@ -93,6 +93,16 @@ def m_c2d_equivalent(r):                    # similarity transform (ss) or num, 
         s["num"] = [3.0 * x for x in s["num"]]; s["den"] = [3.0 * x for x in s["den"]]
 
 
+def m_lsim_y_wrong(r):                      # y scaled by 1 + 1e-8
+    d = _data(r["y"])
+    d[:] = [x * (1 + 1e-8) for x in d]
+
+
+def m_lsim_zoh_as_foh(r):                   # claims the other interpolation (result otherwise unchanged)
+    if r.get("interpolation") in ("foh", "zoh"):
+        r["interpolation"] = "zoh" if r["interpolation"] == "foh" else "foh"
+
+
 # name -> (operator, transform)
 MUTANTS = {
     "pz_pole_wrong": ("control.lti.poles_zeros", m_pz_pole_wrong),
@@ -104,6 +114,8 @@ MUTANTS = {
     "lqr_poles_reordered": ("control.design.lqr", m_lqr_poles_reordered),
     "c2d_A_wrong": ("control.lti.c2d", m_c2d_A_wrong),
     "c2d_equivalent": ("control.lti.c2d", m_c2d_equivalent),
+    "lsim_y_wrong": ("control.lti.lsim", m_lsim_y_wrong),
+    "lsim_interp_mislabeled": ("control.lti.lsim", m_lsim_zoh_as_foh),
 }
 
 

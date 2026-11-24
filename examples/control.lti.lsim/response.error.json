@@ -1,0 +1,48 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "control.lti.lsim",
+    "version": "0.4.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.VALIDATION.OPTION_CONFLICT",
+    "category": "validation",
+    "retryable": true,
+    "message": "x0 是状态向量，它的坐标由状态空间实现决定；system 是 tf，没有状态坐标，x0 没有定义。",
+    "agent_hint": "先用 control_lti_convert（output_kind = ss）把系统转成状态空间，再把 x0 写成那个实现的状态；或去掉 x0（零初始状态）。",
+    "details": {
+      "path": "/x0",
+      "conflicting_fields": [
+        "x0"
+      ],
+      "system_kind": "tf"
+    },
+    "remediation": [
+      {
+        "id": "drop_x0",
+        "kind": "modify_input",
+        "description": "去掉 x0（零初始状态）",
+        "confidence": "medium",
+        "requires_user_confirmation": true,
+        "patch": [
+          {
+            "op": "remove",
+            "path": "/x0"
+          }
+        ]
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.173451
+  }
+}

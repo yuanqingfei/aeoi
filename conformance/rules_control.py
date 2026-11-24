@@ -1,5 +1,5 @@
 """Numeric comparison rules (spec 9.4 CF-6) for control.lti.poles_zeros, control.lti.bode, control.lti.step,
-control.design.lqr and control.lti.c2d.
+control.design.lqr, control.lti.c2d and control.lti.lsim (v0.4.5).
 
 Each rule is rule(case, env, manifest, req=None, expected=None) -> [(check, ok, max_error, tolerance, detail)].
 The first entry is the operator's primary field; the runner reuses its deviation for the section-0 column-major check.
@@ -393,10 +393,37 @@ def rule_c2d(case, env, manifest, req=None, expected=None):
     return out
 
 
+# ---------------------------------------------------------------- control.lti.lsim (parity.yaml: T2)
+def rule_lsim(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = expected or case["expected"]; r = env["result"]
+    if r.get("y") is None or r.get("t") is None:
+        return [fail("y: shape [ny, nt]", "y or t is null (the reference returns all samples)")]
+    gy, wy = arr(r["y"]), np.array(e["y"], dtype=float)
+    gt, wt = arr(r["t"]).ravel(), np.array(e["t"], dtype=float)
+    shape = tuple(e["shape"])
+    if gy.shape != shape or gt.shape != wt.shape:
+        return [fail("y: shape [ny, nt]", f"got y {gy.shape}, t {gt.shape}; reference {shape}, t {wt.shape}")]
+    out = [check("y: max|Δ| / max(1, max|y_ref|) ≤ 1e-10", float(np.max(np.abs(gy.ravel() - wy))) / max(1.0, float(np.max(np.abs(wy)))), 1e-10),
+           check("t: |Δ| ≤ 1e-12 s", float(np.max(np.abs(gt - wt))), 1e-12),
+           ("n_grid_points equals the reference  [CF-6]", r.get("n_grid_points") == e["n_grid_points"], None, None, f"got {r.get('n_grid_points')}, reference {e['n_grid_points']}"),
+           ("interpolation equals the reference (foh / zoh / none)  [CF-6]", r.get("interpolation") == e["interpolation"], None, None, f"got {r.get('interpolation')}, reference {e['interpolation']}")]
+    if "x" in e:
+        if r.get("x") is None:
+            out.append(fail("x: states [n, nt] (return_states)", "x is null"))
+        else:
+            gx, wx = arr(r["x"]), np.array(e["x"], dtype=float)
+            if gx.shape != tuple(e["x_shape"]):
+                out.append(fail("x: states [n, nt] (return_states)", f"shape {gx.shape} != {tuple(e['x_shape'])}"))
+            else:
+                out.append(check("x: max|Δ| / max(1, max|x_ref|) ≤ 1e-10 (coordinates of the given ss)", float(np.max(np.abs(gx.ravel() - wx))) / max(1.0, float(np.max(np.abs(wx)))), 1e-10))
+    return out
+
+
 RULES = {
     "control.lti.poles_zeros": rule_poles_zeros,
     "control.lti.bode": rule_bode,
     "control.lti.step": rule_step,
     "control.design.lqr": rule_lqr,
     "control.lti.c2d": rule_c2d,
+    "control.lti.lsim": rule_lsim,
 }

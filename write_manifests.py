@@ -435,9 +435,31 @@ ls_out=outs("control.analysis.loopsens",{
  "step_metrics":{"type":["object","null"],"description":"给出 time 时为 control.lti.stepinfo(T, time) 的 result，否则为 null"},
  "composition":{"type":"object","description":"operation = loopsens，operands[]（role 与 sha256），controller_implicit、sensor_implicit、topology、lineage"},
 },["open_loop","closed_loop","sensitivity","roles","closed_loop_poles","closed_loop_stable","margins","gain_crossover_rad_s","gain_crossover_hz","bandwidth_rad_s","bandwidth_hz","bandwidth_definition","step_metrics","composition"],ver=V36)
+# ---- control.lti.lsim (v0.4.5): response to an arbitrary sampled input
+V45="0.4.0"
+lsim=man("control.lti.lsim","Response to an arbitrary input","计算 LTI 系统对任意采样输入 u 的响应（斜坡、正弦、扰动、实测数据），可给初始状态。采样之间的输入按 interpolation 解释：foh（线性，缺省）或 zoh（保持）；对这个解释，采样点上的响应没有离散化误差。","analysis",["time-domain","lti","simulation"],
+ ["system 为 proper","u 的形状 [nu, nt]（第 i 行 = 第 i 个输入通道，第 k 列 = t_k = t0 + k·dt 时刻）；nu = 1 时也可给一维 [nt]","均匀网格：t_k = t0 + k·dt，k = 0..nt−1；非均匀时间戳先重采样","离散系统要求 dt = ts（相对误差 1e-9），interpolation 不适用（给出即 E.VALIDATION.OPTION_CONFLICT，F-8）","x0 只用于 kind = ss 的系统：状态坐标由给定实现定义；tf/zpk 没有状态坐标，给 x0 即 E.VALIDATION.OPTION_CONFLICT（先用 control.lti.convert 转成 ss，那个实现有规范定义）"],
+ ["非均匀采样的输入","非线性系统","带时滞的系统（用 control.lti.pade 近似后串联）","采样之间输入形状既不是线性也不是常数时的精确响应（结果对 foh/zoh 的解释精确，对真实输入的误差取决于采样）"],
+ "连续系统：对增广矩阵 M = [[A·dt, B·dt, 0], [0, 0, I], [0, 0, 0]] 求矩阵指数（Padé 13 阶 + scaling & squaring），E = expm(M)，Φ = E[x,x]，F1 = E[x,u1]，F2 = E[x,u2]；foh：x_{k+1} = Φx_k + (F1 − F2)u_k + F2·u_{k+1}；zoh：x_{k+1} = Φx_k + F1·u_k（M 去掉第三块）。离散系统：x_{k+1} = Ax_k + Bu_k。y_k = Cx_k + Du_k，x_0 = x0（缺省 0）。与 scipy.signal.lsim（interp=True/False）及 python-control forced_response 的公式相同。tf/zpk 先转为可控标准型实现（与 control.lti.step 相同）。后验检查：在 dt/2 上重新离散化，用同一插值输入跑前 64 步，偶数步状态须与原递推一致",
+ [{"type":"paper","cite":"C. Van Loan, Computing integrals involving the matrix exponential, IEEE TAC 23(3), 1978","doi":"10.1109/TAC.1978.1101743"},R_HIGHAM,R_FPE],
+ "lsim::simulate (block expm Padé-13 + recursion)","T2",{"max_grid_points":10000000,"max_output_values":1000000,"half_step_check_steps":64},
+ COMMON_LTI_ERR+["E.VALIDATION.GRID","E.VALIDATION.OPTION_CONFLICT","E.RESOURCE.COMPUTE_LIMIT","E.RESOURCE.OUTPUT_TOO_LARGE"],
+ ["W.DOMAIN.UNSTABLE_SYSTEM","W.ACCURACY.GRID_TOO_COARSE"]+LW,
+ sparse=dict(SS_SPARSE,**{"/u":{"policy":"densify","max_dense_elements":10000000}}),ver=V45)
+OUTSEL={"type":"object","additionalProperties":False,"properties":{"return_samples":{"enum":["all","decimated","none"],"default":"all"},"max_samples":{"type":"integer","minimum":2,"default":10001}}}
+lsim_in=ins("control.lti.lsim",{"system":LTI,"u":M,
+ "time":{"type":"object","additionalProperties":False,"required":["dt","unit"],"properties":{"dt":{"type":"number","exclusiveMinimum":0},"t0":{"type":"number","default":0},"unit":{"const":"s"}}},
+ "interpolation":{"enum":["foh","zoh"],"default":"foh","x-aeoi-provenance":"convention"},
+ "x0":M,"return_states":{"type":"boolean","default":False},"output":OUTSEL},["system","u","time"],
+ {"x-aeoi-shape-constraints":["u: [nu, nt]（nu = 1 时也可 [nt]）","x0: [n]，只用于 ss"]},ver=V45)
+lsim_out=outs("control.lti.lsim",{"t":{"oneOf":[{"type":"null"},Q]},"y":{"oneOf":[{"type":"null"},dict(Q,description="shape [ny, nt]")]},
+ "x":{"oneOf":[{"type":"null"},dict(M,description="[n, nt]，return_states = true 时给出；坐标由 realization 定义")]},
+ "n_grid_points":{"type":"integer"},"interpolation":{"enum":["foh","zoh","none"],"description":"实际使用的插值；离散系统为 none"},
+ "realization":{"type":"string","description":"状态坐标所属的实现：given ss，或 tf/zpk 的可控标准型"}},
+ ["t","y","x","n_grid_points","interpolation","realization"],ver=V45)
 B3={"control.lti.series":(series,series_in,series_out),"control.lti.parallel":(par,par_in,par_out),"control.lti.feedback":(fb,fb_in,fb_out),
  "control.design.pid":(pid,pid_in,pid_out),"control.lti.stepinfo":(si,si_in,si_out),"control.lti.pade":(pade,pade_in,pade_out),
- "control.analysis.loopsens":(ls,ls_in,ls_out)}
+ "control.analysis.loopsens":(ls,ls_in,ls_out),"control.lti.lsim":(lsim,lsim_in,lsim_out)}
 _ws=[]
 for _m in (series,fb,mg,si):
     _ws+= [w for w in _m["warnings"] if w not in _ws]
@@ -465,6 +487,7 @@ DESC={
  "control.lti.feedback":{"plant":"具名角色：被控对象 G（必填，用具名写法时）。结果是闭环 T = G·C/(1 + H·G·C)","controller":"具名角色：控制器 C，在前向通路（e → C → G）。省略表示 C = 1。不要把控制器放到 sensor","sensor":"具名角色：反馈通路 H（传感器/测量动态）。省略表示单位反馈 H = 1。控制器不是 sensor","sys1":"位置参数（不推荐）：前向通道。省略 sys2 时必须是方的（单位反馈）","sys2":"位置参数：反馈通道。省略表示单位增益 D=I。负反馈是默认，不是把 sys2 写成负号","sign":"反馈符号，只能是 -1（负反馈，默认，规范定义）或 +1（正反馈）。这是定义默认值，不是测量值，不需要引用用户原话","output_kind":"same（默认）、tf 或 ss","lineage":"可选。上游 receipt.fingerprint.request，只回显，不核验"},
  "control.design.pid":{"form":"parallel（默认）：C=Kp+Ki/s+Kd·s/(Tf·s+1)。standard：C=Kp·(1+1/(Ti·s)+Td·s/(Tf·s+1))。这是定义默认值","Kp":"比例增益。设计参数，没有默认值；由调用方给定，不需要在用户原话里逐字出现，但不得在用户和题目都没给时擅自假设","Ki":"只用于 form=parallel：积分增益，默认 0（该项不出现）。standard 形式不要出现 Ki","Kd":"只用于 form=parallel：微分增益，默认 0。Tf=0 且 Kd≠0 时结果 improper。standard 形式不要出现 Kd","Ti":"只用于 form=standard：积分时间（秒），必须 > 0。没有积分就省略 Ti，不要写 Ti=0；parallel 形式不要出现 Ti","Td":"只用于 form=standard：微分时间（秒），默认 0。parallel 形式不要出现 Td","Tf":"微分滤波时间常数（秒），默认 0（不加滤波）。有微分项时 Tf=0 得到理想微分","output_kind":"tf（默认）或 ss。improper 时 ss 会报错","lineage":"可选。上游 receipt 指纹，只回显"},
  "control.lti.stepinfo":{"system":SYS_D,"time":"时间网格，与 step 相同：uniform（t_final、dt，单位 s）或 auto。指标相对这个网格定义","rise_time_limits":"上升时间的低/高阈值，默认 [0.1, 0.9]（10% 到 90%）。这是指标定义，不是对象的物理参数；省略即用默认，不必询问","settling_threshold":"调节带半宽，默认 0.02（2%）。定义默认值，省略即用默认"},
+ "control.lti.lsim":{"system":SYS_D,"u":"输入采样，形状 [nu, nt]：第 i 行是第 i 个输入通道，第 k 列是 t_k = t0 + k·dt 时刻的值。SISO 可给一维 [nt]。长数据可用 b64 或 ref 编码（3.6）","time":"均匀网格：dt（s，> 0），t0（起始时刻，缺省 0），unit 固定 s。离散系统 dt 必须等于 ts。非均匀时间戳先重采样","interpolation":"采样之间的输入怎么解释：foh 线性（缺省，与 scipy lsim、python-control 相同），zoh 保持到下一个采样。离散系统不要给","x0":"初始状态 [n]，缺省 0。只用于 kind = ss：tf/zpk 没有状态坐标，要给初始状态先用 control_lti_convert 转成 ss","return_states":"true 时同时返回状态轨迹 x [n, nt]，缺省 false","output":"返回的采样点：all / decimated（最多 max_samples 点）/ none"},
  "control.analysis.loopsens":{"plant":"被控对象 G（SISO）。上一个工具返回了系统（例如 control_lti_pade 与对象串联的结果、control_lti_convert 的结果）就原样粘贴 result.system","controller":"控制器 C，在前向通路。省略 = 1（只看对象本身的单位负反馈）。PID 用 control_design_pid 的 result.system 原样粘贴","sensor":"反馈通路 H（测量动态）。省略 = 单位反馈。不要把控制器放在这里","time":"可选。给出时返回闭环 T 的阶跃指标（step_metrics）：uniform（t_final、dt，单位 s）或 auto。不给则 step_metrics 为 null","rise_time_limits":"阶跃上升时间阈值，默认 [0.1, 0.9]。定义默认值，省略即可","settling_threshold":"调节带半宽，默认 0.02（2%）。定义默认值，省略即可","bandwidth_drop_db":"闭环带宽的下降量（dB，负数），默认 -3。定义默认值，省略即可","lineage":"可选。上游 receipt.fingerprint.request，只回显"},
  "control.lti.pade":{"delay":"纯时滞 θ（秒），必须 > 0。没有默认值。用户没给、题目也算不出时先询问，不得假设 0.1 或 1。这不是采样周期那种必须逐字引用的测量值：由 t1、t2 算出的 θ 可以填在这里","order":"对角 Padé 阶次 N（1 到 20）。没有默认值，不得假设 N=1。题目没指定时先询问；设计评测的提示若写明了用哪个 N，按提示填写","lineage":"可选。上游 receipt 指纹，只回显"},
 }
@@ -520,6 +543,8 @@ RECEIPT={
  "control.lti.pade":{"method_id":"aeoi:pade:golub-van-loan-11.3.1","assumptions":[A("delay","delay 由调用方给出，不是假设值","caller"),A("order","阶次由调用方给出，不是假设值","caller"),A("diagonal","只做 [N/N] 对角近似","validation"),A("approximation","结果逼近 e^{-θs}，逼近误差在 approximation，不在系数舍入界里","validation")],
    "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["taylor_matched","dc_is_one","all_finite"]},
 }
+RECEIPT["control.lti.lsim"]={"method_id":"aeoi:lsim:block-expm-pade13-recursion","assumptions":LTI_A+[A("interpolation","采样之间的输入按 foh（线性）或 zoh（保持）解释；响应对这个解释精确","validation"),A("uniform_grid","均匀网格 t_k = t0 + k·dt；离散系统 dt = ts","error:E.VALIDATION.GRID"),A("x0_coordinates","x0 属于给定的 ss 实现","error:E.VALIDATION.OPTION_CONFLICT"),A("input_sampling","输入采样足以描述真实输入（结果对真实输入的误差取决于采样）","caller"),A("grid","dt 足以分辨系统动态","warning:W.ACCURACY.GRID_TOO_COARSE")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["all_finite","half_step_consistent"]}
 RECEIPT["control.analysis.loopsens"]={"method_id":"aeoi:loopsens:connect+margin+stepinfo","assumptions":[A("lti_model","plant、controller、sensor 准确描述回路（单位、符号、row-major 录入）","caller"),A("topology","单回路负反馈 r → e = r − H·y → C → G → y","validation"),A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("same_ts","三个系统采样周期相同","error:E.DOMAIN.SAMPLE_TIME_MISMATCH"),A("siso","SISO","error:E.DOMAIN.MIMO_NOT_SUPPORTED"),A("proper_for_metrics","裕度与阶跃指标要求 L、T proper，否则该项为 null","warning:W.DOMAIN.ANALYSIS_SKIPPED"),A("definitions","带宽、阶跃阈值用请求里的值；省略则是规范默认 −3 dB、10–90%、2%","validation"),A("no_cancel","不做零极点对消","caller")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["closed_loop_identity","stability_consistent","all_finite","sub_operator_checks"]}
 # v0.3.6 E-12: how much of the result each post-condition actually covers. Absent = "full" (evaluated on
@@ -527,12 +552,14 @@ RECEIPT["control.analysis.loopsens"]={"method_id":"aeoi:loopsens:connect+margin+
 # the result). "sampled": evaluated on a subset/compressed copy of the result → claim at most spot_checked.
 COVERAGE={op:{"response_consistent":"test_points"} for op in ("control.lti.series","control.lti.parallel","control.lti.feedback","control.lti.convert")}
 COVERAGE.update({"control.design.pid":{"formula_matches":"test_points"},"control.analysis.margin":{"grid_audit_clean":"sampled"},
- "control.analysis.loopsens":{"closed_loop_identity":"test_points","sub_operator_checks":"sampled"}})
+ "control.analysis.loopsens":{"closed_loop_identity":"test_points","sub_operator_checks":"sampled"},
+ "control.lti.lsim":{"half_step_consistent":"test_points"}})
 # v0.3.6 E-13: result fields that are not usable when a post-condition fails (listed in receipt.evidence.unreliable).
 GUARDS={"control.analysis.ctrb_obsv":{"pbh_agrees_ctrb":["/ctrb/rank","/ctrb/full_rank","/minimal"],"pbh_agrees_obsv":["/obsv/rank","/obsv/full_rank","/minimal"]},
  "control.analysis.loopsens":{"closed_loop_identity":["/open_loop","/closed_loop","/sensitivity"],"stability_consistent":["/closed_loop_stable"],"sub_operator_checks":["/margins","/gain_crossover_rad_s","/gain_crossover_hz","/step_metrics"]}}
 for op in ("control.lti.series","control.lti.parallel","control.lti.feedback"):
     GUARDS[op]={"response_consistent":["/system"]}
+GUARDS["control.lti.lsim"]={"half_step_consistent":["/y","/x"]}
 for op,c in COVERAGE.items(): RECEIPT[op]["coverage"]=c
 for op,g in GUARDS.items(): RECEIPT[op]["guards"]=g
 for op,(m,i,o) in ALL_OPS.items():

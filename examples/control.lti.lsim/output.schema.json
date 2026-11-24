@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.lti.lsim/0.4.0/output",
+  "type": "object",
+  "required": [
+    "t",
+    "y",
+    "x",
+    "n_grid_points",
+    "interpolation",
+    "realization"
+  ],
+  "properties": {
+    "t": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "aeoi://schemas/common/0.4#/$defs/Quantity"
+        }
+      ]
+    },
+    "y": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "aeoi://schemas/common/0.4#/$defs/Quantity",
+          "description": "shape [ny, nt]"
+        }
+      ]
+    },
+    "x": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+          "description": "[n, nt]，return_states = true 时给出；坐标由 realization 定义"
+        }
+      ]
+    },
+    "n_grid_points": {
+      "type": "integer"
+    },
+    "interpolation": {
+      "enum": [
+        "foh",
+        "zoh",
+        "none"
+      ],
+      "description": "实际使用的插值；离散系统为 none"
+    },
+    "realization": {
+      "type": "string",
+      "description": "状态坐标所属的实现：given ss，或 tf/zpk 的可控标准型"
+    }
+  }
+}

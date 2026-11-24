@@ -34,7 +34,7 @@ fn mcp_stdio_session() {
     let tools = tl["result"]["tools"].as_array().unwrap();
     let names: Vec<&str> = tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
     println!("tools/list: {names:?}");
-    assert_eq!(names.len(), 20, "19 operators + aeoi_verify");
+    assert_eq!(names.len(), aeoi_control::registry().len() + 1, "every operator + aeoi_verify");
     assert!(names.contains(&"aeoi_verify"));
     for t in tools {
         assert_eq!(t["inputSchema"]["type"], "object");

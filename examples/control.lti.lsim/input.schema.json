@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.lti.lsim/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "system",
+    "u",
+    "time"
+  ],
+  "properties": {
+    "system": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/LtiSystem",
+      "description": "被分析的 LTI 系统：tf（num/den 按降幂）、ss（A/B/C/D 稠密矩阵，row-major）或 zpk；ts=0 连续，ts>0 为离散采样周期（s）。上一个工具返回了 result.system 时，把那个 JSON 对象原样放在这里，不要手抄或改写系数（spec K-6）"
+    },
+    "u": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "输入采样，形状 [nu, nt]：第 i 行是第 i 个输入通道，第 k 列是 t_k = t0 + k·dt 时刻的值。SISO 可给一维 [nt]。长数据可用 b64 或 ref 编码（3.6）"
+    },
+    "time": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dt",
+        "unit"
+      ],
+      "properties": {
+        "dt": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "t0": {
+          "type": "number",
+          "default": 0
+        },
+        "unit": {
+          "const": "s"
+        }
+      },
+      "description": "均匀网格：dt（s，> 0），t0（起始时刻，缺省 0），unit 固定 s。离散系统 dt 必须等于 ts。非均匀时间戳先重采样"
+    },
+    "interpolation": {
+      "enum": [
+        "foh",
+        "zoh"
+      ],
+      "default": "foh",
+      "x-aeoi-provenance": "convention",
+      "description": "采样之间的输入怎么解释：foh 线性（缺省，与 scipy lsim、python-control 相同），zoh 保持到下一个采样。离散系统不要给"
+    },
+    "x0": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "初始状态 [n]，缺省 0。只用于 kind = ss：tf/zpk 没有状态坐标，要给初始状态先用 control_lti_convert 转成 ss"
+    },
+    "return_states": {
+      "type": "boolean",
+      "default": false,
+      "description": "true 时同时返回状态轨迹 x [n, nt]，缺省 false"
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "return_samples": {
+          "enum": [
+            "all",
+            "decimated",
+            "none"
+          ],
+          "default": "all"
+        },
+        "max_samples": {
+          "type": "integer",
+          "minimum": 2,
+          "default": 10001
+        }
+      },
+      "description": "返回的采样点：all / decimated（最多 max_samples 点）/ none"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  },
+  "x-aeoi-shape-constraints": [
+    "u: [nu, nt]（nu = 1 时也可 [nt]）",
+    "x0: [n]，只用于 ss"
+  ]
+}

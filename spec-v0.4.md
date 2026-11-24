@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.4-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.5-draft
 
-> 状态：Draft v0.4.4 · 2026-11-24 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.5 · 2026-11-24 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.5 新增第 20 个算子 `control.lti.lsim`（任意输入的响应，10.15）：输入按 [nu, nt] 给出并可用 b64 / ref；采样之间按 foh（缺省）或 zoh 解释，不按数据自动选择；`x0` 只用于 ss，因为 tf/zpk 没有状态坐标。一致性规则覆盖 7 / 20 = 35% 的算子。
 >
 > v0.4.4 定下开放问题 20、21：`lyap` 的 Q 可以不对称，实现必须按原样求解、不得对称化 Q，`lyap` 不发 `W.VALIDATION.SYMMETRIZED`；一致性套件从 golden 用例派生“省略默认值 / 写出默认值”的变体，结果必须与原请求逐位相同。
 >
@@ -7224,6 +7226,714 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 缺少 `plant` → `E.VALIDATION.SCHEMA`。12 个 golden 用例（含非单位反馈、只有对象、闭环不稳定、6 个随机 PID）上与 python-control 的最大相对差：系数 0、穿越频率/裕度/带宽 9.7e-13、阶跃指标 1.1e-12（`tests/parity_loopsens.rs`，`reports/parity-loopsens.json`）。
 
+## 10.15 `control.lti.lsim`：任意输入的响应（v0.4.5）
+
+`step`、`impulse` 只回答两种标准输入。`lsim` 回答任意采样输入：斜坡、正弦、扰动、实测数据，可带初始状态。参考值来自 scipy（`signal.lsim`、`signal.dlsim`），每个连续 foh 用例另与 python-control 0.10.2 `forced_response` 交叉核对，不是 MATLAB。
+
+**规范性条款**
+
+- LS-1 **输入布局**。`u` 是 `Matrix`，形状 `[nu, nt]`：第 i 行是第 i 个输入通道，第 k 列是 t_k 时刻的值。nu = 1 时也可给一维 `[nt]`。行数不等于 nu MUST 报 `E.VALIDATION.SHAPE`，`details.expected_rows = nu`（最常见的错误是按表格习惯给成 `[nt, nu]`）。`u` 可以用 b64 或 `ref` 编码（3.6），长数据不必内联成 JSON。
+- LS-2 **时间网格**。均匀网格 t_k = t0 + k·dt，k = 0…nt−1；`time = {dt, t0（缺省 0）, unit: "s"}`，nt 由 `u` 决定。非均匀时间戳不在本算子范围内，先重采样。离散系统 `dt` MUST 等于 `ts`（相对 1e-9），否则 `E.VALIDATION.GRID`。
+- LS-3 **采样之间的输入**。连续系统按 `interpolation` 解释：`foh`，u 在 (t_k, u_k) 与 (t_{k+1}, u_{k+1}) 之间线性；`zoh`，u(t) = u_k，t ∈ [t_k, t_{k+1})。缺省 `foh`，与 `scipy.signal.lsim`（interp=True）和 python-control 相同；实现 MUST NOT 根据输入数据自动选择（MATLAB 不给 method 时会按输入是否光滑自动选），因为同一个请求必须是同一个问题。离散系统没有“采样之间”，写出 `interpolation` MUST 报 `E.VALIDATION.OPTION_CONFLICT`（F-8，`conflicting_fields = ["interpolation"]`）。`result.interpolation` 回显实际使用的值，离散系统为 `none`。
+- LS-4 **初始状态的坐标**。`x0` 是状态向量，它的坐标由状态空间实现决定，所以 MUST 只用于 `kind = ss` 的系统。tf、zpk 没有状态坐标，给 `x0` MUST 报 `E.VALIDATION.OPTION_CONFLICT`（`conflicting_fields = ["x0"]`），提示先用 `control.lti.convert` 转成 ss：那个实现有规范定义（可控标准型，10.4），这样 `x0` 才有确定的含义。`return_states = true` 时返回 `x [n, nt]`，坐标所属的实现写在 `result.realization`（`given ss` 或 tf/zpk 的可控标准型）。
+- LS-5 **精确性与后置条件**。对 LS-3 解释下的输入，采样点上的响应没有离散化误差：连续系统用增广矩阵指数 expm([[A·dt, B·dt, 0], [0, 0, I], [0, 0, 0]]) 递推（Van Loan 1978），离散系统直接递推。后置条件 `half_step_consistent`：在 dt/2 上重新离散化，对同一个插值输入跑前 64 步，偶数步状态与原递推之差 ≤ 1e-9（相对 max‖x‖）；它检验的是每一步都用到的离散化矩阵，所以 E-12 的覆盖记为 `test_points`。结果相对真实输入的误差取决于输入采样，不在算子能检查的范围内（receipt 假设 `input_sampling`，`enforced_by: caller`）。
+- LS-6 **规模**。`limits.max_grid_points = 10⁷`（超出报 `E.RESOURCE.COMPUTE_LIMIT`，提示分段计算、用上一段的末状态作 `x0`）；返回值个数 nt × (ny + 返回状态时的 n) 受 `limits.max_output_values = 10⁶` 限制，超出报 `E.RESOURCE.OUTPUT_TOO_LARGE` 并给抽样返回的补丁（`output.return_samples = decimated`，与 `step` 相同）。
+
+**Manifest** — `examples/control.lti.lsim/manifest.json`
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "id": "control.lti.lsim",
+  "version": "0.4.0",
+  "title": "Response to an arbitrary input",
+  "description": "计算 LTI 系统对任意采样输入 u 的响应（斜坡、正弦、扰动、实测数据），可给初始状态。采样之间的输入按 interpolation 解释：foh（线性，缺省）或 zoh（保持）；对这个解释，采样点上的响应没有离散化误差。",
+  "category": "analysis",
+  "tags": ["time-domain", "lti", "simulation"],
+  "applicability": {
+    "preconditions": ["system 为 proper", "u 的形状 [nu, nt]（第 i 行 = 第 i 个输入通道，第 k 列 = t_k = t0 + k·dt 时刻）；nu = 1 时也可给一维 [nt]", "均匀网格：t_k = t0 + k·dt，k = 0..nt−1；非均匀时间戳先重采样", "离散系统要求 dt = ts（相对误差 1e-9），interpolation 不适用（给出即 E.VALIDATION.OPTION_CONFLICT，F-8）", "x0 只用于 kind = ss 的系统：状态坐标由给定实现定义；tf/zpk 没有状态坐标，给 x0 即 E.VALIDATION.OPTION_CONFLICT（先用 control.lti.convert 转成 ss，那个实现有规范定义）"],
+    "not_for": ["非均匀采样的输入", "非线性系统", "带时滞的系统（用 control.lti.pade 近似后串联）", "采样之间输入形状既不是线性也不是常数时的精确响应（结果对 foh/zoh 的解释精确，对真实输入的误差取决于采样）"],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "连续系统：对增广矩阵 M = [[A·dt, B·dt, 0], [0, 0, I], [0, 0, 0]] 求矩阵指数（Padé 13 阶 + scaling & squaring），E = expm(M)，Φ = E[x,x]，F1 = E[x,u1]，F2 = E[x,u2]；foh：x_{k+1} = Φx_k + (F1 − F2)u_k + F2·u_{k+1}；zoh：x_{k+1} = Φx_k + F1·u_k（M 去掉第三块）。离散系统：x_{k+1} = Ax_k + Bu_k。y_k = Cx_k + Du_k，x_0 = x0（缺省 0）。与 scipy.signal.lsim（interp=True/False）及 python-control forced_response 的公式相同。tf/zpk 先转为可控标准型实现（与 control.lti.step 相同）。后验检查：在 dt/2 上重新离散化，用同一插值输入跑前 64 步，偶数步状态须与原递推一致",
+    "references": [
+      {
+        "type": "paper",
+        "cite": "C. Van Loan, Computing integrals involving the matrix exponential, IEEE TAC 23(3), 1978",
+        "doi": "10.1109/TAC.1978.1101743"
+      },
+      {
+        "type": "paper",
+        "cite": "N. J. Higham, The scaling and squaring method for the matrix exponential revisited, SIMAX 26(4), 2005",
+        "doi": "10.1137/04061101X"
+      },
+      {
+        "type": "textbook",
+        "cite": "G. F. Franklin, J. D. Powell, M. Workman, Digital Control of Dynamic Systems, 3rd ed., 1998（ZOH/FOH/Tustin 与预畸变）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-control (pure Rust) + nalgebra 0.33",
+    "routine": "lsim::simulate (block expm Padé-13 + recursion)",
+    "version": "0.4.0",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T2",
+  "sparse_support": {
+    "/system/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/u": {
+      "policy": "densify",
+      "max_dense_elements": 10000000
+    }
+  },
+  "encodings": {
+    "input": ["json", "b64", "ref"],
+    "output": ["json", "b64"]
+  },
+  "limits": {
+    "max_grid_points": 10000000,
+    "max_output_values": 1000000,
+    "half_step_check_steps": 64
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/control.lti.lsim/0.4.0/credentials",
+  "errors": ["E.VALIDATION.SCHEMA", "E.VALIDATION.SHAPE", "E.VALIDATION.DTYPE", "E.VALIDATION.NON_FINITE", "E.VALIDATION.ZERO_DENOMINATOR", "E.VALIDATION.NOT_CONJUGATE", "…(+11)…", "E.RESOURCE.OUTPUT_TOO_LARGE", "E.VALIDATION.METHOD_UNAVAILABLE"],
+  "warnings": ["W.DOMAIN.UNSTABLE_SYSTEM", "W.ACCURACY.GRID_TOO_COARSE", "W.VALIDATION.LEADING_ZEROS_STRIPPED", "W.PERFORMANCE.SPARSE_DENSIFIED"],
+  "mcp": {
+    "tool_name": "control_lti_lsim",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:lsim:block-expm-pade13-recursion",
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "输入系统准确描述被研究对象（单位、符号、row-major 录入）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "proper",
+        "statement": "系统为 proper（deg num ≤ deg den）",
+        "enforced_by": "error:E.DOMAIN.IMPROPER_SYSTEM"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "interpolation",
+        "statement": "采样之间的输入按 foh（线性）或 zoh（保持）解释；响应对这个解释精确",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "uniform_grid",
+        "statement": "均匀网格 t_k = t0 + k·dt；离散系统 dt = ts",
+        "enforced_by": "error:E.VALIDATION.GRID"
+      },
+      {
+        "id": "x0_coordinates",
+        "statement": "x0 属于给定的 ss 实现",
+        "enforced_by": "error:E.VALIDATION.OPTION_CONFLICT"
+      },
+      {
+        "id": "input_sampling",
+        "statement": "输入采样足以描述真实输入（结果对真实输入的误差取决于采样）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "grid",
+        "statement": "dt 足以分辨系统动态",
+        "enforced_by": "warning:W.ACCURACY.GRID_TOO_COARSE"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": ["all_finite", "half_step_consistent"],
+    "coverage": {
+      "half_step_consistent": "test_points"
+    },
+    "guards": {
+      "half_step_consistent": ["/y", "/x"]
+    }
+  }
+}
+```
+
+**请求**（G(s) = 2/(s² + 3s + 2)，u = sin 2t，0–10 s，dt = 0.05，foh）
+
+```json
+{
+  "system": {
+    "kind": "tf",
+    "num": [
+      2.0
+    ],
+    "den": [
+      1.0,
+      3.0,
+      2.0
+    ],
+    "ts": 0.0
+  },
+  "u": {
+    "dtype": "f64",
+    "shape": [
+      201
+    ],
+    "data": [
+      0.0,
+      0.09983341664682815,
+      0.19866933079506122,
+      0.2955202066613396,
+      0.3894183423086505,
+      0.479425538604203,
+      0.5646424733950355,
+      0.6442176872376911,
+      0.7173560908995228,
+      0.7833269096274834,
+      0.8414709848078965,
+      0.8912073600614354,
+      0.9320390859672264,
+      0.963558185417193,
+      0.9854497299884603,
+      0.9974949866040544,
+      0.9995736030415051,
+      0.9916648104524686,
+      0.9738476308781951,
+      0.9463000876874145,
+      0.9092974268256817,
+      0.8632093666488737,
+      0.8084964038195901,
+      0.74570521217672,
+      0.6754631805511506,
+      0.5984721441039565,
+      0.5155013718214642,
+      0.4273798802338298,
+      0.33498815015590466,
+      0.23924932921398198,
+      0.1411200080598672,
+      0.04158066243329049,
+      -0.058374143427580086,
+      -0.15774569414324865,
+      -0.25554110202683167,
+      -0.35078322768961984,
+      -0.44252044329485246,
+      -0.5298361409084934,
+      -0.6118578909427193,
+      -0.6877661591839741,
+      -0.7568024953079282,
+      -0.8182771110644108,
+      -0.8715757724135882,
+      -0.9161659367494549,
+      -0.951602073889516,
+      -0.977530117665097,
+      -0.9936910036334645,
+      -0.9999232575641008,
+      -0.9961646088358406,
+      -0.9824526126243325,
+      -0.9589242746631385,
+      -0.9258146823277321,
+      -0.8834546557201531,
+      -0.8322674422239008,
+      -0.7727644875559871,
+      -0.7055403255703919,
+      -0.6312666378723208,
+      -0.5506855425976376,
+      -0.4646021794137566,
+      -0.373876664830236,
+      -0.27941549819892586,
+      -0.18216250427209502,
+      -0.0830894028174964,
+      0.0168139004843506,
+      0.11654920485049364,
+      0.21511998808781552,
+      0.3115413635133787,
+      0.4048499206165983,
+      0.49411335113860894,
+      0.5784397643882001,
+      0.6569865987187891,
+      0.7289690401258765,
+      0.7936678638491531,
+      0.8504366206285648,
+      0.8987080958116269,
+      0.9379999767747389,
+      0.9679196720314865,
+      0.9881682338770004,
+      0.998543345374605,
+      0.998941341839772,
+      0.9893582466233818,
+      0.9698898108450863,
+      0.9407305566797726,
+      0.9021718337562933,
+      0.8545989080882804,
+      0.7984871126234903,
+      0.7343970978741133,
+      0.662969230082182,
+      0.5849171928917617,
+      0.5010208564578846,
+      0.4121184852417566,
+      0.3190983623493521,
+      0.22288991410024592,
+      0.1244544235070617,
+      0.024775425453357765,
+      -0.0751511204618093,
+      -0.1743267812229814,
+      -0.2717606264109442,
+      -0.3664791292519284,
+      -0.45753589377532133,
+      -0.5440211108893698,
+      -0.6250706488928834,
+      -0.6998746875935437,
+      -0.7676858097635825,
+      -0.8278264690856537,
+      -0.87969575997167,
+      -0.9227754216128073,
+      -0.9566350162701884,
+      -0.9809362300664916,
+      -0.9954362533063774,
+      -0.9999902065507035,
+      -0.9945525882039891,
+      -0.979177729151317,
+      -0.954019249902089,
+      -0.9193285256646757,
+      -0.8754521746884285,
+      -0.8228285949687079,
+      -0.7619835839190321,
+      -0.6935250847771224,
+      -0.6181371122370333,
+      -0.5365729180004349,
+      -0.44964746453459986,
+      -0.35822928223682704,
+      -0.26323179136580094,
+      -0.1656041754483094,
+      -0.06632189735120068,
+      0.03362304722113847,
+      0.13323204141994396,
+      0.23150982510153895,
+      0.32747443913769303,
+      0.4201670368266409,
+      0.5086614643723752,
+      0.5920735147072245,
+      0.6695697621966024,
+      0.7403758899524486,
+      0.803784426551621,
+      0.8591618148564968,
+      0.9059547423084626,
+      0.9436956694441048,
+      0.9720075013949759,
+      0.9906073556948704,
+      0.9993093887479177,
+      0.9980266527163616,
+      0.9867719642746133,
+      0.9656577765492774,
+      0.934895055524683,
+      0.8947911721405034,
+      0.8457468311429334,
+      0.7882520673753163,
+      0.722881349511976,
+      0.6502878401571168,
+      0.5711968696599872,
+      0.4863986888537981,
+      0.39674057313061206,
+      0.30311835674570226,
+      0.2064674819377966,
+      0.1077536522994423,
+      0.007963183785935567,
+      -0.09190685022768164,
+      -0.19085858137418937,
+      -0.2879033166650653,
+      -0.3820714171840091,
+      -0.47242198639846616,
+      -0.5580522712867794,
+      -0.6381066823479502,
+      -0.711785342369123,
+      -0.7783520785342984,
+      -0.8371417780197468,
+      -0.8875670335815046,
+      -0.9291240127343697,
+      -0.9613974918795568,
+      -0.9840650050816434,
+      -0.9969000660415961,
+      -0.9997744310730111,
+      -0.9926593804706327,
+      -0.9756260054681576,
+      -0.948844497918124,
+      -0.9125824497911845,
+      -0.8672021794855813,
+      -0.8131571116614864,
+      -0.750987246771676,
+      -0.6813137655554999,
+      -0.6048328224062841,
+      -0.5223085896267315,
+      -0.43456562207189353,
+      -0.34248061846961253,
+      -0.2469736617366209,
+      -0.1489990258141988,
+      -0.04953564087836742,
+      0.05042268780681477,
+      0.14987720966295234,
+      0.24783420798295983,
+      0.3433149288198987,
+      0.4353653603728932,
+      0.5230657651576994,
+      0.605539869719601,
+      0.6819636200681356,
+      0.7515734153521506,
+      0.8136737375071054,
+      0.8676441006416691,
+      0.9129452507276277
+    ]
+  },
+  "time": {
+    "dt": 0.05,
+    "unit": "s"
+  }
+}
+```
+
+**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 scipy 值之差 ≤ 1e-10，claim `verified`，半步检查残差 3.4e-15）
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.lti.lsim",
+    "version": "0.4.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "t": {
+      "unit": "s",
+      "value": {
+        "dtype": "f64",
+        "shape": [201],
+        "data": [0.0, 0.05, 0.1, 0.15000000000000002, 0.2, 0.25, "…(+193)…", 9.950000000000001, 10.0]
+      }
+    },
+    "y": {
+      "unit": "1",
+      "value": {
+        "dtype": "f64",
+        "shape": [1, 201],
+        "data": [0.0, 8.014623383568188e-05, 0.0006170872550474472, 0.0020025632332653703, 0.004560555703084328, 0.008550739838256171, "…(+193)…", -0.2356855250414371, -0.21350487846757818]
+      }
+    },
+    "x": null,
+    "n_grid_points": 201,
+    "interpolation": "foh",
+    "realization": "controllable canonical form (scipy tf2ss convention)"
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "half_step_state_rel": 3.4170291212102266e-15,
+      "definition": "dt/2 重新离散化、同一插值输入，前 63 步偶数步状态与原递推之差 max‖Δx‖₂ / max‖x‖₂"
+    },
+    "condition": {
+      "norm1_A_dt": 0.2,
+      "expm_squarings": 0,
+      "realization": "controllable canonical form (scipy tf2ss convention)",
+      "max_real_pole": -1.0
+    },
+    "error_estimate": {
+      "y_abs": 9.971544799805597e-15,
+      "basis": "启发式：max(N·u, 半步一致性偏差) × max|y|；expm 后向误差 ≤ u（Higham 2005）。只针对 foh/zoh 解释下的输入，非严格上界"
+    },
+    "checks": {
+      "all_finite": true,
+      "half_step_consistent": true,
+      "asymptotically_stable": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "dt": 0.05,
+      "t0": 0.0,
+      "t_end": 10.0,
+      "half_step_tolerance": 1e-09
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:lsim:block-expm-pade13-recursion",
+      "routine": "lsim::simulate (block expm Padé-13 + recursion)",
+      "provenance": "aeoi://operators/control.lti.lsim/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "输入系统准确描述被研究对象（单位、符号、row-major 录入）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "proper",
+        "statement": "系统为 proper（deg num ≤ deg den）",
+        "enforced_by": "error:E.DOMAIN.IMPROPER_SYSTEM"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "interpolation",
+        "statement": "采样之间的输入按 foh（线性）或 zoh（保持）解释；响应对这个解释精确",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "uniform_grid",
+        "statement": "均匀网格 t_k = t0 + k·dt；离散系统 dt = ts",
+        "enforced_by": "error:E.VALIDATION.GRID"
+      },
+      {
+        "id": "x0_coordinates",
+        "statement": "x0 属于给定的 ss 实现",
+        "enforced_by": "error:E.VALIDATION.OPTION_CONFLICT"
+      },
+      {
+        "id": "input_sampling",
+        "statement": "输入采样足以描述真实输入（结果对真实输入的误差取决于采样）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "grid",
+        "statement": "dt 足以分辨系统动态",
+        "enforced_by": "warning:W.ACCURACY.GRID_TOO_COARSE"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "y_abs": 9.971544799805597e-15
+      },
+      "basis": "启发式：max(N·u, 半步一致性偏差) × max|y|；expm 后向误差 ≤ u（Higham 2005）。只针对 foh/zoh 解释下的输入，非严格上界"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "all_finite": true,
+        "half_step_consistent": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null,
+      "coverage": {
+        "all_finite": "full",
+        "half_step_consistent": "test_points"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:9c0a3f9b3f3511693805c17b02de36ea7e151654ccf3c879feeb3f64f751050f",
+      "result": "sha256:ccc0a85c86771186a432b1ac932bd1660a841a36c8674dc4579f2f9c29beb43d",
+      "output_hash": "sha256:68db5417d1fef762ec48361d624fea690242bde4b09bc97be6a8ceca0f0d14ff",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.lti.lsim@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:ce34829a277c3ed6e266a10517267d83bc5abbd49085839512ed92730b64273e",
+    "output_hash": "sha256:68db5417d1fef762ec48361d624fea690242bde4b09bc97be6a8ceca0f0d14ff",
+    "platform": "x86_64-linux",
+    "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "glibc 2.39",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.290309
+  }
+}
+```
+
+**错误请求与响应**（tf 系统给了 `x0`：LS-4）
+
+```json
+{
+  "system": {
+    "kind": "tf",
+    "num": [2.0],
+    "den": [1.0, 3.0, 2.0],
+    "ts": 0.0
+  },
+  "u": {
+    "dtype": "f64",
+    "shape": [5],
+    "data": [0.0, 0.09983341664682815, 0.19866933079506122, 0.2955202066613396, 0.3894183423086505]
+  },
+  "time": {
+    "dt": 0.05,
+    "unit": "s"
+  },
+  "x0": {
+    "dtype": "f64",
+    "shape": [2],
+    "data": [1.0, 0.0]
+  }
+}
+```
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "control.lti.lsim",
+    "version": "0.4.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.VALIDATION.OPTION_CONFLICT",
+    "category": "validation",
+    "retryable": true,
+    "message": "x0 是状态向量，它的坐标由状态空间实现决定；system 是 tf，没有状态坐标，x0 没有定义。",
+    "agent_hint": "先用 control_lti_convert（output_kind = ss）把系统转成状态空间，再把 x0 写成那个实现的状态；或去掉 x0（零初始状态）。",
+    "details": {
+      "path": "/x0",
+      "conflicting_fields": ["x0"],
+      "system_kind": "tf"
+    },
+    "remediation": [
+      {
+        "id": "drop_x0",
+        "kind": "modify_input",
+        "description": "去掉 x0（零初始状态）",
+        "confidence": "medium",
+        "requires_user_confirmation": true,
+        "patch": [
+          {
+            "op": "remove",
+            "path": "/x0"
+          }
+        ]
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.173451
+  }
+}
+```
+
+**初始状态与状态轨迹（内存序回归用例）** — `request.ss_x0.json`：非对称 A = [[0, 1], [−4, −0.4]]，x0 = [1, 0]，u = 0.5，zoh，`return_states = true`；响应见 `response.ss_x0.json`，`realization = "given ss"`。
+
+**Parity 测试规格** — `examples/control.lti.lsim/parity.yaml`
+
+```yaml
+# Parity test spec — control.lti.lsim 0.4.0 (AEOI v0.4.5-draft)
+operator: control.lti.lsim
+references:
+  - {engine: scipy, version: "scipy 1.18.1, numpy 2.5.3", role: dev_reference, status: active,
+     generator: gen_golden_lsim.py, golden_store: "golden/python-control/control.lti.lsim/0.4.0/*.json",
+     note: "NOT MATLAB output. scipy.signal.lsim (interp=True: foh, interp=False: zoh) and dlsim; every continuous foh case cross-checked with python-control 0.10.2 forced_response (≤ 1e-11 relative, generator asserts)"}
+  - {engine: MATLAB, role: ground_truth, status: planned,
+     note: "MATLAB lsim picks foh/zoh automatically from the input's smoothness when 'method' is omitted; AEOI has a fixed default (foh). Compare with an explicit method"}
+runner: "cargo test --release -p aeoi-control --test parity_lsim"
+tolerance_class: T2
+compare:
+  t: {atol: 1.0e-12}
+  y: {rtol: 1.0e-10, scale: "max(1, max|y_ref|)"}
+  x: {rtol: 1.0e-10, scale: "max(1, max|x_ref|)", note: "only when return_states; coordinates of the given ss (x0 is rejected for tf/zpk)"}
+  n_grid_points: exact
+  interpolation: exact
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. No trust.* value of the implementation is used
+  y: "shape [ny, nt] exact; max|Δ| / max(1, max|y_ref|) ≤ 1e-10"
+  t: "|Δ| ≤ 1e-12"
+  x: "when the reference has states: shape [n, nt] exact, max|Δ| / max(1, max|x_ref|) ≤ 1e-10"
+  n_grid_points / interpolation: exact
+case_families:
+  - {name: siso_ramp_foh, n: 1, note: "foh is exact for a ramp"}
+  - {name: siso_sine_foh / siso_sine_zoh, n: 2}
+  - {name: siso_square_zoh / siso_square_foh, n: 2, note: "jumps: the two interpretations give different, each exact, answers"}
+  - {name: siso_feedthrough_foh, n: 1, note: "biproper, D ≠ 0"}
+  - {name: siso_t0_nonzero, n: 1}
+  - {name: siso_stiff_foh, n: 1, expect_warning: W.ACCURACY.GRID_TOO_COARSE}
+  - {name: siso_unstable_foh, n: 1, expect_warning: W.DOMAIN.UNSTABLE_SYSTEM}
+  - {name: siso_explicit_default, n: 1, note: "interpolation: foh written out"}
+  - {name: ss_x0_free / ss_x0_forced_zoh, n: 2, note: "x0 and states"}
+  - {name: mimo_random_foh, n: 3, note: "column_major_mistake_request (section 0)"}
+  - {name: mimo_states_zoh, n: 1}
+  - {name: siso_random_noise_foh, n: 4}
+  - {name: discrete_tf / discrete_ss_x0, n: 2}
+  - {name: siso_long_b64, n: 1, note: "20000 samples, u as DenseMatrixB64 (3.6)"}
+  - {name: errors, n: 10, expect: "OPTION_CONFLICT (x0 with tf; interpolation on discrete), GRID, SHAPE ×3, IMPROPER_SYSTEM, SCHEMA ×2, NON_FINITE"}
+```
+
+33 个 golden 用例（23 个成功、10 个错误；含 MIMO、x0 与状态、刚性、不稳定、直通、离散、20000 点 b64 输入）上与 scipy 的最大差：y 9.2e-14（相对 max|y|）、x 9.5e-15、t 0（`tests/parity_lsim.rs`，`reports/parity-lsim.json`）。
+
 ## 11. Rust 参考实现（v0.3）
 
 ### 11.1 结构
@@ -7408,7 +8118,7 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 
 1. 在有授权的机器上运行 `matlab/gen_golden_bode.m`（并补 step/lqr 脚本），先核对 `memory_order_nonsymmetric` 用例与 python-control 一致，再跑通第一份 A 级凭证
 2. ~~修复 `lqr` 病态 R 的精度差距~~（v0.3.2 用补偿 Newton–Kleinman 完成）；剩余：平衡 + 有序 Schur（或广义特征值）作为符号函数不收敛时的后备路径，以及 `dlqr` 的同类精化
-3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；剩余：`lsim`、`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
+3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），下一个是 `pidtune`（须先满足 A-4）；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
 5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；v0.3.4 另有 `aeoi-web design`。v0.3.5 实现了试点里排在前面的算子（串联、并联、反馈、PID 构造、stepinfo、Padé），v0.3.6 加了具名角色、`loopsens`（含带宽读数）和回合预算。下一步是按 A-4 写 `pidtune`（必须先声明对象类、指标和唯一性），以及控制器离散化和 MIMO 裕度；扩充问答题、加入"Agent + 裸 scipy"对照组。非线性吸引域仍不做。
 6. 用 Tauri 打包 `aeoi-web` 为桌面应用（复用 axum 服务与静态页面）
@@ -7416,6 +8126,33 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 8. 根据以上反馈修订，冻结 v1.0
 
 ## 13. Changelog
+
+### v0.4.5-draft（2026-11-24）
+
+起因：作者决定按用途广度补算子，第一个是 `lsim`（任意输入的响应）：`step`、`impulse` 只回答两种标准输入，实际工作里更常见的是斜坡、正弦、扰动和实测数据。线协议标识与核心 schema 不变。
+
+**规范改动**
+
+| # | 条款 | 改动 | 原因 |
+|---|---|---|---|
+| 1 | 10.15 LS-1 – LS-6 | 新算子 `control.lti.lsim` 0.4.0 | 见上 |
+| 2 | LS-3 | 采样之间的输入解释有固定缺省（foh），实现不得按数据自动选择；离散系统写出即 F-8 冲突 | MATLAB 不给 method 时自动选择，同一个请求会因数据不同而换问题 |
+| 3 | LS-4 | `x0` 只用于 ss；tf/zpk 报 `OPTION_CONFLICT` 并指向 `convert` | tf/zpk 没有状态坐标，`x0` 的含义取决于实现选哪个状态空间实现 |
+| 4 | LS-5 | 后置条件 `half_step_consistent`（dt/2 重新离散化），覆盖记 `test_points` | 原先 `step` 只有 `all_finite`；这是对离散化矩阵的独立检查 |
+
+**已做的改动**
+
+| 位置 | 改动 |
+|---|---|
+| `write_manifests.py` | `lsim` 的 manifest、输入输出 schema、L-1 字段描述、receipt（假设、后置条件、覆盖、guards） |
+| `rust/aeoi-control/src/lsim.rs`（新）、`lib.rs` | 实现与注册；6 个单元测试（斜坡 foh 精确到 1e-13、常值 zoh 等于阶跃、x0 规则、离散规则、转置的 u） |
+| `rust/aeoi-{bridge,mcp,web}` | 三处写死的“19 个工具”改为跟注册表数量一致 |
+| `gen_golden_lsim.py`（新）、`golden/python-control/control.lti.lsim/0.4.0` | 33 个用例；foh 用例与 python-control 交叉核对 ≤ 1e-11；同时生成示例请求与参考值 |
+| `rust/aeoi-control/tests/parity_lsim.rs`（新）、`examples.rs` 的 `lsim_example` | parity 与示例测试 |
+| `examples/control.lti.lsim/` | manifest、schema、三个示例请求与响应、`parity.yaml`（含 `conformance_compare`） |
+| `conformance/rules_control.py`、`tests/proxy_mutant.py`、`test_runner_catches_mutants.py` | `lsim` 的一致性规则；变异 `lsim_y_wrong`、`lsim_interp_mislabeled` |
+
+**结果**：`cargo test` 158 / 0；parity 33 / 33（y 9.2e-14）；参考实现一致性 568 通过 / 0 失败 / 284 跳过（`lsim` 33 + 方法选择 1 + 默认值 5 通过、2 跳过）；变异测试 19 / 19；有数值规则的算子 7 / 20 = 35%。
 
 ### v0.4.4-draft（2026-11-24）
 
