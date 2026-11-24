@@ -9,11 +9,11 @@
   ],
   "properties": {
     "A": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "系数矩阵 A，[n,n]"
     },
     "Q": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "右端矩阵 Q，[n,n]，对称"
     },
     "type": {
@@ -25,7 +25,7 @@
       "description": "continuous：A X + X Aᵀ + Q = 0；discrete：A X Aᵀ − X + Q = 0"
     },
     "exec": {
-      "$ref": "aeoi://schemas/common/0.4/ExecOptions"
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
     }
   },
   "x-aeoi-shape-constraints": [

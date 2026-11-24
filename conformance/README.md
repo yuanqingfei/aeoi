@@ -45,6 +45,6 @@ python3 conformance/tests/test_runner_catches_mutants.py
 
 ## 用这个套件发现的规范问题
 
-1. 输出（和输入）schema 里的引用写成 `aeoi://schemas/common/0.4/Matrix`，按标准 JSON Schema 解析不了（应为 `…/0.3#/$defs/Matrix`），3.9 也没有说明这种约定。运行器自己改写后才能校验。
+1. ~~已解决（规范 v0.4.1，3.9 J-1）：所有 schema 改为标准引用，运行器不再改写，遇到无法解析的引用判失败。~~ 原问题：输出（和输入）schema 里的引用写成 `aeoi://schemas/common/0.4/Matrix`，按标准 JSON Schema 解析不了（应为 `…/0.3#/$defs/Matrix`），3.9 也没有说明这种约定。运行器自己改写后才能校验。
 2. `lyap`：input schema 把 Q 描述为“对称”，算法说明却写“Q 非对称也可解”；`W.VALIDATION.SYMMETRIZED` 在 manifest 里声明了，但没有规定什么时候发。第二实现第一版就是因为把非对称 Q 对称化而在 4 个用例上失败。
 3. `lyap` 的 `type` 有默认值 `continuous`，golden 里没有一个用例省略它，所以套件不检验默认值。第二实现第一版因此把它当必填也没被发现（读 input schema 时才发现）。

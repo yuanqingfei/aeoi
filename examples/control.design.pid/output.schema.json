@@ -11,7 +11,7 @@
   ],
   "properties": {
     "system": {
-      "$ref": "aeoi://schemas/common/0.4/LtiSystem",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/LtiSystem",
       "description": "控制器，ts=0。proper 时也可为 ss"
     },
     "realization": {

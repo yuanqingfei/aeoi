@@ -30,7 +30,7 @@ from referencing import Registry, Resource
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import aeoi_hash as H  # noqa: E402
 
-RUNNER_VERSION = "0.1.0"
+RUNNER_VERSION = "0.1.1"
 CLASS_RTOL = {"T0": 0.0, "T1": 1e-12, "T2": 1e-10, "T3": 1e-9, "T4": 1e-6, "T5": 1e-6}   # spec 7.2
 ENGINE_LIBS = {"python-control": ("python-control", "scipy", "slycot"), "mpmath": ("mpmath",), "MATLAB": ("matlab",)}
 BITWISE = ("bitwise", "platform_bitwise", "seeded")                                      # M-7
@@ -110,11 +110,24 @@ def load_registry(schema_dir):
     return reg, docs
 
 
-def fix_refs(schema):
-    """Output schemas write refs as `aeoi://schemas/common/0.4/Matrix`; standard resolution needs `...0.3#/$defs/Matrix`.
-    The spec does not state this convention (reported in the runner output as a spec gap)."""
-    s = json.dumps(schema)
-    return json.loads(re.sub(r'(aeoi://schemas/[a-z]+/[0-9.]+)/([A-Za-z]+)"', r'\1#/$defs/\2"', s))
+def bad_refs(schema, reg):
+    """3.9 J-1: every non-local `$ref` in an operator schema MUST resolve by standard JSON Schema 2020-12 rules
+    against the core schemas' `$id`s (e.g. `aeoi://schemas/common/0.4#/$defs/Matrix`). Returns the ones that do not.
+    Local refs (`#/...`) are left to the validator; `./input.schema.json` style manifest pointers are not schemas."""
+    out, stack = [], [schema]
+    while stack:
+        v = stack.pop()
+        if isinstance(v, dict):
+            r = v.get("$ref")
+            if isinstance(r, str) and not r.startswith("#") and not r.startswith("./"):
+                try:
+                    reg.resolver().lookup(r)
+                except Exception:
+                    out.append(r)
+            stack.extend(v.values())
+        elif isinstance(v, list):
+            stack.extend(v)
+    return sorted(set(out))
 
 
 # ---------------------------------------------------------------- numeric rules (CF-6)
@@ -263,7 +276,7 @@ def main():
     tools = {t["name"]: t for t in cli.request("tools/list")["result"]["tools"] if "aeoi/id" in t.get("_meta", {})}
     by_id = {t["_meta"]["aeoi/id"]: t for t in tools.values()}
 
-    manifests, validators, results, notes = {}, {}, [], set()
+    manifests, validators, results, notes, ref_problems = {}, {}, [], set(), {}
     for op in sorted({c["operator"] for c in cases}):
         t = by_id.get(op)
         if not t:
@@ -274,13 +287,13 @@ def main():
             continue
         m = json.loads(resp["result"]["contents"][0]["text"]); manifests[op] = m
         validators[op] = {"envelope": env_validator}
-        if m.get("output_schema") and "$ref" not in m["output_schema"]:
-            validators[op]["output"] = Draft202012Validator(fix_refs(m["output_schema"]), registry=reg)
+        bad = bad_refs([m.get("input_schema"), m.get("output_schema")], reg)
+        if bad:
+            ref_problems[op] = "3.9 J-1: $ref not resolvable by standard JSON Schema 2020-12: " + ", ".join(bad[:5])
+        if m.get("output_schema") and "$ref" not in m["output_schema"] and not bad:
+            validators[op]["output"] = Draft202012Validator(m["output_schema"], registry=reg)
         else:
             m["output_schema"] = None
-        if re.search(r'aeoi://schemas/[a-z]+/[0-9.]+/[A-Za-z]+"', json.dumps(m.get("output_schema"))):
-            notes.add("SPEC GAP: output schemas reference `aeoi://schemas/common/0.4/Matrix`; this is not standard $ref resolution "
-                      "(needs `#/$defs/Matrix`) and 3.9 does not describe the convention. The runner rewrites it.")
 
     def make_call(op):
         def call(args):
@@ -297,6 +310,8 @@ def main():
             results.append({"case_id": c["_id"], "operator": op, "engine": c["_engine"], "result": "skip", "detail": "operator not implemented by the implementation"}); continue
         if op not in manifests:
             results.append({"case_id": c["_id"], "operator": op, "engine": c["_engine"], "result": "fail", "detail": "manifest resource not readable"}); continue
+        if op in ref_problems:
+            results.append({"case_id": c["_id"], "operator": op, "engine": c["_engine"], "result": "fail", "detail": ref_problems[op]}); continue
         call = make_call(op)
         env, is_err, prob = call(c["request"])
         if env is None:

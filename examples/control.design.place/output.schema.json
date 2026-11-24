@@ -8,11 +8,11 @@
   ],
   "properties": {
     "K": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "[m,n]，u=−Kx"
     },
     "achieved_poles": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "eig(A−BK)，c128 [n]，排序同 poles 规范"
     }
   }

@@ -578,7 +578,7 @@
           ],
           "properties": {
             "policy": {
-              "$ref": "aeoi://schemas/common/0.4/MethodPolicy"
+              "$ref": "aeoi://schemas/common/0.4#/$defs/MethodPolicy"
             },
             "used": {
               "type": "string",

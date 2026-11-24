@@ -148,7 +148,7 @@
         "trust_level": { "enum": ["summary", "full"], "default": "summary" },
         "dry_run": { "type": "boolean", "default": false, "description": "只做校验与代价估计，不执行" },
         "output_encoding": { "enum": ["json", "b64"], "default": "json", "description": "结果中稠密数组的编码；b64 时为 DenseMatrixB64" },
-        "method_policy": { "$ref": "aeoi://schemas/common/0.4/MethodPolicy" }
+        "method_policy": { "$ref": "#/$defs/MethodPolicy" }
       }
     },
     "MethodPolicy": {

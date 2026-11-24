@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.1-draft
 
-> 状态：Draft v0.4 · 2026-11-23 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.1 · 2026-11-24 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.1 定下开放问题 19：所有 schema 里的 `$ref` 改为标准 JSON Schema 2020-12 写法（3.9 J-1 – J-3），去掉参考实现、校验脚本和一致性套件里的三处简写兼容代码。线协议标识仍是 `aeoi/0.4`，示例结果与 `output_hash` 不变。
 >
 > v0.4 为第二个实现和不同的计算方法在规范里留出位置，增加两组条款：同一算子可以登记多个计算方法，请求用 `exec.method_policy` 约束所用的方法（3.14，规则 MS-1 – MS-11）；换一个实现是否等价于参考实现，由跨实现一致性的判定规则回答（9.4，规则 CF-1 – CF-12）。**3.14 的 schema 字段（`method_policy`、`alternatives`、`method_selection`）与参考实现的方法解析、重放、宿主策略合并已经加上；9.4 有一致性套件 v0.1（只覆盖 `lyap`）。**参考实现的每个算子仍只登记一个方法，多方法的路径由单元测试用合成 manifest 覆盖（第 13 章 v0.4-draft 有改动清单）。线协议标识升为 `aeoi/0.4`，核心 schema 的 `$id` 升为 `/0.4`（与 v0.3 的做法相同，12.1 第 15 项）：标识已经改到 `schemas/`、`examples/`、`write_manifests.py` 与 Rust 的 `aeoi_core::SPEC` 常量里，**Rust 在标识改动后的 `cargo test` 结果与改动前相同（见第 13 章 v0.4-draft）**。信封字段只增不减，`input_hash`、`fingerprint` 都不含 `spec`，所以除标识外结果字节不变；v0.3 的消费者若校验 `spec` 或 schema `$id` 需要同步更新（0.x 期间 MINOR 可破坏，G-4）。不认识 `method_policy` 的旧实现会按 3.3 R-4 返回 `E.VALIDATION.SCHEMA`，不会静默忽略硬约束。以下 v0.3.x 各段是各自版本当时的陈述，按原样保留。
 >
@@ -211,6 +213,12 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
 "SparseMatrix":   { "required": ["format", "dtype", "shape", "indptr", "indices", "data"], "…": "…" },
 "Matrix": { "oneOf": [ {"$ref": "#/$defs/DenseMatrix"}, {"$ref": "#/$defs/DenseMatrixB64"}, {"$ref": "#/$defs/MatrixRef"}, {"$ref": "#/$defs/SparseMatrix"} ] }
 ```
+
+**引用写法（v0.4.1 新增，规范性）**
+
+- J-1 schema 里的 `$ref` MUST 是标准 JSON Schema 2020-12 引用：只按 `$id` 与 JSON Pointer 就能解析，不需要任何 AEOI 专用规则。同一文件内写 `#/$defs/<Name>`；引用核心 schema（`schemas/*.schema.json`）的定义写 `<$id>#/$defs/<Name>`，例如 `{"$ref": "aeoi://schemas/common/0.4#/$defs/Matrix"}`。v0.4 及以前用过的简写 `aeoi://schemas/common/0.4/Matrix`（把定义名当作 `$id` 下的路径）不是合法引用：实现 MUST NOT 在发布的 schema 里使用它，消费者与一致性套件按无法解析处理（9.4）。
+- J-2 引用核心 schema 时，`$id` 中的版本 MUST 与 manifest 的 `spec` 一致（`aeoi/0.4` 对应 `aeoi://schemas/<name>/0.4`）。
+- J-3 J-1 管的是独立发布的 schema 文件（如 `examples/<id>/input.schema.json`）。M-1 要求通过 MCP 资源返回的 manifest 是内联后的形式，MCP 工具的 `inputSchema`、`outputSchema` 同样 SHOULD 内联，不含指向其他文档的 `$ref`：多数 MCP 客户端不会去取外部 schema。
 
 ### 3.10 多输出结果、系统输出与离散时间约定（v0.3 新增）
 
@@ -973,7 +981,7 @@ pub trait Operator: Send + Sync + 'static {
   ],
   "properties": {
     "system": {
-      "$ref": "aeoi://schemas/common/0.4/LtiSystem",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/LtiSystem",
       "description": "被分析的 LTI 系统：tf（num/den 按降幂）、ss（A/B/C/D 稠密矩阵，row-major）或 zpk；ts=0 连续，ts>0 为离散采样周期（s）。上一个工具返回了 result.system 时，把那个 JSON 对象原样放在这里，不要手抄或改写系数（spec K-6）"
     },
     "frequency": {
@@ -1063,7 +1071,7 @@ pub trait Operator: Send + Sync + 'static {
       "description": "相位展开与分支选择（可省略）"
     },
     "exec": {
-      "$ref": "aeoi://schemas/common/0.4/ExecOptions"
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
     }
   }
 }
@@ -1117,7 +1125,7 @@ pub trait Operator: Send + Sync + 'static {
   "operator": {
     "id": "control.lti.bode",
     "version": "0.2.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-bode-001",
   "result": {
@@ -1286,8 +1294,9 @@ pub trait Operator: Send + Sync + 'static {
       "stable_across": "request: all platforms and builds of control.lti.bode@0.2.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
       "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -1309,6 +1318,7 @@ pub trait Operator: Send + Sync + 'static {
       "fma",
       "avx512f"
     ],
+    "libm": "glibc 2.39",
     "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
     "threads": 1,
     "seed": null
@@ -1358,7 +1368,7 @@ pub trait Operator: Send + Sync + 'static {
   "operator": {
     "id": "control.lti.bode",
     "version": "0.2.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-bode-002",
   "result": null,
@@ -1791,7 +1801,7 @@ pass_rule: "所有 case 在容差内；预期报错的 case 报出相同 code；
   ],
   "properties": {
     "system": {
-      "$ref": "aeoi://schemas/common/0.4/LtiSystem",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/LtiSystem",
       "description": "被分析的 LTI 系统：tf（num/den 按降幂）、ss（A/B/C/D 稠密矩阵，row-major）或 zpk；ts=0 连续，ts>0 为离散采样周期（s）。上一个工具返回了 result.system 时，把那个 JSON 对象原样放在这里，不要手抄或改写系数（spec K-6）"
     },
     "time": {
@@ -1901,7 +1911,7 @@ pass_rule: "所有 case 在容差内；预期报错的 case 报出相同 code；
       "description": "返回的采样点：all / decimated（最多 max_samples 点）/ none"
     },
     "exec": {
-      "$ref": "aeoi://schemas/common/0.4/ExecOptions"
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
     }
   }
 }
@@ -1958,7 +1968,7 @@ pass_rule: "所有 case 在容差内；预期报错的 case 报出相同 code；
   "operator": {
     "id": "control.lti.step",
     "version": "0.2.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-step-001",
   "result": {
@@ -2168,8 +2178,9 @@ pass_rule: "所有 case 在容差内；预期报错的 case 报出相同 code；
       "stable_across": "request: all platforms and builds of control.lti.step@0.2.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
       "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -2191,6 +2202,7 @@ pass_rule: "所有 case 在容差内；预期报错的 case 报出相同 code；
       "fma",
       "avx512f"
     ],
+    "libm": "glibc 2.39",
     "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
     "threads": 1,
     "seed": null
@@ -2238,7 +2250,7 @@ pass_rule: "所有 case 在容差内；预期报错的 case 报出相同 code；
   "operator": {
     "id": "control.lti.step",
     "version": "0.2.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-step-002",
   "result": null,
@@ -2570,23 +2582,23 @@ excluded: ["auto 时间网格（参考实现的自动网格不公开且会变化
   ],
   "properties": {
     "A": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "状态矩阵 A，[n,n]"
     },
     "B": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "输入矩阵 B，[n,m]（单输入时为列向量 [n,1]）"
     },
     "Q": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "状态权重 Q，[n,n]，对称半正定"
     },
     "R": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "输入权重 R，[m,m]，对称正定（标量写成 [1,1]）"
     },
     "N": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "交叉权重 N，[n,m]，缺省为 0"
     },
     "symmetry_tolerance": {
@@ -2596,7 +2608,7 @@ excluded: ["auto 时间网格（参考实现的自动网格不公开且会变化
       "description": "相对容差 ‖X−Xᵀ‖_F ≤ tol·‖X‖_F；超出即 E.VALIDATION.NOT_SYMMETRIC，范围内（但非精确对称）对称化并给 W.VALIDATION.SYMMETRIZED"
     },
     "exec": {
-      "$ref": "aeoi://schemas/common/0.4/ExecOptions"
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
     }
   },
   "x-aeoi-shape-constraints": [
@@ -2676,7 +2688,7 @@ excluded: ["auto 时间网格（参考实现的自动网格不公开且会变化
   "operator": {
     "id": "control.design.lqr",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-lqr-001",
   "result": {
@@ -2832,8 +2844,9 @@ excluded: ["auto 时间网格（参考实现的自动网格不公开且会变化
       "stable_across": "request: all platforms and builds of control.design.lqr@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
       "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -2855,6 +2868,7 @@ excluded: ["auto 时间网格（参考实现的自动网格不公开且会变化
       "fma",
       "avx512f"
     ],
+    "libm": "glibc 2.39",
     "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
     "threads": 1,
     "seed": null
@@ -2930,7 +2944,7 @@ excluded: ["auto 时间网格（参考实现的自动网格不公开且会变化
   "operator": {
     "id": "control.design.lqr",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-lqr-002",
   "result": null,
@@ -3237,7 +3251,7 @@ tf ↔ ss ↔ zpk 互转。
   "operator": {
     "id": "control.lti.convert",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-convert-001",
   "result": {
@@ -3351,8 +3365,9 @@ tf ↔ ss ↔ zpk 互转。
       "stable_across": "request: all platforms and builds of control.lti.convert@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
       "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -3369,6 +3384,7 @@ tf ↔ ss ↔ zpk 互转。
     "output_hash": "sha256:84dd5712391abb4cee44a4f7fbe27e6924baec2df209a064a071aa08b1c382d7",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "glibc 2.39",
     "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
     "threads": 1,
     "seed": null
@@ -3423,7 +3439,7 @@ tf ↔ ss ↔ zpk 互转。
   "operator": {
     "id": "control.lti.convert",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-convert-002",
   "result": null,
@@ -3707,7 +3723,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.lti.poles_zeros",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-pz-001",
   "result": {
@@ -3817,8 +3833,9 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
       "stable_across": "request: all platforms and builds of control.lti.poles_zeros@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
       "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -3835,6 +3852,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     "output_hash": "sha256:22d247d0c6422a9995702e229b144a26ed08811a4de6bdcf8cfd4f17b27081eb",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "glibc 2.39",
     "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
     "threads": 1,
     "seed": null
@@ -3888,7 +3906,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.lti.poles_zeros",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-pz-002",
   "result": null,
@@ -4182,7 +4200,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.analysis.ctrb_obsv",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-co-001",
   "result": {
@@ -4315,8 +4333,9 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
       "stable_across": "request: all platforms and builds of control.analysis.ctrb_obsv@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
       "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -4333,6 +4352,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     "output_hash": "sha256:4b88f480e4dff3988e44cce0b2f28f372d9420e371da7be0103ae969bdd37258",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "glibc 2.39",
     "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
     "threads": 1,
     "seed": null
@@ -4386,7 +4406,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.analysis.ctrb_obsv",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-co-002",
   "result": null,
@@ -4653,7 +4673,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.analysis.margin",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-margin-001",
   "result": {
@@ -4802,8 +4822,9 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
       "stable_across": "request: all platforms and builds of control.analysis.margin@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
       "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -4820,6 +4841,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     "output_hash": "sha256:6cb2fc3c7c0667751b2821236fc15af6715c6049ba2739e24b6a41ae58840c1b",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "glibc 2.39",
     "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
     "threads": 1,
     "seed": null
@@ -4873,7 +4895,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.analysis.margin",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-margin-002",
   "result": null,
@@ -5146,7 +5168,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.lti.c2d",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-c2d-001",
   "result": {
@@ -5250,8 +5272,9 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
       "stable_across": "request: all platforms and builds of control.lti.c2d@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
       "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -5268,6 +5291,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     "output_hash": "sha256:dba22c18d22875927dfe4ecdf33bf0c537a4081e6b61c91bf9e64936e92a9935",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "glibc 2.39",
     "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
     "threads": 1,
     "seed": null
@@ -5306,7 +5330,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.lti.c2d",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-c2d-002",
   "result": null,
@@ -5572,7 +5596,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.lti.impulse",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-impulse-001",
   "result": {
@@ -5698,8 +5722,9 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
       "stable_across": "request: all platforms and builds of control.lti.impulse@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
       "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -5716,6 +5741,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     "output_hash": "sha256:4e5809cdfc1b534de7c183757528866f09ccf54c47e93b312d73eb3fb7ae7b75",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "glibc 2.39",
     "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
     "threads": 1,
     "seed": null
@@ -5757,7 +5783,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.lti.impulse",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-impulse-002",
   "result": null,
@@ -6019,7 +6045,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.math.lyap",
     "version": "0.4.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-lyap-001",
   "result": {
@@ -6104,8 +6130,9 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
       "stable_across": "request: all platforms and builds of control.math.lyap@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
       "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -6122,6 +6149,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     "output_hash": "sha256:9d4ad79f58f7e2b4020863e3410d440ad79dfc587df3347b4da5439babe82214",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "glibc 2.39",
     "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
     "threads": 1,
     "seed": null
@@ -6161,7 +6189,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.math.lyap",
     "version": "0.4.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-lyap-002",
   "result": null,
@@ -6412,7 +6440,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.design.place",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-place-001",
   "result": {
@@ -6509,8 +6537,9 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
       "stable_across": "request: all platforms and builds of control.design.place@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
       "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -6527,6 +6556,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     "output_hash": "sha256:8353eccf88599846e3653216dd6efce8df922a38183be90044a3afab0a59a59c",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "glibc 2.39",
     "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
     "threads": 1,
     "seed": null
@@ -6566,7 +6596,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.design.place",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-place-002",
   "result": null,
@@ -6842,7 +6872,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.design.dlqr",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-dlqr-001",
   "result": {
@@ -6960,8 +6990,9 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
       "stable_across": "request: all platforms and builds of control.design.dlqr@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
       "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -6978,6 +7009,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     "output_hash": "sha256:2ba88e6c6340c1954eba51085c802ae5b720418c9edb3f5af707dd573a2aade3",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "glibc 2.39",
     "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
     "threads": 1,
     "seed": null
@@ -7026,7 +7058,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.design.dlqr",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-dlqr-002",
   "result": null,
@@ -7327,7 +7359,7 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 16. **（v0.4 新）`method_policy` 的细节**：~~`prefer` 是否保留~~ 已决定去掉（3.14 MS-5），以后若有“偏好但不强制”的需求再加，届时要同时定义回退顺序与收据里的回显。仍待定：字段名；`constraints` 还需要哪些键（例如对 `bound_kind` 的要求）；`METHOD_UNAVAILABLE` 归 `VALIDATION` 还是 `DOMAIN`；`receipt.alternatives` 是否要求 `backend` 与 `algorithm` 必填。
 17. **（v0.4 新）内核级接入的接口**：数值内核如何挂到宿主（输入输出是否限于数值数组加元数据、错误如何跨 ABI 表达、内存归属、收据由哪一层生成）。需要先对照 `aeoi-core` 现有的 `validate`/`execute` 分层（8.2）再设计；它不是 8.3 的 `aeoi-capi`。
 18. **（v0.4 新）宿主策略的表达与注入**：3.14 MS-10 规定了合并语义，但宿主策略从哪里来（配置文件、MCP 客户端、会话参数）、如何审计，属于绑定层设计，尚未写。参考实现的 `Bridge::with_method_policy` 只提供合并这一步，策略的来源（目前只能由嵌入方在代码里设置）、持久化与审计都没有设计。
-19. **（v0.4 新，一致性套件发现）`$ref` 约定**：manifest 的输入、输出 schema 用 `aeoi://schemas/common/0.4/Matrix` 引用通用类型，标准 JSON Schema 解析不了（应为 `aeoi://schemas/common/0.4#/$defs/Matrix`），3.9 也没有说明这种写法。要么改写所有 schema，要么在 3.9 写明约定。
+19. ~~**（v0.4 新，一致性套件发现）`$ref` 约定**~~ **已决定（v0.4.1）：改写所有 schema 为标准引用，见 3.9 J-1 – J-3。** 没有选“在 3.9 写明简写约定”：那会要求每个实现和每个通用校验器都先写专用解析器。原问题：manifest 的输入、输出 schema 用 `aeoi://schemas/common/0.4/Matrix` 引用通用类型，标准 JSON Schema 解析不了（应为 `aeoi://schemas/common/0.4#/$defs/Matrix`），3.9 也没有说明这种写法。要么改写所有 schema，要么在 3.9 写明约定。
 20. **（v0.4 新，一致性套件发现）`lyap` 的 Q 对称性**：input schema 把 Q 描述为“对称”，10.10 的算法说明写“Q 非对称也可解”，二者要统一；`W.VALIDATION.SYMMETRIZED` 已在 manifest 声明，但规范没有规定触发条件（Q 非对称？结果被对称化？）。第二实现第一版因把非对称 Q 对称化，在 golden 的 4 个用例上失败。
 21. **（v0.4 新，一致性套件发现）默认值没有用例**：`lyap` 的 `type` 默认 `continuous`，golden 里没有省略它的用例，F-7 的“默认值回显”也无人检验。套件需要“省略可选字段”的用例族。
 
@@ -7343,6 +7375,30 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 8. 根据以上反馈修订，冻结 v1.0
 
 ## 13. Changelog
+
+### v0.4.1-draft（2026-11-24）
+
+起因：一致性套件 v0.1 发现输入、输出 schema 用 `aeoi://schemas/common/0.4/Matrix` 这种简写引用核心 schema（开放问题 19）。标准 JSON Schema 解析不了它，参考实现、`validate_examples.py` 和一致性运行器各自写了一段兼容代码才能用。作者决定先定这个问题，再扩充一致性规则。线协议标识保持 `aeoi/0.4`，核心 schema 的 `$id` 不变。
+
+**规范改动**
+
+| # | 条款 | 改动 | 原因 |
+|---|---|---|---|
+| 1 | 3.9 J-1 – J-3 | `$ref` MUST 是标准 2020-12 引用（`<$id>#/$defs/<Name>`），简写不合法；引用的 `$id` 版本与 manifest `spec` 一致；MCP 返回的 manifest 与工具 schema 内联 | 第三方实现和通用校验器不应需要专用解析器 |
+| 2 | 12.1 第 19 项 | 标为已决定 | |
+
+**已做的改动**
+
+| 位置 | 改动 |
+|---|---|
+| `write_manifests.py` | 引用前缀改为 `aeoi://schemas/common/0.4#/$defs/`；`E.VALIDATION.METHOD_UNAVAILABLE` 改在写出前统一补到每个 manifest（v0.4 时 `bode`、`step`、`lqr` 三个 v0.2 算子是手改 manifest 文件加的，脚本重新生成会丢掉） |
+| `examples/*/input.schema.json`、`output.schema.json` | 由 `write_manifests.py` 重新生成，只有引用写法改变（19 个算子，37 个文件） |
+| `schemas/common.schema.json`、`envelope.schema.json` | `MethodPolicy` 的两处引用（文件内改为 `#/$defs/MethodPolicy`） |
+| `aeoi-core/src/schema.rs` | 去掉 `resolve` 的简写分支；新单元测试 `shorthand_ref_rejected` |
+| `validate_examples.py` | 去掉为简写注册的别名资源；新增检查：所有 schema 文件里的非本地 `$ref` 按原样解析 |
+| `conformance/aeoi_conformance.py` | 去掉 `fix_refs`（自动改写）；manifest 内的 schema 有无法解析的 `$ref` 时，该算子的用例判失败并注明 J-1；运行器版本 0.1.1 |
+
+指纹、`input_hash`、`output_hash` 都不含 schema 文本，示例响应不变。另：v0.4 一节所说“示例都没有 `libm`、逐位比较暂时跳过”已由 `3dada65` 解决（在 glibc 2.39 上重新生成，只改了元数据）。
 
 ### v0.4-draft（2026-11-23）
 

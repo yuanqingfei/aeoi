@@ -19,13 +19,13 @@
       ],
       "properties": {
         "matrix": {
-          "$ref": "aeoi://schemas/common/0.4/Matrix"
+          "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix"
         },
         "rank": {
           "type": "integer"
         },
         "singular_values": {
-          "$ref": "aeoi://schemas/common/0.4/Matrix"
+          "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix"
         },
         "full_rank": {
           "type": "boolean"
@@ -43,13 +43,13 @@
       ],
       "properties": {
         "matrix": {
-          "$ref": "aeoi://schemas/common/0.4/Matrix"
+          "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix"
         },
         "rank": {
           "type": "integer"
         },
         "singular_values": {
-          "$ref": "aeoi://schemas/common/0.4/Matrix"
+          "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix"
         },
         "full_rank": {
           "type": "boolean"
@@ -70,10 +70,10 @@
           ],
           "properties": {
             "controllability": {
-              "$ref": "aeoi://schemas/common/0.4/Matrix"
+              "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix"
             },
             "observability": {
-              "$ref": "aeoi://schemas/common/0.4/Matrix"
+              "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix"
             }
           }
         }

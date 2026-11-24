@@ -15,31 +15,31 @@
   ],
   "properties": {
     "gain_margin": {
-      "$ref": "aeoi://schemas/common/0.4/Quantity",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Quantity",
       "description": "unit=1（幅值比）；无相位交越时为 \"Inf\""
     },
     "gain_margin_db": {
-      "$ref": "aeoi://schemas/common/0.4/Quantity",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Quantity",
       "description": "unit=dB"
     },
     "phase_margin": {
-      "$ref": "aeoi://schemas/common/0.4/Quantity",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Quantity",
       "description": "unit=deg；无增益交越时为 \"Inf\""
     },
     "stability_margin": {
-      "$ref": "aeoi://schemas/common/0.4/Quantity",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Quantity",
       "description": "unit=1，min_ω |1+G|；无内部极小时为 \"Inf\""
     },
     "phase_crossover_frequency": {
-      "$ref": "aeoi://schemas/common/0.4/Quantity",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Quantity",
       "description": "unit=rad/s，所选 GM 对应频率；无则 \"NaN\""
     },
     "gain_crossover_frequency": {
-      "$ref": "aeoi://schemas/common/0.4/Quantity",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Quantity",
       "description": "unit=rad/s"
     },
     "stability_margin_frequency": {
-      "$ref": "aeoi://schemas/common/0.4/Quantity",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Quantity",
       "description": "unit=rad/s"
     },
     "crossings": {

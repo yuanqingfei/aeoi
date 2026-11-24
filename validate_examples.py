@@ -9,10 +9,19 @@ docs = {n: L(f"schemas/{n}.schema.json") for n in ["common", "envelope", "error"
 reg = Registry()
 for s in docs.values():
     reg = reg.with_resource(s["$id"], Resource.from_contents(s))
-for d in docs["common"]["$defs"]:  # aeoi://schemas/common/0.4/<Def> shorthand used by operator schemas
-    reg = reg.with_resource(f"aeoi://schemas/common/0.4/{d}", Resource.from_contents(
-        {"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": f"aeoi://schemas/common/0.4#/$defs/{d}"}))
 bad = 0
+# spec 3.9 J-1: operator schemas use standard 2020-12 $refs only (no shorthand); every non-local $ref must resolve as written
+def _refs(v):
+    if isinstance(v, dict):
+        if isinstance(v.get("$ref"), str): yield v["$ref"]
+        for x in v.values(): yield from _refs(x)
+    elif isinstance(v, list):
+        for x in v: yield from _refs(x)
+for f in sorted(glob.glob("examples/*/*.schema.json")) + [f"schemas/{n}.schema.json" for n in docs]:
+    for r in _refs(L(f)):
+        if r.startswith("#"): continue
+        try: reg.resolver().lookup(r)
+        except Exception as ex: print(f"FAIL {f}: $ref {r} does not resolve (3.9 J-1): {type(ex).__name__}"); bad += 1
 # framework-level codes (spec E-7a): emitted by the pipeline, not by an operator, so not listed per manifest
 FRAMEWORK_CODES = ["W.EVIDENCE.POSTCONDITION_FAILED"]
 H = lambda o: "sha256:" + hashlib.sha256(json.dumps(o, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()

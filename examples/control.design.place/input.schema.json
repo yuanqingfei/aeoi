@@ -10,17 +10,17 @@
   ],
   "properties": {
     "A": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "状态矩阵 A，[n,n]"
     },
     "B": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "输入矩阵 B，[n,m]"
     },
     "poles": {
       "type": "array",
       "items": {
-        "$ref": "aeoi://schemas/common/0.4/Complex"
+        "$ref": "aeoi://schemas/common/0.4#/$defs/Complex"
       },
       "minItems": 1,
       "description": "期望闭环极点 [re, im]，长度 n，共轭封闭"
@@ -33,7 +33,7 @@
       "description": "多输入 KNV 迭代的最大扫描次数（可省略）"
     },
     "exec": {
-      "$ref": "aeoi://schemas/common/0.4/ExecOptions"
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
     }
   }
 }

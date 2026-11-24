@@ -69,7 +69,7 @@
       "description": "可选。上游 receipt 指纹，只回显"
     },
     "exec": {
-      "$ref": "aeoi://schemas/common/0.4/ExecOptions"
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
     }
   }
 }

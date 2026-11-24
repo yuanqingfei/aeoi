@@ -7,7 +7,7 @@
   ],
   "properties": {
     "X": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "[n,n]；Q 对称时 X 对称"
     }
   }

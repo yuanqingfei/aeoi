@@ -31,11 +31,10 @@ fn resolve(r: &str, cur: &Value) -> (Value, Value) {
     let (base, frag) = r.split_once('#').unwrap_or((r, ""));
     for d in docs() {
         let id = d["$id"].as_str().unwrap();
+        // spec 3.9 J-1: only standard 2020-12 refs (`<$id>` or `<$id>#<JSON Pointer>`); the pre-v0.4
+        // `<$id>/<Def>` shorthand is rejected so it cannot creep back into published schemas.
         if base == id {
             return (pointer(d, frag).unwrap_or_else(|| panic!("bad ref {r}")).clone(), d.clone());
-        }
-        if let Some(name) = base.strip_prefix(&format!("{id}/")) {
-            return (d["$defs"][name].clone(), d.clone());
         }
     }
     panic!("unresolvable $ref {r}")
@@ -228,7 +227,7 @@ mod tests {
     fn inline_has_no_refs() {
         let s = inline(doc("envelope"));
         assert!(!serde_json::to_string(&s).unwrap().contains("$ref"));
-        let m = inline(&serde_json::json!({"$ref": "aeoi://schemas/common/0.4/Matrix"}));
+        let m = inline(&serde_json::json!({"$ref": "aeoi://schemas/common/0.4#/$defs/Matrix"}));
         assert!(!serde_json::to_string(&m).unwrap().contains("$ref"));
         let v = Validator::new(&m);
         assert!(v.violations(&serde_json::json!({"dtype":"f64","shape":[1],"data":[1]}), 5).is_empty());
@@ -238,8 +237,15 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "unresolvable $ref")]
+    fn shorthand_ref_rejected() {
+        // spec 3.9 J-1: `<$id>/<Def>` is not standard JSON Schema and must not resolve
+        inline(&serde_json::json!({"$ref": "aeoi://schemas/common/0.4/Matrix"}));
+    }
+
+    #[test]
     fn diagnose_resolves_oneof() {
-        let s = inline(&serde_json::json!({"type":"object","properties":{"A":{"$ref":"aeoi://schemas/common/0.4/Matrix"},"system":{"$ref":"aeoi://schemas/common/0.4/LtiSystem"}}}));
+        let s = inline(&serde_json::json!({"type":"object","properties":{"A":{"$ref":"aeoi://schemas/common/0.4#/$defs/Matrix"},"system":{"$ref":"aeoi://schemas/common/0.4#/$defs/LtiSystem"}}}));
         let d = diagnose(&s, &serde_json::json!({"A":[[0,1],[2,3]]}));
         assert_eq!(d.patches.len(), 1);
         assert_eq!(d.patches[0]["value"]["data"], serde_json::json!([0.0,1.0,2.0,3.0]));

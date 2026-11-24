@@ -13,11 +13,11 @@
   ],
   "properties": {
     "poles": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "c128 向量 [n]，按实部升序、虚部降序"
     },
     "zeros": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "c128 向量，排序同上"
     },
     "zero_definition": {
@@ -32,17 +32,17 @@
           "type": "null"
         },
         {
-          "$ref": "aeoi://schemas/common/0.4/Quantity",
+          "$ref": "aeoi://schemas/common/0.4#/$defs/Quantity",
           "description": "unit=1，shape [ny,nu]；可含 \"Inf\"/\"-Inf\"/\"NaN\""
         }
       ]
     },
     "natural_frequency": {
-      "$ref": "aeoi://schemas/common/0.4/Quantity",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Quantity",
       "description": "unit=rad/s，[n]，与 poles 同序"
     },
     "damping_ratio": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "f64 [n]，与 poles 同序；p=0 时为 \"NaN\""
     },
     "stable": {

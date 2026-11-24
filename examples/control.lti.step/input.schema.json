@@ -9,7 +9,7 @@
   ],
   "properties": {
     "system": {
-      "$ref": "aeoi://schemas/common/0.4/LtiSystem",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/LtiSystem",
       "description": "被分析的 LTI 系统：tf（num/den 按降幂）、ss（A/B/C/D 稠密矩阵，row-major）或 zpk；ts=0 连续，ts>0 为离散采样周期（s）。上一个工具返回了 result.system 时，把那个 JSON 对象原样放在这里，不要手抄或改写系数（spec K-6）"
     },
     "time": {
@@ -119,7 +119,7 @@
       "description": "返回的采样点：all / decimated（最多 max_samples 点）/ none"
     },
     "exec": {
-      "$ref": "aeoi://schemas/common/0.4/ExecOptions"
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
     }
   }
 }

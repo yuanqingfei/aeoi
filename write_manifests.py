@@ -1,7 +1,7 @@
 """Source of truth for v0.2 manifests and I/O schemas (examples/<id>/{manifest,input.schema,output.schema}.json).
 The Rust crates embed these files at compile time."""
 import json, os
-SPEC="aeoi/0.4"; C="aeoi://schemas/common/0.4/"
+SPEC="aeoi/0.4"; C="aeoi://schemas/common/0.4#/$defs/"  # standard JSON Schema 2020-12 $ref (spec 3.9 J-1)
 def w(p,o):
     os.makedirs(os.path.dirname(p),exist_ok=True); json.dump(o,open(p,"w"),indent=2,ensure_ascii=False); open(p,"a").write("\n")
 CLEAN={"declared":True,"sources":"仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"}
@@ -537,5 +537,6 @@ for op,c in COVERAGE.items(): RECEIPT[op]["coverage"]=c
 for op,g in GUARDS.items(): RECEIPT[op]["guards"]=g
 for op,(m,i,o) in ALL_OPS.items():
     m["receipt"]=RECEIPT[op]
+    if "E.VALIDATION.METHOD_UNAVAILABLE" not in m["errors"]: m["errors"].append("E.VALIDATION.METHOD_UNAVAILABLE")  # v0.4 3.14, every operator (v0.2 dicts bypass man())
     d=f"examples/{op}/"; w(d+"manifest.json",m); w(d+"input.schema.json",i); w(d+"output.schema.json",o)
 print("ok")

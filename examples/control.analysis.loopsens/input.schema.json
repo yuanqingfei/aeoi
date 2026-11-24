@@ -8,15 +8,15 @@
   ],
   "properties": {
     "plant": {
-      "$ref": "aeoi://schemas/common/0.4/LtiSystem",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/LtiSystem",
       "description": "被控对象 G（SISO）。上一个工具返回了系统（例如 control_lti_pade 与对象串联的结果、control_lti_convert 的结果）就原样粘贴 result.system"
     },
     "controller": {
-      "$ref": "aeoi://schemas/common/0.4/LtiSystem",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/LtiSystem",
       "description": "控制器 C，在前向通路。省略 = 1（只看对象本身的单位负反馈）。PID 用 control_design_pid 的 result.system 原样粘贴"
     },
     "sensor": {
-      "$ref": "aeoi://schemas/common/0.4/LtiSystem",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/LtiSystem",
       "description": "反馈通路 H（测量动态）。省略 = 单位反馈。不要把控制器放在这里"
     },
     "time": {
@@ -115,7 +115,7 @@
       "description": "可选。上游 receipt.fingerprint.request，只回显"
     },
     "exec": {
-      "$ref": "aeoi://schemas/common/0.4/ExecOptions"
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
     }
   }
 }

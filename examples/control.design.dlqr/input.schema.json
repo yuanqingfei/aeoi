@@ -11,23 +11,23 @@
   ],
   "properties": {
     "A": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "离散状态矩阵 A（x[k+1] = A x[k] + B u[k]），[n,n]"
     },
     "B": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "输入矩阵 B，[n,m]（单输入时为列向量 [n,1]）"
     },
     "Q": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "状态权重 Q，[n,n]，对称半正定"
     },
     "R": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "输入权重 R，[m,m]，对称正定（标量写成 [1,1]）"
     },
     "N": {
-      "$ref": "aeoi://schemas/common/0.4/Matrix",
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
       "description": "交叉权重 N，[n,m]，缺省为 0"
     },
     "symmetry_tolerance": {
@@ -37,7 +37,7 @@
       "description": "相对容差 ‖X−Xᵀ‖_F ≤ tol·‖X‖_F；超出即 E.VALIDATION.NOT_SYMMETRIC，范围内（但非精确对称）对称化并给 W.VALIDATION.SYMMETRIZED"
     },
     "exec": {
-      "$ref": "aeoi://schemas/common/0.4/ExecOptions"
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
     }
   },
   "x-aeoi-shape-constraints": [
