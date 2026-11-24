@@ -68,3 +68,25 @@ pub fn matched_set_err(a: &[(f64, f64)], b: &[(f64, f64)]) -> f64 {
     }
     worst
 }
+
+/// Spec 2.1 / P-7: `platform_bitwise` promises equal bytes only on the same build AND the same "platform"
+/// (target triple + runtime-detected CPU features). Published example hashes were produced on one such platform,
+/// so on any other machine a differing `output_hash` is not a defect; the numeric checks (python-control /
+/// mpmath tolerance) still run. Returns whether the bitwise comparison applies.
+pub fn same_platform(env: &Value, published: &Value) -> bool {
+    let (a, b) = (&env["reproducibility"], &published["reproducibility"]);
+    a["platform"] == b["platform"] && a["cpu_features"] == b["cpu_features"]
+}
+
+/// Assert equal `output_hash` when the published example comes from this platform; otherwise note and skip.
+pub fn assert_hash_on_same_platform(env: &Value, published: &Value, what: &str) {
+    if same_platform(env, published) {
+        assert_eq!(env["reproducibility"]["output_hash"], published["reproducibility"]["output_hash"], "{what}");
+    } else {
+        println!(
+            "{what}: bitwise comparison skipped (platform_bitwise; example from {} {}, this host {} {})",
+            published["reproducibility"]["platform"], published["reproducibility"]["cpu_features"],
+            env["reproducibility"]["platform"], env["reproducibility"]["cpu_features"]
+        );
+    }
+}

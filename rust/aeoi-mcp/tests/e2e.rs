@@ -56,6 +56,7 @@ fn mcp_stdio_session() {
             println!("tools/call {tool} ({req}): isError={} :: {}", res["isError"], res["content"][0]["text"]);
             assert_eq!(res["isError"], expect_err);
             let env = &res["structuredContent"];
+            let same_platform = env["reproducibility"]["platform"] == want["reproducibility"]["platform"] && env["reproducibility"]["cpu_features"] == want["reproducibility"]["cpu_features"];
             assert_eq!(env["spec"], "aeoi/0.4");
             let text_env: Value = serde_json::from_str(res["content"][1]["text"].as_str().unwrap()).unwrap();
             assert_eq!(&text_env, env);
@@ -63,7 +64,12 @@ fn mcp_stdio_session() {
                 assert_eq!(env["error"]["code"], want["error"]["code"]);
             } else {
                 assert!(env["trust"]["accuracy_grade"].is_string());
-                assert_eq!(env["reproducibility"]["output_hash"], want["reproducibility"]["output_hash"], "{op}: MCP result differs from the published example");
+                // platform_bitwise (spec 2.1, P-7): equal bytes are promised only on the platform the example came from.
+                if same_platform {
+                    assert_eq!(env["reproducibility"]["output_hash"], want["reproducibility"]["output_hash"], "{op}: MCP result differs from the published example");
+                } else {
+                    println!("{op}: bitwise comparison skipped (example from {} {}, this host {} {})", want["reproducibility"]["platform"], want["reproducibility"]["cpu_features"], env["reproducibility"]["platform"], env["reproducibility"]["cpu_features"]);
+                }
                 assert_eq!(env["receipt"]["fingerprint"]["request"], want["receipt"]["fingerprint"]["request"], "{op}: receipt request fingerprint differs");
             }
             // replay-verify the published example envelope through the MCP verifier tool
@@ -73,7 +79,11 @@ fn mcp_stdio_session() {
             if expect_err {
                 assert_eq!(verdict, "error_reproduced");
             } else {
-                assert_eq!(verdict, "bitwise_match");
+                if same_platform {
+                    assert_eq!(verdict, "bitwise_match");
+                } else {
+                    assert!(verdict == "bitwise_match" || verdict == "tolerance_match", "{op}: verify verdict {verdict}");
+                }
             }
         }
     }

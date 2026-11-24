@@ -39,7 +39,7 @@ fn bode_example() {
     assert!(em <= 1e-9 && ep <= 1e-8);
     let pub_ = read("examples/control.lti.bode/response.success.json");
     assert!(maxabs(&mag, &fvec(&pub_["result"]["magnitude"]["value"]["data"])) <= 1e-9);
-    assert_eq!(env["reproducibility"]["output_hash"], pub_["reproducibility"]["output_hash"], "bitwise determinism on this platform");
+    assert_hash_on_same_platform(&env, &pub_, "bitwise determinism on this platform");
     let e = call("control.lti.bode", &read("examples/control.lti.bode/request.error.json"), &h);
     assert_eq!(e["error"]["code"], read("examples/control.lti.bode/response.error.json")["error"]["code"]);
     let ns = call("control.lti.bode", &read("examples/control.lti.bode/request.ss_nonsymmetric.json"), &h);
@@ -195,7 +195,7 @@ fn batch2_examples() {
         let env = call(op, &read(&format!("{dir}/request.json")), &h);
         assert!(env["status"] == "ok" || env["status"] == "ok_with_warnings", "{op}: {}", env["error"]);
         let pub_ = read(&format!("{dir}/response.success.json"));
-        assert_eq!(env["reproducibility"]["output_hash"], pub_["reproducibility"]["output_hash"], "{op}: bitwise determinism on this platform");
+        assert_hash_on_same_platform(&env, &pub_, &format!("{op}: bitwise determinism on this platform"));
         let rf = &read(&format!("{dir}/reference.python-control.json"))["request.json"];
         let r = &env["result"];
         let err: f64 = match op {
@@ -242,7 +242,7 @@ fn batch2_examples() {
         assert!(!e["error"]["remediation"].as_array().map(|v| v.is_empty()).unwrap_or(true) || e["error"]["category"] == "validation", "{op}: domain/numerical errors carry remediation");
         let ns = call(op, &read(&format!("{dir}/request.nonsymmetric.json")), &h);
         let pns = read(&format!("{dir}/response.nonsymmetric.json"));
-        assert_eq!(ns["reproducibility"]["output_hash"], pns["reproducibility"]["output_hash"], "{op}: nonsymmetric example");
+        assert_hash_on_same_platform(&ns, &pns, &format!("{op}: nonsymmetric example"));
     }
 }
 
@@ -255,7 +255,7 @@ fn loopsens_example() {
     let env = call(op, &read(&format!("{dir}/request.json")), &h);
     assert_eq!(env["status"], "ok", "{}", env["error"]);
     let pub_ = read(&format!("{dir}/response.success.json"));
-    assert_eq!(env["reproducibility"]["output_hash"], pub_["reproducibility"]["output_hash"], "bitwise example");
+    assert_hash_on_same_platform(&env, &pub_, "bitwise example");
     assert_eq!(env["receipt"]["evidence"]["claim"], "spot_checked", "E-12: margins are grid-audited");
     let rf = &read(&format!("{dir}/reference.python-control.json"))["request.json"];
     let r = &env["result"];
@@ -279,7 +279,7 @@ fn batch3_examples() {
         let env = call(op, &read(&format!("{dir}/request.json")), &h);
         assert!(env["status"] == "ok" || env["status"] == "ok_with_warnings", "{op}: {}", env["error"]);
         let pub_ = read(&format!("{dir}/response.success.json"));
-        assert_eq!(env["reproducibility"]["output_hash"], pub_["reproducibility"]["output_hash"], "{op}: bitwise example");
+        assert_hash_on_same_platform(&env, &pub_, &format!("{op}: bitwise example"));
         assert_eq!(env["receipt"]["evidence"]["claim"], pub_["receipt"]["evidence"]["claim"]);
         let rf = &read(&format!("{dir}/reference.python-control.json"))["request.json"];
         let err = if op == "control.lti.stepinfo" {
@@ -296,7 +296,7 @@ fn batch3_examples() {
         if spec_root().join(&ns_path).exists() {
             let ns = call(op, &read(&ns_path), &h);
             let pns = read(&format!("{dir}/response.nonsymmetric.json"));
-            assert_eq!(ns["reproducibility"]["output_hash"], pns["reproducibility"]["output_hash"], "{op}: nonsymmetric");
+            assert_hash_on_same_platform(&ns, &pns, &format!("{op}: nonsymmetric"));
         }
     }
 }
