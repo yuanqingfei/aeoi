@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.1-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.2-draft
 
-> 状态：Draft v0.4.1 · 2026-11-24 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.2 · 2026-11-24 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.2 给一致性套件补了 5 个算子的数值规则（`poles_zeros`、`bode`、`step`、`lqr`、`c2d`），连同 `lyap` 共 6 个，占 19 个算子的 32%；参考实现全部通过。CF-2、CF-6、CF-8 据此写得更具体：容差类取自套件而非被测实现的 manifest，状态空间实现比较哪些不变量，列主序检查怎么判定。
 >
 > v0.4.1 定下开放问题 19：所有 schema 里的 `$ref` 改为标准 JSON Schema 2020-12 写法（3.9 J-1 – J-3），去掉参考实现、校验脚本和一致性套件里的三处简写兼容代码。线协议标识仍是 `aeoi/0.4`，示例结果与 `output_hash` 不变。
 >
@@ -728,14 +730,14 @@ pub trait Operator: Send + Sync + 'static {
 
 ### 9.4 跨实现一致性（v0.4）
 
-9.1 的合规等级评价一个算子实现自身的质量（schema、信封、可复现、凭证）。本节回答另一个问题：**换一个实现，行为是否等价于参考实现。** 两者独立：一个实现可以是 L2 却通不过本节的套件，反过来也一样。本节规定判定规则和套件的组成；套件的 v0.1（`conformance/`：运行器、独立的哈希重算、只含 `lyap` 的 Python 第二实现）已经有了，只有 `lyap` 带数值规则，参考实现还没有用它跑过（`conformance/README.md`）。
+9.1 的合规等级评价一个算子实现自身的质量（schema、信封、可复现、凭证）。本节回答另一个问题：**换一个实现，行为是否等价于参考实现。** 两者独立：一个实现可以是 L2 却通不过本节的套件，反过来也一样。本节规定判定规则和套件的组成；套件 v0.2（`conformance/`：运行器、独立的哈希重算、只含 `lyap` 的 Python 第二实现）有 6 个算子的数值规则（`lyap`、`poles_zeros`、`bode`、`step`、`lqr`、`c2d`），参考实现全部通过（`conformance/README.md`）。
 
 - CF-1 **对象与形态。** 一致性有两类对象：算子实现（CF-1 – CF-11），以及把算子暴露给模型的绑定层（CF-12）。算子实现有两种接入形态，与 9.1 的 L1 – L3 无关：
   - **线级（wire）**：独立的可执行体，通过 MCP stdio 暴露算子（8.1、C-1），运行器只与它交互。任何语言都能做到。
   - **内核级（kernel）**：只提供数值内核，挂到宿主（如 `aeoi-core`）里，校验、收据与指纹仍由宿主负责。内核接口尚未定义（12.1 第 17 项）。它不是 8.3 的 `aeoi-capi`：后者是“调用 AEOI 的 C ABI”，把整个算子包成 JSON 进、JSON 出，不是把内核插进宿主的接口。
 
   一致性按（算子 id、版本、方法 id）逐项声明（CF-11）；没有声明的算子，实现不得宣称遵守 AEOI。
-- CF-2 **套件沿用 golden 与 `parity.yaml`，不另立用例格式。** 一个用例就是 `golden/<engine>/<op>/<ver>/<sha256>.json`（`request`、`expected`、`reference_env`、`case_family`）；用例族的容差类、`compare` 规则、预期错误与预期警告写在该算子的 `parity.yaml`（V-4 – V-10）。套件 = 这两者 + CF-10 的方法用例。含矩阵输入的算子 MUST 带 `memory_order_nonsymmetric` 族（第 0 章）：运行器断言按列主序展平的请求，其结果偏离参考超过容差。这是对第二实现最便宜也最有效的检验。
+- CF-2 **套件沿用 golden 与 `parity.yaml`，不另立用例格式。** 一个用例就是 `golden/<engine>/<op>/<ver>/<sha256>.json`（`request`、`expected`、`reference_env`、`case_family`）；用例族的容差类、`compare` 规则、预期错误与预期警告写在该算子的 `parity.yaml`（V-4 – V-10）。套件 = 这两者 + CF-10 的方法用例。含矩阵输入的算子 MUST 带 `memory_order_nonsymmetric` 族（第 0 章）：运行器断言按列主序展平的请求，其结果偏离参考超过容差：取该算子全部数值检查里最大的“偏差 / 容差”，须 > 1e3（或请求被拒绝）。只看一个字段可能看不出错误：eig(Aᵀ) = eig(A)，极点不动，零点与 DC 增益会动。这是对第二实现最便宜也最有效的检验。
 - CF-3 **通信与运行。** 运行器通过 MCP stdio 驱动被测实现，只做这一种（`initialize`、`tools/list`、`tools/call`、`resources/read`）；manifest 由资源 `aeoi://operators/{id}/{version}/manifest`（M-1）读取。非 MCP 的传统程序要通过线级套件，需要自带一层薄的 MCP stdio 适配。运行器命令（v0.1 已实现，只覆盖 `lyap`，见 `conformance/README.md`）：`python3 conformance/aeoi_conformance.py run --impl "<启动命令>" --operators all|<id,…> --report report.json`。对声明 `bitwise`、`platform_bitwise` 或 `seeded` 的算子（M-7），运行器对每个请求运行两次，`output_hash` MUST 相同（P-7）。
 - CF-4 **必须相同的字段。** 信封的 `status` 是否为 `error`；`error.code`（V-7）；用例 `expect_warning` 列出的 warning 码 MUST 出现（V-7）；算子 id 与版本；`fingerprint.request`。最后一项成立的原因：它是 `H({operator, version, input_hash})`，而 `input_hash` 与编码无关（H-1），所以任何实现对同一请求 MUST 算出相同的值。
 - CF-5 **不要求相同的字段。**
@@ -745,8 +747,10 @@ pub trait Operator: Send + Sync + 'static {
   - `timing`、`build`、`platform`、`cpu_features`。
 - CF-6 **数值比较。**
   - 沿用 `parity.yaml` 的 `compare`：对每个顶层输出字段按相对范数（`rel_fro`，标量退化为相对误差，向量为 2-范数）；字符串、布尔、键与数组长度必须完全相同。**多项式系数同样按范数比较，不逐元素。**
+  - 某个字段在 `parity.yaml` 里有自己的写法时（如 `bode` 的 dB 与度按绝对差、相位模 360；`step` 的 y 按相对 max|y_ref| 的最大差），以 `parity.yaml` 为准，上一条的 `rel_fro` 只是没写时的默认。运行器实际执行的公式 MUST 写在该算子 `parity.yaml` 的 `conformance_compare` 里（v0.4.2），使套件不必读运行器代码也能复现。
   - 无序量（极点、零点、特征值）按 V-5 与 3.10 R-2 做集合匹配；状态空间实现、特征向量、Schur 基比较不变量（V-5）；多输入 `place` 的 K 用 V-5a；`stepinfo` 的时间量按 I-10。
-  - 容差类与 κ 缩放由套件固定在 `parity.yaml`（7.2、V-6）；**κ 由运行器用参考请求计算，不采信被测实现自报的任何量。** V-6 中“`max(class_tol, 10 × trust.error_estimate)`”这种放宽只对参考实现开放；第二个实现自报的 `error_estimate` MUST NOT 用来放宽验收，否则它把估计报大就能通过任何用例。
+  - 容差类与 κ 缩放由套件固定在 `parity.yaml`（7.2、V-6）；被测实现 manifest 里的 `tolerance_class` 只是它的自我声明，MUST NOT 用来决定验收容差（否则声明一个更宽的类就能通过）。**κ 由运行器用参考请求或参考值计算，不采信被测实现自报的任何量**（`trust.error_estimate`、`trust.condition`、`trust.derived` 都不用）。 V-6 中“`max(class_tol, 10 × trust.error_estimate)`”这种放宽只对参考实现开放；第二个实现自报的 `error_estimate` MUST NOT 用来放宽验收，否则它把估计报大就能通过任何用例。
+  - 状态空间实现的不变量（v0.4.2，以 `c2d` 为例）：运行器在自己选的点（离散系统取单位圆上若干点，避开参考极点）上比较传递函数值，再比较极点集合与 D；A、B、C 本身不比较，因为相似变换得到的实现同样正确。返回传递函数时，分子分母先同除以分母首项系数（二者只确定到一个公共因子）再比较系数。
   - 4.3 R-5 的 `verify` 用 ‖·‖∞ 做重放比较，`parity.yaml` 用 `rel_fro`；两种范数并存，一致性套件用后者（12.1 第 14 项）。
 - CF-7 **验收容差与自报误差界。** 验收容差由套件决定（CF-6），是“合规下限”。被测实现的收据里 `exactness.bound_kind` 为 `rigorous` 或 `a_priori` 且 `bound` 是数值时，`bound` MUST 不大于该用例的验收容差，否则声明本身不合规；`a_posteriori_heuristic` 与 `none` 只作信息记录，通过与否只看实际偏差。个别用例上确有理由的更宽偏差 MUST 登记在声明的 `known_deviations`（用例、实际偏差、原因），记为“带偏差通过”，不计入“完全通过”。
 - CF-8 **收据与 manifest 的机械核查。** 运行器不采信自报：
@@ -754,7 +758,7 @@ pub trait Operator: Send + Sync + 'static {
   - 响应里出现的每个 `E.*`、`W.*` 码 MUST 在该 manifest 中声明（E-7、5.1；框架级码见 E-7a）。
   - `receipt.evidence.claim` 由运行器按 E-11、E-12，用 manifest 的 `receipt.postconditions` 与 `coverage`、响应的 `trust.checks` 重新推出，MUST 与响应一致：后置条件为 false 时不能声称 `verified`。
   - 收据的 `method.id` MUST 属于 manifest 允许的方法集合（MS-1）。
-  - （推荐）对 `lyap`、`lqr`、`place`、`poles_zeros` 等，运行器用与被测实现不同的代码路径独立复核后置条件（残差、闭环极点位置），做法参照 `validate_examples.py` 对 E-12、E-13 的独立核对。
+  - （推荐）对 `lyap`、`lqr`、`place`、`poles_zeros` 等，运行器用与被测实现不同的代码路径独立复核后置条件（残差、闭环极点位置），做法参照 `validate_examples.py` 对 E-12、E-13 的独立核对。v0.4.2 已对 `lqr` 做了：由返回的 S、K 重算 CARE 残差、K 与 S 的一致性、S 的对称性、A − BK 的稳定性。残差按各项大小归一（后向误差形式），不对 R 求逆：否则 cond(R) 到 1e12 时运行器自身的舍入就会造成误判。
 - CF-9 **错误、边界与 remediation。** 套件除正常路径外 MUST 包含：manifest 声明的每个错误码至少一个触发用例（`parity.yaml` 的 `expect`）；保护性拒绝（如 `series` 的相对阶上限，I-7）；带 `modify_input` remediation 的错误，运行器把补丁套到请求上重新调用，结果 MUST 通过校验（X-9）。
 - CF-10 **方法用例。** 对 manifest 里每个已登记的方法（MS-1），运行器 MUST 以 `exec.method_policy = {"require": ["<该方法 id>"]}` 跑该算子的全部用例，每个方法单独计数（MS-3）；声明了方法却没被检验的实现不能通过。方法选择另有用例：缺省选 `default`；`require` 已登记的方法成功且 `method_selection.used` 相符；`require` 未登记的 id、无解的 `constraints` 返回 `E.VALIDATION.METHOD_UNAVAILABLE` 且 `details` 列出可用方法；含 `method_policy` 的请求发给不支持它的实现得到 `E.VALIDATION.SCHEMA`（MS-8）。只有一个方法的算子只需通过缺省、`require` 未登记 id、`require` 该唯一方法这三项。这些用例用 golden 同样的文件格式，`request.exec` 带 `method_policy`；**不同方法的结果都 MUST 落在同一个验收容差内**，这正是对“换方法不改变结果”的检验。
 - CF-11 **声明与报告。** 运行器产生报告，实现发布机器可读的声明，至少包含：实现名称、版本、形态（线级或内核级）；套件版本与 `suite_hash`；逐（算子、版本、方法 id）的结果（`pass`、`pass_with_deviation`、`fail`、`skip`）；`known_deviations`；通过用例按 `reference_env.engine` 的计数，以及该引擎是否与被测方法的 `backend.library`（M-6）同源；所用内核与数值库及其版本。同源的参考值只能证明套件可移植，不能证明实现可替换，所以声明 MUST 把“同源通过”和“独立通过”（mpmath、解析解，V-1 ②）分开列出。
@@ -1590,6 +1594,10 @@ case_families:   # n = 当前 golden 用例数
   - {name: memory_order_nonsymmetric, n: 1,
      note: "非对称 A；同时断言 column-major 展平（A(:) 错误）的请求结果与参考值偏差 > 1e3×容差"}
 pass_rule: "所有 case 在容差内；预期报错的 case 报出相同 code；预期 warning 必须出现；所有 code 必须在 manifest 中声明"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. No trust.error_estimate (CF-6)
+  magnitude: "|Δ dB| ≤ 1e-9·κ(ω), κ(ω) = 1 + |s| / min_p |s − p|, s = jω (or e^{jω·ts}), p = poles of the reference request"
+  phase: "|Δ| mod 360 ≤ 1e-8·κ(ω) deg (the branch convention is not checked: spec 12.1 item 22)"
+  w: "relative ≤ 1e-14"
 ```
 
 ### 10.2 `control.lti.step`
@@ -2336,6 +2344,11 @@ case_families:
   - {name: improper_reject, n: 1, expect: E.DOMAIN.IMPROPER_SYSTEM}
   - {name: discrete_dt_mismatch, n: 1, expect: E.VALIDATION.GRID}
 excluded: ["auto 时间网格（参考实现的自动网格不公开且会变化，不作为 parity 对象）"]
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. dt from the reference grid, not trust.derived
+  y: "max|Δ| / max(1, max|y_ref|) ≤ 1e-10; shape [ny, nu, nt] exact"
+  t: "|Δ| ≤ 1e-12"
+  n_grid_points: exact
+  info: "null exactly where the reference is (expect_info_null, zero DC gain); times |Δ| ≤ dt; values relative ≤ 1e-9; overshoot/undershoot |Δ| ≤ 1e-6 %"
 ```
 
 ### 10.3 `control.design.lqr`
@@ -3067,6 +3080,10 @@ case_families_high_precision:   # golden/mpmath, n = cases
   - {name: ill_conditioned_R_hp, n: 5, note: "与 python-control 族 ill_conditioned_R 同输入，50 位真值"}
   - {name: ill_conditioned_R_extreme, n: 8, params: "n∈[2,6], m∈[2,3], cond(R)∈{1e10,1e11,1e12}"}
   - {name: ill_conditioned_R_cross_N, n: 2, params: "cond(R)∈{1e9,1e11}，带交叉项 N"}
+conformance_compare:   # spec 9.4 CF-6, CF-8; conformance/rules_control.py. No trust.error_estimate (CF-6)
+  python-control: "S rel_fro ≤ 1e-10·max(1, cond_S/100) (cond_S of the reference); K ≤ 10× that; closed_loop_poles matched set ≤ 1e-8·max(1, cond_S/100)"
+  mpmath: "S, K rel_fro ≤ 1e-12, not loosened; closed_loop_poles ≤ max(1e-10, 1e2·ε·‖A − B·K_ref‖_F)"
+  invariants: "recomputed by the runner from the returned S, K and the request (no reference value): ‖AᵀS + SA − KᵀRK + Q‖₂ / (2‖A‖‖S‖ + ‖K‖²‖R‖ + ‖Q‖) ≤ 1e-12; ‖RK − (BᵀS + Nᵀ)‖ / (‖R‖‖K‖ + ‖BᵀS + Nᵀ‖) ≤ 1e-12; S symmetric ≤ 1e-12; A − BK stable. R is never inverted."
 ```
 
 ### 10.4 `control.lti.convert`（v0.3 新增）
@@ -3967,6 +3984,12 @@ case_families:   # n = golden cases
   - {name: zpk, n: 5}
 reference_postprocess: "python-control (no slycot) returns infinite generalized eigenvalues of the zero pencil as huge finite numbers; zeros with |z| > 1e10·(1+‖[A B; C D]‖_F) are dropped from the reference"
 pass_rule: "all cases within tolerance; expected-error cases return the same code; expected warnings present; every emitted code declared in the manifest; outputs validate against envelope+output schema"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. kappa from the reference values only
+  poles: "matched set (greedy nearest); |Δ|/max(1,|r|) ≤ 1e-10·max(1, κ_root), κ_root = Wilkinson condition of r in poly(reference poles)"
+  zeros: "same, κ_root from poly(reference zeros)"
+  dcgain: "|Δ|/max(1,|ref|) ≤ 1e-10·max(1, Π(1+|p|)/Π|p|) over reference poles p; ±Inf must agree exactly"
+  natural_frequency / damping_ratio: "value of the returned pole matched to each reference pole, ≤ 1e-10·max(1, κ_root)"
+  stable: "must equal the value implied by the reference poles; skipped when a reference pole is within 1e-8 of the boundary"
 ```
 
 ### 10.6 `control.analysis.ctrb_obsv`（v0.3 新增）
@@ -5412,6 +5435,11 @@ case_families:   # n = golden cases
   - {name: tf_zoh, n: 5}
   - {name: tustin_prewarp, n: 5}
 pass_rule: "all cases within tolerance; expected-error cases return the same code; expected warnings present; every emitted code declared in the manifest; outputs validate against envelope+output schema"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. κ from the reference request, not trust.condition
+  kappa: "cond(I − αA) for tustin (α = ts/2, or tan(ω_p·ts/2)/ω_p with prewarp), e^{‖A‖₁·ts} for zoh/foh; A = request A, or the companion form of a tf denominator"
+  ss result: "realization-independent (V-5): transfer-function values at z = e^{jθ}, θ ∈ {0, .05, .3, .9, 1.7, 2.6, π} (points within 1e-3 of a reference pole dropped), rel_fro ≤ 1e-10·κ·max cond(zI − A_ref); eig(A) matched set ≤ 1e-10·κ·max(1, κ_root); D rel_fro ≤ 1e-10·κ. A, B, C themselves are not compared."
+  tf result: "num and den divided by den[0] (they are defined up to a common factor); ‖Δ‖₁ / max(‖ref‖₁, ‖den‖₁) ≤ 1e-10·κ·max(1, Π(1+|λ|)/‖den‖₁)"
+  system.ts: "equal to the request"
 ```
 
 ### 10.9 `control.lti.impulse`（v0.3 新增）
@@ -7362,6 +7390,8 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 19. ~~**（v0.4 新，一致性套件发现）`$ref` 约定**~~ **已决定（v0.4.1）：改写所有 schema 为标准引用，见 3.9 J-1 – J-3。** 没有选“在 3.9 写明简写约定”：那会要求每个实现和每个通用校验器都先写专用解析器。原问题：manifest 的输入、输出 schema 用 `aeoi://schemas/common/0.4/Matrix` 引用通用类型，标准 JSON Schema 解析不了（应为 `aeoi://schemas/common/0.4#/$defs/Matrix`），3.9 也没有说明这种写法。要么改写所有 schema，要么在 3.9 写明约定。
 20. **（v0.4 新，一致性套件发现）`lyap` 的 Q 对称性**：input schema 把 Q 描述为“对称”，10.10 的算法说明写“Q 非对称也可解”，二者要统一；`W.VALIDATION.SYMMETRIZED` 已在 manifest 声明，但规范没有规定触发条件（Q 非对称？结果被对称化？）。第二实现第一版因把非对称 Q 对称化，在 golden 的 4 个用例上失败。
 21. **（v0.4 新，一致性套件发现）默认值没有用例**：`lyap` 的 `type` 默认 `continuous`，golden 里没有省略它的用例，F-7 的“默认值回显”也无人检验。套件需要“省略可选字段”的用例族。
+22. **（v0.4.2 新，一致性规则发现）`bode` 的相位分支不被检验**：`parity.yaml` 按“模 360”比较相位，`branch_center_deg` 与 unwrap 规则规定的分支（v0.2，12.1 第 4 项）因此不进入一致性判定，相位整体差 360° 的实现能通过。要么在套件里加分支检查（同一 `branch_center_deg` 下逐点差 < 180°），要么写明分支只是参考实现约定。
+23. **（v0.4.2 新，一致性规则发现）`lyap` 的 mpmath 容差不一致**：`parity.yaml` 对 mpmath 用例写“rel_fro ≤ 1e-12，不放宽”，运行器的 `lyap` 规则对所有引擎都用 T2 × max(1, κ/100)。`lqr` 的新规则对 mpmath 用 1e-12。改 `lyap` 规则会影响 Python 第二实现在病态用例上的结果，需要先重跑。
 
 ### 12.2 下一步（建议顺序）
 
@@ -7371,10 +7401,37 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
 5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；v0.3.4 另有 `aeoi-web design`。v0.3.5 实现了试点里排在前面的算子（串联、并联、反馈、PID 构造、stepinfo、Padé），v0.3.6 加了具名角色、`loopsens`（含带宽读数）和回合预算。下一步是按 A-4 写 `pidtune`（必须先声明对象类、指标和唯一性），以及控制器离散化和 MIMO 裕度；扩充问答题、加入"Agent + 裸 scipy"对照组。非线性吸引域仍不做。
 6. 用 Tauri 打包 `aeoi-web` 为桌面应用（复用 axum 服务与静态页面）
-7. 一致性套件（9.4）：v0.1 已有（运行器、`lyap` 的 Python 第二实现，44 个用例通过，7 种注入缺陷都被抓出）。接下来：在能编译 Rust 的机器上让参考实现自己先通过；给其余算子补比较规则（V-5、V-5a 的不变量）；再做 C 的内核级实现验证实现可替换；按 3.14 在参考实现里实现 `exec.method_policy`、`receipt.alternatives` 与 `method_selection`
+7. 一致性套件（9.4）：v0.2 有 6 个算子的数值规则（作者定的下限：有规则的算子 ≥ 全部算子的 30%，以后提高），参考实现 456 / 0 / 278 通过；`lyap` 的 Python 第二实现 44 个用例通过；7 种注入缺陷与 8 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；按 3.14 在参考实现里实现 `exec.method_policy`、`receipt.alternatives` 与 `method_selection`
 8. 根据以上反馈修订，冻结 v1.0
 
 ## 13. Changelog
+
+### v0.4.2-draft（2026-11-24）
+
+起因：作者定下目标，一致性数值规则覆盖的算子数不少于全部算子的 30%，以后再提高。v0.4.1 时只有 `lyap`（19 个中的 1 个）。这一版补 5 个，挑选标准是比较方式各不相同：复数集合（`poles_zeros`）、频率响应（`bode`）、时间响应与网格指标（`step`）、唯一解加独立残差复核（`lqr`）、实现不唯一的系统（`c2d`）。线协议标识与 schema 不变。
+
+**规范改动**
+
+| # | 条款 | 改动 | 原因 |
+|---|---|---|---|
+| 1 | 9.4 CF-2 | 列主序检查取全部数值检查里最大的“偏差 / 容差” | `poles_zeros`：eig(Aᵀ) = eig(A)，只看极点查不出错误 |
+| 2 | 9.4 CF-6 | `parity.yaml` 的字段写法优先于默认的 `rel_fro`；运行器的公式写进 `conformance_compare`；容差类取自套件而不是被测实现的 manifest；κ 可由参考请求或参考值算，列出不得采信的自报量；状态空间实现比较哪些不变量，tf 系数先归一 | 写规则时这几处都要自己做决定，规范原来没写 |
+| 3 | 9.4 CF-8 | 记录 `lqr` 的独立复核与残差归一方式 | 第一版按 R⁻¹ 计算残差，cond(R) = 1e12 时运行器自己误判 |
+| 4 | 12.1 第 22、23 项；12.2 第 7 项 | 新开放问题：`bode` 相位分支不被检验；`lyap` 的 mpmath 容差与 `parity.yaml` 不一致 | 写规则时发现 |
+
+**已做的改动**
+
+| 位置 | 改动 |
+|---|---|
+| `conformance/rules_control.py`（新） | 5 个算子的规则。`bode` 近极点用例的 κ(ω) = 1 + |s| / min |s − p|（p 为参考请求的极点），取代参考实现 parity 测试里用的自报误差估计；`lqr` 的 S 容差按参考解的 cond_S 缩放，mpmath 用例 1e-12 不放宽；`step` 的 dt 取参考网格；`c2d` 的 κ 由请求算（tustin：cond(I − αA)；zoh/foh：e^{‖A‖₁ts}），ss 结果比较单位圆上 7 个点的传递函数值、极点与 D |
+| `conformance/aeoi_conformance.py` | 接入新规则；列主序检查改为最大比值；`lyap` 规则的容差类改为取自套件（值仍是 T2，结果不变）；运行器版本 0.2.0 |
+| `conformance/tests/proxy_mutant.py`（新）、`test_runner_catches_mutants.py` | 包住参考实现的代理做 8 种改写：5 种错误答案必须失败、3 种等价答案（极点换序、相似变换、tf 分子分母同乘 3）必须通过 |
+| `examples/{poles_zeros,bode,step,lqr,c2d}/parity.yaml` | 新增 `conformance_compare` |
+| `conformance/README.md` | 状态、结果、限制与新发现的规范问题 |
+
+**结果**：参考实现 456 通过 / 0 失败 / 278 跳过（v0.4.1 时 100 / 0 / 634）；有规则的 6 个算子全部通过，各检查的最大“偏差 / 容差”≤ 0.15。变异测试 15 / 15。
+
+**仍未做**：新规则还没有被独立实现检验过；其余 13 个算子没有规则。
 
 ### v0.4.1-draft（2026-11-24）
 

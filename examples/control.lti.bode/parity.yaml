@@ -26,3 +26,7 @@ case_families:   # n = 当前 golden 用例数
   - {name: memory_order_nonsymmetric, n: 1,
      note: "非对称 A；同时断言 column-major 展平（A(:) 错误）的请求结果与参考值偏差 > 1e3×容差"}
 pass_rule: "所有 case 在容差内；预期报错的 case 报出相同 code；预期 warning 必须出现；所有 code 必须在 manifest 中声明"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. No trust.error_estimate (CF-6)
+  magnitude: "|Δ dB| ≤ 1e-9·κ(ω), κ(ω) = 1 + |s| / min_p |s − p|, s = jω (or e^{jω·ts}), p = poles of the reference request"
+  phase: "|Δ| mod 360 ≤ 1e-8·κ(ω) deg (the branch convention is not checked: spec 12.1 item 22)"
+  w: "relative ≤ 1e-14"

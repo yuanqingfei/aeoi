@@ -22,3 +22,8 @@ case_families:   # n = golden cases
   - {name: tf_zoh, n: 5}
   - {name: tustin_prewarp, n: 5}
 pass_rule: "all cases within tolerance; expected-error cases return the same code; expected warnings present; every emitted code declared in the manifest; outputs validate against envelope+output schema"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. κ from the reference request, not trust.condition
+  kappa: "cond(I − αA) for tustin (α = ts/2, or tan(ω_p·ts/2)/ω_p with prewarp), e^{‖A‖₁·ts} for zoh/foh; A = request A, or the companion form of a tf denominator"
+  ss result: "realization-independent (V-5): transfer-function values at z = e^{jθ}, θ ∈ {0, .05, .3, .9, 1.7, 2.6, π} (points within 1e-3 of a reference pole dropped), rel_fro ≤ 1e-10·κ·max cond(zI − A_ref); eig(A) matched set ≤ 1e-10·κ·max(1, κ_root); D rel_fro ≤ 1e-10·κ. A, B, C themselves are not compared."
+  tf result: "num and den divided by den[0] (they are defined up to a common factor); ‖Δ‖₁ / max(‖ref‖₁, ‖den‖₁) ≤ 1e-10·κ·max(1, Π(1+|λ|)/‖den‖₁)"
+  system.ts: "equal to the request"

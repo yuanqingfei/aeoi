@@ -29,8 +29,9 @@ from referencing import Registry, Resource
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import aeoi_hash as H  # noqa: E402
+import rules_control as RC  # noqa: E402
 
-RUNNER_VERSION = "0.1.1"
+RUNNER_VERSION = "0.2.0"
 CLASS_RTOL = {"T0": 0.0, "T1": 1e-12, "T2": 1e-10, "T3": 1e-9, "T4": 1e-6, "T5": 1e-6}   # spec 7.2
 ENGINE_LIBS = {"python-control": ("python-control", "scipy", "slycot"), "mpmath": ("mpmath",), "MATLAB": ("matlab",)}
 BITWISE = ("bitwise", "platform_bitwise", "seeded")                                      # M-7
@@ -156,7 +157,7 @@ def lyap_kappa(req):
 def rule_lyap(case, env, manifest, req=None, expected=None):
     """X compared by relative Frobenius norm; rtol = class rtol x max(1, kappa/100) (V-6), kappa from the reference request."""
     req = req or case["request"]; expected = expected or case["expected"]
-    rtol = CLASS_RTOL[manifest["tolerance_class"]] * max(1.0, lyap_kappa(req) / 100.0)
+    rtol = CLASS_RTOL["T2"] * max(1.0, lyap_kappa(req) / 100.0)       # class from parity.yaml, not the impl's manifest (CF-6)
     X = dense_of(env["result"]["X"]); Xr = dense_of(expected["X"])
     if X.shape != Xr.shape:
         return [("X.shape", False, None, None, f"shape {X.shape} != {Xr.shape}")]
@@ -164,7 +165,7 @@ def rule_lyap(case, env, manifest, req=None, expected=None):
     return [("X", e <= rtol, e, rtol, f"rel_fro={e:.3e} > tolerance={rtol:.3e}" if e > rtol else "")]
 
 
-RULES = {"control.math.lyap": rule_lyap}
+RULES = {"control.math.lyap": rule_lyap, **RC.RULES}
 
 
 # ---------------------------------------------------------------- one case
@@ -230,12 +231,19 @@ def judge(case, env, is_error, manifest, validators, call):
             checks.append(c)
         if "column_major_mistake_request" in case:                          # section 0: wrong memory order must change the answer
             e3, _, prob = call(case["column_major_mistake_request"])
-            tol = next((c[3] for c in checks if c[3]), None)
             if e3 is None or e3["status"] == "error":
                 add("column-major request deviates or is rejected  [section 0]", True, "rejected or no result: " + (prob or (e3 or {}).get("error", {}).get("code", "")))
             else:
-                bad = rule(case, e3, manifest, req=case["request"])[0][2]
-                add("column-major request deviates > 1e3 x tolerance  [section 0]", bad is not None and tol and bad > 1e3 * tol, f"deviation={bad} tolerance={tol}")
+                # largest deviation/tolerance over the rule's numeric checks: a single field can be blind to the
+                # mistake (eig(Aᵀ) = eig(A), so poles do not move while zeros and the DC gain do)
+                try:
+                    cm = rule(case, e3, manifest, req=case["request"])
+                except Exception as ex:                                     # malformed answer to the wrong request: deviates
+                    cm = [("rule raised", False, None, None, repr(ex)[:80])]
+                ratios = [c[2] / c[3] for c in cm if c[2] is not None and c[3]]
+                hard = any(not c[1] and c[2] is None for c in cm)          # shape / count / kind mismatch
+                worst = max(ratios, default=0.0)
+                add("column-major request deviates > 1e3 x tolerance  [section 0]", hard or worst > 1e3, f"max deviation/tolerance = {worst:.3e}")
     return checks
 
 

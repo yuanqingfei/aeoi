@@ -12,6 +12,21 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 RUNNER = os.path.join(ROOT, "conformance", "aeoi_conformance.py")
 MUTANT = os.path.join(ROOT, "conformance", "tests", "mutant_server.py")
 SERVER = os.path.join(ROOT, "conformance", "impls", "python_scipy", "server.py")
+PROXY = os.path.join(ROOT, "conformance", "tests", "proxy_mutant.py")
+REF = os.path.join(ROOT, "rust", "target", "release", "aeoi-mcp")
+
+# proxy mutants over the reference implementation (rules_control.py): needle that must appear among the failed
+# checks, or None for an equivalent answer that must pass on every case
+PROXY_EXPECT = {
+    "pz_pole_wrong": ("control.lti.poles_zeros", "poles: matched set"),
+    "pz_reordered": ("control.lti.poles_zeros", None),
+    "bode_mag_wrong": ("control.lti.bode", "magnitude"),
+    "step_y_wrong": ("control.lti.step", "y: max"),
+    "lqr_S_wrong": ("control.design.lqr", "S: rel_fro"),
+    "lqr_poles_reordered": ("control.design.lqr", None),
+    "c2d_A_wrong": ("control.lti.c2d", "transfer-function values"),
+    "c2d_equivalent": ("control.lti.c2d", None),
+}
 
 # mutant -> substring that must appear among the names of the failed checks
 EXPECT = {
@@ -25,10 +40,10 @@ EXPECT = {
 }
 
 
-def run(command, env=None):
+def run(command, env=None, operators="control.math.lyap"):
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as t:
         rp = t.name
-    p = subprocess.run([sys.executable, "-I", RUNNER, "run", "--impl", command, "--operators", "control.math.lyap", "--report", rp],
+    p = subprocess.run([sys.executable, "-I", RUNNER, "run", "--impl", command, "--operators", operators, "--report", rp],
                        cwd=ROOT, capture_output=True, text=True, env={**os.environ, **(env or {})})
     rep = json.load(open(rp)); os.unlink(rp)
     return p.returncode, rep
@@ -49,6 +64,20 @@ def main():
         ok = rc == 1 and nfail > 0 and needle in failed_text(rep)
         print(("ok   " if ok else "FAIL ") + f"mutant {name:26s} -> exit {rc}, {nfail} failing case(s), reason contains {needle!r}")
         bad += not ok
+    if not os.path.exists(REF):
+        print(f"skip proxy mutants: {REF} not built (cargo build --release -p aeoi-mcp)")
+    else:
+        for name, (op, needle) in PROXY_EXPECT.items():
+            rc, rep = run(f"{sys.executable} -I {PROXY}", {"AEOI_MUTANT": name}, operators=op)
+            nfail = sum(1 for c in rep["cases"] if c["result"] == "fail")
+            if needle is None:
+                ok = rc == 0 and nfail == 0
+                what = "equivalent answer passes"
+            else:
+                ok = rc == 1 and nfail > 0 and needle in failed_text(rep)
+                what = f"reason contains {needle!r}"
+            print(("ok   " if ok else "FAIL ") + f"proxy {name:23s} -> exit {rc}, {nfail} failing case(s), {what}")
+            bad += not ok
     sys.exit(1 if bad else 0)
 
 

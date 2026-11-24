@@ -31,3 +31,8 @@ case_families:
   - {name: improper_reject, n: 1, expect: E.DOMAIN.IMPROPER_SYSTEM}
   - {name: discrete_dt_mismatch, n: 1, expect: E.VALIDATION.GRID}
 excluded: ["auto 时间网格（参考实现的自动网格不公开且会变化，不作为 parity 对象）"]
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. dt from the reference grid, not trust.derived
+  y: "max|Δ| / max(1, max|y_ref|) ≤ 1e-10; shape [ny, nu, nt] exact"
+  t: "|Δ| ≤ 1e-12"
+  n_grid_points: exact
+  info: "null exactly where the reference is (expect_info_null, zero DC gain); times |Δ| ≤ dt; values relative ≤ 1e-9; overshoot/undershoot |Δ| ≤ 1e-6 %"
