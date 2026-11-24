@@ -14,7 +14,7 @@
     },
     "Q": {
       "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
-      "description": "右端矩阵 Q，[n,n]，对称"
+      "description": "右端矩阵 Q，[n,n]。可以不对称：按原样求解，不对称化（10.10）。Q 对称时解 X 也对称"
     },
     "type": {
       "enum": [

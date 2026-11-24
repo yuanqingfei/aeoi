@@ -31,11 +31,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import aeoi_hash as H  # noqa: E402
 import rules_control as RC  # noqa: E402
 
-RUNNER_VERSION = "0.2.0"
+RUNNER_VERSION = "0.3.0"
 CLASS_RTOL = {"T0": 0.0, "T1": 1e-12, "T2": 1e-10, "T3": 1e-9, "T4": 1e-6, "T5": 1e-6}   # spec 7.2
 ENGINE_LIBS = {"python-control": ("python-control", "scipy", "slycot"), "mpmath": ("mpmath",), "MATLAB": ("matlab",)}
 BITWISE = ("bitwise", "platform_bitwise", "seeded")                                      # M-7
 TIMEOUT_S = 60
+DEFAULT_VARIANTS = 3                                                                     # per (operator, field, direction)
 
 
 # ---------------------------------------------------------------- MCP stdio client (CF-3)
@@ -253,6 +254,7 @@ def main():
     r = sub.add_parser("run")
     r.add_argument("--impl", required=True)
     r.add_argument("--golden", default="golden"); r.add_argument("--schemas", default="schemas")
+    r.add_argument("--examples", default="examples", help="suite input schemas (defaults are read from here, not from the implementation)")
     r.add_argument("--operators", default="all"); r.add_argument("--engines", default="all")
     r.add_argument("--report", default=None); r.add_argument("--known-deviations", default=None)
     r.add_argument("--verbose", action="store_true")
@@ -284,7 +286,7 @@ def main():
     tools = {t["name"]: t for t in cli.request("tools/list")["result"]["tools"] if "aeoi/id" in t.get("_meta", {})}
     by_id = {t["_meta"]["aeoi/id"]: t for t in tools.values()}
 
-    manifests, validators, results, notes, ref_problems = {}, {}, [], set(), {}
+    manifests, validators, results, notes, ref_problems, ok_envs = {}, {}, [], set(), {}, {}
     for op in sorted({c["operator"] for c in cases}):
         t = by_id.get(op)
         if not t:
@@ -322,6 +324,8 @@ def main():
             results.append({"case_id": c["_id"], "operator": op, "engine": c["_engine"], "result": "fail", "detail": ref_problems[op]}); continue
         call = make_call(op)
         env, is_err, prob = call(c["request"])
+        if env is not None and env.get("status") in ("ok", "ok_with_warnings") and "expected" in c:
+            ok_envs.setdefault(op, []).append((c, env))
         if env is None:
             results.append({"case_id": c["_id"], "operator": op, "engine": c["_engine"], "result": "fail", "detail": prob}); continue
         try:
@@ -353,12 +357,52 @@ def main():
         if m["receipt"].get("alternatives"):
             notes.add(f"{op}: manifest declares alternatives; per-method runs (CF-10) are not implemented in runner v0.1")
 
+    # CF-2 / spec 12.1 item 21: default values. Derived from the golden cases, not stored: for each top-level input
+    # field with a default in the SUITE's input schema (examples/<op>/input.schema.json, not the implementation's
+    # manifest), a successful case that writes the default gets a variant that omits it, and one that omits the field
+    # gets a variant that writes the default. Both ask the same question (F-7), so the result MUST be bit-identical
+    # to the original run: same output_hash (a `convention` field's echo included). A variant answered with
+    # E.VALIDATION.OPTION_CONFLICT naming the added field is skipped: that field does not apply in the request's mode
+    # (F-8, e.g. Ki under PID form = standard), so writing it is not the same question.
+    for op in sorted(ok_envs):
+        sf = os.path.join(a.examples, op, "input.schema.json")
+        if not os.path.exists(sf):
+            continue
+        props = json.load(open(sf)).get("properties", {})
+        defaults = {k: v["default"] for k, v in props.items() if isinstance(v, dict) and "default" in v}
+        for field, dv in sorted(defaults.items()):
+            picked = {"omit": [], "add": []}
+            for c, env in sorted(ok_envs[op], key=lambda x: x[0]["_id"]):
+                d = "omit" if c["request"].get(field, object()) == dv else ("add" if field not in c["request"] else None)
+                if d and len(picked[d]) < DEFAULT_VARIANTS:
+                    picked[d].append((c, env))
+            for d, lst in picked.items():
+                for c, env in lst:
+                    req = json.loads(json.dumps(c["request"]))
+                    if d == "omit":
+                        del req[field]
+                    else:
+                        req[field] = dv
+                    e2, _, prob = make_call(op)(req)
+                    cid = f"defaults/{op}/{field}/{d}/{c['_id'].split('/')[-1]}"
+                    if e2 is None:
+                        res, det = "fail", prob
+                    elif e2["status"] == "error":
+                        conflict = e2["error"]["code"] == "E.VALIDATION.OPTION_CONFLICT" and field in json.dumps((e2["error"].get("details") or {}).get("conflicting_fields", []))
+                        res, det = ("skip", "field does not apply in this mode (F-8)") if conflict else ("fail", f"default {d} changed the answer to error {e2['error']['code']}")
+                    else:
+                        same = e2["reproducibility"].get("output_hash") == env["reproducibility"].get("output_hash")
+                        res, det = ("pass", "") if same else ("fail", f"default {d} changed the result (output_hash differs from the original request)")
+                    results.append({"case_id": cid, "operator": op, "engine": "conformance", "group": "defaults", "result": res,
+                                    "failed_checks": [] if res != "fail" else [{"check": f"{'omitting' if d == 'omit' else 'writing'} the default {field}={json.dumps(dv)} gives the same result  [F-7, 12.1 #21]", "detail": det}],
+                                    "detail": det})
+
     cli.close()
     # ---- report (CF-11)
     groups = {}
     for x in results:
         if x["engine"] == "conformance":
-            key = (x["operator"], manifests[x["operator"]]["version"], "method-policy")
+            key = (x["operator"], manifests[x["operator"]]["version"], x.get("group", "method-policy"))
         else:
             key = (x["operator"], manifests.get(x["operator"], {}).get("version"), next((y.get("method") for y in results if y["operator"] == x["operator"] and y.get("method")), None))
         g = groups.setdefault(key, {"pass": 0, "pass_with_deviation": 0, "fail": 0, "skip": 0, "by_engine": {}})

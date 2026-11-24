@@ -37,6 +37,12 @@ elif m == "overclaims":                       # receipt claims `verified` althou
             e["receipt"]["evidence"]["claim"] = "verified"
         return e
     S.call = call
+elif m == "wrong_default":                    # omitted `type` treated as discrete (the schema default is continuous)
+    def solve(args):
+        if isinstance(args, dict) and "type" not in args:
+            args = {**args, "type": "discrete"}
+        return orig_solve(args)
+    S.solve = solve
 elif m == "nondeterministic":                 # same request, different bits on every call
     import random
     def solve(args):

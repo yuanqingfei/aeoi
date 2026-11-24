@@ -38,6 +38,7 @@ EXPECT = {
     "wrong_error_code": "expected error",
     "overclaims": "claim equals",
     "nondeterministic": "repeat run",
+    "wrong_default": "gives the same result",
 }
 
 

@@ -11,7 +11,7 @@
   ],
   "applicability": {
     "preconditions": [
-      "A 方阵，Q 同形",
+      "A 方阵，Q 同形（Q 可以不对称）",
       "连续：λ_i + λ̄_j ≠ 0（对所有特征值对）；离散：λ_i·λ̄_j ≠ 1"
     ],
     "not_for": [
@@ -121,7 +121,6 @@
     "W.DOMAIN.UNSTABLE_SYSTEM",
     "W.NUMERICAL.ILL_CONDITIONED",
     "W.NUMERICAL.LARGE_RESIDUAL",
-    "W.VALIDATION.SYMMETRIZED",
     "W.PERFORMANCE.SPARSE_DENSIFIED"
   ],
   "mcp": {

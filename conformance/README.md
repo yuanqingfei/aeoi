@@ -1,4 +1,4 @@
-# AEOI 跨实现一致性套件（v0.2）
+# AEOI 跨实现一致性套件（v0.3）
 
 规范 9.4（CF-1 – CF-12）的实现。**状态：6 个算子有数值规则（`lyap`、`poles_zeros`、`bode`、`step`、`lqr`、`c2d`，占 19 个算子的 32%）；参考实现（Rust）全部通过；Python 第二实现只做 `lyap`。**
 
@@ -38,13 +38,15 @@ python3 conformance/tests/test_runner_catches_mutants.py
 - `lqr` 另由运行器用返回的 S、K 独立复核 CARE 残差、K 与 S 的一致性、S 对称、A − BK 稳定（CF-8 推荐项）；残差按各项大小归一，不对 R 求逆，所以 cond(R) 到 1e12 也不会因运行器自身的舍入误判；
 - 第 0 章的列主序检查：错误展平的请求在所有数值检查里的最大“偏差/容差”> 1e3 才算查出。单看一个字段可能看不出：eig(Aᵀ) = eig(A)，极点不动，零点与 DC 增益会动。
 
+默认值用例（v0.3，规范 9.4 CF-2）：运行器从成功的 golden 用例派生“省略默认值”与“写出默认值”的变体（默认值取自套件的 `examples/<op>/input.schema.json`，不取被测实现的 manifest；每个算子、字段、方向至多 3 个），结果必须与原请求逐位相同。写出的字段在该模式下不适用（F-8 的 `OPTION_CONFLICT` 点名该字段）时跳过。
+
 另有一个方法选择用例（CF-10 里今天就能跑的部分）：请求 `exec.method_policy.require` 一个不可能存在的方法 id，实现 MUST NOT 成功（返回 `E.VALIDATION.SCHEMA` 或 `E.VALIDATION.METHOD_UNAVAILABLE` 都可以）。
 
 ## 结果
 
-参考实现（`rust/target/release/aeoi-mcp`，云容器 x86_64-linux、glibc 2.39）：456 通过 / 0 失败 / 278 跳过。有规则的 6 个算子全部通过：`lyap` 43、`poles_zeros` 47、`bode` 103、`step` 89、`lqr` 88（mpmath 16 + python-control 72）、`c2d` 47；跳过的是其余 13 个算子的成功用例。各检查的最大“偏差/容差”都 ≤ 0.15（`lqr` 的 mpmath 闭环极点），多数在 1e-3 以下。
+参考实现（`rust/target/release/aeoi-mcp`，云容器 x86_64-linux、glibc 2.39；作者 WSL glibc 2.31 结果相同）：529 通过 / 0 失败 / 282 跳过，其中默认值用例 73 通过、4 跳过（PID 的模式专属字段，F-8）。有规则的 6 个算子全部通过：`lyap` 43、`poles_zeros` 47、`bode` 103、`step` 89、`lqr` 88（mpmath 16 + python-control 72）、`c2d` 47；跳过的是其余 13 个算子的成功用例。各检查的最大“偏差/容差”都 ≤ 0.15（`lqr` 的 mpmath 闭环极点），多数在 1e-3 以下。
 
-第二实现（`lyap`）：44 个用例全部通过：mpmath 12 个（独立于 SciPy，含病态的 `continuous_near_axis`、`discrete_rho_near_1`）、python-control 31 个（**与第二实现同源**，只能说明套件可移植，不能说明实现可替换，报告里分开列出）、方法选择 1 个。
+第二实现（`lyap`）：47 个用例全部通过（含 3 个默认值用例）；其中 v0.2 时的 44 个：mpmath 12 个（独立于 SciPy，含病态的 `continuous_near_axis`、`discrete_rho_near_1`）、python-control 31 个（**与第二实现同源**，只能说明套件可移植，不能说明实现可替换，报告里分开列出）、方法选择 1 个。
 
 ## 已知限制
 
@@ -57,8 +59,9 @@ python3 conformance/tests/test_runner_catches_mutants.py
 ## 用这个套件发现的规范问题
 
 1. ~~已解决（规范 v0.4.1，3.9 J-1）：所有 schema 改为标准引用，运行器不再改写，遇到无法解析的引用判失败。~~ 原问题：输出（和输入）schema 里的引用写成 `aeoi://schemas/common/0.4/Matrix`，按标准 JSON Schema 解析不了（应为 `…/0.3#/$defs/Matrix`），3.9 也没有说明这种约定。运行器自己改写后才能校验。
-2. `lyap`：input schema 把 Q 描述为“对称”，算法说明却写“Q 非对称也可解”；`W.VALIDATION.SYMMETRIZED` 在 manifest 里声明了，但没有规定什么时候发。第二实现第一版就是因为把非对称 Q 对称化而在 4 个用例上失败。
-3. `lyap` 的 `type` 有默认值 `continuous`，golden 里没有一个用例省略它，所以套件不检验默认值。第二实现第一版因此把它当必填也没被发现（读 input schema 时才发现）。
+2. ~~已解决（规范 v0.4.4，10.10）：Q 可以不对称，按原样求解，不得对称化 Q；`lyap` 不声明 `W.VALIDATION.SYMMETRIZED`。~~ 原问题：`lyap`：input schema 把 Q 描述为“对称”，算法说明却写“Q 非对称也可解”；`W.VALIDATION.SYMMETRIZED` 在 manifest 里声明了，但没有规定什么时候发。第二实现第一版就是因为把非对称 Q 对称化而在 4 个用例上失败。
+3. ~~已解决（规范 v0.4.4，CF-2）：运行器派生默认值用例，变异 `wrong_default` 必须失败。~~ 原问题：`lyap` 的 `type` 有默认值 `continuous`，golden 里没有一个用例省略它，所以套件不检验默认值。第二实现第一版因此把它当必填也没被发现（读 input schema 时才发现）。
 4. ~~已解决（规范 v0.4.3，12.1 第 22 项）：相位改为在 10.x 规定的分支上比较，不取模；只在参考值距分支边界 1e-6° 以内时取模。变异测试 `bode_phase_360` 必须失败。~~ 原问题：`bode` 的 `parity.yaml` 按“模 360”比较相位，分支约定不被检验。
 5. ~~已解决（规范 v0.4.3，12.1 第 23 项）：1e-12 是参考实现自己的精度目标（它做精化，实测 ≤ 7e-15），不是一致性门槛；一致性对所有引擎用同一个 κ 缩放容差，`lqr` 的 mpmath 分支也改成这样。标准 SciPy 在 `lyap` κ ≈ 1.6e8 时误差 7.5e-9、在 `lqr` cond(R) = 1e11 时 3.7e-9，属于后向稳定算法的正常表现；超出容差的个别用例走 CF-7 的 `known_deviations`。~~ 原问题：`lyap` 的 mpmath 用例 `parity.yaml` 写 1e-12，规则用 T2 × max(1, κ/100)。
 6. （v0.2 规则发现）CF-6 说每个顶层字段默认按 `rel_fro` 比较，而 `bode`（dB 与度的绝对差）、`step`（相对 max|y_ref| 的最大差）在 `parity.yaml` 里另有写法；规则按 `parity.yaml`。规范 v0.4.2 已写明以 `parity.yaml` 为准。
+7. （v0.3 发现）省略与写出默认值的请求，`fingerprint.request` 不同（H-1 按原样哈希），套件只比较结果。见规范 12.1 第 24 项。

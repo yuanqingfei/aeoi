@@ -238,13 +238,13 @@ imp_out=outs("control.lti.impulse",{"t":{"oneOf":[{"type":"null"},Q]},"y":{"oneO
 
 # ---- control.math.lyap
 ly=man("control.math.lyap","Lyapunov equation","求解连续 Lyapunov 方程 A X + X Aᵀ + Q = 0 或离散 Lyapunov 方程 A X Aᵀ − X + Q = 0。","utility",["matrix-equation","lyapunov"],
- ["A 方阵，Q 同形","连续：λ_i + λ̄_j ≠ 0（对所有特征值对）；离散：λ_i·λ̄_j ≠ 1"],["Sylvester 方程（v0.3 未暴露）","大规模稀疏（低秩 ADI 类方法）"],
+ ["A 方阵，Q 同形（Q 可以不对称）","连续：λ_i + λ̄_j ≠ 0（对所有特征值对）；离散：λ_i·λ̄_j ≠ 1"],["Sylvester 方程（v0.3 未暴露）","大规模稀疏（低秩 ADI 类方法）"],
  "Bartels–Stewart：复 Schur 分解 A = U T Uᴴ（T 上三角），Q̃ = Uᴴ Q U；连续逐列（j 从 n−1 到 0）解 (T + t̄_jj I) y_j = −q̃_j − Σ_{k>j} t̄_jk y_k，离散解 (t̄_jj T − I) y_j = −q̃_j − T Σ_{k>j} t̄_jk y_k，均为上三角回代；X = Re(U Y Uᴴ)。当启发式前向误差估计 ‖R‖_F/(sep_min·‖X‖_F) > 1e-12（方程接近奇异，如离散 ρ(A) → 1）时做迭代精化：用补偿算术（Dot2，Dekker 无 FMA 乘法，跨平台逐位相同）计算残差 R(X)，复用同一 Schur 分解解修正量 δ，X ← X + δ，至多 4 步，‖δ‖_F ≤ 2u‖X‖_F 或修正量未减半即停。可解性分离度 sep_min = min|λ_i+λ̄_j|（离散 min|λ_i λ̄_j − 1|）≤ 10³·u·‖A‖_F（离散 10³·u·max(1,‖A‖_F)²）时报 E.DOMAIN.LYAP_SINGULAR。Q 对称时输出对称化",
  [R_BS,R_GVL,{"type":"paper","cite":"S. J. Hammarling, Numerical solution of the stable, non-negative definite Lyapunov equation, IMA J. Numer. Anal. 2(3), 1982","doi":"10.1093/imanum/2.3.303"},
   {"type":"paper","cite":"T. Ogita, S. M. Rump, S. Oishi, Accurate sum and dot product, SIAM J. Sci. Comput. 26(6), 2005","doi":"10.1137/030601818"},
   {"type":"textbook","cite":"N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM, 2002（迭代精化，第 12 章）"}],
  "sysalg::lyap_refined (complex Schur Bartels–Stewart + compensated-residual iterative refinement)","T2",{"max_states":300,"max_refinement_steps":4},MAT_ERR+["E.DOMAIN.LYAP_SINGULAR","E.NUMERICAL.NO_CONVERGENCE"]+TAIL_ERR,
- ["W.DOMAIN.UNSTABLE_SYSTEM","W.NUMERICAL.ILL_CONDITIONED","W.NUMERICAL.LARGE_RESIDUAL","W.VALIDATION.SYMMETRIZED","W.PERFORMANCE.SPARSE_DENSIFIED"],
+ ["W.DOMAIN.UNSTABLE_SYSTEM","W.NUMERICAL.ILL_CONDITIONED","W.NUMERICAL.LARGE_RESIDUAL","W.PERFORMANCE.SPARSE_DENSIFIED"],  # v0.4.4: no W.VALIDATION.SYMMETRIZED, lyap never symmetrizes an input (10.10)
  sparse={p:{"policy":"densify","max_dense_elements":1000000} for p in ["/A","/Q"]})
 ly_in=ins("control.math.lyap",{"A":M,"Q":M,"type":{"enum":["continuous","discrete"],"default":"continuous"}},["A","Q"],{"x-aeoi-shape-constraints":["A: [n,n]","Q: [n,n]"]})
 ly_out=outs("control.math.lyap",{"X":dict(M,description="[n,n]；Q 对称时 X 对称")},["X"])
@@ -454,7 +454,7 @@ DESC={
  "control.design.lqr":dict(LQR_D),
  "control.design.dlqr":dict(LQR_D,A="离散状态矩阵 A（x[k+1] = A x[k] + B u[k]），[n,n]"),
  "control.design.place":{"A":"状态矩阵 A，[n,n]","B":"输入矩阵 B，[n,m]","max_sweeps":"多输入 KNV 迭代的最大扫描次数（可省略）"},
- "control.math.lyap":{"A":"系数矩阵 A，[n,n]","Q":"右端矩阵 Q，[n,n]，对称","type":"continuous：A X + X Aᵀ + Q = 0；discrete：A X Aᵀ − X + Q = 0"},
+ "control.math.lyap":{"A":"系数矩阵 A，[n,n]","Q":"右端矩阵 Q，[n,n]。可以不对称：按原样求解，不对称化（10.10）。Q 对称时解 X 也对称","type":"continuous：A X + X Aᵀ + Q = 0；discrete：A X Aᵀ − X + Q = 0"},
  "control.lti.convert":{"system":SYS_D,"to":"目标表示：tf（传递函数）、ss（状态空间，可控标准型）、zpk（零极点增益，仅 SISO）"},
  "control.lti.poles_zeros":{"system":SYS_D,"dcgain":"是否计算直流增益（连续 s=0，离散 z=1），默认 true"},
  "control.analysis.ctrb_obsv":{"system":SYS_D+"。判断可控性只需 A、B：用户没给 C、D 时用 kind=\"ss\"，C = {dtype:\"f64\", shape:[1,n], data:[0,…,0]}、D = {dtype:\"f64\", shape:[1,m], data:[0,…,0]}（不影响可控性结果，回答时只报告可控性）；判断可观性只需 A、C：没给 B、D 时 B 取 shape [n,1] 全零","gramians":"是否额外计算可控/可观 Gramian（要求系统稳定），默认 false"},
