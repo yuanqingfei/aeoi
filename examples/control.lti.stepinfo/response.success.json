@@ -5,7 +5,7 @@
   "operator": {
     "id": "control.lti.stepinfo",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
   },
   "request_id": "req-stepinfo-001",
   "result": {
@@ -169,8 +169,9 @@
       "stable_across": "request: all platforms and builds of control.lti.stepinfo@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
       "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -198,6 +199,7 @@
       "fma",
       "avx512f"
     ],
+    "libm": "glibc 2.39",
     "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
     "threads": 1,
     "seed": null
