@@ -352,6 +352,10 @@
             "type": "string"
           },
           "description": "影响数值内核分派的 CPU 特性（如 avx2, fma）；platform_bitwise 的“平台”= target triple + 该特性集合"
+        },
+        "libm": {
+          "type": "string",
+          "description": "v0.4：超越函数所用的 C 数学库及版本（如 glibc 2.39、rust-libm）；platform_bitwise 的“平台”= target triple + cpu_features + libm"
         }
       }
     },
@@ -558,6 +562,10 @@
             },
             "verify": {
               "type": "object"
+            },
+            "libm": {
+              "type": "string",
+              "description": "v0.4：同 reproducibility.libm"
             }
           }
         },

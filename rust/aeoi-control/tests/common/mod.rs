@@ -75,7 +75,9 @@ pub fn matched_set_err(a: &[(f64, f64)], b: &[(f64, f64)]) -> f64 {
 /// mpmath tolerance) still run. Returns whether the bitwise comparison applies.
 pub fn same_platform(env: &Value, published: &Value) -> bool {
     let (a, b) = (&env["reproducibility"], &published["reproducibility"]);
-    a["platform"] == b["platform"] && a["cpu_features"] == b["cpu_features"]
+    // v0.4: platform = target triple + CPU features + C math library. Examples published before v0.4 do not
+    // record `libm`, so the comparison is skipped for them until they are regenerated.
+    a["platform"] == b["platform"] && a["cpu_features"] == b["cpu_features"] && !b["libm"].is_null() && a["libm"] == b["libm"]
 }
 
 /// Assert equal `output_hash` when the published example comes from this platform; otherwise note and skip.
@@ -84,9 +86,9 @@ pub fn assert_hash_on_same_platform(env: &Value, published: &Value, what: &str) 
         assert_eq!(env["reproducibility"]["output_hash"], published["reproducibility"]["output_hash"], "{what}");
     } else {
         println!(
-            "{what}: bitwise comparison skipped (platform_bitwise; example from {} {}, this host {} {})",
-            published["reproducibility"]["platform"], published["reproducibility"]["cpu_features"],
-            env["reproducibility"]["platform"], env["reproducibility"]["cpu_features"]
+            "{what}: bitwise comparison skipped (platform_bitwise; example from {} {} libm {}, this host {} {} libm {})",
+            published["reproducibility"]["platform"], published["reproducibility"]["cpu_features"], published["reproducibility"]["libm"],
+            env["reproducibility"]["platform"], env["reproducibility"]["cpu_features"], env["reproducibility"]["libm"]
         );
     }
 }

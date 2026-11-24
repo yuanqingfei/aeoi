@@ -82,7 +82,7 @@ pub fn build_string() -> String {
         "aeoi-control {}+{} nalgebra-0.33 rustc-{}",
         env!("CARGO_PKG_VERSION"),
         option_env!("AEOI_GIT_SHA").unwrap_or("nogit"),
-        option_env!("AEOI_RUSTC_VERSION").unwrap_or("1.85")
+        option_env!("AEOI_RUSTC_VERSION").unwrap_or("unknown")
     )
 }
 
@@ -91,6 +91,27 @@ pub fn build_string() -> String {
 pub fn platform() -> String {
     let os = if std::env::consts::OS.is_empty() { "unknown" } else { std::env::consts::OS };
     format!("{}-{}", std::env::consts::ARCH, os)
+}
+
+/// The C math library that `f64::exp`, `sin`, `cos`, `powf`, `hypot`, … resolve to. Part of the "platform"
+/// of `platform_bitwise` (spec 2.1, v0.4): glibc 2.31 and 2.39 differ by 1–2 ulp on the same CPU features.
+/// `glibc <version>` on linux-gnu (read at run time, since the library is linked dynamically), `rust-libm`
+/// on wasm32, `<os>-system` elsewhere.
+pub fn libm() -> String {
+    #[cfg(all(target_os = "linux", target_env = "gnu"))]
+    let s = {
+        unsafe extern "C" {
+            fn gnu_get_libc_version() -> *const std::os::raw::c_char;
+        }
+        // SAFETY: glibc returns a pointer to a static NUL-terminated string.
+        let v = unsafe { std::ffi::CStr::from_ptr(gnu_get_libc_version()) };
+        format!("glibc {}", v.to_string_lossy())
+    };
+    #[cfg(target_arch = "wasm32")]
+    let s = String::from("rust-libm");
+    #[cfg(not(any(all(target_os = "linux", target_env = "gnu"), target_arch = "wasm32")))]
+    let s = format!("{}-system", std::env::consts::OS);
+    s
 }
 
 pub fn cpu_features() -> Vec<&'static str> {
@@ -219,6 +240,7 @@ impl<T: Operator> DynOperator for T {
                 "input_hash": input_hash, "output_hash": output_hash,
                 "platform": platform(),
                 "cpu_features": cpu_features(),
+                "libm": libm(),
                 "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
                 "threads": 1, "seed": ctx.seed
             },

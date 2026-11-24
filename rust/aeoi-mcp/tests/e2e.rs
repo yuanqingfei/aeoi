@@ -56,7 +56,8 @@ fn mcp_stdio_session() {
             println!("tools/call {tool} ({req}): isError={} :: {}", res["isError"], res["content"][0]["text"]);
             assert_eq!(res["isError"], expect_err);
             let env = &res["structuredContent"];
-            let same_platform = env["reproducibility"]["platform"] == want["reproducibility"]["platform"] && env["reproducibility"]["cpu_features"] == want["reproducibility"]["cpu_features"];
+            let (er, wr) = (&env["reproducibility"], &want["reproducibility"]);
+            let same_platform = er["platform"] == wr["platform"] && er["cpu_features"] == wr["cpu_features"] && !wr["libm"].is_null() && er["libm"] == wr["libm"];
             assert_eq!(env["spec"], "aeoi/0.4");
             let text_env: Value = serde_json::from_str(res["content"][1]["text"].as_str().unwrap()).unwrap();
             assert_eq!(&text_env, env);

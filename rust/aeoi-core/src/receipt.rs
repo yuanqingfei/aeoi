@@ -168,6 +168,7 @@ pub fn build_for(m: &OperatorMeta, method: &crate::method::Method, selection: Op
         "replay": {
             "build": build,
             "platform": platform,
+            "libm": crate::operator::libm(),
             "verify": {"mcp_tool": "aeoi_verify", "cli": "aeoi-call verify <operator> <request.json> <envelope.json>", "wasm": "verify(operator, request, envelope)"},
         },
     });
@@ -287,7 +288,8 @@ pub fn verify(op: &dyn DynOperator, args: &Value, claimed: &Value, host: &HostCt
     let claimed_res = receipt["fingerprint"]["result"].as_str().unwrap_or("");
     let fresh_res = fr["fingerprint"]["result"].as_str().unwrap_or("");
     let same_build = receipt["replay"]["build"] == fr["replay"]["build"];
-    let same_platform = receipt["replay"]["platform"] == fr["replay"]["platform"];
+    // v0.4: the "platform" of platform_bitwise includes the C math library (spec 2.1).
+    let same_platform = receipt["replay"]["platform"] == fr["replay"]["platform"] && receipt["replay"]["libm"] == fr["replay"]["libm"];
     let class = m.tolerance_class.clone();
     let rtol = class_rtol(&class);
     let mut out = json!({
