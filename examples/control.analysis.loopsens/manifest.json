@@ -1,5 +1,5 @@
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "id": "control.analysis.loopsens",
   "version": "0.4.0",
   "title": "Loop analysis from plant and controller",

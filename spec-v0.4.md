@@ -2,7 +2,7 @@
 
 > 状态：Draft v0.4 · 2026-11-23 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
 >
-> v0.4 为第二个实现和不同的计算方法在规范里留出位置，增加两组条款：同一算子可以登记多个计算方法，请求用 `exec.method_policy` 约束所用的方法（3.14，规则 MS-1 – MS-11）；换一个实现是否等价于参考实现，由跨实现一致性的判定规则回答（9.4，规则 CF-1 – CF-12）。**这两组目前只有规范文本，参考实现、schema 与示例还没有改**（第 13 章 v0.4-draft 列出需要的改动）。线协议标识仍为 `aeoi/0.3`：新增字段全部可选，`ExecOptions` 是封闭对象，不认识 `method_policy` 的旧实现会按 3.3 R-4 返回 `E.VALIDATION.SCHEMA`，不会静默忽略硬约束；线协议标识不随本版改变（已决定，12.1 第 15 项）。以下 v0.3.x 各段按原样保留。
+> v0.4 为第二个实现和不同的计算方法在规范里留出位置，增加两组条款：同一算子可以登记多个计算方法，请求用 `exec.method_policy` 约束所用的方法（3.14，规则 MS-1 – MS-11）；换一个实现是否等价于参考实现，由跨实现一致性的判定规则回答（9.4，规则 CF-1 – CF-12）。**这两组目前只有规范文本：参考实现与 schema 里的新字段（`method_policy`、`alternatives`、`method_selection`）还没有加**（第 13 章 v0.4-draft 列出需要的改动）。线协议标识升为 `aeoi/0.4`，核心 schema 的 `$id` 升为 `/0.4`（与 v0.3 的做法相同，12.1 第 15 项）：标识已经改到 `schemas/`、`examples/`、`write_manifests.py` 与 Rust 的 `aeoi_core::SPEC` 常量里，**但 Rust 尚未重新编译或运行测试**。信封字段只增不减，`input_hash`、`fingerprint` 都不含 `spec`，所以除标识外结果字节不变；v0.3 的消费者若校验 `spec` 或 schema `$id` 需要同步更新（0.x 期间 MINOR 可破坏，G-4）。不认识 `method_policy` 的旧实现会按 3.3 R-4 返回 `E.VALIDATION.SCHEMA`，不会静默忽略硬约束。以下 v0.3.x 各段是各自版本当时的陈述，按原样保留。
 >
 > v0.3.6 根据 EngDesign 真模型运行（`reports/design-live.md`）补规则：回路里的系统按角色命名（对象、控制器、反馈通路），一次调用得到开环与闭环（新算子 `control.analysis.loopsens`），带宽字段名写明 Hz 或 rad/s（3.13 K-1 – K-6）；互斥选项的冲突统一报错并给出只删除已出现字段的补丁（F-8）；抽样或压缩数据上的检查不算“已验证”（E-12、E-13，新 claim `spot_checked`）；Agent 循环在回合用完之前必须提交（8.4 AL-1 – AL-3）。线协议标识仍为 `aeoi/0.3`：信封只增加可选字段，位置参数调用的 `series`/`feedback` 结果字节不变。
 >
@@ -15,8 +15,8 @@
 ## 0. 约定
 
 - 关键词 MUST / MUST NOT / SHOULD / SHOULD NOT / MAY 按 RFC 2119 / RFC 8174 解释。
-- JSON Schema 一律使用 Draft 2020-12。完整 schema 文件见 `schemas/`，`$id` 形如 `aeoi://schemas/common/0.3`。
-- 本文中 `spec` 版本标识写作 `aeoi/0.3`。
+- JSON Schema 一律使用 Draft 2020-12。完整 schema 文件见 `schemas/`，`$id` 形如 `aeoi://schemas/common/0.4`。
+- 本文中 `spec` 版本标识写作 `aeoi/0.4`（v0.3.x 为 `aeoi/0.3`）。
 - **净室原则（normative）**：算子实现 MUST 仅依据公开文献、教科书、标准与开源许可兼容的代码；MUST NOT 反编译、反汇编、阅读或复制 MATLAB（或任何闭源软件）的实现代码、`.p` 文件、二进制或未公开文档。MATLAB 只作为黑盒 ground truth，通过其公开 API 生成对照数据。每个 manifest MUST 带 `provenance.clean_room.declared = true`。
 - **与 MATLAB 的关系（v0.3.6 澄清）**：算子的命名与分类沿用 MATLAB Control System Toolbox 的**公开函数名**（`series`、`feedback`、`margin`、`stepinfo`、`pade`、`loopsens` 等），以便工程师和模型按熟悉的名字找到算子；定义与方程写在本规范里，不依赖任何 MATLAB 文档。到 v0.3.6 为止，**所有参考数据都来自开源实现**（python-control、scipy、mpmath），没有一条由 MATLAB 生成；`matlab/` 目录下的脚本只是留给有 MATLAB 许可的第三方复核用的生成器。
 - **示例数值说明**：第 10 章示例的响应由 Rust 参考实现（`aeoi-control 0.3.0`）实际输出（`regen_examples.py`）；其数值另与 python-control 0.10.2 / scipy 1.18.1 / numpy 2.5.5 在 box 上的计算结果比对（`cargo test`）。**两者都不是 MATLAB 输出。** `timing` 为 box 上的实测值，仅供参考。
@@ -80,7 +80,7 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "id": "control.design.lqr",
   "version": "0.3.0",
   "determinism": "platform_bitwise",
@@ -374,7 +374,7 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "ok | ok_with_warnings | error",
   "dry_run": false,
   "operator": { "id": "control.lti.step", "version": "0.2.0", "build": "aeoi-control 0.2.0+<git sha|nogit> nalgebra-0.33 rustc-1.85" },
@@ -778,7 +778,7 @@ pub trait Operator: Send + Sync + 'static {
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "id": "control.lti.bode",
   "version": "0.2.0",
   "title": "Bode frequency response",
@@ -970,7 +970,7 @@ pub trait Operator: Send + Sync + 'static {
   ],
   "properties": {
     "system": {
-      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "$ref": "aeoi://schemas/common/0.4/LtiSystem",
       "description": "被分析的 LTI 系统：tf（num/den 按降幂）、ss（A/B/C/D 稠密矩阵，row-major）或 zpk；ts=0 连续，ts>0 为离散采样周期（s）。上一个工具返回了 result.system 时，把那个 JSON 对象原样放在这里，不要手抄或改写系数（spec K-6）"
     },
     "frequency": {
@@ -1060,7 +1060,7 @@ pub trait Operator: Send + Sync + 'static {
       "description": "相位展开与分支选择（可省略）"
     },
     "exec": {
-      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+      "$ref": "aeoi://schemas/common/0.4/ExecOptions"
     }
   }
 }
@@ -1108,7 +1108,7 @@ pub trait Operator: Send + Sync + 'static {
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "ok",
   "dry_run": false,
   "operator": {
@@ -1349,7 +1349,7 @@ pub trait Operator: Send + Sync + 'static {
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "error",
   "dry_run": false,
   "operator": {
@@ -1591,7 +1591,7 @@ pass_rule: "所有 case 在容差内；预期报错的 case 报出相同 code；
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "id": "control.lti.step",
   "version": "0.2.0",
   "title": "Step response",
@@ -1787,7 +1787,7 @@ pass_rule: "所有 case 在容差内；预期报错的 case 报出相同 code；
   ],
   "properties": {
     "system": {
-      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "$ref": "aeoi://schemas/common/0.4/LtiSystem",
       "description": "被分析的 LTI 系统：tf（num/den 按降幂）、ss（A/B/C/D 稠密矩阵，row-major）或 zpk；ts=0 连续，ts>0 为离散采样周期（s）。上一个工具返回了 result.system 时，把那个 JSON 对象原样放在这里，不要手抄或改写系数（spec K-6）"
     },
     "time": {
@@ -1897,7 +1897,7 @@ pass_rule: "所有 case 在容差内；预期报错的 case 报出相同 code；
       "description": "返回的采样点：all / decimated（最多 max_samples 点）/ none"
     },
     "exec": {
-      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+      "$ref": "aeoi://schemas/common/0.4/ExecOptions"
     }
   }
 }
@@ -1948,7 +1948,7 @@ pass_rule: "所有 case 在容差内；预期报错的 case 报出相同 code；
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "ok",
   "dry_run": false,
   "operator": {
@@ -2228,7 +2228,7 @@ pass_rule: "所有 case 在容差内；预期报错的 case 报出相同 code；
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "error",
   "dry_run": false,
   "operator": {
@@ -2343,7 +2343,7 @@ excluded: ["auto 时间网格（参考实现的自动网格不公开且会变化
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "id": "control.design.lqr",
   "version": "0.3.0",
   "title": "Continuous-time LQR",
@@ -2565,23 +2565,23 @@ excluded: ["auto 时间网格（参考实现的自动网格不公开且会变化
   ],
   "properties": {
     "A": {
-      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "$ref": "aeoi://schemas/common/0.4/Matrix",
       "description": "状态矩阵 A，[n,n]"
     },
     "B": {
-      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "$ref": "aeoi://schemas/common/0.4/Matrix",
       "description": "输入矩阵 B，[n,m]（单输入时为列向量 [n,1]）"
     },
     "Q": {
-      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "$ref": "aeoi://schemas/common/0.4/Matrix",
       "description": "状态权重 Q，[n,n]，对称半正定"
     },
     "R": {
-      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "$ref": "aeoi://schemas/common/0.4/Matrix",
       "description": "输入权重 R，[m,m]，对称正定（标量写成 [1,1]）"
     },
     "N": {
-      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "$ref": "aeoi://schemas/common/0.4/Matrix",
       "description": "交叉权重 N，[n,m]，缺省为 0"
     },
     "symmetry_tolerance": {
@@ -2591,7 +2591,7 @@ excluded: ["auto 时间网格（参考实现的自动网格不公开且会变化
       "description": "相对容差 ‖X−Xᵀ‖_F ≤ tol·‖X‖_F；超出即 E.VALIDATION.NOT_SYMMETRIC，范围内（但非精确对称）对称化并给 W.VALIDATION.SYMMETRIZED"
     },
     "exec": {
-      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+      "$ref": "aeoi://schemas/common/0.4/ExecOptions"
     }
   },
   "x-aeoi-shape-constraints": [
@@ -2665,7 +2665,7 @@ excluded: ["auto 时间网格（参考实现的自动网格不公开且会变化
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "ok",
   "dry_run": false,
   "operator": {
@@ -2919,7 +2919,7 @@ excluded: ["auto 时间网格（参考实现的自动网格不公开且会变化
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "error",
   "dry_run": false,
   "operator": {
@@ -3064,7 +3064,7 @@ tf ↔ ss ↔ zpk 互转。
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "id": "control.lti.convert",
   "version": "0.3.0",
   "title": "LTI representation conversion",
@@ -3243,7 +3243,7 @@ tf ↔ ss ↔ zpk 互转。
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "ok",
   "dry_run": false,
   "operator": {
@@ -3429,7 +3429,7 @@ tf ↔ ss ↔ zpk 互转。
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "error",
   "dry_run": false,
   "operator": {
@@ -3537,7 +3537,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "id": "control.lti.poles_zeros",
   "version": "0.3.0",
   "title": "Poles, zeros and DC gain",
@@ -3712,7 +3712,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "ok",
   "dry_run": false,
   "operator": {
@@ -3893,7 +3893,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "error",
   "dry_run": false,
   "operator": {
@@ -3976,7 +3976,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "id": "control.analysis.ctrb_obsv",
   "version": "0.3.0",
   "title": "Controllability / observability",
@@ -4186,7 +4186,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "ok",
   "dry_run": false,
   "operator": {
@@ -4390,7 +4390,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "error",
   "dry_run": false,
   "operator": {
@@ -4477,7 +4477,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "id": "control.analysis.margin",
   "version": "0.3.0",
   "title": "Gain / phase / stability margins",
@@ -4656,7 +4656,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "ok",
   "dry_run": false,
   "operator": {
@@ -4876,7 +4876,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "error",
   "dry_run": false,
   "operator": {
@@ -4961,7 +4961,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "id": "control.lti.c2d",
   "version": "0.3.0",
   "title": "Continuous-to-discrete conversion",
@@ -5149,7 +5149,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "ok",
   "dry_run": false,
   "operator": {
@@ -5309,7 +5309,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "error",
   "dry_run": false,
   "operator": {
@@ -5413,7 +5413,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "id": "control.lti.impulse",
   "version": "0.3.0",
   "title": "Impulse response",
@@ -5575,7 +5575,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "ok",
   "dry_run": false,
   "operator": {
@@ -5760,7 +5760,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "error",
   "dry_run": false,
   "operator": {
@@ -5847,7 +5847,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "id": "control.math.lyap",
   "version": "0.4.0",
   "title": "Lyapunov equation",
@@ -6021,7 +6021,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "ok",
   "dry_run": false,
   "operator": {
@@ -6163,7 +6163,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "error",
   "dry_run": false,
   "operator": {
@@ -6251,7 +6251,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "id": "control.design.place",
   "version": "0.3.0",
   "title": "Pole placement",
@@ -6431,7 +6431,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "ok",
   "dry_run": false,
   "operator": {
@@ -6585,7 +6585,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "error",
   "dry_run": false,
   "operator": {
@@ -6668,7 +6668,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "id": "control.design.dlqr",
   "version": "0.3.0",
   "title": "Discrete-time LQR",
@@ -6861,7 +6861,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "ok",
   "dry_run": false,
   "operator": {
@@ -7045,7 +7045,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
 
 ```json
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "status": "error",
   "dry_run": false,
   "operator": {
@@ -7348,11 +7348,11 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 10. **Agent 可用性评估**：建立一组 Agent 回归任务（故意给错输入，测自我修复成功率）。
 11. **稀疏 vs 稠密的哈希等价**（新）：是否应让同一矩阵的稀疏/稠密表示 `input_hash` 相同？代价是哈希大型稀疏矩阵时需要逻辑稠密化。
 14. **（v0.4 新）两种范数并存**：`parity.yaml` 的 `compare` 用相对 Frobenius 范数，4.3 R-5 的 `verify` 用 ‖·‖∞（近零字段另有下限）。一致性套件沿用前者（9.4 CF-6）。是否统一？统一会改变已发布 `verify` 的判定，需要重跑已有测试。
-15. ~~**（v0.4 新）线协议标识**~~ **已决定：保持 `aeoi/0.3`。** v0.4-draft 的新增全部是可选字段，且 `ExecOptions` 是封闭对象（3.14 MS-8），与 v0.3.1、v0.3.5、v0.3.6 的做法一致；全部 manifest、信封、schema `$id` 与已发布示例都不用改。何时升到 `aeoi/0.4` 另行决定，触发条件建议是出现不兼容的改动（G-1）。
+15. ~~**（v0.4 新）线协议标识**~~ **已决定：升为 `aeoi/0.4`，核心 schema 的 `$id` 升为 `/0.4`。** 作者先决定保持 `aeoi/0.3`（理由是新增字段全部可选，与 v0.3.1、v0.3.5、v0.3.6 的做法一致），随后改为随版本升级。做法与 v0.3 相同（第 13 章 v0.3-draft 第 1 行）：`spec` 与 `$id` 一起升；`golden/` 不改（文件名是内容哈希，V-3；其中的 `spec` 记录生成时的版本，没有测试或脚本比较它）；`reports/` 是历史运行记录，不改。没有兼容层：v0.4 的实现只发 `aeoi/0.4`，是否同时接受 `aeoi/0.3` 的 manifest/信封留给消费者。`input_hash`、`fingerprint` 不含 `spec`，不受影响。
 16. **（v0.4 新）`method_policy` 的细节**：~~`prefer` 是否保留~~ 已决定去掉（3.14 MS-5），以后若有“偏好但不强制”的需求再加，届时要同时定义回退顺序与收据里的回显。仍待定：字段名；`constraints` 还需要哪些键（例如对 `bound_kind` 的要求）；`METHOD_UNAVAILABLE` 归 `VALIDATION` 还是 `DOMAIN`；`receipt.alternatives` 是否要求 `backend` 与 `algorithm` 必填。
 17. **（v0.4 新）内核级接入的接口**：数值内核如何挂到宿主（输入输出是否限于数值数组加元数据、错误如何跨 ABI 表达、内存归属、收据由哪一层生成）。需要先对照 `aeoi-core` 现有的 `validate`/`execute` 分层（8.2）再设计；它不是 8.3 的 `aeoi-capi`。
 18. **（v0.4 新）宿主策略的表达与注入**：3.14 MS-10 规定了合并语义，但宿主策略从哪里来（配置文件、MCP 客户端、会话参数）、如何审计，属于绑定层设计，尚未写。
-19. **（v0.4 新，一致性套件发现）`$ref` 约定**：manifest 的输入、输出 schema 用 `aeoi://schemas/common/0.3/Matrix` 引用通用类型，标准 JSON Schema 解析不了（应为 `aeoi://schemas/common/0.3#/$defs/Matrix`），3.9 也没有说明这种写法。要么改写所有 schema，要么在 3.9 写明约定。
+19. **（v0.4 新，一致性套件发现）`$ref` 约定**：manifest 的输入、输出 schema 用 `aeoi://schemas/common/0.4/Matrix` 引用通用类型，标准 JSON Schema 解析不了（应为 `aeoi://schemas/common/0.4#/$defs/Matrix`），3.9 也没有说明这种写法。要么改写所有 schema，要么在 3.9 写明约定。
 20. **（v0.4 新，一致性套件发现）`lyap` 的 Q 对称性**：input schema 把 Q 描述为“对称”，10.10 的算法说明写“Q 非对称也可解”，二者要统一；`W.VALIDATION.SYMMETRIZED` 已在 manifest 声明，但规范没有规定触发条件（Q 非对称？结果被对称化？）。第二实现第一版因把非对称 Q 对称化，在 golden 的 4 个用例上失败。
 21. **（v0.4 新，一致性套件发现）默认值没有用例**：`lyap` 的 `type` 默认 `continuous`，golden 里没有省略它的用例，F-7 的“默认值回显”也无人检验。套件需要“省略可选字段”的用例族。
 
@@ -7371,7 +7371,7 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 
 ### v0.4-draft（2026-11-23）
 
-起因：准备写第二个实现（先 Python，再 C 的数值内核）时发现两处规范是空的：一个算子版本只能有一个方法 id，没有办法登记另一种算法，用户也没有办法要求“只用经过审计的库”；换一个实现是否等价于参考实现，没有判定规则，`parity.yaml` 只说明参考实现怎么测自己。这一版的规范改动只是文本，参考实现、schema 与示例都没有动；另加了一致性套件 v0.1（`conformance/`，只覆盖 `lyap`，没有在参考实现上跑过）。线协议标识保持 `aeoi/0.3`（已决定，12.1 第 15 项）。
+起因：准备写第二个实现（先 Python，再 C 的数值内核）时发现两处规范是空的：一个算子版本只能有一个方法 id，没有办法登记另一种算法，用户也没有办法要求“只用经过审计的库”；换一个实现是否等价于参考实现，没有判定规则，`parity.yaml` 只说明参考实现怎么测自己。这一版的规范改动只是文本，参考实现、schema 与示例都没有动；另加了一致性套件 v0.1（`conformance/`，只覆盖 `lyap`，没有在参考实现上跑过）。线协议标识升为 `aeoi/0.4`（已决定，12.1 第 15 项）：`spec` 与核心 schema 的 `$id` 一起升，改动见下表第 7 行。
 
 **规范改动**
 
@@ -7383,6 +7383,9 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 | 4 | 5.1 | 新错误码 `E.VALIDATION.METHOD_UNAVAILABLE`（类别仍是 5 个） | MS-6 |
 | 5 | 9.4 CF-1 – CF-12 | 跨实现一致性：线级与内核级两种形态（避开 9.1 的 L1 – L3 命名）；套件沿用 golden 与 `parity.yaml`；精确字段与不要求相同的字段（`ok` 与 `ok_with_warnings`、结果指纹、方法 id 不要求相同）；范数比较；第二实现自报的 `error_estimate` 不得放宽验收；`rel_fro` 与 R-5 的 ‖·‖∞ 并存的说明；收据与 manifest 的机械核查；逐方法检验；声明区分“同源通过”与“独立通过” | 让“换实现”可以被检验，而不是只被声称 |
 | 6 | 12、附录 A | 新开放问题 14 – 21（19 – 21 由一致性套件的第一次运行发现）；下一步 7；附录 A 加 `spec-v0.4.md` 与 `conformance/` | |
+| 7 | 0、2.2、4.2、12.1 第 15 项 | 线协议标识升为 `aeoi/0.4`，核心 schema `$id` 升为 `/0.4`（与 v0.3 的做法相同） | 作者决定：新增字段后版本号与线标识保持同步 |
+
+**已改（只涉及标识）**：`schemas/*`（`$id`、`$ref`、`spec` 的 const）、`examples/**`（manifest 的 `spec`、示例响应、输入输出 schema 里对核心 schema 的引用）、`write_manifests.py`、`validate_examples.py`、`rust/`（`aeoi_core::SPEC`、`schema.rs` 两处单元测试字面量、`aeoi-mcp` 的 e2e 断言与说明文字）、`conformance/`。没有改：`golden/`、`reports/`、`gen_golden_*.py`（它们只记录生成当时的版本）。除 `validate_examples.py`（459 个 golden 请求与全部示例校验通过）和一致性套件（44 个用例、7 个变异测试）外，**Rust 没有重新编译或测试**。
 
 **需要但尚未做的改动（参考实现与数据）**
 
@@ -7606,7 +7609,7 @@ ai-operator-spec/
 ├── spec-v0.3.md                     v0.3.6-draft 的快照（历史版本，不再重新生成）
 ├── spec-v0.2.md / spec-v0.1.md      历史版本
 ├── spec-src.md                      本文源稿（file / jsonc 占位符）
-├── schemas/                         common / manifest / envelope / error（/0.3）
+├── schemas/                         common / manifest / envelope / error（/0.4）
 ├── examples/<id>/                   12 个算子：manifest、input/output schema、request(.error/.nonsymmetric)、
 │                                    response(.success/.error/.nonsymmetric)、parity.yaml；v0.3 算子另有 reference.python-control.json
 ├── golden/python-control/<op>/<ver>/<sha256>.json + INDEX.json   264（0.2.0）+ 353（0.3.0）个 python-control 参考用例（NOT MATLAB）

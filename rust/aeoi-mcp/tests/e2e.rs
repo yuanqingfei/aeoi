@@ -56,7 +56,7 @@ fn mcp_stdio_session() {
             println!("tools/call {tool} ({req}): isError={} :: {}", res["isError"], res["content"][0]["text"]);
             assert_eq!(res["isError"], expect_err);
             let env = &res["structuredContent"];
-            assert_eq!(env["spec"], "aeoi/0.3");
+            assert_eq!(env["spec"], "aeoi/0.4");
             let text_env: Value = serde_json::from_str(res["content"][1]["text"].as_str().unwrap()).unwrap();
             assert_eq!(&text_env, env);
             if expect_err {

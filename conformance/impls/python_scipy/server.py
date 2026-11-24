@@ -133,7 +133,7 @@ def solve(args):
 
 
 def error_envelope(f, request_id):
-    return {"spec": "aeoi/0.3", "status": "error", "dry_run": False, "operator": {"id": OP_ID, "version": MANIFEST["version"], "build": BUILD},
+    return {"spec": "aeoi/0.4", "status": "error", "dry_run": False, "operator": {"id": OP_ID, "version": MANIFEST["version"], "build": BUILD},
             "request_id": request_id, "result": None, "trust": None, "receipt": None, "reproducibility": None,
             "error": {"code": f.code, "category": f.category, "retryable": f.category in ("validation", "numerical", "resource"),
                       "message": f.message, "agent_hint": "check the inputs (matrices are row-major) and the equation type",
@@ -176,7 +176,7 @@ def call(args):
                         "stable_across": "request: all implementations; result: same build + platform only"},
         "replay": {"build": BUILD, "platform": plat, "verify": {}},
     }
-    return {"spec": "aeoi/0.3", "status": "ok_with_warnings" if warnings else "ok", "dry_run": False,
+    return {"spec": "aeoi/0.4", "status": "ok_with_warnings" if warnings else "ok", "dry_run": False,
             "operator": {"id": OP_ID, "version": version, "build": BUILD}, "request_id": request_id, "result": result,
             "trust": trust, "warnings": warnings, "error": None,
             "reproducibility": {"determinism": "platform_bitwise", "tolerance_class": MANIFEST["tolerance_class"], "input_hash": in_hash,
@@ -188,7 +188,7 @@ def call(args):
 def tools_list():
     return {"tools": [{"name": TOOL, "title": MANIFEST["title"], "description": MANIFEST["description"],
                        "inputSchema": {"type": "object"}, "annotations": MANIFEST["mcp"]["annotations"],
-                       "_meta": {"aeoi/id": OP_ID, "aeoi/version": MANIFEST["version"], "aeoi/spec": "aeoi/0.3",
+                       "_meta": {"aeoi/id": OP_ID, "aeoi/version": MANIFEST["version"], "aeoi/spec": "aeoi/0.4",
                                  "aeoi/manifest": f"aeoi://operators/{OP_ID}/{MANIFEST['version']}/manifest"}}]}
 
 

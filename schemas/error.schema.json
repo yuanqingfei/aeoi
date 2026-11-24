@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "aeoi://schemas/error/0.3",
+  "$id": "aeoi://schemas/error/0.4",
   "type": "object",
   "required": [
     "code",

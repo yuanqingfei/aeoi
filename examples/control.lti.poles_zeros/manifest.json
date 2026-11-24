@@ -1,5 +1,5 @@
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "id": "control.lti.poles_zeros",
   "version": "0.3.0",
   "title": "Poles, zeros and DC gain",

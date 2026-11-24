@@ -111,7 +111,7 @@ def load_registry(schema_dir):
 
 
 def fix_refs(schema):
-    """Output schemas write refs as `aeoi://schemas/common/0.3/Matrix`; standard resolution needs `...0.3#/$defs/Matrix`.
+    """Output schemas write refs as `aeoi://schemas/common/0.4/Matrix`; standard resolution needs `...0.3#/$defs/Matrix`.
     The spec does not state this convention (reported in the runner output as a spec gap)."""
     s = json.dumps(schema)
     return json.loads(re.sub(r'(aeoi://schemas/[a-z]+/[0-9.]+)/([A-Za-z]+)"', r'\1#/$defs/\2"', s))
@@ -238,7 +238,7 @@ def main():
     a = ap.parse_args()
 
     reg, docs = load_registry(a.schemas)
-    env_validator = Draft202012Validator(docs["aeoi://schemas/envelope/0.3"], registry=reg)
+    env_validator = Draft202012Validator(docs["aeoi://schemas/envelope/0.4"], registry=reg)
     deviations = {d["case_id"]: d for d in json.load(open(a.known_deviations))} if a.known_deviations else {}
 
     files = sorted(f for f in glob.glob(os.path.join(a.golden, "*", "*", "*", "*.json")) if not f.endswith("INDEX.json"))
@@ -279,7 +279,7 @@ def main():
         else:
             m["output_schema"] = None
         if re.search(r'aeoi://schemas/[a-z]+/[0-9.]+/[A-Za-z]+"', json.dumps(m.get("output_schema"))):
-            notes.add("SPEC GAP: output schemas reference `aeoi://schemas/common/0.3/Matrix`; this is not standard $ref resolution "
+            notes.add("SPEC GAP: output schemas reference `aeoi://schemas/common/0.4/Matrix`; this is not standard $ref resolution "
                       "(needs `#/$defs/Matrix`) and 3.9 does not describe the convention. The runner rewrites it.")
 
     def make_call(op):

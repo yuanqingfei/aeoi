@@ -8,7 +8,7 @@
   ],
   "properties": {
     "system": {
-      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "$ref": "aeoi://schemas/common/0.4/LtiSystem",
       "description": "离散系统，ts = 输入 ts"
     },
     "method": {

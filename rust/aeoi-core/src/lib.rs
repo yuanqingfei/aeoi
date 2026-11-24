@@ -12,7 +12,7 @@ pub mod poly;
 pub mod receipt;
 pub mod sysalg;
 
-pub const SPEC: &str = "aeoi/0.3";
+pub const SPEC: &str = "aeoi/0.4";
 
 pub use error::{OpError, Warning};
 pub use host::{ExecCtx, HostCtx};

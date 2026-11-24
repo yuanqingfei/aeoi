@@ -20,15 +20,15 @@
   ],
   "properties": {
     "open_loop": {
-      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "$ref": "aeoi://schemas/common/0.4/LtiSystem",
       "description": "L = sensor·plant·controller。margin、穿越频率作用在它上面"
     },
     "closed_loop": {
-      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "$ref": "aeoi://schemas/common/0.4/LtiSystem",
       "description": "T = plant·controller/(1+L)，r→y。stepinfo/step 作用在它上面"
     },
     "sensitivity": {
-      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "$ref": "aeoi://schemas/common/0.4/LtiSystem",
       "description": "S = 1/(1+L)，r→e"
     },
     "roles": {
@@ -36,7 +36,7 @@
       "description": "每个返回系统的角色说明（open_loop/closed_loop/sensitivity → 文字定义）"
     },
     "closed_loop_poles": {
-      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "$ref": "aeoi://schemas/common/0.4/Matrix",
       "description": "c128 向量，T 的极点，按实部升序、虚部降序"
     },
     "closed_loop_stable": {
@@ -56,7 +56,7 @@
           "type": "null"
         },
         {
-          "$ref": "aeoi://schemas/common/0.3/Quantity",
+          "$ref": "aeoi://schemas/common/0.4/Quantity",
           "description": "unit=rad/s：|L(jω)| = 1 的开环穿越频率（margin 选中的那个）；没有穿越为 \"NaN\""
         }
       ]
@@ -67,7 +67,7 @@
           "type": "null"
         },
         {
-          "$ref": "aeoi://schemas/common/0.3/Quantity",
+          "$ref": "aeoi://schemas/common/0.4/Quantity",
           "description": "unit=Hz：同一个穿越频率 / (2π)"
         }
       ]
@@ -78,7 +78,7 @@
           "type": "null"
         },
         {
-          "$ref": "aeoi://schemas/common/0.3/Quantity",
+          "$ref": "aeoi://schemas/common/0.4/Quantity",
           "description": "unit=rad/s：闭环 |T| 比 |T(0)| 低 |bandwidth_drop_db| dB 的第一个频率；T(0) = 0 或无穷时为 null，全频段不降为 \"Inf\""
         }
       ]
@@ -89,7 +89,7 @@
           "type": "null"
         },
         {
-          "$ref": "aeoi://schemas/common/0.3/Quantity",
+          "$ref": "aeoi://schemas/common/0.4/Quantity",
           "description": "unit=Hz：同一个闭环带宽 / (2π)"
         }
       ]

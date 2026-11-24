@@ -9,7 +9,7 @@
   ],
   "properties": {
     "system": {
-      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "$ref": "aeoi://schemas/common/0.4/LtiSystem",
       "description": "待离散化的连续系统（ts 必须为 0）"
     },
     "ts": {
@@ -43,7 +43,7 @@
       "description": "输出表示：same（与输入相同，默认）、tf、ss、zpk"
     },
     "exec": {
-      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+      "$ref": "aeoi://schemas/common/0.4/ExecOptions"
     }
   }
 }

@@ -9,9 +9,9 @@ docs = {n: L(f"schemas/{n}.schema.json") for n in ["common", "envelope", "error"
 reg = Registry()
 for s in docs.values():
     reg = reg.with_resource(s["$id"], Resource.from_contents(s))
-for d in docs["common"]["$defs"]:  # aeoi://schemas/common/0.3/<Def> shorthand used by operator schemas
-    reg = reg.with_resource(f"aeoi://schemas/common/0.3/{d}", Resource.from_contents(
-        {"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": f"aeoi://schemas/common/0.3#/$defs/{d}"}))
+for d in docs["common"]["$defs"]:  # aeoi://schemas/common/0.4/<Def> shorthand used by operator schemas
+    reg = reg.with_resource(f"aeoi://schemas/common/0.4/{d}", Resource.from_contents(
+        {"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": f"aeoi://schemas/common/0.4#/$defs/{d}"}))
 bad = 0
 # framework-level codes (spec E-7a): emitted by the pipeline, not by an operator, so not listed per manifest
 FRAMEWORK_CODES = ["W.EVIDENCE.POSTCONDITION_FAILED"]

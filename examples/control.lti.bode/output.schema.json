@@ -9,15 +9,15 @@
   ],
   "properties": {
     "w": {
-      "$ref": "aeoi://schemas/common/0.3/Quantity",
+      "$ref": "aeoi://schemas/common/0.4/Quantity",
       "description": "频率，unit 固定为 rad/s（Hz 输入会被换算）"
     },
     "magnitude": {
-      "$ref": "aeoi://schemas/common/0.3/Quantity",
+      "$ref": "aeoi://schemas/common/0.4/Quantity",
       "description": "shape [ny,nu,nw]，unit=dB（20·log10|G|）；|G|=0 时为 \"-Inf\""
     },
     "phase": {
-      "$ref": "aeoi://schemas/common/0.3/Quantity",
+      "$ref": "aeoi://schemas/common/0.4/Quantity",
       "description": "shape [ny,nu,nw]，unit=deg；|G|=0 时为 \"NaN\""
     }
   }
