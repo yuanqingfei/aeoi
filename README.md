@@ -135,7 +135,6 @@ node aeoi-wasm/parity/parity.mjs /tmp/pkg-node /tmp/cases.json /tmp/native.jsonl
 
 ### 后续计划
 
-- 用 Tauri 打包成桌面应用（复用同一个 axum 服务与静态页面），免去命令行启动。
 - 流式输出模型文本；会话持久化。
 
 ## 许可（License）
