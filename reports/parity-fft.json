@@ -1,0 +1,19 @@
+{
+  "reference": "numpy.fft (pocketfft) for every case; mpmath 50-digit direct DFT (exact) for small n. Not MATLAB.",
+  "cases": 44,
+  "error_cases": 8,
+  "worst": {
+    "python-control": {
+      "X_rel_normwise": 8.364778024663197e-16,
+      "frequency_rel": 2.1721754829622626e-16
+    },
+    "mpmath": {
+      "X_rel_normwise": 2.9011373416012436e-16,
+      "frequency_rel": 1.9120507646322144e-16
+    }
+  },
+  "tolerances": {
+    "X_rel_normwise": "1e-12 · (⌈log2 n⌉ + 1)",
+    "frequency_rel": "4ε"
+  }
+}

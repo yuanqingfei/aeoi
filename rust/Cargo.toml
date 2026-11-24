@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["aeoi-core", "aeoi-control", "aeoi-mcp", "aeoi-bridge", "aeoi-web", "aeoi-wasm"]
+members = ["aeoi-core", "aeoi-control", "aeoi-numeric", "aeoi-ops", "aeoi-mcp", "aeoi-bridge", "aeoi-web", "aeoi-wasm"]
 
 [workspace.package]
 version = "0.3.0"

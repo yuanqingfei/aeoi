@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/signal.spectral.fft/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "x"
+  ],
+  "properties": {
+    "x": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "要变换的序列：f64 或 c128，形状 [n] 或 [m, n]（m 个通道，沿最后一维变换，与 lsim 的 [nu, nt] 相同）。长数据可用 b64 或 ref 编码"
+    },
+    "n": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "变换长度。缺省为 x 最后一维的长度；更短则截断，更长则在末尾补零（= MATLAB fft(x, n)）"
+    },
+    "direction": {
+      "enum": [
+        "forward",
+        "inverse"
+      ],
+      "default": "forward",
+      "x-aeoi-provenance": "convention",
+      "description": "forward（缺省）或 inverse"
+    },
+    "normalization": {
+      "enum": [
+        "backward",
+        "ortho",
+        "forward"
+      ],
+      "default": "backward",
+      "x-aeoi-provenance": "convention",
+      "description": "backward（缺省：正变换不缩放、逆变换乘 1/n，与 MATLAB、numpy 相同）、ortho（两个方向都乘 1/√n）或 forward（正变换乘 1/n）"
+    },
+    "sides": {
+      "enum": [
+        "two",
+        "one"
+      ],
+      "default": "two",
+      "x-aeoi-provenance": "convention",
+      "description": "two（缺省，全部 n 个频点）或 one（只返回 0..fs/2，仅用于实数输入的正变换）"
+    },
+    "sample_rate_hz": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "x-aeoi-provenance": "user",
+      "description": "采样率（Hz）。给出时 frequency 以 Hz 为单位，否则以 cycles/sample 为单位"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  },
+  "x-aeoi-shape-constraints": [
+    "x: [n] 或 [m, n]，沿最后一维变换"
+  ]
+}

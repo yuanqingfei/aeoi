@@ -111,6 +111,24 @@ def m_pidtune_controller_wrong(r):          # controller numerator scaled by 1.0
     r["controller"]["num"] = [x * 1.001 for x in r["controller"]["num"]]
 
 
+def m_fft_bin_wrong(r):                     # one bin off by 1e-9 relative to the largest bin
+    d = r["X"]["data"]
+    big = max(abs(complex(*z)) for z in d) or 1.0
+    d[len(d) // 3][0] += 1e-9 * big
+
+
+def m_fft_shifted_frequencies(r):           # frequencies relabelled in fftshift order (the classic mistake)
+    f = r["frequency"]["value"]["data"]
+    if r.get("sides") == "two" and len(f) > 2:
+        f[:] = sorted(f)                    # ascending = fftshift order for the numpy fftfreq labels
+
+
+def m_fft_scale_wrong(r):                   # X scaled by 1/n (another normalization than the one echoed)
+    n = r["n"]
+    for z in r["X"]["data"]:
+        z[0] /= n; z[1] /= n
+
+
 # name -> (operator, transform)
 MUTANTS = {
     "pz_pole_wrong": ("control.lti.poles_zeros", m_pz_pole_wrong),
@@ -126,6 +144,9 @@ MUTANTS = {
     "lsim_interp_mislabeled": ("control.lti.lsim", m_lsim_zoh_as_foh),
     "pidtune_kp_wrong": ("control.design.pidtune", m_pidtune_kp_wrong),
     "pidtune_controller_wrong": ("control.design.pidtune", m_pidtune_controller_wrong),
+    "fft_bin_wrong": ("signal.spectral.fft", m_fft_bin_wrong),
+    "fft_shifted_frequencies": ("signal.spectral.fft", m_fft_shifted_frequencies),
+    "fft_scale_wrong": ("signal.spectral.fft", m_fft_scale_wrong),
 }
 
 

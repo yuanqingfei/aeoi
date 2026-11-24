@@ -26,6 +26,8 @@ pub struct OperatorMeta {
     pub output_schema: Value,
     pub determinism: String,
     pub tolerance_class: String,
+    /// The crate that implements the operator; reported in `operator.build` and `receipt.replay.build`.
+    pub crate_name: String,
     validator: Validator,
 }
 
@@ -43,8 +45,14 @@ impl OperatorMeta {
             manifest,
             input_schema,
             output_schema,
+            crate_name: "aeoi-control".into(),
             validator,
         }
+    }
+    /// Record the implementing crate (the `operator_meta!` macros pass `env!("CARGO_PKG_NAME")`).
+    pub fn with_crate(mut self, name: &str) -> OperatorMeta {
+        self.crate_name = name.into();
+        self
     }
     /// Manifest with input/output schemas inlined (for resources/read).
     pub fn manifest_resolved(&self) -> Value {
@@ -78,8 +86,13 @@ pub trait DynOperator: Send + Sync {
 }
 
 pub fn build_string() -> String {
+    build_string_for("aeoi-control")
+}
+
+/// `<crate> <version>+<git> nalgebra-0.33 rustc-<version>` for the crate that implements the operator.
+pub fn build_string_for(crate_name: &str) -> String {
     format!(
-        "aeoi-control {}+{} nalgebra-0.33 rustc-{}",
+        "{crate_name} {}+{} nalgebra-0.33 rustc-{}",
         env!("CARGO_PKG_VERSION"),
         option_env!("AEOI_GIT_SHA").unwrap_or("nogit"),
         option_env!("AEOI_RUSTC_VERSION").unwrap_or("unknown")
@@ -136,7 +149,7 @@ pub fn cpu_features() -> Vec<&'static str> {
 }
 
 fn op_header(m: &OperatorMeta) -> Value {
-    json!({"id": m.id, "version": m.version, "build": build_string()})
+    json!({"id": m.id, "version": m.version, "build": build_string_for(&m.crate_name)})
 }
 
 pub fn error_envelope(m: &OperatorMeta, request_id: &Value, e: &OpError, warnings: &[Warning], t0: Instant) -> Value {
@@ -220,7 +233,7 @@ impl<T: Operator> DynOperator for T {
         // spec 4.3 receipt + E-11 (no evidence, no success claim): may append W.EVIDENCE.POSTCONDITION_FAILED
         // MS-7: method_selection only when the request carried a method_policy (otherwise byte-identical to v0.3).
         let selection = method_policy.map(|p| json!({"policy": p, "used": method.id}));
-        let receipt = crate::receipt::build_for(m, &method, selection, &input_hash, &output_hash, &out.trust, &mut warnings, &build_string(), &platform());
+        let receipt = crate::receipt::build_for(m, &method, selection, &input_hash, &output_hash, &out.trust, &mut warnings, &build_string_for(&m.crate_name), &platform());
         if exec.get("output_encoding").and_then(|x| x.as_str()) == Some("b64") {
             encode_b64_inplace(&mut result, host);
         }

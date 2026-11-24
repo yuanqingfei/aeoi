@@ -31,6 +31,9 @@ PROXY_EXPECT = {
     "lsim_interp_mislabeled": ("control.lti.lsim", "interpolation equals"),
     "pidtune_kp_wrong": ("control.design.pidtune", "gains Kp"),
     "pidtune_controller_wrong": ("control.design.pidtune", "recomputed by the runner"),
+    "fft_bin_wrong": ("signal.spectral.fft", "X: per channel"),
+    "fft_shifted_frequencies": ("signal.spectral.fft", "frequency: |Δ|"),
+    "fft_scale_wrong": ("signal.spectral.fft", "Parseval, recomputed by the runner"),
 }
 
 # mutant -> substring that must appear among the names of the failed checks

@@ -83,10 +83,8 @@
   },
   "limits": {
     "td_scan_points": 4001,
-    "td_scan_log10_range": [
-      -6,
-      6
-    ],
+    "td_scan_log10_min": -6,
+    "td_scan_log10_max": 6,
     "max_bisection_iterations": 200
   },
   "input_schema": {

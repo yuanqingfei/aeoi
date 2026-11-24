@@ -1,0 +1,44 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "signal.spectral.fft",
+ "operator_version": "0.4.0",
+ "case_family": "length_one",
+ "request": {
+  "x": {
+   "dtype": "f64",
+   "shape": [
+    1
+   ],
+   "data": [
+    2.5
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "numpy.fft (pocketfft)",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261124,
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "X": [
+   [
+    2.5,
+    0.0
+   ]
+  ],
+  "shape": [
+   1
+  ],
+  "frequency": [
+   0.0
+  ],
+  "frequency_unit": "cycles/sample",
+  "n": 1,
+  "input_length": 1,
+  "direction": "forward",
+  "normalization": "backward",
+  "sides": "two"
+ }
+}

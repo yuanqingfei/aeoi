@@ -71,7 +71,7 @@ impl Default for Bridge {
 
 impl Bridge {
     pub fn new() -> Bridge {
-        let reg = aeoi_control::registry();
+        let reg = aeoi_ops::registry();
         let tools = reg
             .iter()
             .map(|op| {
@@ -141,7 +141,7 @@ impl Bridge {
             }
         }
         let args = &args;
-        let env = match aeoi_control::find(&self.reg, name) {
+        let env = match aeoi_ops::find(&self.reg, name) {
             None => bridge_error(
                 "E.VALIDATION.UNKNOWN_TOOL",
                 &format!("没有名为 {name} 的工具。"),
@@ -300,7 +300,7 @@ mod tests {
     #[test]
     fn one_tool_per_operator_with_names_valid_for_all_providers() {
         let b = Bridge::new();
-        assert_eq!(b.tools.len(), aeoi_control::registry().len());
+        assert_eq!(b.tools.len(), aeoi_ops::registry().len());
         for t in &b.tools {
             assert!(t.name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'), "{}", t.name);
             assert!(t.name.len() <= 64);

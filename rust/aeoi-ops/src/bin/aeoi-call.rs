@@ -30,8 +30,8 @@ fn main() {
         eprintln!("usage: aeoi-call <operator-id> <request.json|-> [--data-root DIR]\n       aeoi-call verify <operator-id> <request.json> <envelope.json> [--data-root DIR]");
         std::process::exit(2);
     }
-    let reg = aeoi_control::registry();
-    let Some(op) = aeoi_control::find(&reg, &args[base]) else {
+    let reg = aeoi_ops::registry();
+    let Some(op) = aeoi_ops::find(&reg, &args[base]) else {
         eprintln!("unknown operator {}", args[base]);
         std::process::exit(2);
     };

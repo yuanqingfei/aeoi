@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/signal.spectral.fft/0.4.0/output",
+  "type": "object",
+  "required": [
+    "X",
+    "frequency",
+    "n",
+    "direction",
+    "normalization",
+    "sides",
+    "input_length",
+    "frequency_resolution"
+  ],
+  "properties": {
+    "X": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "c128，形状 [n_out] 或 [m, n_out]；n_out = n（双边）或 ⌊n/2⌋ + 1（单边）"
+    },
+    "frequency": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Quantity",
+      "description": "每个输出频点的频率：unit Hz（给了 sample_rate_hz）或 cycles/sample；双边按 numpy fftfreq 顺序（0、正频率、负频率），单边为 0..fs/2"
+    },
+    "n": {
+      "type": "integer",
+      "description": "实际变换长度"
+    },
+    "direction": {
+      "enum": [
+        "forward",
+        "inverse"
+      ]
+    },
+    "normalization": {
+      "enum": [
+        "backward",
+        "ortho",
+        "forward"
+      ]
+    },
+    "sides": {
+      "enum": [
+        "two",
+        "one"
+      ]
+    },
+    "input_length": {
+      "type": "integer",
+      "description": "x 最后一维的原长度；与 n 不同表示截断或补零"
+    },
+    "frequency_resolution": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Quantity",
+      "description": "相邻频点间隔 fs/n"
+    }
+  }
+}

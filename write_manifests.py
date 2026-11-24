@@ -130,11 +130,11 @@ CVEC=lambda d:dict(M,description=d)
 LTI={"$ref":C+"LtiSystem"}
 EXEC={"$ref":C+"ExecOptions"}
 CPLX_LIST={"type":"array","items":{"$ref":C+"Complex"}}
-def man(id_,title,desc,cat,tags,pre,notfor,algo,refs,routine,tol,limits,errors,warnings,sparse=SS_SPARSE,siso_only=False,det="platform_bitwise",ver=V3):
+def man(id_,title,desc,cat,tags,pre,notfor,algo,refs,routine,tol,limits,errors,warnings,sparse=SS_SPARSE,siso_only=False,det="platform_bitwise",ver=V3,backend=None):
     return {"spec":SPEC,"id":id_,"version":ver,"title":title,"description":desc,"category":cat,"tags":tags,
      "applicability":{"preconditions":pre,"not_for":notfor,"siso_only":siso_only},
      "provenance":{"algorithm":algo,"references":refs,"clean_room":CLEAN},
-     "backend":dict(BACK3(routine),version=ver),"determinism":det,"tolerance_class":tol,"sparse_support":sparse,"encodings":ENC,"limits":limits,
+     "backend":dict(backend or BACK3(routine),version=ver),"determinism":det,"tolerance_class":tol,"sparse_support":sparse,"encodings":ENC,"limits":limits,
      "input_schema":{"$ref":"./input.schema.json"},"output_schema":{"$ref":"./output.schema.json"},
      "conformance":{"target":"L3","current":"L2"},"accuracy_grade":{"target":"A","current":"B"},
      "credentials":f"aeoi://operators/{id_}/{ver}/credentials","errors":errors+([] if "E.VALIDATION.METHOD_UNAVAILABLE" in errors else ["E.VALIDATION.METHOD_UNAVAILABLE"]),"warnings":warnings,
@@ -453,7 +453,7 @@ pt=man("control.design.pidtune","PI/PID tuning by crossover and phase margin","�
  "所需控制器值 C* = e^{j(PM−180°)}/G(jωc)。PI：C(jω) = Kp − j·Ki/ω ⇒ Kp = Re C*，Ki = −ωc·Im C*。PID（标准形，Ti = α·Td，Tf = Td/N）：令 x = ωc·Td，H(x) = 1 − j/(αx) + jx/(1 + jx/N)，在 x_k = 10^{−6 + 12k/4000}（k = 0..4000）上找第一个使 arg H(x) − ∠C* 变号的区间，对 log x 二分到相对宽度 ≤ 4u，Kp = |C*|/|H(x)|，Td = x/ωc；并联增益 Ki = Kp/Ti、Kd = Kp·Td。控制器由 control.design.pid（parallel）构造，回路分析由 control.analysis.loopsens 在同一 JSON 上完成（K-4）",
  [{"type":"textbook","cite":"K. J. Åström, T. Hägglund, Advanced PID Control, ISA 2006（频率点设计、Ti/Td 比与微分滤波）"},
   {"type":"textbook","cite":"G. F. Franklin, J. D. Powell, A. Emami-Naeini, Feedback Control of Dynamic Systems, 8th ed.（相位裕度设计）"}],
- "pidtune::frequency_point (closed-form PI; log-scan + bisection for PID Td)","T2",{"td_scan_points":4001,"td_scan_log10_range":[-6,6],"max_bisection_iterations":200},
+ "pidtune::frequency_point (closed-form PI; log-scan + bisection for PID Td)","T2",{"td_scan_points":4001,"td_scan_log10_min":-6,"td_scan_log10_max":6,"max_bisection_iterations":200},
  COMMON_LTI_ERR+["E.DOMAIN.MIMO_NOT_SUPPORTED","E.DOMAIN.NOT_CONTINUOUS","E.DOMAIN.TARGET_NOT_ACHIEVABLE","E.VALIDATION.OPTION_CONFLICT","E.NUMERICAL.NO_CONVERGENCE"],
  ["W.DOMAIN.EXTRA_CROSSOVER","W.DOMAIN.ANALYSIS_SKIPPED"]+LW,siso_only=True,ver="0.4.0")
 pt_in=ins("control.design.pidtune",{"plant":LTI,"type":{"enum":["PI","PID"]},
@@ -470,6 +470,32 @@ pt_out=outs("control.design.pidtune",{"type":{"enum":["PI","PID"]},"controller":
  "closed_loop_poles":dict(M,description="c128 向量：control.analysis.loopsens 给出的闭环极点"),
  "design":{"type":"object","description":"method = frequency_point；required_controller_phase_deg、required_controller_gain；PID 时 td_search（x = ωc·Td 的扫描与二分）、ti_td_ratio、derivative_filter_n"}},
  ["type","controller","gains","gains_standard","target","achieved","closed_loop_poles","design"],ver="0.4.0")
+# ======================================================================================================
+# Domains outside control (crate aeoi-numeric). v0.4.7: signal.spectral.fft
+BACK_NUM=lambda routine,extra="":{"library":"aeoi-numeric (pure Rust)"+extra,"routine":routine,"binding":"native","license":"MIT OR Apache-2.0"}
+V47="0.4.0"
+fft=man("signal.spectral.fft","Discrete Fourier transform","计算离散傅里叶变换（正变换或逆变换），并给出每个频点对应的频率。约定全部显式：符号 e^{−2πi·jk/n}、归一化（backward 缺省，与 MATLAB fft/ifft、numpy.fft 相同）、双边或单边、频率轴顺序（numpy fftfreq）。","analysis",["signal","spectral","fft"],
+ ["x 为 f64 或 c128，形状 [n] 或 [m, n]（沿最后一维变换，每行一个通道）","n（变换长度）缺省为最后一维长度；更短则截断、更长则在末尾补零（= MATLAB fft(x, n)）","sides = one 只用于实数输入的正变换（返回 n/2 + 1 个非负频点）"],
+ ["非均匀采样","窗函数与功率谱密度估计（另设算子）","三维及以上数组"],
+ "定义：正变换 X_k = s·Σ_{j=0}^{n−1} x_j·e^{−2πi·jk/n}，逆变换 x_j = s'·Σ_k X_k·e^{+2πi·jk/n}；normalization = backward：s = 1、s' = 1/n；ortho：s = s' = 1/√n；forward：s = 1/n、s' = 1。快速算法：rustfft 6.4 标量规划器（混合基 Cooley–Tukey，素数长度 Bluestein/Rader），不使用运行时 SIMD 分派，结果只依赖输入与 n。频率轴：双边按 numpy.fft.fftfreq 顺序 f_k = k·fs/n（k < ⌈n/2⌉），其余为 (k − n)·fs/n；单边按 rfftfreq，f_k = k·fs/n，k = 0..⌊n/2⌋。后验检查：Parseval 能量恒等式（全部输出），以及在 8 个确定的频点上用 O(n) 补偿求和直接计算 DFT（抽查）",
+ [{"type":"paper","cite":"J. W. Cooley, J. W. Tukey, An algorithm for the machine calculation of complex Fourier series, Math. Comp. 19, 1965","doi":"10.1090/S0025-5718-1965-0178586-1"},
+  {"type":"paper","cite":"L. Bluestein, A linear filtering approach to the computation of discrete Fourier transform, IEEE Trans. Audio Electroacoust. 18(4), 1970","doi":"10.1109/TAU.1970.1162132"},
+  {"type":"textbook","cite":"N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §24（FFT 的舍入误差界）"}],
+ "fft::transform (rustfft 6.4 scalar planner)","T1",{"max_input_elements":10000000,"max_output_values":10000000,"dft_spot_check_bins":8},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.OPTION_CONFLICT","E.VALIDATION.ENCODING","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.OUTPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["W.PERFORMANCE.SPARSE_DENSIFIED"],
+ sparse={"/x":{"policy":"densify","max_dense_elements":10000000}},ver=V47,backend=BACK_NUM("fft::transform"," + rustfft 6.4 (scalar planner)"))
+fft_in=ins("signal.spectral.fft",{"x":M,"n":{"type":"integer","minimum":1},
+ "direction":{"enum":["forward","inverse"],"default":"forward","x-aeoi-provenance":"convention"},
+ "normalization":{"enum":["backward","ortho","forward"],"default":"backward","x-aeoi-provenance":"convention"},
+ "sides":{"enum":["two","one"],"default":"two","x-aeoi-provenance":"convention"},
+ "sample_rate_hz":{"type":"number","exclusiveMinimum":0,"x-aeoi-provenance":"user"}},["x"],
+ {"x-aeoi-shape-constraints":["x: [n] 或 [m, n]，沿最后一维变换"]},ver=V47)
+fft_out=outs("signal.spectral.fft",{"X":dict(M,description="c128，形状 [n_out] 或 [m, n_out]；n_out = n（双边）或 ⌊n/2⌋ + 1（单边）"),
+ "frequency":dict(Q,description="每个输出频点的频率：unit Hz（给了 sample_rate_hz）或 cycles/sample；双边按 numpy fftfreq 顺序（0、正频率、负频率），单边为 0..fs/2"),
+ "n":{"type":"integer","description":"实际变换长度"},"direction":{"enum":["forward","inverse"]},"normalization":{"enum":["backward","ortho","forward"]},"sides":{"enum":["two","one"]},
+ "input_length":{"type":"integer","description":"x 最后一维的原长度；与 n 不同表示截断或补零"},"frequency_resolution":dict(Q,description="相邻频点间隔 fs/n")},
+ ["X","frequency","n","direction","normalization","sides","input_length","frequency_resolution"],ver=V47)
 OUTSEL={"type":"object","additionalProperties":False,"properties":{"return_samples":{"enum":["all","decimated","none"],"default":"all"},"max_samples":{"type":"integer","minimum":2,"default":10001}}}
 lsim_in=ins("control.lti.lsim",{"system":LTI,"u":M,
  "time":{"type":"object","additionalProperties":False,"required":["dt","unit"],"properties":{"dt":{"type":"number","exclusiveMinimum":0},"t0":{"type":"number","default":0},"unit":{"const":"s"}}},
@@ -483,7 +509,7 @@ lsim_out=outs("control.lti.lsim",{"t":{"oneOf":[{"type":"null"},Q]},"y":{"oneOf"
  ["t","y","x","n_grid_points","interpolation","realization"],ver=V45)
 B3={"control.lti.series":(series,series_in,series_out),"control.lti.parallel":(par,par_in,par_out),"control.lti.feedback":(fb,fb_in,fb_out),
  "control.design.pid":(pid,pid_in,pid_out),"control.lti.stepinfo":(si,si_in,si_out),"control.lti.pade":(pade,pade_in,pade_out),
- "control.analysis.loopsens":(ls,ls_in,ls_out),"control.lti.lsim":(lsim,lsim_in,lsim_out),"control.design.pidtune":(pt,pt_in,pt_out)}
+ "control.analysis.loopsens":(ls,ls_in,ls_out),"control.lti.lsim":(lsim,lsim_in,lsim_out),"control.design.pidtune":(pt,pt_in,pt_out),"signal.spectral.fft":(fft,fft_in,fft_out)}
 _ws=[]
 for _m in (series,fb,mg,si):
     _ws+= [w for w in _m["warnings"] if w not in _ws]
@@ -511,6 +537,7 @@ DESC={
  "control.lti.feedback":{"plant":"具名角色：被控对象 G（必填，用具名写法时）。结果是闭环 T = G·C/(1 + H·G·C)","controller":"具名角色：控制器 C，在前向通路（e → C → G）。省略表示 C = 1。不要把控制器放到 sensor","sensor":"具名角色：反馈通路 H（传感器/测量动态）。省略表示单位反馈 H = 1。控制器不是 sensor","sys1":"位置参数（不推荐）：前向通道。省略 sys2 时必须是方的（单位反馈）","sys2":"位置参数：反馈通道。省略表示单位增益 D=I。负反馈是默认，不是把 sys2 写成负号","sign":"反馈符号，只能是 -1（负反馈，默认，规范定义）或 +1（正反馈）。这是定义默认值，不是测量值，不需要引用用户原话","output_kind":"same（默认）、tf 或 ss","lineage":"可选。上游 receipt.fingerprint.request，只回显，不核验"},
  "control.design.pid":{"form":"parallel（默认）：C=Kp+Ki/s+Kd·s/(Tf·s+1)。standard：C=Kp·(1+1/(Ti·s)+Td·s/(Tf·s+1))。这是定义默认值","Kp":"比例增益。设计参数，没有默认值；由调用方给定，不需要在用户原话里逐字出现，但不得在用户和题目都没给时擅自假设","Ki":"只用于 form=parallel：积分增益，默认 0（该项不出现）。standard 形式不要出现 Ki","Kd":"只用于 form=parallel：微分增益，默认 0。Tf=0 且 Kd≠0 时结果 improper。standard 形式不要出现 Kd","Ti":"只用于 form=standard：积分时间（秒），必须 > 0。没有积分就省略 Ti，不要写 Ti=0；parallel 形式不要出现 Ti","Td":"只用于 form=standard：微分时间（秒），默认 0。parallel 形式不要出现 Td","Tf":"微分滤波时间常数（秒），默认 0（不加滤波）。有微分项时 Tf=0 得到理想微分","output_kind":"tf（默认）或 ss。improper 时 ss 会报错","lineage":"可选。上游 receipt 指纹，只回显"},
  "control.lti.stepinfo":{"system":SYS_D,"time":"时间网格，与 step 相同：uniform（t_final、dt，单位 s）或 auto。指标相对这个网格定义","rise_time_limits":"上升时间的低/高阈值，默认 [0.1, 0.9]（10% 到 90%）。这是指标定义，不是对象的物理参数；省略即用默认，不必询问","settling_threshold":"调节带半宽，默认 0.02（2%）。定义默认值，省略即用默认"},
+ "signal.spectral.fft":{"x":"要变换的序列：f64 或 c128，形状 [n] 或 [m, n]（m 个通道，沿最后一维变换，与 lsim 的 [nu, nt] 相同）。长数据可用 b64 或 ref 编码","n":"变换长度。缺省为 x 最后一维的长度；更短则截断，更长则在末尾补零（= MATLAB fft(x, n)）","direction":"forward（缺省）或 inverse","normalization":"backward（缺省：正变换不缩放、逆变换乘 1/n，与 MATLAB、numpy 相同）、ortho（两个方向都乘 1/√n）或 forward（正变换乘 1/n）","sides":"two（缺省，全部 n 个频点）或 one（只返回 0..fs/2，仅用于实数输入的正变换）","sample_rate_hz":"采样率（Hz）。给出时 frequency 以 Hz 为单位，否则以 cycles/sample 为单位"},
  "control.design.pidtune":{"plant":"被控对象 G（SISO、连续、proper）。上一个工具返回了系统就原样粘贴 result.system","type":"PI 或 PID。必填：控制器类型是设计决定，不由算子选","wc_rad_s":"目标增益穿越频率 ωc（rad/s）。必填，由用户或题目给出，算子不猜；不知道就问用户期望的响应速度（ωc 约为闭环带宽）","phase_margin_deg":"目标相位裕度（度），默认 60。定义默认值，省略即可","ti_td_ratio":"只用于 PID：Ti/Td 比，默认 4（Åström–Hägglund）。PI 不要给","derivative_filter_n":"只用于 PID：微分滤波 Tf = Td/N 的 N，默认 10。PI 不要给","lineage":"可选。上游 receipt.fingerprint.request，只回显"},
  "control.lti.lsim":{"system":SYS_D,"u":"输入采样，形状 [nu, nt]：第 i 行是第 i 个输入通道，第 k 列是 t_k = t0 + k·dt 时刻的值。SISO 可给一维 [nt]。长数据可用 b64 或 ref 编码（3.6）","time":"均匀网格：dt（s，> 0），t0（起始时刻，缺省 0），unit 固定 s。离散系统 dt 必须等于 ts。非均匀时间戳先重采样","interpolation":"采样之间的输入怎么解释：foh 线性（缺省，与 scipy lsim、python-control 相同），zoh 保持到下一个采样。离散系统不要给","x0":"初始状态 [n]，缺省 0。只用于 kind = ss：tf/zpk 没有状态坐标，要给初始状态先用 control_lti_convert 转成 ss","return_states":"true 时同时返回状态轨迹 x [n, nt]，缺省 false","output":"返回的采样点：all / decimated（最多 max_samples 点）/ none"},
  "control.analysis.loopsens":{"plant":"被控对象 G（SISO）。上一个工具返回了系统（例如 control_lti_pade 与对象串联的结果、control_lti_convert 的结果）就原样粘贴 result.system","controller":"控制器 C，在前向通路。省略 = 1（只看对象本身的单位负反馈）。PID 用 control_design_pid 的 result.system 原样粘贴","sensor":"反馈通路 H（测量动态）。省略 = 单位反馈。不要把控制器放在这里","time":"可选。给出时返回闭环 T 的阶跃指标（step_metrics）：uniform（t_final、dt，单位 s）或 auto。不给则 step_metrics 为 null","rise_time_limits":"阶跃上升时间阈值，默认 [0.1, 0.9]。定义默认值，省略即可","settling_threshold":"调节带半宽，默认 0.02（2%）。定义默认值，省略即可","bandwidth_drop_db":"闭环带宽的下降量（dB，负数），默认 -3。定义默认值，省略即可","lineage":"可选。上游 receipt.fingerprint.request，只回显"},
@@ -568,6 +595,8 @@ RECEIPT={
  "control.lti.pade":{"method_id":"aeoi:pade:golub-van-loan-11.3.1","assumptions":[A("delay","delay 由调用方给出，不是假设值","caller"),A("order","阶次由调用方给出，不是假设值","caller"),A("diagonal","只做 [N/N] 对角近似","validation"),A("approximation","结果逼近 e^{-θs}，逼近误差在 approximation，不在系数舍入界里","validation")],
    "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["taylor_matched","dc_is_one","all_finite"]},
 }
+RECEIPT["signal.spectral.fft"]={"method_id":"aeoi:fft:rustfft-scalar","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("uniform_sampling","x 是均匀采样序列；频率轴按 sample_rate_hz（或 cycles/sample）解释","caller"),A("conventions","符号、归一化、单双边、频率轴顺序按请求或规范默认","validation"),A("periodic_extension","DFT 把 x 视为周期 n 的序列；截断或补零改变频谱（泄漏），不是误差","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["parseval","dft_spot_check","all_finite"]}
 RECEIPT["control.design.pidtune"]={"method_id":"aeoi:pidtune:frequency-point","assumptions":[A("lti_model","plant 准确描述被控对象（单位、符号）","caller"),A("siso_continuous","SISO、连续、proper","error:E.DOMAIN.NOT_CONTINUOUS"),A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("target_from_user","ωc 由调用方给出；PM、Ti/Td、N 用请求里的值或规范默认","validation"),A("achievable","所需控制器相位在 PI/PID 可达范围内","error:E.DOMAIN.TARGET_NOT_ACHIEVABLE"),A("closed_loop_stable","结果闭环稳定","error:E.DOMAIN.TARGET_NOT_ACHIEVABLE"),A("single_crossover","L 只有一个增益穿越点（否则实际相位裕度可能小于目标）","warning:W.DOMAIN.EXTRA_CROSSOVER")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["target_met","closed_loop_stable","sub_operator_checks","all_finite"]}
 RECEIPT["control.lti.lsim"]={"method_id":"aeoi:lsim:block-expm-pade13-recursion","assumptions":LTI_A+[A("interpolation","采样之间的输入按 foh（线性）或 zoh（保持）解释；响应对这个解释精确","validation"),A("uniform_grid","均匀网格 t_k = t0 + k·dt；离散系统 dt = ts","error:E.VALIDATION.GRID"),A("x0_coordinates","x0 属于给定的 ss 实现","error:E.VALIDATION.OPTION_CONFLICT"),A("input_sampling","输入采样足以描述真实输入（结果对真实输入的误差取决于采样）","caller"),A("grid","dt 足以分辨系统动态","warning:W.ACCURACY.GRID_TOO_COARSE")],
@@ -581,13 +610,15 @@ COVERAGE={op:{"response_consistent":"test_points"} for op in ("control.lti.serie
 COVERAGE.update({"control.design.pid":{"formula_matches":"test_points"},"control.analysis.margin":{"grid_audit_clean":"sampled"},
  "control.analysis.loopsens":{"closed_loop_identity":"test_points","sub_operator_checks":"sampled"},
  "control.lti.lsim":{"half_step_consistent":"test_points"},
- "control.design.pidtune":{"target_met":"test_points","sub_operator_checks":"sampled"}})
+ "control.design.pidtune":{"target_met":"test_points","sub_operator_checks":"sampled"},
+ "signal.spectral.fft":{"parseval":"full","dft_spot_check":"sampled"}})
 # v0.3.6 E-13: result fields that are not usable when a post-condition fails (listed in receipt.evidence.unreliable).
 GUARDS={"control.analysis.ctrb_obsv":{"pbh_agrees_ctrb":["/ctrb/rank","/ctrb/full_rank","/minimal"],"pbh_agrees_obsv":["/obsv/rank","/obsv/full_rank","/minimal"]},
  "control.analysis.loopsens":{"closed_loop_identity":["/open_loop","/closed_loop","/sensitivity"],"stability_consistent":["/closed_loop_stable"],"sub_operator_checks":["/margins","/gain_crossover_rad_s","/gain_crossover_hz","/step_metrics"]}}
 for op in ("control.lti.series","control.lti.parallel","control.lti.feedback"):
     GUARDS[op]={"response_consistent":["/system"]}
 GUARDS["control.lti.lsim"]={"half_step_consistent":["/y","/x"]}
+GUARDS["signal.spectral.fft"]={"parseval":["/X"],"dft_spot_check":["/X","/frequency"]}
 GUARDS["control.design.pidtune"]={"target_met":["/controller","/gains","/gains_standard"],"sub_operator_checks":["/achieved"]}
 for op,c in COVERAGE.items(): RECEIPT[op]["coverage"]=c
 for op,g in GUARDS.items(): RECEIPT[op]["guards"]=g

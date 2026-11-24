@@ -1,0 +1,29 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "signal.spectral.fft",
+ "operator_version": "0.4.0",
+ "case_family": "bad_normalization",
+ "request": {
+  "x": {
+   "dtype": "f64",
+   "shape": [
+    4
+   ],
+   "data": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  "normalization": "unitary"
+ },
+ "reference_env": {
+  "engine": "numpy.fft (pocketfft)",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261124,
+  "note": "NOT MATLAB output"
+ },
+ "expected_error": "E.VALIDATION.SCHEMA"
+}

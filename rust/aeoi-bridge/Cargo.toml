@@ -9,6 +9,7 @@ description = "Runtime-free LLM binding for AEOI operators: function declaration
 [dependencies]
 aeoi-core = { path = "../aeoi-core" }
 aeoi-control = { path = "../aeoi-control" }
+aeoi-ops = { path = "../aeoi-ops" }
 serde.workspace = true
 serde_json.workspace = true
 regex = { version = "1", default-features = false, features = ["std", "unicode-perl"] }

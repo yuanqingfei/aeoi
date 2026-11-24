@@ -192,7 +192,7 @@ fn main() {
         }
         i += 1;
     }
-    let mut reg = aeoi_control::registry();
+    let mut reg = aeoi_ops::registry();
     if let Some(n) = &ns {
         reg.retain(|o| o.meta().id.starts_with(n.as_str()));
     }

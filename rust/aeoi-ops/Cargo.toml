@@ -1,0 +1,16 @@
+[package]
+name = "aeoi-ops"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "All AEOI operators across domains: the registry the front-ends (MCP, bridge, web, wasm) serve"
+
+[dependencies]
+aeoi-core = { path = "../aeoi-core" }
+aeoi-control = { path = "../aeoi-control" }
+aeoi-numeric = { path = "../aeoi-numeric" }
+serde_json.workspace = true
+
+[[bin]]
+name = "aeoi-call"
+path = "src/bin/aeoi-call.rs"

@@ -1,0 +1,12 @@
+[package]
+name = "aeoi-numeric"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "AEOI operators outside control: signal processing, ODEs, and the shared expression language"
+
+[dependencies]
+aeoi-core = { path = "../aeoi-core" }
+nalgebra.workspace = true
+serde_json.workspace = true
+rustfft = { version = "6.4", default-features = false }

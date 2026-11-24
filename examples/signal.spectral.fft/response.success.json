@@ -1,0 +1,432 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "signal.spectral.fft",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "X": {
+      "dtype": "c128",
+      "shape": [
+        51
+      ],
+      "data": [
+        [
+          3.091971123581061e-14,
+          0.0
+        ],
+        [
+          7.735827995380404e-15,
+          8.96590016479734e-15
+        ],
+        [
+          1.723099388513925e-15,
+          2.3736907687814027e-14
+        ],
+        [
+          -8.645759934959145e-15,
+          3.9552922969366874e-15
+        ],
+        [
+          -4.761404154601001e-15,
+          -5.874032909248751e-15
+        ],
+        [
+          -2.2373742683544112e-15,
+          -50.000000000000014
+        ],
+        [
+          1.1464360253476398e-14,
+          -1.5248193820121442e-14
+        ],
+        [
+          2.6548977807675167e-14,
+          6.884936363489588e-15
+        ],
+        [
+          1.70303209687895e-14,
+          1.8894099336468446e-14
+        ],
+        [
+          4.694609769577298e-15,
+          2.237098308675146e-14
+        ],
+        [
+          -7.121085351026962e-16,
+          1.0565489712278676e-14
+        ],
+        [
+          1.3741143500781025e-14,
+          4.928113340795591e-14
+        ],
+        [
+          -1.0652965012220985e-13,
+          -24.99999999999999
+        ],
+        [
+          -5.025631713904998e-15,
+          -3.68594044175552e-14
+        ],
+        [
+          1.0675525697201406e-14,
+          -2.563936834358294e-14
+        ],
+        [
+          1.0020297510055861e-15,
+          -9.109457340661602e-16
+        ],
+        [
+          4.007172998069884e-15,
+          -1.9056663146265727e-14
+        ],
+        [
+          2.4309759066385698e-14,
+          -2.579581845899492e-15
+        ],
+        [
+          1.5229964592669294e-14,
+          5.065654306032682e-15
+        ],
+        [
+          -3.3458448330530075e-15,
+          3.513830620146823e-14
+        ],
+        [
+          -1.2895515304755913e-14,
+          -1.1102230246251565e-14
+        ],
+        [
+          5.1706101427459576e-15,
+          -5.849869929723573e-15
+        ],
+        [
+          1.181013580104621e-14,
+          7.827771077154324e-15
+        ],
+        [
+          -4.522518143390676e-15,
+          5.0221794495364756e-15
+        ],
+        [
+          9.499906404072408e-15,
+          7.192475104643186e-15
+        ],
+        [
+          -5.9396931817445875e-15,
+          7.549516567451064e-15
+        ],
+        [
+          -1.4603671960872506e-14,
+          1.4460261291231883e-14
+        ],
+        [
+          -1.5576729534940467e-14,
+          -1.3738042224222126e-14
+        ],
+        [
+          5.220938265177934e-15,
+          -1.2426412408365442e-15
+        ],
+        [
+          1.6382183767623069e-15,
+          9.793255060549596e-15
+        ],
+        [
+          -8.454623206255287e-15,
+          -1.865174681370263e-14
+        ],
+        [
+          2.4490974949612527e-15,
+          1.9566984284313137e-15
+        ],
+        [
+          -6.466995640568172e-15,
+          -1.6045946643475247e-15
+        ],
+        [
+          -3.948474534157982e-15,
+          -5.42347404499909e-16
+        ],
+        [
+          -7.235716418132841e-15,
+          -1.0102114656263925e-14
+        ],
+        [
+          2.9974985325171713e-15,
+          -2.9784167192948512e-15
+        ],
+        [
+          4.733595949392748e-15,
+          -1.891875957257743e-15
+        ],
+        [
+          6.157986877243536e-15,
+          -1.1102230246251565e-14
+        ],
+        [
+          2.3507100018961525e-14,
+          3.552713678800501e-15
+        ],
+        [
+          -3.5425091180089808e-15,
+          1.9117682803559876e-14
+        ],
+        [
+          -8.992866600054478e-15,
+          4.9453050482494845e-15
+        ],
+        [
+          2.7879121402478834e-15,
+          1.1975712947479558e-15
+        ],
+        [
+          -7.762522146213258e-15,
+          3.446473057655426e-15
+        ],
+        [
+          -1.5813610409520911e-15,
+          1.7100120657208934e-16
+        ],
+        [
+          -5.008969790727052e-15,
+          -1.041512579246355e-14
+        ],
+        [
+          -9.051066388042234e-16,
+          -3.552713678800501e-15
+        ],
+        [
+          6.408779494464187e-15,
+          1.7596612491704266e-14
+        ],
+        [
+          -4.0664429842548145e-15,
+          -4.82380027695497e-15
+        ],
+        [
+          8.052311442823704e-15,
+          -3.60551059673452e-15
+        ],
+        [
+          -1.942257000487916e-15,
+          2.3152189965588898e-14
+        ],
+        [
+          -2.503552920529728e-14,
+          0.0
+        ]
+      ]
+    },
+    "frequency": {
+      "unit": "Hz",
+      "value": {
+        "dtype": "f64",
+        "shape": [
+          51
+        ],
+        "data": [
+          0.0,
+          10.0,
+          20.0,
+          30.0,
+          40.0,
+          50.0,
+          60.0,
+          70.0,
+          80.0,
+          90.0,
+          100.0,
+          110.0,
+          120.0,
+          130.0,
+          140.0,
+          150.0,
+          160.0,
+          170.0,
+          180.0,
+          190.0,
+          200.0,
+          210.0,
+          220.0,
+          230.0,
+          240.0,
+          250.0,
+          260.0,
+          270.0,
+          280.0,
+          290.0,
+          300.0,
+          310.0,
+          320.0,
+          330.0,
+          340.0,
+          350.0,
+          360.0,
+          370.0,
+          380.0,
+          390.0,
+          400.0,
+          410.0,
+          420.0,
+          430.0,
+          440.0,
+          450.0,
+          460.0,
+          470.0,
+          480.0,
+          490.0,
+          500.0
+        ]
+      }
+    },
+    "n": 100,
+    "direction": "forward",
+    "normalization": "backward",
+    "sides": "one",
+    "input_length": 100,
+    "frequency_resolution": {
+      "unit": "Hz",
+      "value": 10.0
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "parseval_rel": 0.0,
+      "dft_spot_rel": 4.776162573867406e-17,
+      "definition": "Parseval：|Σ|out|² − sc²·n·Σ|in|²| / (sc²·n·Σ|in|²)，各通道取最大；抽查：5 个频点上直接 DFT 与 FFT 之差 / (sc·Σ|x_j|)"
+    },
+    "condition": {
+      "n": 100,
+      "log2_n": 7.0,
+      "complex_input": false
+    },
+    "error_estimate": {
+      "X_rel_normwise": 8.881784197001252e-15,
+      "basis": "先验范数界 ‖ΔX‖₂/‖X‖₂ ≲ c·log₂n·u（Higham 2002 定理 24.2，基 2；其它分解与 Bluestein 的常数更大，此处取 c = 10 作为估计）"
+    },
+    "checks": {
+      "parseval": true,
+      "dft_spot_check": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "scale": 1.0,
+      "spot_bins": [
+        0,
+        1,
+        25,
+        33,
+        50
+      ],
+      "tolerances": {
+        "parseval_rel": 5.684341886080802e-14,
+        "dft_spot_rel": 5.684341886080802e-14
+      },
+      "planner": "rustfft 6.4 FftPlannerScalar"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:fft:rustfft-scalar",
+      "routine": "fft::transform",
+      "provenance": "aeoi://operators/signal.spectral.fft/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "uniform_sampling",
+        "statement": "x 是均匀采样序列；频率轴按 sample_rate_hz（或 cycles/sample）解释",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "conventions",
+        "statement": "符号、归一化、单双边、频率轴顺序按请求或规范默认",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "periodic_extension",
+        "statement": "DFT 把 x 视为周期 n 的序列；截断或补零改变频谱（泄漏），不是误差",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_priori",
+      "bound": {
+        "X_rel_normwise": 8.881784197001252e-15
+      },
+      "basis": "先验范数界 ‖ΔX‖₂/‖X‖₂ ≲ c·log₂n·u（Higham 2002 定理 24.2，基 2；其它分解与 Bluestein 的常数更大，此处取 c = 10 作为估计）"
+    },
+    "evidence": {
+      "claim": "spot_checked",
+      "postconditions": {
+        "parseval": true,
+        "dft_spot_check": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "parseval": "full",
+        "dft_spot_check": "sampled",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:2835386cddebdadc7ea80184708a4956cd434c037ade3bce1568972002d4d1a1",
+      "result": "sha256:091e4bd3b48ecbedd11a25596b85a4029df8c7addce1ad8fa9425b147bb9785c",
+      "output_hash": "sha256:345e7eb7b81e1993b700a680db4e5a648730079698734d5a2bda985efc914718",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of signal.spectral.fft@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:46926d1dba512d42ad0915662fc8eacdc902878b56685ed5f19e56c67720a289",
+    "output_hash": "sha256:345e7eb7b81e1993b700a680db4e5a648730079698734d5a2bda985efc914718",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "glibc 2.39",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.218415
+  }
+}

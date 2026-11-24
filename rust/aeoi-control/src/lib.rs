@@ -7,6 +7,7 @@ macro_rules! operator_meta {
             include_str!(concat!("../../../examples/", $dir, "/input.schema.json")),
             include_str!(concat!("../../../examples/", $dir, "/output.schema.json")),
         )
+        .with_crate(env!("CARGO_PKG_NAME"))
     };
 }
 /// Boilerplate: operator struct with `new()` and `Default`.

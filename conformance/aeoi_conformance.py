@@ -30,6 +30,7 @@ from referencing import Registry, Resource
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import aeoi_hash as H  # noqa: E402
 import rules_control as RC  # noqa: E402
+import rules_numeric as RN  # noqa: E402
 
 RUNNER_VERSION = "0.3.0"
 CLASS_RTOL = {"T0": 0.0, "T1": 1e-12, "T2": 1e-10, "T3": 1e-9, "T4": 1e-6, "T5": 1e-6}   # spec 7.2
@@ -166,7 +167,7 @@ def rule_lyap(case, env, manifest, req=None, expected=None):
     return [("X", e <= rtol, e, rtol, f"rel_fro={e:.3e} > tolerance={rtol:.3e}" if e > rtol else "")]
 
 
-RULES = {"control.math.lyap": rule_lyap, **RC.RULES}
+RULES = {"control.math.lyap": rule_lyap, **RC.RULES, **RN.RULES}
 
 
 # ---------------------------------------------------------------- one case

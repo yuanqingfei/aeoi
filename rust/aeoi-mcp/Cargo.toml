@@ -7,4 +7,5 @@ license.workspace = true
 [dependencies]
 aeoi-core = { path = "../aeoi-core" }
 aeoi-control = { path = "../aeoi-control" }
+aeoi-ops = { path = "../aeoi-ops" }
 serde_json.workspace = true

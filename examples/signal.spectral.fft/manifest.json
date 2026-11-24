@@ -1,0 +1,167 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "signal.spectral.fft",
+  "version": "0.4.0",
+  "title": "Discrete Fourier transform",
+  "description": "计算离散傅里叶变换（正变换或逆变换），并给出每个频点对应的频率。约定全部显式：符号 e^{−2πi·jk/n}、归一化（backward 缺省，与 MATLAB fft/ifft、numpy.fft 相同）、双边或单边、频率轴顺序（numpy fftfreq）。",
+  "category": "analysis",
+  "tags": [
+    "signal",
+    "spectral",
+    "fft"
+  ],
+  "applicability": {
+    "preconditions": [
+      "x 为 f64 或 c128，形状 [n] 或 [m, n]（沿最后一维变换，每行一个通道）",
+      "n（变换长度）缺省为最后一维长度；更短则截断、更长则在末尾补零（= MATLAB fft(x, n)）",
+      "sides = one 只用于实数输入的正变换（返回 n/2 + 1 个非负频点）"
+    ],
+    "not_for": [
+      "非均匀采样",
+      "窗函数与功率谱密度估计（另设算子）",
+      "三维及以上数组"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "定义：正变换 X_k = s·Σ_{j=0}^{n−1} x_j·e^{−2πi·jk/n}，逆变换 x_j = s'·Σ_k X_k·e^{+2πi·jk/n}；normalization = backward：s = 1、s' = 1/n；ortho：s = s' = 1/√n；forward：s = 1/n、s' = 1。快速算法：rustfft 6.4 标量规划器（混合基 Cooley–Tukey，素数长度 Bluestein/Rader），不使用运行时 SIMD 分派，结果只依赖输入与 n。频率轴：双边按 numpy.fft.fftfreq 顺序 f_k = k·fs/n（k < ⌈n/2⌉），其余为 (k − n)·fs/n；单边按 rfftfreq，f_k = k·fs/n，k = 0..⌊n/2⌋。后验检查：Parseval 能量恒等式（全部输出），以及在 8 个确定的频点上用 O(n) 补偿求和直接计算 DFT（抽查）",
+    "references": [
+      {
+        "type": "paper",
+        "cite": "J. W. Cooley, J. W. Tukey, An algorithm for the machine calculation of complex Fourier series, Math. Comp. 19, 1965",
+        "doi": "10.1090/S0025-5718-1965-0178586-1"
+      },
+      {
+        "type": "paper",
+        "cite": "L. Bluestein, A linear filtering approach to the computation of discrete Fourier transform, IEEE Trans. Audio Electroacoust. 18(4), 1970",
+        "doi": "10.1109/TAU.1970.1162132"
+      },
+      {
+        "type": "textbook",
+        "cite": "N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §24（FFT 的舍入误差界）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust) + rustfft 6.4 (scalar planner)",
+    "routine": "fft::transform",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {
+    "/x": {
+      "policy": "densify",
+      "max_dense_elements": 10000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_input_elements": 10000000,
+    "max_output_values": 10000000,
+    "dft_spot_check_bins": 8
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/signal.spectral.fft/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.OPTION_CONFLICT",
+    "E.VALIDATION.ENCODING",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.OUTPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "signal_spectral_fft",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:fft:rustfft-scalar",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "uniform_sampling",
+        "statement": "x 是均匀采样序列；频率轴按 sample_rate_hz（或 cycles/sample）解释",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "conventions",
+        "statement": "符号、归一化、单双边、频率轴顺序按请求或规范默认",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "periodic_extension",
+        "statement": "DFT 把 x 视为周期 n 的序列；截断或补零改变频谱（泄漏），不是误差",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_priori"
+    },
+    "postconditions": [
+      "parseval",
+      "dft_spot_check",
+      "all_finite"
+    ],
+    "coverage": {
+      "parseval": "full",
+      "dft_spot_check": "sampled"
+    },
+    "guards": {
+      "parseval": [
+        "/X"
+      ],
+      "dft_spot_check": [
+        "/X",
+        "/frequency"
+      ]
+    }
+  }
+}

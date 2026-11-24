@@ -41,7 +41,7 @@ pub fn summary(case: &str, op: &str, env: &Value) -> Value {
 
 fn main() {
     let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let reg = aeoi_control::registry();
+    let reg = aeoi_ops::registry();
     let host = aeoi_core::HostCtx::default();
     // the cases list is shared with the node side so both run exactly the same inputs
     let cs = cases(&repo);
@@ -50,7 +50,7 @@ fn main() {
     let list: Vec<Value> = cs.iter().map(|(c, o, r)| json!({"case": c, "operator": o, "request_text": r.to_string()})).collect();
     std::fs::write(std::env::args().nth(1).unwrap_or("/tmp/aeoi-parity-cases.json".into()), serde_json::to_string(&list).unwrap()).unwrap();
     for (c, o, r) in &cs {
-        let op = aeoi_control::find(&reg, o).unwrap();
+        let op = aeoi_ops::find(&reg, o).unwrap();
         println!("{}", summary(c, o, &op.call(r, &host)));
     }
 }

@@ -1,0 +1,48 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "signal.spectral.fft",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.VALIDATION.OPTION_CONFLICT",
+    "category": "validation",
+    "retryable": true,
+    "message": "sides = one 只用于实数输入的正变换（负频率是正频率的共轭，才可以省略）；这里是复数输入（dtype c128）。不能静默改成双边（F-8）。",
+    "agent_hint": "去掉 sides（双边）；实数信号的单边谱请用 dtype f64 的正变换。",
+    "details": {
+      "path": "/sides",
+      "conflicting_fields": [
+        "sides",
+        "x"
+      ]
+    },
+    "remediation": [
+      {
+        "id": "two_sided",
+        "kind": "modify_input",
+        "description": "去掉 sides，返回双边谱",
+        "confidence": "high",
+        "requires_user_confirmation": false,
+        "patch": [
+          {
+            "op": "remove",
+            "path": "/sides"
+          }
+        ]
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.060107
+  }
+}

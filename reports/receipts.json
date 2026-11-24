@@ -1,7 +1,7 @@
 {
   "generated_by": "rust/aeoi-control/tests/receipt.rs",
-  "golden_successes": 722,
-  "golden_errors": 59,
+  "golden_successes": 758,
+  "golden_errors": 67,
   "claims_by_operator": {
     "control.analysis.ctrb_obsv": {
       "verified": 26
@@ -65,6 +65,9 @@
     },
     "control.math.lyap": {
       "unchecked": 41
+    },
+    "signal.spectral.fft": {
+      "spot_checked": 36
     }
   },
   "replay_verdict": "bitwise_match on every golden success; error_reproduced on every error"

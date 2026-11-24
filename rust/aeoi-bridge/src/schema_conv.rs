@@ -349,7 +349,7 @@ mod tests {
 
     #[test]
     fn all_operator_schemas_convert_cleanly() {
-        for op in aeoi_control::registry() {
+        for op in aeoi_ops::registry() {
             let s = llm_surface(&op.meta().input_schema);
             let txt = s.to_string();
             assert!(!txt.contains("data_b64") && !txt.contains("\"uri\""), "{}: alt matrix encodings must be dropped", op.meta().id);
@@ -363,8 +363,8 @@ mod tests {
 
     #[test]
     fn dense_matrix_shape_survives() {
-        let reg = aeoi_control::registry();
-        let lqr = aeoi_control::find(&reg, "control.design.lqr").unwrap();
+        let reg = aeoi_ops::registry();
+        let lqr = aeoi_ops::find(&reg, "control.design.lqr").unwrap();
         let mut l = vec![];
         let g = to_gemini(&llm_surface(&lqr.meta().input_schema), &mut l);
         let a = &g["properties"]["A"];

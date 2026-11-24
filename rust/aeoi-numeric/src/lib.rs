@@ -1,0 +1,46 @@
+//! aeoi-numeric — AEOI operators outside control (signal processing, ODEs) and the shared expression
+//! language (spec 3.15). Operators here report `aeoi-numeric` as their build (operator.build).
+
+/// Load manifest + I/O schemas of examples/<dir> at compile time.
+macro_rules! operator_meta {
+    ($dir:literal) => {
+        aeoi_core::OperatorMeta::from_json(
+            include_str!(concat!("../../../examples/", $dir, "/manifest.json")),
+            include_str!(concat!("../../../examples/", $dir, "/input.schema.json")),
+            include_str!(concat!("../../../examples/", $dir, "/output.schema.json")),
+        )
+        .with_crate(env!("CARGO_PKG_NAME"))
+    };
+}
+/// Boilerplate: operator struct with `new()` and `Default`.
+macro_rules! operator_struct {
+    ($name:ident, $dir:literal) => {
+        pub struct $name {
+            meta: aeoi_core::OperatorMeta,
+        }
+        impl $name {
+            pub fn new() -> Self {
+                $name { meta: operator_meta!($dir) }
+            }
+        }
+        impl Default for $name {
+            fn default() -> Self {
+                Self::new()
+            }
+        }
+    };
+}
+
+pub mod fft;
+
+use aeoi_core::DynOperator;
+
+/// All operators in this crate.
+pub fn registry() -> Vec<Box<dyn DynOperator>> {
+    vec![Box::new(fft::Fft::new())]
+}
+
+/// Look up by operator id or MCP tool name.
+pub fn find<'a>(reg: &'a [Box<dyn DynOperator>], id: &str) -> Option<&'a dyn DynOperator> {
+    reg.iter().find(|o| o.meta().id == id || o.meta().manifest["mcp"]["tool_name"] == id).map(|b| b.as_ref())
+}

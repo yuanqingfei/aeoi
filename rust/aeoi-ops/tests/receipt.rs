@@ -2,12 +2,26 @@
 //! fingerprints re-derived from reproducibility hashes, E-11 claims consistent with manifest post-conditions,
 //! replay-verify verdicts, and the negative paths (tampered result, changed input, simulated other platform).
 //! Writes reports/receipts.json (claim counts per operator).
-mod common;
+//! Lives in aeoi-ops (v0.4.7): it walks every golden store, across domains, so it needs the cross-domain registry.
 use aeoi_core::receipt::{compare, request_fingerprint, result_fingerprint, verify};
 use aeoi_core::HostCtx;
-use common::*;
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
+use std::path::PathBuf;
+
+fn spec_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
+}
+fn f(v: &Value) -> f64 {
+    match v {
+        Value::Number(n) => n.as_f64().unwrap(),
+        Value::String(s) if s == "NaN" => f64::NAN,
+        Value::String(s) if s == "Inf" => f64::INFINITY,
+        Value::String(s) if s == "-Inf" => f64::NEG_INFINITY,
+        Value::Null => f64::NAN,
+        _ => panic!("not a number: {v}"),
+    }
+}
 
 fn golden_files() -> Vec<std::path::PathBuf> {
     let mut v = vec![];
@@ -29,13 +43,13 @@ fn golden_files() -> Vec<std::path::PathBuf> {
 
 #[test]
 fn receipts_on_all_golden_requests() {
-    let reg = aeoi_control::registry();
+    let reg = aeoi_ops::registry();
     let h = HostCtx::default();
     let mut claims: BTreeMap<String, BTreeMap<String, usize>> = BTreeMap::new();
     let (mut n_ok, mut n_err) = (0, 0);
     for p in golden_files() {
         let case: Value = serde_json::from_str(&std::fs::read_to_string(&p).unwrap()).unwrap();
-        let op = aeoi_control::find(&reg, case["operator"].as_str().unwrap()).unwrap();
+        let op = aeoi_ops::find(&reg, case["operator"].as_str().unwrap()).unwrap();
         let m = op.meta();
         let env = op.call(&case["request"], &h);
         if env["status"] == "error" {
@@ -74,11 +88,11 @@ fn receipts_on_all_golden_requests() {
 
 #[test]
 fn verify_negative_paths_and_cross_platform() {
-    let reg = aeoi_control::registry();
+    let reg = aeoi_ops::registry();
     let h = HostCtx::default();
     let root = spec_root().join("examples/control.design.lqr");
     let req: Value = serde_json::from_str(&std::fs::read_to_string(root.join("request.json")).unwrap()).unwrap();
-    let op = aeoi_control::find(&reg, "control.design.lqr").unwrap();
+    let op = aeoi_ops::find(&reg, "control.design.lqr").unwrap();
     let env = op.call(&req, &h);
     // tampered result
     let mut bad = env.clone();

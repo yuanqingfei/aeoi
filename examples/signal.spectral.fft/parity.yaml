@@ -1,0 +1,30 @@
+# Parity test spec — signal.spectral.fft 0.4.0 (AEOI v0.4.7-draft)
+operator: signal.spectral.fft
+references:
+  - {engine: numpy, version: "numpy 2.5.3 (pocketfft)", role: dev_reference, status: active,
+     generator: gen_golden_fft.py, golden_store: "golden/python-control/signal.spectral.fft/0.4.0/*.json",
+     note: "NOT MATLAB output. numpy.fft.fft/ifft (norm=backward|ortho|forward), rfft for sides = one, fftfreq/rfftfreq. An independent FFT implementation"}
+  - {engine: mpmath, version: "mpmath 1.4.1, 50 digits", role: high_precision_reference, status: active,
+     golden_store: "golden/mpmath/signal.spectral.fft/0.4.0/*.json", note: "direct DFT with exact j·k mod n reduction: the exact answer rounded to f64 (n ≤ 31)"}
+  - {engine: MATLAB, role: ground_truth, status: planned,
+     note: "MATLAB fft/ifft use the same definition as normalization = backward; MATLAB has no sides/frequency outputs, compare X only"}
+runner: "cargo test --release -p aeoi-numeric --test parity_fft"
+tolerance_class: T1
+compare:
+  X: {norm: "per channel ‖ΔX‖₂ / ‖X_ref‖₂", rtol: "1e-12 · (⌈log2 n⌉ + 1)", note: "FFT rounding error grows like log n (Higham 2002 Thm 24.2)"}
+  frequency: {rtol: "4ε"}
+  shape / n / input_length / direction / normalization / sides / frequency.unit: exact
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py (rule_fft). No trust.* value of the implementation is used
+  X: "shape exact; per channel ‖ΔX‖₂ / ‖X_ref‖₂ ≤ 1e-12 · (⌈log2 n⌉ + 1)"
+  frequency: "unit exact; |Δ| / |f_ref| ≤ 4ε (f = 0 exact)"
+  echoed: "n, input_length, direction, normalization, sides equal the reference"
+  parseval: "recomputed by the runner from the request and the returned X (no reference value): |Σ|X|²·w − sc²·n·Σ|x|²| / (sc²·n·Σ|x|²) ≤ 64·(⌈log2 n⌉ + 1)·u, w = 2 for mirrored one-sided bins"
+case_families:
+  - {name: "single_tone / impulse / constant / length_one", n: 4, note: "analytic answers"}
+  - {name: "real_pow2 / real_composite / real_prime / complex_random", n: 10, note: "factorizations incl. Bluestein/Rader primes"}
+  - {name: "normalization_forward / normalization_inverse", n: 6, note: "3 normalizations × 2 directions"}
+  - {name: "explicit_defaults / one_sided_even / one_sided_odd / one_sided_ortho / sample_rate", n: 5}
+  - {name: "zero_pad / truncate / multichannel / multichannel_complex", n: 4}
+  - {name: long_b64, n: 1, note: "8192 samples as DenseMatrixB64 (3.6), one-sided, 48 kHz"}
+  - {name: "exact_* (mpmath)", n: 6}
+  - {name: errors, n: 8, expect: "OPTION_CONFLICT ×2 (complex/inverse with sides = one), SHAPE (3-D), DTYPE (bool), NON_FINITE, SCHEMA ×3"}

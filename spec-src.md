@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.6-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.7-draft
 
-> 状态：Draft v0.4.6 · 2026-11-24 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.7 · 2026-11-24 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.7 进入控制以外的第一个领域：`signal.spectral.fft`（10.17）。约定（归一化、单双边、频率轴顺序）全部显式并回显，频率轴总是返回；运算路径不得依赖运行时 CPU 特性。实现放在新 crate `aeoi-numeric`，前端改用跨领域注册表 `aeoi-ops`；`operator.build` 报告实现所在的 crate。一致性规则覆盖 9 / 22 = 41% 的算子。
 >
 > v0.4.6 新增第 21 个算子 `control.design.pidtune`（10.16）：第一个满足 A-4 的整定算子。指标是给定 ωc（必填）与相位裕度；PI 为唯一封闭解，PID 用 Ti = 4·Td 固定多出的自由度并规定取最小 Td 根的扫描法；闭环不稳定时报错而不返回控制器。一致性规则覆盖 8 / 21 = 38% 的算子。
 >
@@ -1508,6 +1510,57 @@ A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与�
 
 33 个 golden 用例（24 个成功、9 个错误；含纯 P 边界、不稳定对象、非最小相位、额外穿越、闭环不稳定）上：增益与 numpy 实现之差 ≤ 7.3e-16，达到的裕度与穿越频率与 python-control 之差 ≤ 3.5e-13（`tests/parity_pidtune.rs`，`reports/parity-pidtune.json`）。
 
+## 10.17 `signal.spectral.fft`：离散傅里叶变换（v0.4.7，第一个控制以外的算子）
+
+这是控制以外的第一个算子（领域 `signal`，实现在 crate `aeoi-numeric`）。FFT 的数值本身没有疑问，难点全在约定上：同一段数据，归一化、频率轴顺序、单双边任何一项理解不同，结果就差一个常数因子或整体错位，而且看起来都“像对的”。所以本节的条款都在把约定写死。参考值来自 numpy.fft（pocketfft，一个独立的 FFT 实现）和 mpmath 的 50 位直接 DFT（精确值）；不是 MATLAB。
+
+**规范性条款**
+
+- FT-1 **定义与归一化**。正变换 X_k = s·Σ_{j=0}^{n−1} x_j·e^{−2πi·jk/n}，逆变换 x_j = s′·Σ_k X_k·e^{+2πi·jk/n}。`normalization`：`backward`（缺省；s = 1、s′ = 1/n，与 MATLAB `fft`/`ifft` 和 numpy 相同）、`ortho`（s = s′ = 1/√n）、`forward`（s = 1/n、s′ = 1）。`direction` 为 `forward`（缺省）或 `inverse`。两者都在结果中回显（O-1）。
+- FT-2 **布局与长度**。`x` 为 f64、c128（i64 按实数处理），形状 `[n]` 或 `[m, n]`：沿最后一维变换，每行一个通道（与 `lsim` 的 `[nu, nt]` 相同）；更高维 → `E.VALIDATION.SHAPE`，bool → `E.VALIDATION.DTYPE`。`n` 缺省为最后一维长度；更小则截断、更大则在末尾补零（= MATLAB `fft(x, n)`）；`result.input_length` 回显原长度，二者不同即表示截断或补零。
+- FT-3 **单边谱**。`sides = one` 只用于实数输入的正变换：返回 k = 0…⌊n/2⌋ 共 ⌊n/2⌋ + 1 个频点，且 MUST 与双边结果的前 ⌊n/2⌋ + 1 个频点逐位相同（参考实现由同一次变换截取）。复数输入（dtype c128，与虚部是否为 0 无关）或逆变换写 `sides = one` → `E.VALIDATION.OPTION_CONFLICT`（F-8）：负频率不是正频率的共轭时不能省略。
+- FT-4 **频率轴总是返回**。`result.frequency` 给出每个输出频点的频率：给了 `sample_rate_hz` 时单位 Hz，否则 `cycles/sample`。双边按 numpy `fftfreq` 顺序：f_k = k·fs/n（k < ⌈n/2⌉），其余 f_k = (k − n)·fs/n；n 为偶数时 Nyquist 频点 k = n/2 标为 −fs/2。单边按 `rfftfreq`：f_k = k·fs/n。实现 MUST NOT 做 `fftshift`。把频点下标误当频率，是 FFT 最常见的用法错误，所以算子不把这一步留给调用方。
+- FT-5 **确定性**。`determinism = platform_bitwise`。快速算法的运算路径只能由 x 和 n 决定，MUST NOT 依赖运行时检测到的 CPU 特性（SIMD 分派会让同一平台描述下的结果因 CPU 不同而变）。参考实现用 rustfft 6.4 的标量规划器（混合基 Cooley–Tukey，素数长度 Rader/Bluestein）。
+- FT-6 **后置条件**。`parseval`：Σ|out|²（单边时镜像频点计两次）与 sc²·n·Σ|in|² 的相对差 ≤ 64·(⌈log₂n⌉ + 1)·u，覆盖全部输出（`full`）；它查不出频点错位（换位不改变能量）。`dft_spot_check`：在 {0, 1, n−1, ⌊n/2⌋, ⌊n/3⌋, ⌊n/4⌋, ⌊2n/3⌋, ⌊3n/4⌋} 上用 O(n) 补偿求和直接计算 DFT（j·k mod n 先做整数约化），与 FFT 之差 ≤ 64·(⌈log₂n⌉ + 1)·u·sc·Σ|x_j|，覆盖 `sampled`，所以 claim 为 `spot_checked`（E-12）。`exactness.bound_kind = a_priori`：‖ΔX‖₂/‖X‖₂ ≲ c·log₂n·u（Higham 2002 定理 24.2，基 2 严格；其它分解常数更大，c 取 10 作估计）。
+
+**Manifest** — `examples/signal.spectral.fft/manifest.json`
+
+```json
+{{jsonc:examples/signal.spectral.fft/manifest.json}}
+```
+
+**请求**（0.1 s 的 sin 2π·50t + 0.5·sin 2π·120t，fs = 1 kHz，单边）
+
+```json
+{{file:examples/signal.spectral.fft/request.json}}
+```
+
+**成功响应**（51 个频点，分辨率 10 Hz；幅值峰在 50 Hz（|X| = 50 = 1·N/2）与 120 Hz（25 = 0.5·N/2）；`operator.build` 为 `aeoi-numeric`）
+
+```json
+{{jsonc:examples/signal.spectral.fft/response.success.json}}
+```
+
+**复数示例** — `request.complex.json`：e^{2πi·2j/8}、`ortho`，只有第 2 个频点非零（√8）；响应见 `response.complex.json`。
+
+**错误请求与响应**（复数输入要单边谱：FT-3）
+
+```json
+{{jsonc:examples/signal.spectral.fft/request.error.json}}
+```
+
+```json
+{{jsonc:examples/signal.spectral.fft/response.error.json}}
+```
+
+**Parity 测试规格** — `examples/signal.spectral.fft/parity.yaml`
+
+```yaml
+{{file:examples/signal.spectral.fft/parity.yaml}}
+```
+
+44 个 golden 用例（36 个成功、8 个错误；含 2、合数、素数长度，三种归一化 × 两个方向，单边奇偶，补零与截断，多通道，8192 点 b64 输入）：与 numpy 的最大范数相对差 8.4e-16，与 mpmath 精确值 2.9e-16，频率轴 2.2e-16（`aeoi-numeric/tests/parity_fft.rs`，`reports/parity-fft.json`）。
+
 ## 11. Rust 参考实现（v0.3）
 
 ### 11.1 结构
@@ -1692,7 +1745,7 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 
 1. 在有授权的机器上运行 `matlab/gen_golden_bode.m`（并补 step/lqr 脚本），先核对 `memory_order_nonsymmetric` 用例与 python-control 一致，再跑通第一份 A 级凭证
 2. ~~修复 `lqr` 病态 R 的精度差距~~（v0.3.2 用补偿 Newton–Kleinman 完成）；剩余：平衡 + 有序 Schur（或广义特征值）作为符号函数不收敛时的后备路径，以及 `dlqr` 的同类精化
-3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；之后转向控制以外的领域；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
+3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17），下一个是 ODE 初值问题（需要先定表达式语言）；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
 5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；v0.3.4 另有 `aeoi-web design`。v0.3.5 实现了试点里排在前面的算子（串联、并联、反馈、PID 构造、stepinfo、Padé），v0.3.6 加了具名角色、`loopsens`（含带宽读数）和回合预算。下一步是按 A-4 写 `pidtune`（必须先声明对象类、指标和唯一性），以及控制器离散化和 MIMO 裕度；扩充问答题、加入"Agent + 裸 scipy"对照组。非线性吸引域仍不做。
 6. 用 Tauri 打包 `aeoi-web` 为桌面应用（复用 axum 服务与静态页面）
@@ -1700,6 +1753,36 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 8. 根据以上反馈修订，冻结 v1.0
 
 ## 13. Changelog
+
+### v0.4.7-draft（2026-11-24）
+
+起因：控制领域告一段落，作者决定按 MATLAB 的使用频率转向其他领域，先做 `fft` 与 `ode45`。这一版是 `fft`，以及为多领域做的结构调整。线协议标识与核心 schema 不变。
+
+**规范改动**
+
+| # | 条款 | 改动 | 原因 |
+|---|---|---|---|
+| 1 | 10.17 FT-1 – FT-6 | 新算子 `signal.spectral.fft` 0.4.0（领域 `signal`） | 见上 |
+| 2 | FT-4 | 频率轴总是返回，顺序为 numpy `fftfreq`，不做 `fftshift` | 频点下标与频率的对应是最常见的用法错误 |
+| 3 | FT-5 | 快速算法的运算路径不得依赖运行时 CPU 特性 | rustfft 缺省规划器按 AVX/SSE 分派，`platform_bitwise` 会因 CPU 不同而失效 |
+| 4 | P-1 补充 | `operator.build` 与 `receipt.replay.build` 报告实现所在的 crate（`aeoi-control …`、`aeoi-numeric …`） | 原来写死为 `aeoi-control`，对其他领域的算子是错的；控制算子的输出不变 |
+
+**已做的改动**
+
+| 位置 | 改动 |
+|---|---|
+| `rust/aeoi-numeric`（新 crate） | `fft.rs`（4 个单元测试）、`tests/parity_fft.rs`、`tests/examples_numeric.rs`；依赖 rustfft 6.4（标量规划器） |
+| `rust/aeoi-ops`（新 crate） | 跨领域注册表 `registry()` / `find()`；`aeoi-call` 与遍历全部 golden 的收据测试 `tests/receipt.rs` 从 `aeoi-control` 移来（它们需要看到所有领域） |
+| `rust/aeoi-{mcp,bridge,web,wasm}` | 改用 `aeoi_ops::registry()`；控制 crate 的测试仍用 `aeoi_control::registry()` |
+| `rust/aeoi-core/src/operator.rs` | `OperatorMeta.crate_name`、`build_string_for(crate)`；`operator_meta!` 宏传入 `env!("CARGO_PKG_NAME")` |
+| `write_manifests.py` | `man(…, backend=)`；`fft` 的 manifest、schema、L-1 描述、receipt |
+| `gen_golden_fft.py`（新）、`golden/{python-control,mpmath}/signal.spectral.fft/0.4.0` | 38 个 numpy 用例、6 个 mpmath 精确用例；同时生成示例请求与参考值 |
+| `conformance/rules_numeric.py`（新）、`aeoi_conformance.py` | `fft` 的一致性规则（含运行器用请求的 x 与返回的 X 独立重算 Parseval，b64 输入也解码）；变异 `fft_bin_wrong`、`fft_shifted_frequencies`、`fft_scale_wrong` |
+| `examples/control.design.pidtune/manifest.json` | 修正 v0.4.6 的一处 manifest 错误：`limits.td_scan_log10_range` 是数组，manifest schema 要求 `limits` 的值是数字，改为 `td_scan_log10_min`、`td_scan_log10_max`。`validate_examples.py` 在 `8a997b4` 上就报了这个错，当时检查时只看了它输出的最后一行（汇总），漏掉了前面的 FAIL 行；之后以退出码为准 |
+
+写 `fft` 的 manifest 时两次用了 schema 枚举之外的值（`bound_kind = a_priori_normwise`、覆盖 `all`），一致性套件的信封校验（CF-8）和 `validate_examples.py` 都抓到了。
+
+**结果**：`cargo test` 170 / 0；parity 44 / 44（与 numpy 8.4e-16，与 mpmath 精确值 2.9e-16）；参考实现一致性 669 通过 / 0 失败 / 290 跳过（`fft` 44 + 方法选择 1 + 默认值 14）；变异测试 24 / 24；`validate_examples.py` 退出码 0；有数值规则的算子 9 / 22 = 41%。
 
 ### v0.4.6-draft（2026-11-24）
 

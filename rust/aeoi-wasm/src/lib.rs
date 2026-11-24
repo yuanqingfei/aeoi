@@ -91,8 +91,8 @@ pub fn call_tool(name: &str, args_json: &str, history_json: Option<String>, max_
 #[wasm_bindgen]
 pub fn run_operator(id: &str, request_json: &str) -> Result<String, JsError> {
     let req = parse(request_json, "request")?;
-    let reg = aeoi_control::registry();
-    let op = aeoi_control::find(&reg, id).ok_or_else(|| JsError::new(&format!("unknown operator {id}")))?;
+    let reg = aeoi_ops::registry();
+    let op = aeoi_ops::find(&reg, id).ok_or_else(|| JsError::new(&format!("unknown operator {id}")))?;
     Ok(op.call(&req, &aeoi_core::HostCtx::default()).to_string())
 }
 
@@ -111,8 +111,8 @@ pub fn verify_tool_call(name: &str, args_json: &str, envelope_json: &str) -> Res
 pub fn verify(id: &str, request_json: &str, envelope_json: &str) -> Result<String, JsError> {
     let req = parse(request_json, "request")?;
     let claimed = parse(envelope_json, "envelope")?;
-    let reg = aeoi_control::registry();
-    let op = aeoi_control::find(&reg, id).ok_or_else(|| JsError::new(&format!("unknown operator {id}")))?;
+    let reg = aeoi_ops::registry();
+    let op = aeoi_ops::find(&reg, id).ok_or_else(|| JsError::new(&format!("unknown operator {id}")))?;
     Ok(aeoi_core::receipt::verify(op, &req, &claimed, &aeoi_core::HostCtx::default()).to_string())
 }
 

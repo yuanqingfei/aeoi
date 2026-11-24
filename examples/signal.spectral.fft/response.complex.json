@@ -1,0 +1,219 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "signal.spectral.fft",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "X": {
+      "dtype": "c128",
+      "shape": [
+        8
+      ],
+      "data": [
+        [
+          -8.659560562354929e-17,
+          8.659560562354932e-17
+        ],
+        [
+          -2.0906028553828462e-16,
+          8.659560562354932e-17
+        ],
+        [
+          2.82842712474619,
+          -6.061692393648453e-16
+        ],
+        [
+          2.0906028553828462e-16,
+          8.659560562354932e-17
+        ],
+        [
+          8.659560562354929e-17,
+          8.659560562354932e-17
+        ],
+        [
+          3.586907429118602e-17,
+          8.659560562354932e-17
+        ],
+        [
+          0.0,
+          8.659560562354934e-17
+        ],
+        [
+          -3.586907429118602e-17,
+          8.659560562354932e-17
+        ]
+      ]
+    },
+    "frequency": {
+      "unit": "cycles/sample",
+      "value": {
+        "dtype": "f64",
+        "shape": [
+          8
+        ],
+        "data": [
+          0.0,
+          0.125,
+          0.25,
+          0.375,
+          -0.5,
+          -0.375,
+          -0.25,
+          -0.125
+        ]
+      }
+    },
+    "n": 8,
+    "direction": "forward",
+    "normalization": "ortho",
+    "sides": "two",
+    "input_length": 8,
+    "frequency_resolution": {
+      "unit": "cycles/sample",
+      "value": 0.125
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "parseval_rel": 0.0,
+      "dft_spot_rel": 9.184850993605151e-17,
+      "definition": "Parseval：|Σ|out|² − sc²·n·Σ|in|²| / (sc²·n·Σ|in|²)，各通道取最大；抽查：7 个频点上直接 DFT 与 FFT 之差 / (sc·Σ|x_j|)"
+    },
+    "condition": {
+      "n": 8,
+      "log2_n": 3.0,
+      "complex_input": true
+    },
+    "error_estimate": {
+      "X_rel_normwise": 4.440892098500626e-15,
+      "basis": "先验范数界 ‖ΔX‖₂/‖X‖₂ ≲ c·log₂n·u（Higham 2002 定理 24.2，基 2；其它分解与 Bluestein 的常数更大，此处取 c = 10 作为估计）"
+    },
+    "checks": {
+      "parseval": true,
+      "dft_spot_check": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "scale": 0.35355339059327373,
+      "spot_bins": [
+        0,
+        1,
+        2,
+        4,
+        5,
+        6,
+        7
+      ],
+      "tolerances": {
+        "parseval_rel": 2.842170943040401e-14,
+        "dft_spot_rel": 2.842170943040401e-14
+      },
+      "planner": "rustfft 6.4 FftPlannerScalar"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:fft:rustfft-scalar",
+      "routine": "fft::transform",
+      "provenance": "aeoi://operators/signal.spectral.fft/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "uniform_sampling",
+        "statement": "x 是均匀采样序列；频率轴按 sample_rate_hz（或 cycles/sample）解释",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "conventions",
+        "statement": "符号、归一化、单双边、频率轴顺序按请求或规范默认",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "periodic_extension",
+        "statement": "DFT 把 x 视为周期 n 的序列；截断或补零改变频谱（泄漏），不是误差",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_priori",
+      "bound": {
+        "X_rel_normwise": 4.440892098500626e-15
+      },
+      "basis": "先验范数界 ‖ΔX‖₂/‖X‖₂ ≲ c·log₂n·u（Higham 2002 定理 24.2，基 2；其它分解与 Bluestein 的常数更大，此处取 c = 10 作为估计）"
+    },
+    "evidence": {
+      "claim": "spot_checked",
+      "postconditions": {
+        "parseval": true,
+        "dft_spot_check": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "parseval": "full",
+        "dft_spot_check": "sampled",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:85aa56b593ef7f81ea3f46988492a38c7871f485b49cd70fc50004dd537d9425",
+      "result": "sha256:237bad72125a6e176ca933dbf97bba13346e3f6ebd7fd697aa2a3281d80de451",
+      "output_hash": "sha256:aee412abbf611d70504a6c3437cf22dfd05e780f7b947ee6cbc998551b7c10c2",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of signal.spectral.fft@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:eb497c67cf9b27fc6ddf3c1d1365252d14c9ed86f2513bcf1e99d0ab19a2bec8",
+    "output_hash": "sha256:aee412abbf611d70504a6c3437cf22dfd05e780f7b947ee6cbc998551b7c10c2",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "glibc 2.39",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.206562
+  }
+}
