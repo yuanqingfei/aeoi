@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.5-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.6-draft
 
-> 状态：Draft v0.4.5 · 2026-11-24 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.6 · 2026-11-24 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.6 新增第 21 个算子 `control.design.pidtune`（10.16）：第一个满足 A-4 的整定算子。指标是给定 ωc（必填）与相位裕度；PI 为唯一封闭解，PID 用 Ti = 4·Td 固定多出的自由度并规定取最小 Td 根的扫描法；闭环不稳定时报错而不返回控制器。一致性规则覆盖 8 / 21 = 38% 的算子。
 >
 > v0.4.5 新增第 20 个算子 `control.lti.lsim`（任意输入的响应，10.15）：输入按 [nu, nt] 给出并可用 b64 / ref；采样之间按 foh（缺省）或 zoh 解释，不按数据自动选择；`x0` 只用于 ss，因为 tf/zpk 没有状态坐标。一致性规则覆盖 7 / 20 = 35% 的算子。
 >
@@ -313,7 +315,7 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
 - A-3 `control.lti.pade` 的对象是 e^{−θs} 的 [N/N] Padé 近似。系数用与 Golub & Van Loan《Matrix Computations》第 3 版算法 11.3.1 等价的递推，但每一步已经对分母首项归一，避免未归一乘积在 N ≳ 10 时冲掉 f64 的有效位。`delay` 与 `order` 都是 F-7 的 `supplied`，没有默认值。容差类 T1 只约束系数；certificate 是虚轴 32 点上 |e^{−jωθ} − R(jω)| 的最大值，ω_k = θ⁻¹·10^{−2+4k/31}，k = 0…31。
 
 **还没写成算子的整定**
-- A-4 不在 v0.3.5 提供 `pidtune`。一个能写进规范的整定算子必须事先声明：对象类（例如已经化成的一阶加时滞）、被最小化或被满足的指标、解的唯一性、以及失败时的错误码。缺任何一条，算法就只是“某个实现的默认行为”，不能当算子。
+- A-4 不在 v0.3.5 提供 `pidtune`。一个能写进规范的整定算子必须事先声明：对象类（例如已经化成的一阶加时滞）、被最小化或被满足的指标、解的唯一性、以及失败时的错误码。缺任何一条，算法就只是“某个实现的默认行为”，不能当算子。v0.4.6 的 `control.design.pidtune` 按 10.16 PT-1 – PT-6 满足这四项。
 
 ### 3.13 回路的角色、一次性分析与句柄（v0.3.6）
 
@@ -1453,6 +1455,59 @@ tf ↔ ss ↔ zpk 互转。
 
 33 个 golden 用例（23 个成功、10 个错误；含 MIMO、x0 与状态、刚性、不稳定、直通、离散、20000 点 b64 输入）上与 scipy 的最大差：y 9.2e-14（相对 max|y|）、x 9.5e-15、t 0（`tests/parity_lsim.rs`，`reports/parity-lsim.json`）。
 
+## 10.16 `control.design.pidtune`：按穿越频率与相位裕度整定 PI/PID（v0.4.6）
+
+A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与失败码，否则算法只是“某个实现的默认行为”。`pidtune` 按下面的条款满足这四项。参考值是对本节公式的独立 numpy 实现，每个结果再用 python-control 0.10.2 的 `stability_margins` 与闭环极点核验；不是 MATLAB（MATLAB `pidtune` 自己选 ωc，指标未公开，不能作参考）。
+
+**规范性条款**
+
+- PT-1 **对象类**。`plant` 为 SISO、连续、proper 的 LTI 系统。离散对象 → `E.DOMAIN.NOT_CONTINUOUS`（先用连续模型整定，再用 `c2d` 离散化控制器）；MIMO → `E.DOMAIN.MIMO_NOT_SUPPORTED`。带时滞的对象先用 `pade` 近似后串联。
+- PT-2 **指标**。给定 ωc（`wc_rad_s`，必填，来源 `user`：算子不猜，缺了由调用方问用户）与相位裕度 PM（`phase_margin_deg`，缺省 60°），要求开环 L = G·C 满足 |L(jωc)| = 1、∠L(jωc) = −180° + PM。等价于控制器在 ωc 处取值 C* = e^{j(PM − 180°)}/G(jωc)。G(jωc) 为 0 或无穷 → `E.DOMAIN.TARGET_NOT_ACHIEVABLE`。`type`（PI / PID）必填：控制器类型是设计决定。
+- PT-3 **PI：唯一的封闭解**。C(jω) = Kp − j·Ki/ω，所以 Kp = Re C*，Ki = −ωc·Im C*。可达当且仅当 Kp > 0 且 Ki ≥ 0，即 ∠C* ∈ (−90°, 0°]；否则 `TARGET_NOT_ACHIEVABLE`，`details` 给出所需控制器相位、可达范围与对象相位。∠C* = 0° 是纯 P：−4u·ωc·|C*| ≤ Ki < 0 MUST 按 Ki = 0 处理，否则可达性会因舍入翻转（1/(s+1)³ 在 ωc = 1、PM = 45° 时 ∠C* 恰为 0°，是 golden 用例）。
+- PT-4 **PID：固定多出的自由度，并规定取哪个解**。标准形 C = Kp·(1 + 1/(Ti·s) + Td·s/(1 + Tf·s))，Ti = α·Td（`ti_td_ratio`，缺省 4，Åström–Hägglund），Tf = Td/N（`derivative_filter_n`，缺省 10）。令 x = ωc·Td，H(x) = 1 − j/(αx) + jx/(1 + jx/N)；Re H > 0，所以 arg H ∈ (−90°, 90°)，不需要相位展开。Td 由 arg H(x) = ∠C* 决定，这个方程可能有多个根，规范规定取法：在 x_k = 10^{−6 + 12k/4000}（k = 0…4000）上找第一个 arg H(x) − ∠C* 变号（或为 0）的区间，在 log x 上二分到 (hi − lo) ≤ 4u·hi，取几何中点；Kp = |C*|/|H(x)|。没有变号区间 → `TARGET_NOT_ACHIEVABLE`（`details.achievable_range_deg` 为扫描上的相位范围）；二分 200 次未收敛 → `E.NUMERICAL.NO_CONVERGENCE`。这一取法是规范的一部分，不是实现细节：两个独立实现由此得到相同的根（参考实现与 numpy 实现的增益相差 ≤ 7.3e-16）。`trust.convergence` 报告二分次数与区间宽度。两个 PID 专属字段用于 PI → `E.VALIDATION.OPTION_CONFLICT`（F-8）。
+- PT-5 **闭环稳定是结果的一部分**。频率点条件只约束一个频率，不保证闭环稳定。控制器由 `control.design.pid`（parallel：Ki = Kp/Ti、Kd = Kp·Td、Tf）构造，回路由 `control.analysis.loopsens(plant, controller)` 分析，都在同一个 JSON 上（K-4）；闭环不稳定 MUST 报 `TARGET_NOT_ACHIEVABLE`（附闭环极点与增益），不返回一个不能用的控制器。L 还有别的增益穿越、使实际相位裕度（所有穿越里最小的）小于目标时，给 `W.DOMAIN.EXTRA_CROSSOVER`（新），`achieved` 报告实际值。
+- PT-6 **后置条件**。`target_met`：用构造出的控制器（而不是增益公式）重新计算 L(jωc)，||L| − 1| ≤ 1e-9、相位差 ≤ 1e-7°（覆盖 `test_points`）；`closed_loop_stable`；`sub_operator_checks`（`pid`、`loopsens` 的后置条件，`margin` 的网格复查为 `sampled`，所以 claim 最多 `spot_checked`，E-12）；`all_finite`。
+
+新错误码 `E.DOMAIN.TARGET_NOT_ACHIEVABLE`：设计目标在给定对象与控制器结构下不可达（相位不可达、对象在 jωc 处为零或极点、结果闭环不稳定），`remediation` 为向用户确认是否降低 ωc、降低 PM 或换控制器类型。新警告码 `W.DOMAIN.EXTRA_CROSSOVER`：设计频率处条件满足，但开环另有穿越点、实际相位裕度小于目标。
+
+**Manifest** — `examples/control.design.pidtune/manifest.json`
+
+```json
+{{jsonc:examples/control.design.pidtune/manifest.json}}
+```
+
+**请求**（PID，G = 1/(s+1)³，ωc = 1 rad/s，PM 缺省 60°；对象在 ωc 处相位 −135°，需要控制器提供 +15°）
+
+```json
+{{file:examples/control.design.pidtune/request.json}}
+```
+
+**成功响应**（Kp = 2.6182，Ti = 2.6432，Td = 0.6608，Tf = 0.06608；达到的相位裕度 60.000°、穿越 1.000 rad/s、增益裕度 14.05，闭环稳定；Td 二分 44 次；claim `spot_checked`）
+
+```json
+{{jsonc:examples/control.design.pidtune/response.success.json}}
+```
+
+**PI 示例** — `request.pi.json`：G = 2/(s² + 3s + 2)，ωc = 1，PM = 45° → Kp = 1/√2，Ki = √2，与手算一致；响应见 `response.pi.json`。
+
+**错误请求与响应**（同一目标用 PI：需要 +15° 超前，PI 只能 (−90°, 0°]）
+
+```json
+{{jsonc:examples/control.design.pidtune/request.error.json}}
+```
+
+```json
+{{jsonc:examples/control.design.pidtune/response.error.json}}
+```
+
+**Parity 测试规格** — `examples/control.design.pidtune/parity.yaml`
+
+```yaml
+{{file:examples/control.design.pidtune/parity.yaml}}
+```
+
+33 个 golden 用例（24 个成功、9 个错误；含纯 P 边界、不稳定对象、非最小相位、额外穿越、闭环不稳定）上：增益与 numpy 实现之差 ≤ 7.3e-16，达到的裕度与穿越频率与 python-control 之差 ≤ 3.5e-13（`tests/parity_pidtune.rs`，`reports/parity-pidtune.json`）。
+
 ## 11. Rust 参考实现（v0.3）
 
 ### 11.1 结构
@@ -1637,7 +1692,7 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 
 1. 在有授权的机器上运行 `matlab/gen_golden_bode.m`（并补 step/lqr 脚本），先核对 `memory_order_nonsymmetric` 用例与 python-control 一致，再跑通第一份 A 级凭证
 2. ~~修复 `lqr` 病态 R 的精度差距~~（v0.3.2 用补偿 Newton–Kleinman 完成）；剩余：平衡 + 有序 Schur（或广义特征值）作为符号函数不收敛时的后备路径，以及 `dlqr` 的同类精化
-3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），下一个是 `pidtune`（须先满足 A-4）；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
+3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；之后转向控制以外的领域；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
 5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；v0.3.4 另有 `aeoi-web design`。v0.3.5 实现了试点里排在前面的算子（串联、并联、反馈、PID 构造、stepinfo、Padé），v0.3.6 加了具名角色、`loopsens`（含带宽读数）和回合预算。下一步是按 A-4 写 `pidtune`（必须先声明对象类、指标和唯一性），以及控制器离散化和 MIMO 裕度；扩充问答题、加入"Agent + 裸 scipy"对照组。非线性吸引域仍不做。
 6. 用 Tauri 打包 `aeoi-web` 为桌面应用（复用 axum 服务与静态页面）
@@ -1645,6 +1700,34 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 8. 根据以上反馈修订，冻结 v1.0
 
 ## 13. Changelog
+
+### v0.4.6-draft（2026-11-24）
+
+起因：按用途广度补的第二个算子。工业回路绝大多数是 PID，“帮我把 PID 调好”是最常见的设计请求；此前 Agent 只能自己猜参数再交给 `pid`、`loopsens` 验证。A-4 要求的四项由作者选定：指标为穿越频率 + 相位裕度，ωc 必须由调用方给出，PID 用 Ti = 4·Td 固定多出的自由度并取最小 Td 根。线协议标识与核心 schema 不变。
+
+**规范改动**
+
+| # | 条款 | 改动 | 原因 |
+|---|---|---|---|
+| 1 | 10.16 PT-1 – PT-6、A-4 | 新算子 `control.design.pidtune` 0.4.0 | 见上 |
+| 2 | PT-3 | ∠C* = 0°（纯 P）在舍入内 MUST 按 Ki = 0 处理 | 第一版在这个边界上报“不可达”，而错误消息又说所需相位 0° 在可达范围内 |
+| 3 | PT-4 | Td 的求根法（扫描网格、二分终止条件、取最小根）是规范的一部分 | 方程可有多个根；规定取法后两个独立实现的增益相差 ≤ 7.3e-16 |
+| 4 | PT-5 | 闭环不稳定报 `E.DOMAIN.TARGET_NOT_ACHIEVABLE`，额外穿越给 `W.DOMAIN.EXTRA_CROSSOVER`（两个新码） | 频率点条件只约束一个频率；golden 里两种情况都是从系统族中搜出来的真实例子 |
+
+**已做的改动**
+
+| 位置 | 改动 |
+|---|---|
+| `write_manifests.py` | `pidtune` 的 manifest、schema、L-1 描述、receipt（假设、后置条件、覆盖、guards） |
+| `rust/aeoi-control/src/pidtune.rs`（新）、`lib.rs`、`loopsens.rs`（`sub` 改为 crate 内可见） | 实现与注册；4 个单元测试（PI 封闭解、需要超前时 PI 报错而 PID 成功、纯 P 边界、冲突与域错误） |
+| `gen_golden_pidtune.py`（新）、`golden/python-control/control.design.pidtune/0.4.0` | 33 个用例，独立 numpy 实现 + python-control 核验；同时生成示例请求与参考值 |
+| `rust/aeoi-control/tests/parity_pidtune.rs`（新）、`examples.rs` 的 `pidtune_example` | parity 与示例测试；示例测试同时核对 controller 与 `control.design.pid(gains)` 逐位相同（K-4） |
+| `examples/control.design.pidtune/` | manifest、schema、三个示例请求与响应、`parity.yaml`（含 `conformance_compare`） |
+| `conformance/rules_control.py`、`tests/proxy_mutant.py`、`test_runner_catches_mutants.py` | `pidtune` 的一致性规则（含运行器用返回的控制器重算 L(jωc)）；变异 `pidtune_kp_wrong`、`pidtune_controller_wrong` |
+
+一致性套件在第一次运行时就查出一处 manifest 错误：`pidtune` 会发出 `E.DOMAIN.MIMO_NOT_SUPPORTED`，但没有声明（CF-8），已改正。
+
+**结果**：`cargo test` 164 / 0；parity 33 / 33（增益 7.3e-16）；参考实现一致性 610 通过 / 0 失败 / 290 跳过（`pidtune` 33 + 方法选择 1 + 默认值 8 通过、6 跳过）；变异测试 21 / 21；有数值规则的算子 8 / 21 = 38%。
 
 ### v0.4.5-draft（2026-11-24）
 

@@ -103,6 +103,14 @@ def m_lsim_zoh_as_foh(r):                   # claims the other interpolation (re
         r["interpolation"] = "zoh" if r["interpolation"] == "foh" else "foh"
 
 
+def m_pidtune_kp_wrong(r):                  # reported Kp off by 1e-6 (controller untouched)
+    r["gains"]["Kp"] *= 1 + 1e-6
+
+
+def m_pidtune_controller_wrong(r):          # controller numerator scaled by 1.001, gains untouched
+    r["controller"]["num"] = [x * 1.001 for x in r["controller"]["num"]]
+
+
 # name -> (operator, transform)
 MUTANTS = {
     "pz_pole_wrong": ("control.lti.poles_zeros", m_pz_pole_wrong),
@@ -116,6 +124,8 @@ MUTANTS = {
     "c2d_equivalent": ("control.lti.c2d", m_c2d_equivalent),
     "lsim_y_wrong": ("control.lti.lsim", m_lsim_y_wrong),
     "lsim_interp_mislabeled": ("control.lti.lsim", m_lsim_zoh_as_foh),
+    "pidtune_kp_wrong": ("control.design.pidtune", m_pidtune_kp_wrong),
+    "pidtune_controller_wrong": ("control.design.pidtune", m_pidtune_controller_wrong),
 }
 
 

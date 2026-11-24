@@ -1,0 +1,207 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "control.design.pidtune",
+  "version": "0.4.0",
+  "title": "PI/PID tuning by crossover and phase margin",
+  "description": "按给定的穿越频率 ωc 与相位裕度整定 PI 或 PID：使开环 L = G·C 满足 |L(jωc)| = 1、∠L(jωc) = −180° + PM，并核验闭环稳定。PI 有封闭解且唯一；PID 用 Ti = α·Td（缺省 α = 4）与微分滤波 Tf = Td/N（缺省 N = 10）固定多出的自由度，Td 取规范规定扫描下的最小解。",
+  "category": "design",
+  "tags": [
+    "pid",
+    "tuning",
+    "loop-shaping"
+  ],
+  "applicability": {
+    "preconditions": [
+      "plant 为 SISO、连续、proper",
+      "ωc（wc_rad_s）由调用方给出，算子不猜",
+      "PI 可达条件：所需控制器相位 ∠C ∈ (−90°, 0°]；PID 可达条件：∠C 落在 H(x) 的相位范围内（见 10.16）",
+      "结果闭环必须稳定，否则 E.DOMAIN.TARGET_NOT_ACHIEVABLE"
+    ],
+    "not_for": [
+      "离散系统（E.DOMAIN.NOT_CONTINUOUS）",
+      "MIMO",
+      "带时滞的对象（先用 control.lti.pade 近似后串联）",
+      "时域指标（超调、调节时间）直接作为目标",
+      "自动选择 ωc"
+    ],
+    "siso_only": true
+  },
+  "provenance": {
+    "algorithm": "所需控制器值 C* = e^{j(PM−180°)}/G(jωc)。PI：C(jω) = Kp − j·Ki/ω ⇒ Kp = Re C*，Ki = −ωc·Im C*。PID（标准形，Ti = α·Td，Tf = Td/N）：令 x = ωc·Td，H(x) = 1 − j/(αx) + jx/(1 + jx/N)，在 x_k = 10^{−6 + 12k/4000}（k = 0..4000）上找第一个使 arg H(x) − ∠C* 变号的区间，对 log x 二分到相对宽度 ≤ 4u，Kp = |C*|/|H(x)|，Td = x/ωc；并联增益 Ki = Kp/Ti、Kd = Kp·Td。控制器由 control.design.pid（parallel）构造，回路分析由 control.analysis.loopsens 在同一 JSON 上完成（K-4）",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "K. J. Åström, T. Hägglund, Advanced PID Control, ISA 2006（频率点设计、Ti/Td 比与微分滤波）"
+      },
+      {
+        "type": "textbook",
+        "cite": "G. F. Franklin, J. D. Powell, A. Emami-Naeini, Feedback Control of Dynamic Systems, 8th ed.（相位裕度设计）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-control (pure Rust) + nalgebra 0.33",
+    "routine": "pidtune::frequency_point (closed-form PI; log-scan + bisection for PID Td)",
+    "version": "0.4.0",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T2",
+  "sparse_support": {
+    "/system/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "td_scan_points": 4001,
+    "td_scan_log10_range": [
+      -6,
+      6
+    ],
+    "max_bisection_iterations": 200
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/control.design.pidtune/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ZERO_DENOMINATOR",
+    "E.VALIDATION.NOT_CONJUGATE",
+    "E.VALIDATION.SPARSE_STRUCTURE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.DOMAIN.IMPROPER_SYSTEM",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.DOMAIN.MIMO_NOT_SUPPORTED",
+    "E.DOMAIN.NOT_CONTINUOUS",
+    "E.DOMAIN.TARGET_NOT_ACHIEVABLE",
+    "E.VALIDATION.OPTION_CONFLICT",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.DOMAIN.EXTRA_CROSSOVER",
+    "W.DOMAIN.ANALYSIS_SKIPPED",
+    "W.VALIDATION.LEADING_ZEROS_STRIPPED",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "control_design_pidtune",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:pidtune:frequency-point",
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "plant 准确描述被控对象（单位、符号）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "siso_continuous",
+        "statement": "SISO、连续、proper",
+        "enforced_by": "error:E.DOMAIN.NOT_CONTINUOUS"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "target_from_user",
+        "statement": "ωc 由调用方给出；PM、Ti/Td、N 用请求里的值或规范默认",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "achievable",
+        "statement": "所需控制器相位在 PI/PID 可达范围内",
+        "enforced_by": "error:E.DOMAIN.TARGET_NOT_ACHIEVABLE"
+      },
+      {
+        "id": "closed_loop_stable",
+        "statement": "结果闭环稳定",
+        "enforced_by": "error:E.DOMAIN.TARGET_NOT_ACHIEVABLE"
+      },
+      {
+        "id": "single_crossover",
+        "statement": "L 只有一个增益穿越点（否则实际相位裕度可能小于目标）",
+        "enforced_by": "warning:W.DOMAIN.EXTRA_CROSSOVER"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "target_met",
+      "closed_loop_stable",
+      "sub_operator_checks",
+      "all_finite"
+    ],
+    "coverage": {
+      "target_met": "test_points",
+      "sub_operator_checks": "sampled"
+    },
+    "guards": {
+      "target_met": [
+        "/controller",
+        "/gains",
+        "/gains_standard"
+      ],
+      "sub_operator_checks": [
+        "/achieved"
+      ]
+    }
+  }
+}

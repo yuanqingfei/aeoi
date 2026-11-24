@@ -1,0 +1,44 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "control.design.pidtune",
+ "operator_version": "0.4.0",
+ "case_family": "pi_integrating",
+ "request": {
+  "plant": {
+   "kind": "tf",
+   "num": [
+    1.0
+   ],
+   "den": [
+    1.0,
+    1.0,
+    0.0
+   ],
+   "ts": 0.0
+  },
+  "type": "PI",
+  "wc_rad_s": 0.3
+ },
+ "reference_env": {
+  "engine": "numpy (spec formulas) + python-control stability_margins / poles",
+  "python_control": "0.10.2",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261124,
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "gains": {
+   "Kp": 0.3048076211353316,
+   "Ki": 0.021617314097820133,
+   "Kd": 0.0,
+   "Tf": 0.0
+  },
+  "achieved": {
+   "phase_margin_deg": 60.0,
+   "gain_crossover_rad_s": 0.29999999999999993,
+   "closed_loop_stable": true
+  },
+  "extra_crossover": false
+ }
+}

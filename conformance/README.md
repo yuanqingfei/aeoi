@@ -1,6 +1,6 @@
 # AEOI 跨实现一致性套件（v0.3）
 
-规范 9.4（CF-1 – CF-12）的实现。**状态：7 个算子有数值规则（`lyap`、`poles_zeros`、`bode`、`step`、`lqr`、`c2d`、`lsim`，占 20 个算子的 35%）；参考实现（Rust）全部通过；Python 第二实现只做 `lyap`。**
+规范 9.4（CF-1 – CF-12）的实现。**状态：8 个算子有数值规则（`lyap`、`poles_zeros`、`bode`、`step`、`lqr`、`c2d`、`lsim`、`pidtune`，占 21 个算子的 38%）；参考实现（Rust）全部通过；Python 第二实现只做 `lyap`。**
 
 ## 内容
 
@@ -8,7 +8,7 @@
 |---|---|
 | `aeoi_conformance.py` | 运行器。只通过 MCP stdio 驱动被测实现（CF-3），用例直接读 `golden/`（CF-2） |
 | `aeoi_hash.py` | 规范 3.7 / 4.3 R-3 / P-2 的独立重写（RFC 8785 JCS、数组摘要、请求指纹）。运行器用它重算指纹，不采信被测实现自报的值 |
-| `rules_control.py` | `poles_zeros`、`bode`、`step`、`lqr`、`c2d` 的数值规则（v0.2），`lsim`（v0.4，规范 v0.4.5）；`lyap` 的规则在运行器里 |
+| `rules_control.py` | `poles_zeros`、`bode`、`step`、`lqr`、`c2d` 的数值规则（v0.2），`lsim`（规范 v0.4.5）、`pidtune`（规范 v0.4.6，含运行器用返回的控制器重算 L(jωc)）；`lyap` 的规则在运行器里 |
 | `impls/python_scipy/server.py` | 第二实现：Python + SciPy，只做 `lyap`，线级（MCP stdio） |
 | `tests/test_runner_catches_mutants.py` | 证明规则既不太松也不太严：对第二实现注入 7 种缺陷；再经 `proxy_mutant.py` 对参考实现做 9 种改写，错误答案（含相位整体加 360°）必须失败，等价答案（换极点顺序、相似变换、tf 分子分母同乘常数）必须通过 |
 | `tests/proxy_mutant.py` | 包住参考实现的 MCP 代理，按 `$AEOI_MUTANT` 改写一个算子的结果并重算 `output_hash` |
@@ -44,7 +44,7 @@ python3 conformance/tests/test_runner_catches_mutants.py
 
 ## 结果
 
-参考实现（`rust/target/release/aeoi-mcp`，云容器 x86_64-linux、glibc 2.39；作者 WSL glibc 2.31 结果相同）：568 通过 / 0 失败 / 284 跳过（规范 v0.4.5，含 `lsim` 33 个），其中默认值用例 78 通过、6 跳过（PID 的模式专属字段与离散系统上的 `interpolation`，F-8）。有规则的 6 个算子全部通过：`lyap` 43、`poles_zeros` 47、`bode` 103、`step` 89、`lqr` 88（mpmath 16 + python-control 72）、`c2d` 47；跳过的是其余 13 个算子的成功用例。各检查的最大“偏差/容差”都 ≤ 0.15（`lqr` 的 mpmath 闭环极点），多数在 1e-3 以下。
+参考实现（`rust/target/release/aeoi-mcp`，云容器 x86_64-linux、glibc 2.39；作者 WSL glibc 2.31 结果相同）：610 通过 / 0 失败 / 290 跳过（规范 v0.4.6，含 `lsim` 33 个、`pidtune` 33 个），其中默认值用例 86 通过、12 跳过（只用于某种模式的字段，F-8：PID 的 `Ti`/`Td`、离散系统上的 `interpolation`、PI 上的 `ti_td_ratio`/`derivative_filter_n`）。有规则的 6 个算子全部通过：`lyap` 43、`poles_zeros` 47、`bode` 103、`step` 89、`lqr` 88（mpmath 16 + python-control 72）、`c2d` 47；跳过的是其余 13 个算子的成功用例。各检查的最大“偏差/容差”都 ≤ 0.15（`lqr` 的 mpmath 闭环极点），多数在 1e-3 以下。
 
 第二实现（`lyap`）：47 个用例全部通过（含 3 个默认值用例）；其中 v0.2 时的 44 个：mpmath 12 个（独立于 SciPy，含病态的 `continuous_near_axis`、`discrete_rho_near_1`）、python-control 31 个（**与第二实现同源**，只能说明套件可移植，不能说明实现可替换，报告里分开列出）、方法选择 1 个。
 

@@ -1,0 +1,14 @@
+{
+  "reference": "numpy implementation of the spec 10.16 formulas, verified with python-control 0.10.2 stability_margins / poles. Not MATLAB.",
+  "cases": 33,
+  "error_cases": 9,
+  "extra_crossover_cases": 1,
+  "worst": {
+    "gains_rel": 7.260372234144846e-16,
+    "achieved_margin_crossover_rel": 3.455401517684233e-13
+  },
+  "tolerances": {
+    "gains_rel": 1e-10,
+    "achieved_margin_crossover_rel": 1e-6
+  }
+}

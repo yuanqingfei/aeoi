@@ -1,5 +1,5 @@
 """Numeric comparison rules (spec 9.4 CF-6) for control.lti.poles_zeros, control.lti.bode, control.lti.step,
-control.design.lqr, control.lti.c2d and control.lti.lsim (v0.4.5).
+control.design.lqr, control.lti.c2d, control.lti.lsim (v0.4.5) and control.design.pidtune (v0.4.6).
 
 Each rule is rule(case, env, manifest, req=None, expected=None) -> [(check, ok, max_error, tolerance, detail)].
 The first entry is the operator's primary field; the runner reuses its deviation for the section-0 column-major check.
@@ -419,6 +419,44 @@ def rule_lsim(case, env, manifest, req=None, expected=None):
     return out
 
 
+# ---------------------------------------------------------------- control.design.pidtune (parity.yaml: T2)
+def _eval_lti(sysd, s):
+    """SISO transfer value of an AEOI LtiSystem JSON at complex s (tf, zpk or ss)."""
+    k = sysd["kind"]
+    if k == "tf":
+        num = np.array(sysd["num"], dtype=float).ravel() if not isinstance(sysd["num"][0], list) else np.array(sysd["num"][0][0], dtype=float)
+        den = np.array(sysd["den"], dtype=float).ravel() if not isinstance(sysd["den"][0], list) else np.array(sysd["den"][0][0], dtype=float)
+        return np.polyval(num, s) / np.polyval(den, s)
+    if k == "zpk":
+        z, p = arr(sysd["z"]).ravel().astype(complex), arr(sysd["p"]).ravel().astype(complex)
+        return num(sysd["k"]) * np.prod(s - z) / np.prod(s - p)
+    A, B, C, D = (arr(sysd[x]) for x in "ABCD")
+    n = A.shape[0]
+    return complex((C @ np.linalg.solve(s * np.eye(n) - A, B) + D)[0, 0]) if n else complex(D[0, 0])
+
+
+def rule_pidtune(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = expected or case["expected"]; r = env["result"]
+    eg = max(abs(num(r["gains"][k]) - e["gains"][k]) / max(1.0, abs(e["gains"][k])) for k in ("Kp", "Ki", "Kd", "Tf"))
+    a = e["achieved"]
+    ea = max(abs(num(r["achieved"][k]) - a[k]) / max(1.0, abs(a[k])) for k in ("phase_margin_deg", "gain_crossover_rad_s"))
+    out = [check("gains Kp, Ki, Kd, Tf: |Δ| / max(1, |ref|) ≤ 1e-10", eg, 1e-10),
+           check("achieved phase_margin_deg, gain_crossover_rad_s: |Δ| / max(1, |ref|) ≤ 1e-6", ea, 1e-6),
+           ("achieved.closed_loop_stable equals the reference  [CF-6]", r["achieved"].get("closed_loop_stable") is a["closed_loop_stable"], None, None, f"got {r['achieved'].get('closed_loop_stable')}"),
+           ("type echoes the request", r.get("type") == req["type"], None, None, f"got {r.get('type')}")]
+    # independent of the reference: L(jωc) from the request's plant and the RETURNED controller (CF-8)
+    wc, pm = num(req["wc_rad_s"]), num(req.get("phase_margin_deg", 60.0))
+    L = _eval_lti(req["plant"], 1j * wc) * _eval_lti(r["controller"], 1j * wc)
+    dph = abs((np.degrees(np.angle(L)) - (pm - 180.0) + 180.0) % 360.0 - 180.0)
+    out.append(check("|L(jωc)| = 1, recomputed by the runner from the returned controller: ||L| − 1| ≤ 1e-9", abs(abs(L) - 1.0), 1e-9))
+    out.append(check("∠L(jωc) = PM − 180°, recomputed by the runner: |Δ| ≤ 1e-7 deg", dph, 1e-7))
+    if req["type"] == "PID":
+        st = r["gains_standard"]
+        alpha = num(req.get("ti_td_ratio", 4.0))
+        out.append(check("gains_standard.Ti = ti_td_ratio · Td (PT-4)", abs(num(st["Ti"]) - alpha * num(st["Td"])) / max(1.0, abs(num(st["Ti"]))), 1e-12))
+    return out
+
+
 RULES = {
     "control.lti.poles_zeros": rule_poles_zeros,
     "control.lti.bode": rule_bode,
@@ -426,4 +464,5 @@ RULES = {
     "control.design.lqr": rule_lqr,
     "control.lti.c2d": rule_c2d,
     "control.lti.lsim": rule_lsim,
+    "control.design.pidtune": rule_pidtune,
 }

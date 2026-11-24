@@ -1,0 +1,33 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "control.design.pidtune",
+ "operator_version": "0.4.0",
+ "case_family": "pid_out_of_range",
+ "request": {
+  "plant": {
+   "kind": "tf",
+   "num": [
+    1.0
+   ],
+   "den": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "ts": 0.0
+  },
+  "type": "PID",
+  "wc_rad_s": 1.0,
+  "phase_margin_deg": 80
+ },
+ "reference_env": {
+  "engine": "numpy (spec formulas) + python-control stability_margins / poles",
+  "python_control": "0.10.2",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261124,
+  "note": "NOT MATLAB output"
+ },
+ "expected_error": "E.DOMAIN.TARGET_NOT_ACHIEVABLE"
+}

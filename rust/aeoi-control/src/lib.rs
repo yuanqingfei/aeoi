@@ -41,6 +41,7 @@ pub mod lyap;
 pub mod margin;
 pub mod pade;
 pub mod pid;
+pub mod pidtune;
 pub mod place;
 pub mod poles_zeros;
 pub mod step;
@@ -71,6 +72,7 @@ pub fn registry() -> Vec<Box<dyn DynOperator>> {
         Box::new(pade::Pade::new()),
         Box::new(loopsens::LoopSens::new()),
         Box::new(lsim::Lsim::new()),
+        Box::new(pidtune::PidTune::new()),
     ]
 }
 

@@ -1,0 +1,45 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "control.design.pidtune",
+ "operator_version": "0.4.0",
+ "case_family": "pid_third_order_lag",
+ "request": {
+  "plant": {
+   "kind": "tf",
+   "num": [
+    1.0
+   ],
+   "den": [
+    1.0,
+    3.0,
+    3.0,
+    1.0
+   ],
+   "ts": 0.0
+  },
+  "type": "PID",
+  "wc_rad_s": 0.8
+ },
+ "reference_env": {
+  "engine": "numpy (spec formulas) + python-control stability_margins / poles",
+  "python_control": "0.10.2",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261124,
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "gains": {
+   "Kp": 2.050649687133949,
+   "Ki": 0.8803883769118714,
+   "Kd": 1.1941218925711428,
+   "Tf": 0.058231393692605014
+  },
+  "achieved": {
+   "phase_margin_deg": 60.0,
+   "gain_crossover_rad_s": 0.8000000000000012,
+   "closed_loop_stable": true
+  },
+  "extra_crossover": false
+ }
+}

@@ -29,6 +29,8 @@ PROXY_EXPECT = {
     "c2d_equivalent": ("control.lti.c2d", None),
     "lsim_y_wrong": ("control.lti.lsim", "y: max"),
     "lsim_interp_mislabeled": ("control.lti.lsim", "interpolation equals"),
+    "pidtune_kp_wrong": ("control.design.pidtune", "gains Kp"),
+    "pidtune_controller_wrong": ("control.design.pidtune", "recomputed by the runner"),
 }
 
 # mutant -> substring that must appear among the names of the failed checks

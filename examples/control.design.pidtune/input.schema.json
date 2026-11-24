@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.design.pidtune/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "plant",
+    "type",
+    "wc_rad_s"
+  ],
+  "properties": {
+    "plant": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/LtiSystem",
+      "description": "被控对象 G（SISO、连续、proper）。上一个工具返回了系统就原样粘贴 result.system"
+    },
+    "type": {
+      "enum": [
+        "PI",
+        "PID"
+      ],
+      "description": "PI 或 PID。必填：控制器类型是设计决定，不由算子选"
+    },
+    "wc_rad_s": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "x-aeoi-provenance": "user",
+      "description": "目标增益穿越频率 ωc（rad/s）。必填，由用户或题目给出，算子不猜；不知道就问用户期望的响应速度（ωc 约为闭环带宽）"
+    },
+    "phase_margin_deg": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 90,
+      "default": 60,
+      "x-aeoi-provenance": "convention",
+      "description": "目标相位裕度（度），默认 60。定义默认值，省略即可"
+    },
+    "ti_td_ratio": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "default": 4,
+      "x-aeoi-provenance": "convention",
+      "description": "只用于 PID：Ti/Td 比，默认 4（Åström–Hägglund）。PI 不要给"
+    },
+    "derivative_filter_n": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "default": 10,
+      "x-aeoi-provenance": "convention",
+      "description": "只用于 PID：微分滤波 Tf = Td/N 的 N，默认 10。PI 不要给"
+    },
+    "lineage": {
+      "type": [
+        "string",
+        "array",
+        "null"
+      ],
+      "description": "可选。上游 receipt.fingerprint.request，只回显"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  }
+}

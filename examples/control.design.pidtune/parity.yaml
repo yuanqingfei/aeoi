@@ -1,0 +1,28 @@
+# Parity test spec — control.design.pidtune 0.4.0 (AEOI v0.4.6-draft)
+operator: control.design.pidtune
+references:
+  - {engine: "numpy (spec 10.16 formulas) + python-control", version: "python-control 0.10.2, numpy 2.5.3", role: dev_reference, status: active,
+     generator: gen_golden_pidtune.py, golden_store: "golden/python-control/control.design.pidtune/0.4.0/*.json",
+     note: "NOT MATLAB output. Independent Python implementation of PT-2 – PT-4 (PI closed form, PID scan + bisection); every success case verified with python-control: |L(jωc)| = 1 (1e-9), ∠L(jωc) = −180° + PM (1e-7°), stability_margins, closed-loop poles"}
+  - {engine: MATLAB, role: none,
+     note: "MATLAB pidtune chooses ωc itself and balances robustness/performance with an unpublished objective; it is not a reference for this operator (A-4)"}
+runner: "cargo test --release -p aeoi-control --test parity_pidtune"
+tolerance_class: T2
+compare:
+  gains (Kp, Ki, Kd, Tf): {rtol: 1.0e-10, scale: "max(1, |ref|)"}
+  achieved.phase_margin_deg / gain_crossover_rad_s: {rtol: 1.0e-6, note: "through control.analysis.margin (T3)"}
+  achieved.closed_loop_stable: exact
+  W.DOMAIN.EXTRA_CROSSOVER: "present exactly when the reference's binding crossover differs from ωc or its phase margin is below the target"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. No trust.* value of the implementation is used
+  gains: "Kp, Ki, Kd, Tf: |Δ| / max(1, |ref|) ≤ 1e-10"
+  achieved: "phase_margin_deg, gain_crossover_rad_s: |Δ| / max(1, |ref|) ≤ 1e-6; closed_loop_stable exact"
+  target: "recomputed by the runner from the returned controller (no reference value): ||L(jωc)| − 1| ≤ 1e-9 and |∠L(jωc) − (PM − 180°)| ≤ 1e-7°"
+  structure: "type echoes the request; gains_standard.Ti = ti_td_ratio · Td for PID"
+case_families:
+  - {name: "pi_first_order / pi_second_order / pi_third_order_lag / pi_integrating / pi_nonminimum_phase / pi_unstable_plant", n: 8}
+  - {name: pi_boundary_pure_p, n: 1, note: "∠C* = 0°: Ki = 0 exactly (PT-3), not an error"}
+  - {name: "pid_third_order_lag / pid_double_integrator / pid_custom_ratio", n: 4}
+  - {name: "pi_explicit_default / pid_explicit_defaults", n: 2}
+  - {name: "random_pi / random_pid", n: 8}
+  - {name: extra_crossover_resonance, n: 1, expect_warning: W.DOMAIN.EXTRA_CROSSOVER}
+  - {name: errors, n: 9, expect: "TARGET_NOT_ACHIEVABLE ×4 (PI needs lead, PID out of range, plant zero at jωc, unstable closed loop), OPTION_CONFLICT, NOT_CONTINUOUS, MIMO_NOT_SUPPORTED, SCHEMA ×2"}

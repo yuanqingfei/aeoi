@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.5-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.6-draft
 
-> 状态：Draft v0.4.5 · 2026-11-24 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.6 · 2026-11-24 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.6 新增第 21 个算子 `control.design.pidtune`（10.16）：第一个满足 A-4 的整定算子。指标是给定 ωc（必填）与相位裕度；PI 为唯一封闭解，PID 用 Ti = 4·Td 固定多出的自由度并规定取最小 Td 根的扫描法；闭环不稳定时报错而不返回控制器。一致性规则覆盖 8 / 21 = 38% 的算子。
 >
 > v0.4.5 新增第 20 个算子 `control.lti.lsim`（任意输入的响应，10.15）：输入按 [nu, nt] 给出并可用 b64 / ref；采样之间按 foh（缺省）或 zoh 解释，不按数据自动选择；`x0` 只用于 ss，因为 tf/zpk 没有状态坐标。一致性规则覆盖 7 / 20 = 35% 的算子。
 >
@@ -313,7 +315,7 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
 - A-3 `control.lti.pade` 的对象是 e^{−θs} 的 [N/N] Padé 近似。系数用与 Golub & Van Loan《Matrix Computations》第 3 版算法 11.3.1 等价的递推，但每一步已经对分母首项归一，避免未归一乘积在 N ≳ 10 时冲掉 f64 的有效位。`delay` 与 `order` 都是 F-7 的 `supplied`，没有默认值。容差类 T1 只约束系数；certificate 是虚轴 32 点上 |e^{−jωθ} − R(jω)| 的最大值，ω_k = θ⁻¹·10^{−2+4k/31}，k = 0…31。
 
 **还没写成算子的整定**
-- A-4 不在 v0.3.5 提供 `pidtune`。一个能写进规范的整定算子必须事先声明：对象类（例如已经化成的一阶加时滞）、被最小化或被满足的指标、解的唯一性、以及失败时的错误码。缺任何一条，算法就只是“某个实现的默认行为”，不能当算子。
+- A-4 不在 v0.3.5 提供 `pidtune`。一个能写进规范的整定算子必须事先声明：对象类（例如已经化成的一阶加时滞）、被最小化或被满足的指标、解的唯一性、以及失败时的错误码。缺任何一条，算法就只是“某个实现的默认行为”，不能当算子。v0.4.6 的 `control.design.pidtune` 按 10.16 PT-1 – PT-6 满足这四项。
 
 ### 3.13 回路的角色、一次性分析与句柄（v0.3.6）
 
@@ -7934,6 +7936,514 @@ case_families:
 
 33 个 golden 用例（23 个成功、10 个错误；含 MIMO、x0 与状态、刚性、不稳定、直通、离散、20000 点 b64 输入）上与 scipy 的最大差：y 9.2e-14（相对 max|y|）、x 9.5e-15、t 0（`tests/parity_lsim.rs`，`reports/parity-lsim.json`）。
 
+## 10.16 `control.design.pidtune`：按穿越频率与相位裕度整定 PI/PID（v0.4.6）
+
+A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与失败码，否则算法只是“某个实现的默认行为”。`pidtune` 按下面的条款满足这四项。参考值是对本节公式的独立 numpy 实现，每个结果再用 python-control 0.10.2 的 `stability_margins` 与闭环极点核验；不是 MATLAB（MATLAB `pidtune` 自己选 ωc，指标未公开，不能作参考）。
+
+**规范性条款**
+
+- PT-1 **对象类**。`plant` 为 SISO、连续、proper 的 LTI 系统。离散对象 → `E.DOMAIN.NOT_CONTINUOUS`（先用连续模型整定，再用 `c2d` 离散化控制器）；MIMO → `E.DOMAIN.MIMO_NOT_SUPPORTED`。带时滞的对象先用 `pade` 近似后串联。
+- PT-2 **指标**。给定 ωc（`wc_rad_s`，必填，来源 `user`：算子不猜，缺了由调用方问用户）与相位裕度 PM（`phase_margin_deg`，缺省 60°），要求开环 L = G·C 满足 |L(jωc)| = 1、∠L(jωc) = −180° + PM。等价于控制器在 ωc 处取值 C* = e^{j(PM − 180°)}/G(jωc)。G(jωc) 为 0 或无穷 → `E.DOMAIN.TARGET_NOT_ACHIEVABLE`。`type`（PI / PID）必填：控制器类型是设计决定。
+- PT-3 **PI：唯一的封闭解**。C(jω) = Kp − j·Ki/ω，所以 Kp = Re C*，Ki = −ωc·Im C*。可达当且仅当 Kp > 0 且 Ki ≥ 0，即 ∠C* ∈ (−90°, 0°]；否则 `TARGET_NOT_ACHIEVABLE`，`details` 给出所需控制器相位、可达范围与对象相位。∠C* = 0° 是纯 P：−4u·ωc·|C*| ≤ Ki < 0 MUST 按 Ki = 0 处理，否则可达性会因舍入翻转（1/(s+1)³ 在 ωc = 1、PM = 45° 时 ∠C* 恰为 0°，是 golden 用例）。
+- PT-4 **PID：固定多出的自由度，并规定取哪个解**。标准形 C = Kp·(1 + 1/(Ti·s) + Td·s/(1 + Tf·s))，Ti = α·Td（`ti_td_ratio`，缺省 4，Åström–Hägglund），Tf = Td/N（`derivative_filter_n`，缺省 10）。令 x = ωc·Td，H(x) = 1 − j/(αx) + jx/(1 + jx/N)；Re H > 0，所以 arg H ∈ (−90°, 90°)，不需要相位展开。Td 由 arg H(x) = ∠C* 决定，这个方程可能有多个根，规范规定取法：在 x_k = 10^{−6 + 12k/4000}（k = 0…4000）上找第一个 arg H(x) − ∠C* 变号（或为 0）的区间，在 log x 上二分到 (hi − lo) ≤ 4u·hi，取几何中点；Kp = |C*|/|H(x)|。没有变号区间 → `TARGET_NOT_ACHIEVABLE`（`details.achievable_range_deg` 为扫描上的相位范围）；二分 200 次未收敛 → `E.NUMERICAL.NO_CONVERGENCE`。这一取法是规范的一部分，不是实现细节：两个独立实现由此得到相同的根（参考实现与 numpy 实现的增益相差 ≤ 7.3e-16）。`trust.convergence` 报告二分次数与区间宽度。两个 PID 专属字段用于 PI → `E.VALIDATION.OPTION_CONFLICT`（F-8）。
+- PT-5 **闭环稳定是结果的一部分**。频率点条件只约束一个频率，不保证闭环稳定。控制器由 `control.design.pid`（parallel：Ki = Kp/Ti、Kd = Kp·Td、Tf）构造，回路由 `control.analysis.loopsens(plant, controller)` 分析，都在同一个 JSON 上（K-4）；闭环不稳定 MUST 报 `TARGET_NOT_ACHIEVABLE`（附闭环极点与增益），不返回一个不能用的控制器。L 还有别的增益穿越、使实际相位裕度（所有穿越里最小的）小于目标时，给 `W.DOMAIN.EXTRA_CROSSOVER`（新），`achieved` 报告实际值。
+- PT-6 **后置条件**。`target_met`：用构造出的控制器（而不是增益公式）重新计算 L(jωc)，||L| − 1| ≤ 1e-9、相位差 ≤ 1e-7°（覆盖 `test_points`）；`closed_loop_stable`；`sub_operator_checks`（`pid`、`loopsens` 的后置条件，`margin` 的网格复查为 `sampled`，所以 claim 最多 `spot_checked`，E-12）；`all_finite`。
+
+新错误码 `E.DOMAIN.TARGET_NOT_ACHIEVABLE`：设计目标在给定对象与控制器结构下不可达（相位不可达、对象在 jωc 处为零或极点、结果闭环不稳定），`remediation` 为向用户确认是否降低 ωc、降低 PM 或换控制器类型。新警告码 `W.DOMAIN.EXTRA_CROSSOVER`：设计频率处条件满足，但开环另有穿越点、实际相位裕度小于目标。
+
+**Manifest** — `examples/control.design.pidtune/manifest.json`
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "id": "control.design.pidtune",
+  "version": "0.4.0",
+  "title": "PI/PID tuning by crossover and phase margin",
+  "description": "按给定的穿越频率 ωc 与相位裕度整定 PI 或 PID：使开环 L = G·C 满足 |L(jωc)| = 1、∠L(jωc) = −180° + PM，并核验闭环稳定。PI 有封闭解且唯一；PID 用 Ti = α·Td（缺省 α = 4）与微分滤波 Tf = Td/N（缺省 N = 10）固定多出的自由度，Td 取规范规定扫描下的最小解。",
+  "category": "design",
+  "tags": ["pid", "tuning", "loop-shaping"],
+  "applicability": {
+    "preconditions": ["plant 为 SISO、连续、proper", "ωc（wc_rad_s）由调用方给出，算子不猜", "PI 可达条件：所需控制器相位 ∠C ∈ (−90°, 0°]；PID 可达条件：∠C 落在 H(x) 的相位范围内（见 10.16）", "结果闭环必须稳定，否则 E.DOMAIN.TARGET_NOT_ACHIEVABLE"],
+    "not_for": ["离散系统（E.DOMAIN.NOT_CONTINUOUS）", "MIMO", "带时滞的对象（先用 control.lti.pade 近似后串联）", "时域指标（超调、调节时间）直接作为目标", "自动选择 ωc"],
+    "siso_only": true
+  },
+  "provenance": {
+    "algorithm": "所需控制器值 C* = e^{j(PM−180°)}/G(jωc)。PI：C(jω) = Kp − j·Ki/ω ⇒ Kp = Re C*，Ki = −ωc·Im C*。PID（标准形，Ti = α·Td，Tf = Td/N）：令 x = ωc·Td，H(x) = 1 − j/(αx) + jx/(1 + jx/N)，在 x_k = 10^{−6 + 12k/4000}（k = 0..4000）上找第一个使 arg H(x) − ∠C* 变号的区间，对 log x 二分到相对宽度 ≤ 4u，Kp = |C*|/|H(x)|，Td = x/ωc；并联增益 Ki = Kp/Ti、Kd = Kp·Td。控制器由 control.design.pid（parallel）构造，回路分析由 control.analysis.loopsens 在同一 JSON 上完成（K-4）",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "K. J. Åström, T. Hägglund, Advanced PID Control, ISA 2006（频率点设计、Ti/Td 比与微分滤波）"
+      },
+      {
+        "type": "textbook",
+        "cite": "G. F. Franklin, J. D. Powell, A. Emami-Naeini, Feedback Control of Dynamic Systems, 8th ed.（相位裕度设计）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-control (pure Rust) + nalgebra 0.33",
+    "routine": "pidtune::frequency_point (closed-form PI; log-scan + bisection for PID Td)",
+    "version": "0.4.0",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T2",
+  "sparse_support": {
+    "/system/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/system/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    }
+  },
+  "encodings": {
+    "input": ["json", "b64", "ref"],
+    "output": ["json", "b64"]
+  },
+  "limits": {
+    "td_scan_points": 4001,
+    "td_scan_log10_range": [-6, 6],
+    "max_bisection_iterations": 200
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/control.design.pidtune/0.4.0/credentials",
+  "errors": ["E.VALIDATION.SCHEMA", "E.VALIDATION.SHAPE", "E.VALIDATION.DTYPE", "E.VALIDATION.NON_FINITE", "E.VALIDATION.ZERO_DENOMINATOR", "E.VALIDATION.NOT_CONJUGATE", "…(+12)…", "E.NUMERICAL.NO_CONVERGENCE", "E.VALIDATION.METHOD_UNAVAILABLE"],
+  "warnings": ["W.DOMAIN.EXTRA_CROSSOVER", "W.DOMAIN.ANALYSIS_SKIPPED", "W.VALIDATION.LEADING_ZEROS_STRIPPED", "W.PERFORMANCE.SPARSE_DENSIFIED"],
+  "mcp": {
+    "tool_name": "control_design_pidtune",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:pidtune:frequency-point",
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "plant 准确描述被控对象（单位、符号）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "siso_continuous",
+        "statement": "SISO、连续、proper",
+        "enforced_by": "error:E.DOMAIN.NOT_CONTINUOUS"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "target_from_user",
+        "statement": "ωc 由调用方给出；PM、Ti/Td、N 用请求里的值或规范默认",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "achievable",
+        "statement": "所需控制器相位在 PI/PID 可达范围内",
+        "enforced_by": "error:E.DOMAIN.TARGET_NOT_ACHIEVABLE"
+      },
+      {
+        "id": "closed_loop_stable",
+        "statement": "结果闭环稳定",
+        "enforced_by": "error:E.DOMAIN.TARGET_NOT_ACHIEVABLE"
+      },
+      {
+        "id": "single_crossover",
+        "statement": "L 只有一个增益穿越点（否则实际相位裕度可能小于目标）",
+        "enforced_by": "warning:W.DOMAIN.EXTRA_CROSSOVER"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": ["target_met", "closed_loop_stable", "sub_operator_checks", "all_finite"],
+    "coverage": {
+      "target_met": "test_points",
+      "sub_operator_checks": "sampled"
+    },
+    "guards": {
+      "target_met": ["/controller", "/gains", "/gains_standard"],
+      "sub_operator_checks": ["/achieved"]
+    }
+  }
+}
+```
+
+**请求**（PID，G = 1/(s+1)³，ωc = 1 rad/s，PM 缺省 60°；对象在 ωc 处相位 −135°，需要控制器提供 +15°）
+
+```json
+{
+  "plant": {
+    "kind": "tf",
+    "num": [
+      1.0
+    ],
+    "den": [
+      1.0,
+      3.0,
+      3.0,
+      1.0
+    ],
+    "ts": 0.0
+  },
+  "type": "PID",
+  "wc_rad_s": 1.0
+}
+```
+
+**成功响应**（Kp = 2.6182，Ti = 2.6432，Td = 0.6608，Tf = 0.06608；达到的相位裕度 60.000°、穿越 1.000 rad/s、增益裕度 14.05，闭环稳定；Td 二分 44 次；claim `spot_checked`）
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.design.pidtune",
+    "version": "0.4.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "type": "PID",
+    "controller": {
+      "kind": "tf",
+      "num": [1.9031340095618572, 2.6836768573287557, 0.990549161934039],
+      "den": [0.06608004490940968, 1.0, 0.0],
+      "ts": 0.0,
+      "time_unit": "s"
+    },
+    "gains": {
+      "form": "parallel",
+      "Kp": 2.6182213242231764,
+      "Ki": 0.990549161934039,
+      "Kd": 1.7301218268744156,
+      "Tf": 0.06608004490940968
+    },
+    "gains_standard": {
+      "Kp": 2.6182213242231764,
+      "Ti": 2.643201796376387,
+      "Td": 0.6608004490940967,
+      "Tf": 0.06608004490940968
+    },
+    "target": {
+      "wc_rad_s": 1.0,
+      "phase_margin_deg": 60.0
+    },
+    "achieved": {
+      "closed_loop_stable": true,
+      "gain_crossover_rad_s": 0.9999999999999998,
+      "phase_margin_deg": 60.0,
+      "gain_margin": 14.046342966305138
+    },
+    "closed_loop_poles": {
+      "dtype": "c128",
+      "shape": [5],
+      "data": [[-15.270851395996205, 0.0], [-0.776410556523517, 1.268733894459779], [-0.776410556523517, -1.268733894459779], [-0.6547445594814632, 0.12238809223611721], [-0.6547445594814632, -0.12238809223611721]]
+    },
+    "design": {
+      "method": "frequency_point",
+      "required_controller_phase_deg": 15.000000000000014,
+      "required_controller_gain": 2.82842712474619,
+      "plant_at_wc": {
+        "magnitude": 0.3535533905932738,
+        "phase_deg": -135.0
+      },
+      "ti_td_ratio": 4.0,
+      "derivative_filter_n": 10.0,
+      "td_search": {
+        "variable": "x = ωc·Td",
+        "scan": {
+          "points": 4001,
+          "log10_range": [-6, 6]
+        },
+        "bracket_index": 1940,
+        "bisection_iterations": 44,
+        "bracket_rel_width": 0.0,
+        "x": 0.6608004490940967,
+        "achievable_phase_range_deg": [-89.99977081688195, 55.67267142284173],
+        "rule": "smallest root on the scan"
+      },
+      "lineage": null
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": true,
+      "converged": true,
+      "iterations": 44,
+      "criterion": "bracket relative width ≤ 4u"
+    },
+    "residual": {
+      "target_magnitude_abs": 0.0,
+      "target_phase_deg_abs": 0.0,
+      "definition": "用 control.design.pid 构造的控制器重新计算 L(jωc)：||L| − 1| 与 |∠L − (PM − 180°)|"
+    },
+    "condition": {
+      "plant_magnitude_at_wc": 0.3535533905932738
+    },
+    "error_estimate": {
+      "gains_rel": 7.105427357601002e-15,
+      "basis": "PI 为封闭式；PID 的 Td 由二分到 4u 的相对宽度。增益误差主要来自 G(jωc) 的求值。非严格上界；达到的裕度误差见 margin（T3）"
+    },
+    "checks": {
+      "target_met": true,
+      "closed_loop_stable": true,
+      "sub_operator_checks": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "sub_operators": ["control.design.pid", "control.analysis.loopsens"],
+      "target_tolerances": {
+        "magnitude": 1e-09,
+        "phase_deg": 1e-07
+      }
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:pidtune:frequency-point",
+      "routine": "pidtune::frequency_point (closed-form PI; log-scan + bisection for PID Td)",
+      "provenance": "aeoi://operators/control.design.pidtune/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "plant 准确描述被控对象（单位、符号）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "siso_continuous",
+        "statement": "SISO、连续、proper",
+        "enforced_by": "error:E.DOMAIN.NOT_CONTINUOUS"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "target_from_user",
+        "statement": "ωc 由调用方给出；PM、Ti/Td、N 用请求里的值或规范默认",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "achievable",
+        "statement": "所需控制器相位在 PI/PID 可达范围内",
+        "enforced_by": "error:E.DOMAIN.TARGET_NOT_ACHIEVABLE"
+      },
+      {
+        "id": "closed_loop_stable",
+        "statement": "结果闭环稳定",
+        "enforced_by": "error:E.DOMAIN.TARGET_NOT_ACHIEVABLE"
+      },
+      {
+        "id": "single_crossover",
+        "statement": "L 只有一个增益穿越点（否则实际相位裕度可能小于目标）",
+        "enforced_by": "warning:W.DOMAIN.EXTRA_CROSSOVER"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "gains_rel": 7.105427357601002e-15
+      },
+      "basis": "PI 为封闭式；PID 的 Td 由二分到 4u 的相对宽度。增益误差主要来自 G(jωc) 的求值。非严格上界；达到的裕度误差见 margin（T3）"
+    },
+    "evidence": {
+      "claim": "spot_checked",
+      "postconditions": {
+        "target_met": true,
+        "closed_loop_stable": true,
+        "sub_operator_checks": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": {
+        "converged": true,
+        "iterations": 44
+      },
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null,
+      "coverage": {
+        "target_met": "test_points",
+        "closed_loop_stable": "full",
+        "sub_operator_checks": "sampled",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:39a98124a4cb673ab377f84530911e53aa82c97372224b2978fbb1f93016871e",
+      "result": "sha256:f8e22e7ebb6d2cb8626426634d46693220a44936e83d4965ce7e547dd8bbe6a7",
+      "output_hash": "sha256:e72fcbd6d97661899d2e5ebce922806c5ea394d2b2cf7be4d9e75f922419e85b",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.design.pidtune@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:3c9e2fed8c66d0d90b66092c29189647ea03d3b29555af3790d7a016ac989e40",
+    "output_hash": "sha256:e72fcbd6d97661899d2e5ebce922806c5ea394d2b2cf7be4d9e75f922419e85b",
+    "platform": "x86_64-linux",
+    "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "glibc 2.39",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 60.256510999999996
+  }
+}
+```
+
+**PI 示例** — `request.pi.json`：G = 2/(s² + 3s + 2)，ωc = 1，PM = 45° → Kp = 1/√2，Ki = √2，与手算一致；响应见 `response.pi.json`。
+
+**错误请求与响应**（同一目标用 PI：需要 +15° 超前，PI 只能 (−90°, 0°]）
+
+```json
+{
+  "plant": {
+    "kind": "tf",
+    "num": [1.0],
+    "den": [1.0, 3.0, 3.0, 1.0],
+    "ts": 0.0
+  },
+  "type": "PI",
+  "wc_rad_s": 1.0
+}
+```
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "control.design.pidtune",
+    "version": "0.4.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.DOMAIN.TARGET_NOT_ACHIEVABLE",
+    "category": "domain",
+    "retryable": true,
+    "message": "PI 达不到目标：在 ωc = 1 rad/s 处需要控制器相位 15.0000°，PI 的可达范围是 (−90°, 0°]（对象相位 -135.0000°，目标相位裕度 60°）。",
+    "agent_hint": "所需控制器相位为超前，PI 只能提供 (−90°, 0°]：改用 type = PID，或降低 ωc / 降低相位裕度目标。",
+    "details": {
+      "path": "/wc_rad_s",
+      "required_controller_phase_deg": 15.000000000000014,
+      "achievable_range_deg": [-90.0, 0.0],
+      "plant_phase_deg": -135.0,
+      "type": "PI"
+    },
+    "remediation": [
+      {
+        "id": "change_target",
+        "kind": "ask_user",
+        "description": "与用户确认：降低 ωc（更慢的响应）、降低相位裕度目标，或换控制器类型",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.207448
+  }
+}
+```
+
+**Parity 测试规格** — `examples/control.design.pidtune/parity.yaml`
+
+```yaml
+# Parity test spec — control.design.pidtune 0.4.0 (AEOI v0.4.6-draft)
+operator: control.design.pidtune
+references:
+  - {engine: "numpy (spec 10.16 formulas) + python-control", version: "python-control 0.10.2, numpy 2.5.3", role: dev_reference, status: active,
+     generator: gen_golden_pidtune.py, golden_store: "golden/python-control/control.design.pidtune/0.4.0/*.json",
+     note: "NOT MATLAB output. Independent Python implementation of PT-2 – PT-4 (PI closed form, PID scan + bisection); every success case verified with python-control: |L(jωc)| = 1 (1e-9), ∠L(jωc) = −180° + PM (1e-7°), stability_margins, closed-loop poles"}
+  - {engine: MATLAB, role: none,
+     note: "MATLAB pidtune chooses ωc itself and balances robustness/performance with an unpublished objective; it is not a reference for this operator (A-4)"}
+runner: "cargo test --release -p aeoi-control --test parity_pidtune"
+tolerance_class: T2
+compare:
+  gains (Kp, Ki, Kd, Tf): {rtol: 1.0e-10, scale: "max(1, |ref|)"}
+  achieved.phase_margin_deg / gain_crossover_rad_s: {rtol: 1.0e-6, note: "through control.analysis.margin (T3)"}
+  achieved.closed_loop_stable: exact
+  W.DOMAIN.EXTRA_CROSSOVER: "present exactly when the reference's binding crossover differs from ωc or its phase margin is below the target"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. No trust.* value of the implementation is used
+  gains: "Kp, Ki, Kd, Tf: |Δ| / max(1, |ref|) ≤ 1e-10"
+  achieved: "phase_margin_deg, gain_crossover_rad_s: |Δ| / max(1, |ref|) ≤ 1e-6; closed_loop_stable exact"
+  target: "recomputed by the runner from the returned controller (no reference value): ||L(jωc)| − 1| ≤ 1e-9 and |∠L(jωc) − (PM − 180°)| ≤ 1e-7°"
+  structure: "type echoes the request; gains_standard.Ti = ti_td_ratio · Td for PID"
+case_families:
+  - {name: "pi_first_order / pi_second_order / pi_third_order_lag / pi_integrating / pi_nonminimum_phase / pi_unstable_plant", n: 8}
+  - {name: pi_boundary_pure_p, n: 1, note: "∠C* = 0°: Ki = 0 exactly (PT-3), not an error"}
+  - {name: "pid_third_order_lag / pid_double_integrator / pid_custom_ratio", n: 4}
+  - {name: "pi_explicit_default / pid_explicit_defaults", n: 2}
+  - {name: "random_pi / random_pid", n: 8}
+  - {name: extra_crossover_resonance, n: 1, expect_warning: W.DOMAIN.EXTRA_CROSSOVER}
+  - {name: errors, n: 9, expect: "TARGET_NOT_ACHIEVABLE ×4 (PI needs lead, PID out of range, plant zero at jωc, unstable closed loop), OPTION_CONFLICT, NOT_CONTINUOUS, MIMO_NOT_SUPPORTED, SCHEMA ×2"}
+```
+
+33 个 golden 用例（24 个成功、9 个错误；含纯 P 边界、不稳定对象、非最小相位、额外穿越、闭环不稳定）上：增益与 numpy 实现之差 ≤ 7.3e-16，达到的裕度与穿越频率与 python-control 之差 ≤ 3.5e-13（`tests/parity_pidtune.rs`，`reports/parity-pidtune.json`）。
+
 ## 11. Rust 参考实现（v0.3）
 
 ### 11.1 结构
@@ -8118,7 +8628,7 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 
 1. 在有授权的机器上运行 `matlab/gen_golden_bode.m`（并补 step/lqr 脚本），先核对 `memory_order_nonsymmetric` 用例与 python-control 一致，再跑通第一份 A 级凭证
 2. ~~修复 `lqr` 病态 R 的精度差距~~（v0.3.2 用补偿 Newton–Kleinman 完成）；剩余：平衡 + 有序 Schur（或广义特征值）作为符号函数不收敛时的后备路径，以及 `dlqr` 的同类精化
-3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），下一个是 `pidtune`（须先满足 A-4）；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
+3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；之后转向控制以外的领域；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
 5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；v0.3.4 另有 `aeoi-web design`。v0.3.5 实现了试点里排在前面的算子（串联、并联、反馈、PID 构造、stepinfo、Padé），v0.3.6 加了具名角色、`loopsens`（含带宽读数）和回合预算。下一步是按 A-4 写 `pidtune`（必须先声明对象类、指标和唯一性），以及控制器离散化和 MIMO 裕度；扩充问答题、加入"Agent + 裸 scipy"对照组。非线性吸引域仍不做。
 6. 用 Tauri 打包 `aeoi-web` 为桌面应用（复用 axum 服务与静态页面）
@@ -8126,6 +8636,34 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 8. 根据以上反馈修订，冻结 v1.0
 
 ## 13. Changelog
+
+### v0.4.6-draft（2026-11-24）
+
+起因：按用途广度补的第二个算子。工业回路绝大多数是 PID，“帮我把 PID 调好”是最常见的设计请求；此前 Agent 只能自己猜参数再交给 `pid`、`loopsens` 验证。A-4 要求的四项由作者选定：指标为穿越频率 + 相位裕度，ωc 必须由调用方给出，PID 用 Ti = 4·Td 固定多出的自由度并取最小 Td 根。线协议标识与核心 schema 不变。
+
+**规范改动**
+
+| # | 条款 | 改动 | 原因 |
+|---|---|---|---|
+| 1 | 10.16 PT-1 – PT-6、A-4 | 新算子 `control.design.pidtune` 0.4.0 | 见上 |
+| 2 | PT-3 | ∠C* = 0°（纯 P）在舍入内 MUST 按 Ki = 0 处理 | 第一版在这个边界上报“不可达”，而错误消息又说所需相位 0° 在可达范围内 |
+| 3 | PT-4 | Td 的求根法（扫描网格、二分终止条件、取最小根）是规范的一部分 | 方程可有多个根；规定取法后两个独立实现的增益相差 ≤ 7.3e-16 |
+| 4 | PT-5 | 闭环不稳定报 `E.DOMAIN.TARGET_NOT_ACHIEVABLE`，额外穿越给 `W.DOMAIN.EXTRA_CROSSOVER`（两个新码） | 频率点条件只约束一个频率；golden 里两种情况都是从系统族中搜出来的真实例子 |
+
+**已做的改动**
+
+| 位置 | 改动 |
+|---|---|
+| `write_manifests.py` | `pidtune` 的 manifest、schema、L-1 描述、receipt（假设、后置条件、覆盖、guards） |
+| `rust/aeoi-control/src/pidtune.rs`（新）、`lib.rs`、`loopsens.rs`（`sub` 改为 crate 内可见） | 实现与注册；4 个单元测试（PI 封闭解、需要超前时 PI 报错而 PID 成功、纯 P 边界、冲突与域错误） |
+| `gen_golden_pidtune.py`（新）、`golden/python-control/control.design.pidtune/0.4.0` | 33 个用例，独立 numpy 实现 + python-control 核验；同时生成示例请求与参考值 |
+| `rust/aeoi-control/tests/parity_pidtune.rs`（新）、`examples.rs` 的 `pidtune_example` | parity 与示例测试；示例测试同时核对 controller 与 `control.design.pid(gains)` 逐位相同（K-4） |
+| `examples/control.design.pidtune/` | manifest、schema、三个示例请求与响应、`parity.yaml`（含 `conformance_compare`） |
+| `conformance/rules_control.py`、`tests/proxy_mutant.py`、`test_runner_catches_mutants.py` | `pidtune` 的一致性规则（含运行器用返回的控制器重算 L(jωc)）；变异 `pidtune_kp_wrong`、`pidtune_controller_wrong` |
+
+一致性套件在第一次运行时就查出一处 manifest 错误：`pidtune` 会发出 `E.DOMAIN.MIMO_NOT_SUPPORTED`，但没有声明（CF-8），已改正。
+
+**结果**：`cargo test` 164 / 0；parity 33 / 33（增益 7.3e-16）；参考实现一致性 610 通过 / 0 失败 / 290 跳过（`pidtune` 33 + 方法选择 1 + 默认值 8 通过、6 跳过）；变异测试 21 / 21；有数值规则的算子 8 / 21 = 38%。
 
 ### v0.4.5-draft（2026-11-24）
 

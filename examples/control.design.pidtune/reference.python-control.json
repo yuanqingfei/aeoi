@@ -1,0 +1,29 @@
+{
+ "note": "numpy spec formulas verified with python-control 0.10.2 stability_margins; NOT MATLAB",
+ "request.json": {
+  "gains": {
+   "Kp": 2.6182213242231764,
+   "Ki": 0.990549161934039,
+   "Kd": 1.7301218268744156,
+   "Tf": 0.06608004490940968
+  },
+  "achieved": {
+   "phase_margin_deg": 60.00000000000003,
+   "gain_crossover_rad_s": 1.0,
+   "closed_loop_stable": true
+  }
+ },
+ "request.pi.json": {
+  "gains": {
+   "Kp": 0.7071067811865477,
+   "Ki": 1.414213562373095,
+   "Kd": 0.0,
+   "Tf": 0.0
+  },
+  "achieved": {
+   "phase_margin_deg": 45.0,
+   "gain_crossover_rad_s": 1.0,
+   "closed_loop_stable": true
+  }
+ }
+}

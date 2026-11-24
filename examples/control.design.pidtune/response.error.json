@@ -1,0 +1,45 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "control.design.pidtune",
+    "version": "0.4.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.DOMAIN.TARGET_NOT_ACHIEVABLE",
+    "category": "domain",
+    "retryable": true,
+    "message": "PI 达不到目标：在 ωc = 1 rad/s 处需要控制器相位 15.0000°，PI 的可达范围是 (−90°, 0°]（对象相位 -135.0000°，目标相位裕度 60°）。",
+    "agent_hint": "所需控制器相位为超前，PI 只能提供 (−90°, 0°]：改用 type = PID，或降低 ωc / 降低相位裕度目标。",
+    "details": {
+      "path": "/wc_rad_s",
+      "required_controller_phase_deg": 15.000000000000014,
+      "achievable_range_deg": [
+        -90.0,
+        0.0
+      ],
+      "plant_phase_deg": -135.0,
+      "type": "PI"
+    },
+    "remediation": [
+      {
+        "id": "change_target",
+        "kind": "ask_user",
+        "description": "与用户确认：降低 ωc（更慢的响应）、降低相位裕度目标，或换控制器类型",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.207448
+  }
+}

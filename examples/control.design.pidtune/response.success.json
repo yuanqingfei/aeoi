@@ -1,0 +1,264 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.design.pidtune",
+    "version": "0.4.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "type": "PID",
+    "controller": {
+      "kind": "tf",
+      "num": [
+        1.9031340095618572,
+        2.6836768573287557,
+        0.990549161934039
+      ],
+      "den": [
+        0.06608004490940968,
+        1.0,
+        0.0
+      ],
+      "ts": 0.0,
+      "time_unit": "s"
+    },
+    "gains": {
+      "form": "parallel",
+      "Kp": 2.6182213242231764,
+      "Ki": 0.990549161934039,
+      "Kd": 1.7301218268744156,
+      "Tf": 0.06608004490940968
+    },
+    "gains_standard": {
+      "Kp": 2.6182213242231764,
+      "Ti": 2.643201796376387,
+      "Td": 0.6608004490940967,
+      "Tf": 0.06608004490940968
+    },
+    "target": {
+      "wc_rad_s": 1.0,
+      "phase_margin_deg": 60.0
+    },
+    "achieved": {
+      "closed_loop_stable": true,
+      "gain_crossover_rad_s": 0.9999999999999998,
+      "phase_margin_deg": 60.0,
+      "gain_margin": 14.046342966305138
+    },
+    "closed_loop_poles": {
+      "dtype": "c128",
+      "shape": [
+        5
+      ],
+      "data": [
+        [
+          -15.270851395996205,
+          0.0
+        ],
+        [
+          -0.776410556523517,
+          1.268733894459779
+        ],
+        [
+          -0.776410556523517,
+          -1.268733894459779
+        ],
+        [
+          -0.6547445594814632,
+          0.12238809223611721
+        ],
+        [
+          -0.6547445594814632,
+          -0.12238809223611721
+        ]
+      ]
+    },
+    "design": {
+      "method": "frequency_point",
+      "required_controller_phase_deg": 15.000000000000014,
+      "required_controller_gain": 2.82842712474619,
+      "plant_at_wc": {
+        "magnitude": 0.3535533905932738,
+        "phase_deg": -135.0
+      },
+      "ti_td_ratio": 4.0,
+      "derivative_filter_n": 10.0,
+      "td_search": {
+        "variable": "x = ωc·Td",
+        "scan": {
+          "points": 4001,
+          "log10_range": [
+            -6,
+            6
+          ]
+        },
+        "bracket_index": 1940,
+        "bisection_iterations": 44,
+        "bracket_rel_width": 0.0,
+        "x": 0.6608004490940967,
+        "achievable_phase_range_deg": [
+          -89.99977081688195,
+          55.67267142284173
+        ],
+        "rule": "smallest root on the scan"
+      },
+      "lineage": null
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": true,
+      "converged": true,
+      "iterations": 44,
+      "criterion": "bracket relative width ≤ 4u"
+    },
+    "residual": {
+      "target_magnitude_abs": 0.0,
+      "target_phase_deg_abs": 0.0,
+      "definition": "用 control.design.pid 构造的控制器重新计算 L(jωc)：||L| − 1| 与 |∠L − (PM − 180°)|"
+    },
+    "condition": {
+      "plant_magnitude_at_wc": 0.3535533905932738
+    },
+    "error_estimate": {
+      "gains_rel": 7.105427357601002e-15,
+      "basis": "PI 为封闭式；PID 的 Td 由二分到 4u 的相对宽度。增益误差主要来自 G(jωc) 的求值。非严格上界；达到的裕度误差见 margin（T3）"
+    },
+    "checks": {
+      "target_met": true,
+      "closed_loop_stable": true,
+      "sub_operator_checks": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "sub_operators": [
+        "control.design.pid",
+        "control.analysis.loopsens"
+      ],
+      "target_tolerances": {
+        "magnitude": 1e-09,
+        "phase_deg": 1e-07
+      }
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:pidtune:frequency-point",
+      "routine": "pidtune::frequency_point (closed-form PI; log-scan + bisection for PID Td)",
+      "provenance": "aeoi://operators/control.design.pidtune/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "plant 准确描述被控对象（单位、符号）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "siso_continuous",
+        "statement": "SISO、连续、proper",
+        "enforced_by": "error:E.DOMAIN.NOT_CONTINUOUS"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "target_from_user",
+        "statement": "ωc 由调用方给出；PM、Ti/Td、N 用请求里的值或规范默认",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "achievable",
+        "statement": "所需控制器相位在 PI/PID 可达范围内",
+        "enforced_by": "error:E.DOMAIN.TARGET_NOT_ACHIEVABLE"
+      },
+      {
+        "id": "closed_loop_stable",
+        "statement": "结果闭环稳定",
+        "enforced_by": "error:E.DOMAIN.TARGET_NOT_ACHIEVABLE"
+      },
+      {
+        "id": "single_crossover",
+        "statement": "L 只有一个增益穿越点（否则实际相位裕度可能小于目标）",
+        "enforced_by": "warning:W.DOMAIN.EXTRA_CROSSOVER"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "gains_rel": 7.105427357601002e-15
+      },
+      "basis": "PI 为封闭式；PID 的 Td 由二分到 4u 的相对宽度。增益误差主要来自 G(jωc) 的求值。非严格上界；达到的裕度误差见 margin（T3）"
+    },
+    "evidence": {
+      "claim": "spot_checked",
+      "postconditions": {
+        "target_met": true,
+        "closed_loop_stable": true,
+        "sub_operator_checks": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": {
+        "converged": true,
+        "iterations": 44
+      },
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null,
+      "coverage": {
+        "target_met": "test_points",
+        "closed_loop_stable": "full",
+        "sub_operator_checks": "sampled",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:39a98124a4cb673ab377f84530911e53aa82c97372224b2978fbb1f93016871e",
+      "result": "sha256:f8e22e7ebb6d2cb8626426634d46693220a44936e83d4965ce7e547dd8bbe6a7",
+      "output_hash": "sha256:e72fcbd6d97661899d2e5ebce922806c5ea394d2b2cf7be4d9e75f922419e85b",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.design.pidtune@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:3c9e2fed8c66d0d90b66092c29189647ea03d3b29555af3790d7a016ac989e40",
+    "output_hash": "sha256:e72fcbd6d97661899d2e5ebce922806c5ea394d2b2cf7be4d9e75f922419e85b",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "glibc 2.39",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 60.256510999999996
+  }
+}

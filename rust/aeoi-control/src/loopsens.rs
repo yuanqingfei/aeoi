@@ -196,7 +196,7 @@ impl Operator for LoopSens {
 /// error becomes `null` plus W.DOMAIN.ANALYSIS_SKIPPED (the loop itself is still valid).
 /// Runs a sub-operator; returns its result (null on error) and whether all of its post-condition
 /// checks passed (vacuously true when it did not run).
-fn sub(op: &dyn DynOperator, args: &Value, prefix: &str, what: &str, host: &HostCtx, warnings: &mut Vec<Warning>) -> (Value, bool) {
+pub(crate) fn sub(op: &dyn DynOperator, args: &Value, prefix: &str, what: &str, host: &HostCtx, warnings: &mut Vec<Warning>) -> (Value, bool) {
     let env = op.call(args, host);
     if env["status"] == "error" {
         let e = &env["error"];

@@ -329,3 +329,38 @@ fn lsim_example() {
     assert_eq!(e["error"]["code"], "E.VALIDATION.OPTION_CONFLICT");
     assert!(!e["error"]["remediation"].as_array().unwrap().is_empty(), "remediation");
 }
+
+/// v0.4.6: control.design.pidtune examples. request.json (PID, 1/(s+1)³, ωc = 1, PM 60°) and request.pi.json
+/// reproduce the reference gains (numpy spec formulas verified with python-control) and their published
+/// responses bit-for-bit on the same platform; request.error.json (PI needs +15° lead) is TARGET_NOT_ACHIEVABLE.
+/// The controller equals control.design.pid on the returned gains (K-4).
+#[test]
+fn pidtune_example() {
+    let h = HostCtx::default();
+    let op = "control.design.pidtune";
+    let dir = format!("examples/{op}");
+    let rf = read(&format!("{dir}/reference.python-control.json"));
+    for (rq, rs) in [("request.json", "response.success.json"), ("request.pi.json", "response.pi.json")] {
+        let env = call(op, &read(&format!("{dir}/{rq}")), &h);
+        assert_eq!(env["status"], "ok", "{rq}: {}", env["error"]);
+        assert_hash_on_same_platform(&env, &read(&format!("{dir}/{rs}")), &format!("{op} {rq}: bitwise example"));
+        let r = &env["result"];
+        for k in ["Kp", "Ki", "Kd", "Tf"] {
+            let (a, b) = (f(&r["gains"][k]), f(&rf[rq]["gains"][k]));
+            assert!((a - b).abs() <= 1e-10 * b.abs().max(1.0), "{rq}: {k} {a} vs {b}");
+        }
+        assert!((f(&r["achieved"]["phase_margin_deg"]) - f(&rf[rq]["achieved"]["phase_margin_deg"])).abs() <= 1e-6);
+        let mut pa = json!({"form": "parallel", "Kp": r["gains"]["Kp"], "Ki": r["gains"]["Ki"]});
+        if r["type"] == "PID" {
+            pa["Kd"] = r["gains"]["Kd"].clone();
+            pa["Tf"] = r["gains"]["Tf"].clone();
+        }
+        let pid = call("control.design.pid", &pa, &h);
+        assert_eq!(pid["result"]["system"], r["controller"], "{rq}: controller == control.design.pid(gains) (K-4)");
+    }
+    let e = call(op, &read(&format!("{dir}/request.error.json")), &h);
+    assert_eq!(e["error"]["code"], "E.DOMAIN.TARGET_NOT_ACHIEVABLE");
+    assert_eq!(e["error"]["code"], read(&format!("{dir}/response.error.json"))["error"]["code"]);
+    assert!((f(&e["error"]["details"]["required_controller_phase_deg"]) - 15.0).abs() < 1e-9);
+    assert!(!e["error"]["remediation"].as_array().unwrap().is_empty(), "remediation");
+}

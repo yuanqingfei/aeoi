@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.design.pidtune/0.4.0/output",
+  "type": "object",
+  "required": [
+    "type",
+    "controller",
+    "gains",
+    "gains_standard",
+    "target",
+    "achieved",
+    "closed_loop_poles",
+    "design"
+  ],
+  "properties": {
+    "type": {
+      "enum": [
+        "PI",
+        "PID"
+      ]
+    },
+    "controller": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/LtiSystem",
+      "description": "control.design.pid（form = parallel）用 gains 构造的控制器；可原样传给 loopsens / feedback"
+    },
+    "gains": {
+      "type": "object",
+      "description": "并联形式 Kp、Ki、Kd、Tf（与 control.design.pid 的输入相同）"
+    },
+    "gains_standard": {
+      "type": "object",
+      "description": "标准形式 Kp、Ti、Td、Tf；Ti 为 null 表示没有积分（Ki = 0）"
+    },
+    "target": {
+      "type": "object",
+      "description": "wc_rad_s、phase_margin_deg（请求的目标）"
+    },
+    "achieved": {
+      "type": "object",
+      "description": "control.analysis.loopsens(plant, controller) 给出的：closed_loop_stable、gain_crossover_rad_s、phase_margin_deg、gain_margin"
+    },
+    "closed_loop_poles": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "c128 向量：control.analysis.loopsens 给出的闭环极点"
+    },
+    "design": {
+      "type": "object",
+      "description": "method = frequency_point；required_controller_phase_deg、required_controller_gain；PID 时 td_search（x = ωc·Td 的扫描与二分）、ti_td_ratio、derivative_filter_n"
+    }
+  }
+}

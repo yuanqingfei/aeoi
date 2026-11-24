@@ -1,7 +1,7 @@
 {
   "generated_by": "rust/aeoi-control/tests/receipt.rs",
-  "golden_successes": 698,
-  "golden_errors": 50,
+  "golden_successes": 722,
+  "golden_errors": 59,
   "claims_by_operator": {
     "control.analysis.ctrb_obsv": {
       "verified": 26
@@ -20,6 +20,9 @@
     },
     "control.design.pid": {
       "verified": 8
+    },
+    "control.design.pidtune": {
+      "spot_checked": 24
     },
     "control.design.place": {
       "verified": 25
