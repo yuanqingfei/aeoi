@@ -4,7 +4,7 @@
   "dry_run": false,
   "operator": {
     "id": "control.design.pid",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
   },
   "request_id": "req-pid-002",
@@ -16,26 +16,27 @@
     "code": "E.VALIDATION.OPTION_CONFLICT",
     "category": "validation",
     "retryable": true,
-    "message": "parallel 形式用 Kp、Ki、Kd、Tf，不接受 Ti、Td。",
-    "agent_hint": "去掉不属于该形式的参数，或改 form。",
+    "message": "form = parallel（省略 form 时的默认值） 只接受 Kp、Ki、Kd、Tf；Ti 属于 standard 形式。两种形式的字段不能混用。",
+    "agent_hint": "不需要的项直接省略，不要填 0 占位。按 remediation 的补丁去掉多余字段，或改 form。",
     "details": {
-      "path": "/form"
+      "path": "/Ti",
+      "form": "parallel",
+      "form_given": false,
+      "conflicting_fields": [
+        "Ti"
+      ]
     },
     "remediation": [
       {
         "id": "drop",
         "kind": "modify_input",
-        "description": "去掉冲突字段",
-        "confidence": "high",
+        "description": "保留 form = parallel，去掉 Ti",
+        "confidence": "medium",
         "requires_user_confirmation": false,
         "patch": [
           {
             "op": "remove",
             "path": "/Ti"
-          },
-          {
-            "op": "remove",
-            "path": "/Td"
           }
         ]
       },

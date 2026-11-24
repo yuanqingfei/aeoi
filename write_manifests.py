@@ -4,7 +4,7 @@ import json, os
 SPEC="aeoi/0.3"; C="aeoi://schemas/common/0.3/"
 def w(p,o):
     os.makedirs(os.path.dirname(p),exist_ok=True); json.dump(o,open(p,"w"),indent=2,ensure_ascii=False); open(p,"a").write("\n")
-CLEAN={"declared":True,"sources":"仅公开文献；MATLAB 仅作为黑盒参考（公开 API），v0.2 的 parity 参考为 python-control/scipy"}
+CLEAN={"declared":True,"sources":"仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"}
 BACK=lambda routine:{"library":"aeoi-control (pure Rust) + nalgebra 0.33","routine":routine,"version":"0.2.0","binding":"native","license":"MIT OR Apache-2.0"}
 ENC={"input":["json","b64","ref"],"output":["json","b64"]}
 ANN={"readOnlyHint":True,"idempotentHint":True,"openWorldHint":False}
@@ -130,21 +130,21 @@ CVEC=lambda d:dict(M,description=d)
 LTI={"$ref":C+"LtiSystem"}
 EXEC={"$ref":C+"ExecOptions"}
 CPLX_LIST={"type":"array","items":{"$ref":C+"Complex"}}
-def man(id_,title,desc,cat,tags,pre,notfor,algo,refs,routine,tol,limits,errors,warnings,sparse=SS_SPARSE,siso_only=False,det="platform_bitwise"):
-    return {"spec":SPEC,"id":id_,"version":V3,"title":title,"description":desc,"category":cat,"tags":tags,
+def man(id_,title,desc,cat,tags,pre,notfor,algo,refs,routine,tol,limits,errors,warnings,sparse=SS_SPARSE,siso_only=False,det="platform_bitwise",ver=V3):
+    return {"spec":SPEC,"id":id_,"version":ver,"title":title,"description":desc,"category":cat,"tags":tags,
      "applicability":{"preconditions":pre,"not_for":notfor,"siso_only":siso_only},
      "provenance":{"algorithm":algo,"references":refs,"clean_room":CLEAN},
-     "backend":BACK3(routine),"determinism":det,"tolerance_class":tol,"sparse_support":sparse,"encodings":ENC,"limits":limits,
+     "backend":dict(BACK3(routine),version=ver),"determinism":det,"tolerance_class":tol,"sparse_support":sparse,"encodings":ENC,"limits":limits,
      "input_schema":{"$ref":"./input.schema.json"},"output_schema":{"$ref":"./output.schema.json"},
      "conformance":{"target":"L3","current":"L2"},"accuracy_grade":{"target":"A","current":"B"},
-     "credentials":f"aeoi://operators/{id_}/{V3}/credentials","errors":errors,"warnings":warnings,
+     "credentials":f"aeoi://operators/{id_}/{ver}/credentials","errors":errors,"warnings":warnings,
      "mcp":{"tool_name":id_.replace(".","_"),"annotations":ANN}}
-def ins(id_,props,req,extra=None):
-    o={"$schema":"https://json-schema.org/draft/2020-12/schema","$id":f"aeoi://schemas/{id_}/{V3}/input","type":"object","additionalProperties":False,"required":req,"properties":dict(props,exec=EXEC)}
+def ins(id_,props,req,extra=None,ver=V3):
+    o={"$schema":"https://json-schema.org/draft/2020-12/schema","$id":f"aeoi://schemas/{id_}/{ver}/input","type":"object","additionalProperties":False,"required":req,"properties":dict(props,exec=EXEC)}
     if extra: o.update(extra)
     return o
-def outs(id_,props,req):
-    return {"$schema":"https://json-schema.org/draft/2020-12/schema","$id":f"aeoi://schemas/{id_}/{V3}/output","type":"object","required":req,"properties":props}
+def outs(id_,props,req,ver=V3):
+    return {"$schema":"https://json-schema.org/draft/2020-12/schema","$id":f"aeoi://schemas/{id_}/{ver}/output","type":"object","required":req,"properties":props}
 R_HIGHAM={"type":"paper","cite":"N. J. Higham, The scaling and squaring method for the matrix exponential revisited, SIMAX 26(4), 2005","doi":"10.1137/04061101X"}
 R_EVD={"type":"paper","cite":"A. Emami-Naeini, P. Van Dooren, Computation of zeros of linear multivariable systems, Automatica 18(4), 1982","doi":"10.1016/0005-1098(82)90070-X"}
 R_BS={"type":"paper","cite":"R. H. Bartels, G. W. Stewart, Solution of the matrix equation AX + XB = C, Comm. ACM 15(9), 1972","doi":"10.1145/361573.361582"}
@@ -181,8 +181,8 @@ pz_out=outs("control.lti.poles_zeros",{"poles":CVEC("c128 向量 [n]，按实部
  "stable":{"type":"boolean","description":"连续：所有 Re p < 0；离散：所有 |p| < 1"}},["poles","zeros","zero_definition","dcgain","natural_frequency","damping_ratio","stable"])
 
 # ---- control.analysis.ctrb_obsv
-co=man("control.analysis.ctrb_obsv","Controllability / observability","判断 LTI 系统是否可控、是否可观（“(A, B) 是否可控”“可控性矩阵的秩是多少”“系统是否可观”这类问题用本工具；只给出 A、B 时也用本工具，C、D 按 system 的说明补零即可）。计算可控性矩阵 [B AB … A^{n−1}B] 与可观性矩阵 [C; CA; …; CA^{n−1}]、基于 SVD 的数值秩，以及（可选）由 Lyapunov 方程得到的可控/可观 Gramian。","analysis",["lti","controllability","observability","gramian"],
- ["system 为 proper；tf/zpk 先按可控标准型实现（结果依赖实现，给出 warning）","Gramian 需系统渐近稳定（连续 Re λ < 0；离散 |λ| < 1）"],["大规模系统（n > 100）的秩判定：Krylov 矩阵病态，应改用 PBH/阶梯形"],
+co=man("control.analysis.ctrb_obsv","Controllability / observability","判断 LTI 系统是否可控、是否可观（“(A, B) 是否可控”“可控性矩阵的秩是多少”“系统是否可观”这类问题用本工具；只给出 A、B 时也用本工具，C、D 按 system 的说明补零即可）。计算可控性矩阵 [B AB … A^{n−1}B] 与可观性矩阵 [C; CA; …; CA^{n−1}]、基于 SVD 的数值秩，以及（可选）由 Lyapunov 方程得到的可控/可观 Gramian。高阶系统的 Krylov 矩阵严重病态：Krylov 秩与 PBH 检验不一致时 receipt.claim 为 unverified，receipt 列出不可依赖的字段（rank、full_rank、minimal），不要把它们当结论。设计控制器不需要先调用本工具。","analysis",["lti","controllability","observability","gramian"],
+ ["system 为 proper；tf/zpk 先按可控标准型实现（结果依赖实现，给出 warning）","Gramian 需系统渐近稳定（连续 Re λ < 0；离散 |λ| < 1）"],["大规模系统（n > 100）的秩判定：Krylov 矩阵病态，应改用 PBH/阶梯形","控制器设计、带宽/裕度检查（用 control_analysis_loopsens，或 control_lti_series / control_lti_feedback 的具名角色）"],
  "Krylov 块逐列构造；数值秩 = #{σ_i > rtol·σ_max}，rtol 缺省为 max(行,列)·ε（与 numpy.linalg.matrix_rank 相同）；同时对 A 的每个特征值做 PBH 检验 σ_min([A−λI, B])/‖[A,B]‖_F 作为更稳健的旁证，二者不一致时给出 W.NUMERICAL.RANK_AMBIGUOUS。Gramian：连续 A W_c + W_c Aᵀ + BBᵀ = 0、Aᵀ W_o + W_o A + CᵀC = 0；离散 A W_c Aᵀ − W_c + BBᵀ = 0、Aᵀ W_o A − W_o + CᵀC = 0；用复 Schur 形式的 Bartels–Stewart 法求解（同 control.math.lyap）",
  [R_KAI,R_GVL,R_BS],"ctrb_obsv::analyze","T2",{"max_states":100},COMMON_LTI_ERR,
  ["W.DOMAIN.REALIZATION_DEPENDENT","W.NUMERICAL.RANK_AMBIGUOUS","W.DOMAIN.GRAMIAN_UNDEFINED","W.NUMERICAL.ILL_CONDITIONED"]+LW)
@@ -299,54 +299,56 @@ def conn_out(id_, reals):
         "realization": {"enum": reals, "description": "多项式算术或块状态空间公式，见 spec I-6"},
         "minimal": {"type": ["boolean", "null"]},
         "proper": {"type": "boolean"},
-        "composition": {"type": "object", "description": "operation、operands[].sha256（操作数 JSON 的 JCS 哈希）、sign、implicit_unity、lineage（只回显，不核验）"},
+        "composition": {"type": "object", "description": "operation、operands[]（role 与 sha256：操作数 JSON 的 JCS 哈希）、sign、implicit_unity、loop_role（open_loop = L、closed_loop = T、unspecified = 用 sys1/sys2 调用，角色由调用方负责；spec K-3）、topology、lineage（只回显，不核验）"},
     }, ["system", "realization", "proper", "composition"])
 OUTK={"enum":["same","tf","ss"],"default":"same","description":"same：SISO 的 tf/zpk 用多项式，否则用 ss 块公式；tf：SISO 多项式或 ss2tf；ss：块公式"}
 LINEAGE={"type":"array","items":{"type":"string"},"maxItems":8,"description":"可选。上游 receipt.fingerprint.request 列表。只写入 composition.lineage，算子不核验，缺省不是错误。"}
-def conn_in(id_, extra, req):
+def conn_in(id_, extra, req, ver=V3):
     props={"sys1":LTI,"sys2":LTI,"output_kind":dict(OUTK),"lineage":LINEAGE}
     props.update(extra)
-    return ins(id_, props, req)
+    return ins(id_, props, req, ver=ver)
+V36="0.4.0"  # v0.3.6: named loop roles (K-1..K-3), PID option conflicts (F-8)
 ALG="SISO 且两个操作数都是 tf 或 zpk：多项式算术，不对消。y = sys2(sys1(u)) 即 num = conv(num2, num1)、den = conv(den2, den1)。任一操作数为 ss、MIMO，或 output_kind=ss：块公式 A=[[A1,0],[B2 C1, A2]]，B=[[B1],[B2 D1]]，C=[D2 C1, C2]，D=D2 D1。状态按 sys1 在前。"
 ALG_P="SISO tf/zpk：num = conv(num1, den2)+conv(num2, den1)，den = conv(den1, den2)（低次项对齐）。ss / MIMO：A=diag(A1,A2)，B=[[B1],[B2]]，C=[C1 C2]，D=D1+D2。"
 ALG_F="方程（规范 I-5）：u1 = u + sign·y2，y1 = sys1(u1)，u2 = y1，y2 = sys2(u2)，y = y1。sign 默认 -1（负反馈）。SISO tf：num = conv(num1, den2)，den = conv(den1, den2) − sign·conv(num1, num2)。省略 sys2 表示与 sys1 同维的单位增益。代数环 E = I − sign·D2·D1 的 rcond ≤ n·u·1e4 时报 E.DOMAIN.ALGEBRAIC_LOOP。"
 R_GVL_PADE={"type":"textbook","cite":"G. H. Golub, C. F. Van Loan, Matrix Computations, 3rd ed., Johns Hopkins, 1996, Algorithm 11.3.1（指数函数的 Padé 分子递推）"}
 R_VAJTA={"type":"paper","cite":"M. Vajta, Some remarks on Padé-approximations, 3rd TEMPUS-INTCOM Symposium, 2000"}
 R_OGATA={"type":"textbook","cite":"K. Ogata, Modern Control Engineering, 5th ed., Prentice-Hall（串联、并联、反馈；阶跃指标）"}
-series=man("control.lti.series","Series interconnection","串联：sys1 的输出接到 sys2 的输入，结果是 sys2·sys1。SISO 用多项式，状态空间用块公式。结果 system 可直接送给其他算子。","transform",["lti","interconnection"],
- CONN_PRE,["自动零极点对消（minreal）","不同采样周期"],ALG,[R_OGATA,R_KAI],"connect::series_ss / polynomial product","T1",{"max_states":200,"max_degree":64,"max_relative_degree":8},
- CONN_ERR,CONN_WARN,sparse=CONN_SPARSE)
-series_in=conn_in("control.lti.series",{},["sys1","sys2"])
-series_out=conn_out("control.lti.series",["polynomial_product","series_block","ss2tf_characteristic_polynomial"])
+series=man("control.lti.series","Series interconnection","串联。推荐用具名角色：controller 与 plant，结果是 L = plant·controller（控制器输出进对象），单位反馈时它就是开环 L，送给 margin；composition.loop_role = open_loop。也可用 sys1/sys2：结果是 sys2·sys1（sys1 的输出进 sys2），角色由调用方负责。两种写法不能混用。结果 system 原样传给下一个工具，不要手抄系数。","transform",["lti","interconnection"],
+ CONN_PRE+["具名角色（controller、plant）与位置参数（sys1、sys2）二选一，混用报 E.VALIDATION.OPTION_CONFLICT","具名调用必须同时给出 controller 和 plant"],["自动零极点对消（minreal）","不同采样周期","把串联结果当成闭环 T（串联只得到开环 L，闭环用 control_lti_feedback 的具名角色或 control_analysis_loopsens）"],ALG,[R_OGATA,R_KAI],"connect::series_ss / polynomial product","T1",{"max_states":200,"max_degree":64,"max_relative_degree":8},
+ CONN_ERR+["E.VALIDATION.OPTION_CONFLICT"],CONN_WARN,sparse=dict(CONN_SPARSE,**{f"/{r}/{x}":{"policy":"densify","max_dense_elements":1000000} for r in ("plant","controller") for x in "ABCD"}),ver=V36)
+series_in=conn_in("control.lti.series",{"controller":LTI,"plant":LTI},[],ver=V36)
+series_out=conn_out("control.lti.series",["polynomial_product","series_block","ss2tf_characteristic_polynomial"]); series_out["$id"]=series_out["$id"].replace(V3,V36)
 par=man("control.lti.parallel","Parallel interconnection","并联：同一输入，输出相加，结果是 sys1+sys2。","transform",["lti","interconnection"],
  CONN_PRE,["自动零极点对消","不同采样周期"],ALG_P,[R_OGATA,R_KAI],"connect::parallel_ss / polynomial sum","T1",{"max_states":200,"max_degree":64,"max_relative_degree":8},
  CONN_ERR,CONN_WARN,sparse=CONN_SPARSE)
 par_in=conn_in("control.lti.parallel",{},["sys1","sys2"])
 par_out=conn_out("control.lti.parallel",["polynomial_sum","parallel_block","ss2tf_characteristic_polynomial"])
-fb=man("control.lti.feedback","Feedback interconnection","反馈：sys1 在前向通道，sys2 在反馈通道。sign = -1（默认）为负反馈，+1 为正反馈。省略 sys2 表示单位反馈。","transform",["lti","interconnection","feedback"],
- CONN_PRE+["sign ∈ {+1,-1}，默认 -1；这是定义默认值，不是测量值","E = I − sign·D₂·D₁ 可逆"],["自动零极点对消","把 sign 留空时当成 0"],ALG_F,[R_OGATA,R_KAI],"connect::feedback_ss / polynomial feedback","T2",{"max_states":200,"max_degree":64,"max_relative_degree":8},
- CONN_ERR+["E.DOMAIN.ALGEBRAIC_LOOP"],CONN_WARN,sparse=CONN_SPARSE)
-fb_in=conn_in("control.lti.feedback",{"sign":{"enum":[-1,1],"default":-1,"x-aeoi-provenance":"convention"}},["sys1"])
-fb_out=conn_out("control.lti.feedback",["polynomial_feedback","feedback_block","ss2tf_characteristic_polynomial"])
-pid=man("control.design.pid","PID controller","按 parallel 或 standard 形式构造 PID，返回可被其他算子使用的 tf（或 proper 时的 ss）。Tf = 0 表示不加微分滤波，微分项非零时结果 improper。","design",["pid","lti"],
- ["form=parallel：C = Kp + Ki/s + Kd·s/(Tf·s+1)；Ki 或 Kd 为 0 时该项不出现（精确去掉引入的因子，不是数值对消）","form=standard：C = Kp·(1 + 1/(Ti·s) + Td·s/(Tf·s+1))；省略 Ti 表示没有积分","Tf = 0 且有微分项时结果 improper，并给出 W.DOMAIN.IMPROPER_RESULT","增益是调用方给出的设计参数，没有安全默认值"],
+fb=man("control.lti.feedback","Feedback interconnection","闭环。推荐用具名角色：plant（必填）、controller（可省略 = 1）、sensor（反馈通路，可省略 = 单位反馈）。拓扑固定为 r → e = r − sensor·y → controller → plant → y，结果是闭环 T = plant·controller/(1 + sensor·plant·controller)（r→y），composition.loop_role = closed_loop：送给 stepinfo/step，不要送给 margin（裕度要用开环 L）。控制器永远在前向通路。也可用 sys1（前向）/sys2（反馈通路），角色由调用方负责；两种写法不能混用。","transform",["lti","interconnection","feedback"],
+ CONN_PRE+["具名角色（plant、controller、sensor）与位置参数（sys1、sys2）二选一，混用报 E.VALIDATION.OPTION_CONFLICT","sign ∈ {+1,-1}，默认 -1；这是定义默认值，不是测量值","E = I − sign·D₂·D₁ 可逆"],["自动零极点对消","把 sign 留空时当成 0","把控制器放进反馈通路（具名调用里 controller 总在前向通路；sensor 才是反馈通路）","求开环裕度（闭环 T 不是开环 L；用 control_lti_series 的具名角色或 control_analysis_loopsens）"],ALG_F,[R_OGATA,R_KAI],"connect::feedback_ss / polynomial feedback","T2",{"max_states":200,"max_degree":64,"max_relative_degree":8},
+ CONN_ERR+["E.DOMAIN.ALGEBRAIC_LOOP","E.VALIDATION.OPTION_CONFLICT"],CONN_WARN,sparse=dict(CONN_SPARSE,**{f"/{r}/{x}":{"policy":"densify","max_dense_elements":1000000} for r in ("plant","controller","sensor") for x in "ABCD"}),ver=V36)
+fb_in=conn_in("control.lti.feedback",{"sign":{"enum":[-1,1],"default":-1,"x-aeoi-provenance":"convention"},"plant":LTI,"controller":LTI,"sensor":LTI},[],ver=V36)
+fb_out=conn_out("control.lti.feedback",["polynomial_feedback","feedback_block","ss2tf_characteristic_polynomial"]); fb_out["$id"]=fb_out["$id"].replace(V3,V36)
+pid=man("control.design.pid","PID controller","按 parallel 或 standard 形式构造 PID，返回可被其他算子使用的 tf（或 proper 时的 ss）。两种形式的字段互斥：parallel 只用 Kp、Ki、Kd、Tf；standard 只用 Kp、Ti、Td、Tf。不要的项直接省略，不要填 0 占位（尤其不要写 Ti = 0：没有积分就省略 Ti，或改用 parallel 并省略 Ki）。混用报 E.VALIDATION.OPTION_CONFLICT，附可直接应用的 JSON Patch。Tf = 0 表示不加微分滤波，微分项非零时结果 improper。返回的 result.system 原样作为 control_lti_series / control_lti_feedback 的 controller。","design",["pid","lti"],
+ ["form=parallel：C = Kp + Ki/s + Kd·s/(Tf·s+1)；Ki 或 Kd 为 0 时该项不出现（精确去掉引入的因子，不是数值对消）","form=standard：C = Kp·(1 + 1/(Ti·s) + Td·s/(Tf·s+1))；省略 Ti 表示没有积分，Ti = 0 不是“没有积分”（会报 E.VALIDATION.OPTION_CONFLICT 并建议省略 Ti）","form 省略时默认 parallel；若只给了 standard 的字段（Ti/Td），报 OPTION_CONFLICT，补丁是加上 form = standard","Tf = 0 且有微分项时结果 improper，并给出 W.DOMAIN.IMPROPER_RESULT","增益是调用方给出的设计参数，没有安全默认值"],
  ["pidtune（目标函数、对象类和唯一性都还没写成规范，见 §12.2）","离散 PID"],
  "parallel：分子 [Kd, Kp, Ki]、分母 [1, 0]，Ki=0 时约去 s；Tf>0 时分母为 s(Tf·s+1)。standard 把同一分解写成 Kp、Ti、Td。零增益项按定义删除。",
  [R_OGATA,{"type":"textbook","cite":"K. J. Åström, T. Hägglund, Advanced PID Control, ISA, 2006（parallel 与 standard 两种参数化）"}],
  "pid::parallel / pid::standard","T1",{"max_relative_degree":1},
  ["E.VALIDATION.SCHEMA","E.VALIDATION.RANGE","E.VALIDATION.OPTION_CONFLICT","E.DOMAIN.IMPROPER_SYSTEM","E.VALIDATION.NON_FINITE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
  ["W.DOMAIN.IMPROPER_RESULT"],sparse={})
+pid["version"]=V36; pid["credentials"]=pid["credentials"].replace(V3,V36); pid["backend"]["version"]=V36
 pid_in=ins("control.design.pid",{
  "form":{"enum":["parallel","standard"],"default":"parallel","x-aeoi-provenance":"convention"},
  "Kp":{"type":"number","x-aeoi-provenance":"supplied"},
  "Ki":{"type":"number","default":0,"x-aeoi-provenance":"convention"},
  "Kd":{"type":"number","default":0,"x-aeoi-provenance":"convention"},
- "Ti":{"type":"number","exclusiveMinimum":0,"x-aeoi-provenance":"supplied"},
+ "Ti":{"type":"number","x-aeoi-provenance":"supplied"},
  "Td":{"type":"number","minimum":0,"default":0,"x-aeoi-provenance":"convention"},
  "Tf":{"type":"number","minimum":0,"default":0,"x-aeoi-provenance":"convention"},
  "output_kind":{"enum":["tf","ss"],"default":"tf"},
  "lineage":LINEAGE,
-},["Kp"])
+},["Kp"],ver=V36)
 pid_out=outs("control.design.pid",{
  "system":dict(LTI,description="控制器，ts=0。proper 时也可为 ss"),
  "realization":{"enum":["pid_closed_form","controllable_canonical"]},
@@ -354,7 +356,7 @@ pid_out=outs("control.design.pid",{
  "proper":{"type":"boolean"},
  "parameters":{"type":"object","description":"回显的形式与增益，含规范默认值（Ki/Kd/Tf 缺省为 0）"},
  "composition":{"type":"object"},
-},["system","realization","proper","parameters","composition"])
+},["system","realization","proper","parameters","composition"],ver=V36)
 si=man("control.lti.stepinfo","Step-response metrics","在显式时间网格上给出阶跃指标：上升时间、调节时间、超调、欠调、峰值、峰值时间、稳态值。阈值有规范默认值。不稳定或不在窗口内调节的通道把依赖稳态的指标设为 null，峰值仍给出。","analysis",["time-domain","lti","stepinfo"],
  ["采样与 control.lti.step 相同（连续为 ZOH 精确递推）","时间指标是网格点，不插值：与连续穿越点之差 ≤ dt，记为 time_quantization_s，不占用 T2 的 rtol","rise_time_limits 默认 [0.1, 0.9]，settling_threshold 默认 0.02；这是指标定义，不是被测对象的物理参数","稳态值取 DC 增益，不取最后一个采样"],
  ["把未调节写成 Inf（窗口太短只说明没观察到，不说明永不调节）","插值到网格之间"],
@@ -395,12 +397,55 @@ pade_out=outs("control.lti.pade",{
  "approximation":{"type":"object","description":"target、method、matched_order、next_coefficient、certificate、bound（无严格界时为 null）"},
  "composition":{"type":"object"},
 },["system","realization","proper","approximation","composition"])
+
+# ---- v0.3.6: control.analysis.loopsens — one-shot loop analysis from named roles (spec 3.13 K-4/K-5)
+LS_SPARSE={f"/{r}/{x}":{"policy":"densify","max_dense_elements":1000000} for r in ("plant","controller","sensor") for x in "ABCD"}
+QN=lambda d:{"oneOf":[{"type":"null"},dict(Q,description=d)]}
+ls=man("control.analysis.loopsens","Loop analysis from plant and controller",
+ "一步得到单回路负反馈的开环、闭环和指标。输入对象 plant、控制器 controller（省略 = 1）、反馈通路 sensor（省略 = 单位反馈）。拓扑固定：r → e = r − sensor·y → controller → plant → y。返回 open_loop L = sensor·plant·controller（裕度、穿越频率作用在 L 上）、closed_loop T = plant·controller/(1+L)（r→y，阶跃指标作用在 T 上）、sensitivity S = 1/(1+L)；闭环极点与稳定性；L 的增益/相位裕度；两种带宽并各给 rad/s 与 Hz 两个字段：gain_crossover_*（|L| = 1 的开环穿越频率，常被叫作“回路带宽”）和 bandwidth_*（|T| 比直流增益低 3 dB 的闭环带宽）；给出 time 时还返回 T 的阶跃指标。结果等于依次调用 series、feedback、margin、stepinfo 的结果（同一 build 逐位相同），只是不会接错。",
+ "analysis",["lti","feedback","frequency-domain","time-domain","loop"],
+ ["SISO","plant、controller、sensor 的 ts 完全相同","controller 可以是 improper（理想微分）；open_loop / closed_loop 必须 proper 才能求裕度和阶跃指标，否则该项为 null 并给 W.DOMAIN.ANALYSIS_SKIPPED","负反馈；正反馈或其他拓扑用 control_lti_feedback 的位置参数","带宽定义：bandwidth_* 为 |T(jω)| 第一次降到 |T(0)| 以下 |bandwidth_drop_db| dB 的频率（默认 −3 dB）；gain_crossover_* 为 |L(jω)| = 1 的频率（多个时取 margin 选中的那个，全部见 margins.crossings.gain）","Hz 字段 = rad/s 字段 / (2π)，两者来自同一个数"],
+ ["MIMO","时滞（先用 control_lti_pade 得到有理近似，再作为 plant 的一部分串联）","自动整定（pidtune 尚未定义，见 spec A-4）","非线性"],
+ "forward = series(controller → plant)，L = series(forward → sensor)，T = feedback(forward, sensor, sign = −1)，S = feedback(1, L)：与 control.lti.series / control.lti.feedback 同一实现（spec I-5、I-6）。闭环极点为 T 的极点。裕度 = control.analysis.margin(L)。闭环带宽：连续系统令 P(ω) = |N(jω)|² − 10^{drop/10}·|T(0)|²·|D(jω)|²（实系数偶多项式），取最小正实根，再在 |T| 上二分修正；离散系统在 (0, π/ts) 上做 4000 点对数网格扫描后二分。阶跃指标 = control.lti.stepinfo(T, time)。",
+ [R_OGATA,{"type":"textbook","cite":"K. J. Åström, R. M. Murray, Feedback Systems, 2nd ed., Princeton, 2021, ch.11–12（回路传递函数、灵敏度函数、带宽定义）"},{"type":"software","cite":"python-control 0.10 bandwidth / stability_margins 文档（仅作定义对照）"}],
+ "loopsens::analyze (connect + margin + stepinfo)","T3",{"max_states":100,"max_degree":64,"max_relative_degree":8,"bandwidth_scan_points":4000,"max_grid_points":10000000},
+ COMMON_LTI_ERR+["E.DOMAIN.SAMPLE_TIME_MISMATCH","E.DOMAIN.MIMO_NOT_SUPPORTED","E.DOMAIN.ALGEBRAIC_LOOP","E.VALIDATION.GRID","E.VALIDATION.RANGE","E.RESOURCE.COMPUTE_LIMIT","E.RESOURCE.OUTPUT_TOO_LARGE"],
+ None,sparse=LS_SPARSE,siso_only=True,ver=V36)
+ls_in=ins("control.analysis.loopsens",{
+ "plant":LTI,"controller":LTI,"sensor":LTI,
+ "time":dict(step_in["properties"]["time"]),
+ "rise_time_limits":{"type":"array","items":{"type":"number","minimum":0,"maximum":1},"minItems":2,"maxItems":2,"default":[0.1,0.9],"x-aeoi-provenance":"convention"},
+ "settling_threshold":{"type":"number","exclusiveMinimum":0,"maximum":0.5,"default":0.02,"x-aeoi-provenance":"convention"},
+ "bandwidth_drop_db":{"type":"number","exclusiveMaximum":0,"minimum":-60,"default":-3,"x-aeoi-provenance":"convention"},
+ "lineage":LINEAGE,
+},["plant"],ver=V36)
+ls_out=outs("control.analysis.loopsens",{
+ "open_loop":dict(LTI,description="L = sensor·plant·controller。margin、穿越频率作用在它上面"),
+ "closed_loop":dict(LTI,description="T = plant·controller/(1+L)，r→y。stepinfo/step 作用在它上面"),
+ "sensitivity":dict(LTI,description="S = 1/(1+L)，r→e"),
+ "roles":{"type":"object","description":"每个返回系统的角色说明（open_loop/closed_loop/sensitivity → 文字定义）"},
+ "closed_loop_poles":CVEC("c128 向量，T 的极点，按实部升序、虚部降序"),
+ "closed_loop_stable":{"type":"boolean","description":"连续：T 的极点全部 Re < 0；离散：|p| < 1"},
+ "margins":{"type":["object","null"],"description":"control.analysis.margin(L) 的 result；L 不 proper 时为 null"},
+ "gain_crossover_rad_s":QN("unit=rad/s：|L(jω)| = 1 的开环穿越频率（margin 选中的那个）；没有穿越为 \"NaN\""),
+ "gain_crossover_hz":QN("unit=Hz：同一个穿越频率 / (2π)"),
+ "bandwidth_rad_s":QN("unit=rad/s：闭环 |T| 比 |T(0)| 低 |bandwidth_drop_db| dB 的第一个频率；T(0) = 0 或无穷时为 null，全频段不降为 \"Inf\""),
+ "bandwidth_hz":QN("unit=Hz：同一个闭环带宽 / (2π)"),
+ "bandwidth_definition":{"type":"object","description":"drop_db、reference（dc_gain）、method（even_polynomial_roots 或 grid_bisection）"},
+ "step_metrics":{"type":["object","null"],"description":"给出 time 时为 control.lti.stepinfo(T, time) 的 result，否则为 null"},
+ "composition":{"type":"object","description":"operation = loopsens，operands[]（role 与 sha256），controller_implicit、sensor_implicit、topology、lineage"},
+},["open_loop","closed_loop","sensitivity","roles","closed_loop_poles","closed_loop_stable","margins","gain_crossover_rad_s","gain_crossover_hz","bandwidth_rad_s","bandwidth_hz","bandwidth_definition","step_metrics","composition"],ver=V36)
 B3={"control.lti.series":(series,series_in,series_out),"control.lti.parallel":(par,par_in,par_out),"control.lti.feedback":(fb,fb_in,fb_out),
- "control.design.pid":(pid,pid_in,pid_out),"control.lti.stepinfo":(si,si_in,si_out),"control.lti.pade":(pade,pade_in,pade_out)}
+ "control.design.pid":(pid,pid_in,pid_out),"control.lti.stepinfo":(si,si_in,si_out),"control.lti.pade":(pade,pade_in,pade_out),
+ "control.analysis.loopsens":(ls,ls_in,ls_out)}
+_ws=[]
+for _m in (series,fb,mg,si):
+    _ws+= [w for w in _m["warnings"] if w not in _ws]
+ls["warnings"]=_ws+["W.DOMAIN.ANALYSIS_SKIPPED"]
 # v0.4 rule L-1: every top-level input property carries a description (meaning, shape, unit, enum values)
 # so that function-calling consumers — which drop unknown keywords such as x-aeoi-shape-constraints —
 # still see it. DESC wins over a shorter inline description (the inline c2d.ts text lacked the ask-the-user rule).
-SYS_D="被分析的 LTI 系统：tf（num/den 按降幂）、ss（A/B/C/D 稠密矩阵，row-major）或 zpk；ts=0 连续，ts>0 为离散采样周期（s）"
+SYS_D="被分析的 LTI 系统：tf（num/den 按降幂）、ss（A/B/C/D 稠密矩阵，row-major）或 zpk；ts=0 连续，ts>0 为离散采样周期（s）。上一个工具返回了 result.system 时，把那个 JSON 对象原样放在这里，不要手抄或改写系数（spec K-6）"
 LQR_D={"A":"状态矩阵 A，[n,n]","B":"输入矩阵 B，[n,m]（单输入时为列向量 [n,1]）","Q":"状态权重 Q，[n,n]，对称半正定","R":"输入权重 R，[m,m]，对称正定（标量写成 [1,1]）","N":"交叉权重 N，[n,m]，缺省为 0"}
 DESC={
  "control.lti.bode":{"system":SYS_D,"frequency":"频率网格：explicit（values 严格递增）或 logspace（min..max 共 n 点，对数均匀）；unit 为 rad/s 或 Hz，必须与用户给出的单位一致（ω = 2π·f）","phase":"相位展开与分支选择（可省略）"},
@@ -413,13 +458,14 @@ DESC={
  "control.lti.convert":{"system":SYS_D,"to":"目标表示：tf（传递函数）、ss（状态空间，可控标准型）、zpk（零极点增益，仅 SISO）"},
  "control.lti.poles_zeros":{"system":SYS_D,"dcgain":"是否计算直流增益（连续 s=0，离散 z=1），默认 true"},
  "control.analysis.ctrb_obsv":{"system":SYS_D+"。判断可控性只需 A、B：用户没给 C、D 时用 kind=\"ss\"，C = {dtype:\"f64\", shape:[1,n], data:[0,…,0]}、D = {dtype:\"f64\", shape:[1,m], data:[0,…,0]}（不影响可控性结果，回答时只报告可控性）；判断可观性只需 A、C：没给 B、D 时 B 取 shape [n,1] 全零","gramians":"是否额外计算可控/可观 Gramian（要求系统稳定），默认 false"},
- "control.analysis.margin":{"system":"开环 SISO 系统 L(s)（单位负反馈）；tf/ss/zpk，ts>0 为离散"},
+ "control.analysis.margin":{"system":"开环 SISO 系统 L(s) = 控制器·对象（·传感器），按单位负反馈解释；tf/ss/zpk，ts>0 为离散。不要传闭环 T（control_lti_feedback 的结果）；有对象和控制器时可直接用 control_analysis_loopsens，或把 control_lti_series(controller, plant) 返回的 result.system 原样放在这里"},
  "control.lti.c2d":{"system":"待离散化的连续系统（ts 必须为 0）","ts":"采样周期 T（单位 s，> 0）。必须是用户在对话中明确给出的数值；用户没给时不要调用本工具，先询问用户，绝不假设 0.1、0.01 等常用值","method":"离散化方法：zoh（零阶保持，默认）、foh（一阶保持/三角保持）、tustin（双线性，可配合 prewarp_frequency）","output_kind":"输出表示：same（与输入相同，默认）、tf、ss、zpk"},
- "control.lti.series":{"sys1":"前向第一个系统（输出接到 sys2）。tf 系数降幂；ss 为 row-major。ts 必须与 sys2 相同","sys2":"第二个系统。结果是 sys2·sys1，不是 sys1·sys2","output_kind":"same（默认：SISO tf/zpk 用多项式，否则 ss 块公式）、tf 或 ss","lineage":"可选。上游调用的 receipt.fingerprint.request。只回显，不核验；没有就不要编"},
+ "control.lti.series":{"controller":"具名角色：控制器 C（例如 control_design_pid 返回的 result.system，原样粘贴）。与 plant 一起给出，结果是开环 L = plant·controller","plant":"具名角色：被控对象 G。与 controller 一起给出。不要和 sys1/sys2 混用","sys1":"位置参数（不推荐）：前向第一个系统（输出接到 sys2）。tf 系数降幂；ss 为 row-major。ts 必须与 sys2 相同","sys2":"位置参数：第二个系统。结果是 sys2·sys1，不是 sys1·sys2","output_kind":"same（默认：SISO tf/zpk 用多项式，否则 ss 块公式）、tf 或 ss","lineage":"可选。上游调用的 receipt.fingerprint.request。只回显，不核验；没有就不要编"},
  "control.lti.parallel":{"sys1":"并联支路 1，与 sys2 输入数、输出数都相同","sys2":"并联支路 2。结果是 sys1+sys2","output_kind":"same（默认）、tf 或 ss","lineage":"可选。上游 receipt.fingerprint.request，只回显，不核验"},
- "control.lti.feedback":{"sys1":"前向通道。省略 sys2 时必须是方的（单位反馈）","sys2":"反馈通道。省略表示单位增益 D=I。负反馈是默认，不是把 sys2 写成负号","sign":"反馈符号，只能是 -1（负反馈，默认，规范定义）或 +1（正反馈）。这是定义默认值，不是测量值，不需要引用用户原话","output_kind":"same（默认）、tf 或 ss","lineage":"可选。上游 receipt.fingerprint.request，只回显，不核验"},
- "control.design.pid":{"form":"parallel（默认）：C=Kp+Ki/s+Kd·s/(Tf·s+1)。standard：C=Kp·(1+1/(Ti·s)+Td·s/(Tf·s+1))。这是定义默认值","Kp":"比例增益。设计参数，没有默认值；由调用方给定，不需要在用户原话里逐字出现，但不得在用户和题目都没给时擅自假设","Ki":"parallel 的积分增益，默认 0（该项不出现）。不是测量值","Kd":"parallel 的微分增益，默认 0。Tf=0 且 Kd≠0 时结果 improper","Ti":"standard 的积分时间（秒）。省略表示没有积分；给出时必须 > 0","Td":"standard 的微分时间（秒），默认 0","Tf":"微分滤波时间常数（秒），默认 0（不加滤波）。有微分项时 Tf=0 得到理想微分","output_kind":"tf（默认）或 ss。improper 时 ss 会报错","lineage":"可选。上游 receipt 指纹，只回显"},
+ "control.lti.feedback":{"plant":"具名角色：被控对象 G（必填，用具名写法时）。结果是闭环 T = G·C/(1 + H·G·C)","controller":"具名角色：控制器 C，在前向通路（e → C → G）。省略表示 C = 1。不要把控制器放到 sensor","sensor":"具名角色：反馈通路 H（传感器/测量动态）。省略表示单位反馈 H = 1。控制器不是 sensor","sys1":"位置参数（不推荐）：前向通道。省略 sys2 时必须是方的（单位反馈）","sys2":"位置参数：反馈通道。省略表示单位增益 D=I。负反馈是默认，不是把 sys2 写成负号","sign":"反馈符号，只能是 -1（负反馈，默认，规范定义）或 +1（正反馈）。这是定义默认值，不是测量值，不需要引用用户原话","output_kind":"same（默认）、tf 或 ss","lineage":"可选。上游 receipt.fingerprint.request，只回显，不核验"},
+ "control.design.pid":{"form":"parallel（默认）：C=Kp+Ki/s+Kd·s/(Tf·s+1)。standard：C=Kp·(1+1/(Ti·s)+Td·s/(Tf·s+1))。这是定义默认值","Kp":"比例增益。设计参数，没有默认值；由调用方给定，不需要在用户原话里逐字出现，但不得在用户和题目都没给时擅自假设","Ki":"只用于 form=parallel：积分增益，默认 0（该项不出现）。standard 形式不要出现 Ki","Kd":"只用于 form=parallel：微分增益，默认 0。Tf=0 且 Kd≠0 时结果 improper。standard 形式不要出现 Kd","Ti":"只用于 form=standard：积分时间（秒），必须 > 0。没有积分就省略 Ti，不要写 Ti=0；parallel 形式不要出现 Ti","Td":"只用于 form=standard：微分时间（秒），默认 0。parallel 形式不要出现 Td","Tf":"微分滤波时间常数（秒），默认 0（不加滤波）。有微分项时 Tf=0 得到理想微分","output_kind":"tf（默认）或 ss。improper 时 ss 会报错","lineage":"可选。上游 receipt 指纹，只回显"},
  "control.lti.stepinfo":{"system":SYS_D,"time":"时间网格，与 step 相同：uniform（t_final、dt，单位 s）或 auto。指标相对这个网格定义","rise_time_limits":"上升时间的低/高阈值，默认 [0.1, 0.9]（10% 到 90%）。这是指标定义，不是对象的物理参数；省略即用默认，不必询问","settling_threshold":"调节带半宽，默认 0.02（2%）。定义默认值，省略即用默认"},
+ "control.analysis.loopsens":{"plant":"被控对象 G（SISO）。上一个工具返回了系统（例如 control_lti_pade 与对象串联的结果、control_lti_convert 的结果）就原样粘贴 result.system","controller":"控制器 C，在前向通路。省略 = 1（只看对象本身的单位负反馈）。PID 用 control_design_pid 的 result.system 原样粘贴","sensor":"反馈通路 H（测量动态）。省略 = 单位反馈。不要把控制器放在这里","time":"可选。给出时返回闭环 T 的阶跃指标（step_metrics）：uniform（t_final、dt，单位 s）或 auto。不给则 step_metrics 为 null","rise_time_limits":"阶跃上升时间阈值，默认 [0.1, 0.9]。定义默认值，省略即可","settling_threshold":"调节带半宽，默认 0.02（2%）。定义默认值，省略即可","bandwidth_drop_db":"闭环带宽的下降量（dB，负数），默认 -3。定义默认值，省略即可","lineage":"可选。上游 receipt.fingerprint.request，只回显"},
  "control.lti.pade":{"delay":"纯时滞 θ（秒），必须 > 0。没有默认值。用户没给、题目也算不出时先询问，不得假设 0.1 或 1。这不是采样周期那种必须逐字引用的测量值：由 t1、t2 算出的 θ 可以填在这里","order":"对角 Padé 阶次 N（1 到 20）。没有默认值，不得假设 N=1。题目没指定时先询问；设计评测的提示若写明了用哪个 N，按提示填写","lineage":"可选。上游 receipt 指纹，只回显"},
 }
 ALL_OPS={"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2|B3
@@ -474,6 +520,21 @@ RECEIPT={
  "control.lti.pade":{"method_id":"aeoi:pade:golub-van-loan-11.3.1","assumptions":[A("delay","delay 由调用方给出，不是假设值","caller"),A("order","阶次由调用方给出，不是假设值","caller"),A("diagonal","只做 [N/N] 对角近似","validation"),A("approximation","结果逼近 e^{-θs}，逼近误差在 approximation，不在系数舍入界里","validation")],
    "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["taylor_matched","dc_is_one","all_finite"]},
 }
+RECEIPT["control.analysis.loopsens"]={"method_id":"aeoi:loopsens:connect+margin+stepinfo","assumptions":[A("lti_model","plant、controller、sensor 准确描述回路（单位、符号、row-major 录入）","caller"),A("topology","单回路负反馈 r → e = r − H·y → C → G → y","validation"),A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("same_ts","三个系统采样周期相同","error:E.DOMAIN.SAMPLE_TIME_MISMATCH"),A("siso","SISO","error:E.DOMAIN.MIMO_NOT_SUPPORTED"),A("proper_for_metrics","裕度与阶跃指标要求 L、T proper，否则该项为 null","warning:W.DOMAIN.ANALYSIS_SKIPPED"),A("definitions","带宽、阶跃阈值用请求里的值；省略则是规范默认 −3 dB、10–90%、2%","validation"),A("no_cancel","不做零极点对消","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["closed_loop_identity","stability_consistent","all_finite","sub_operator_checks"]}
+# v0.3.6 E-12: how much of the result each post-condition actually covers. Absent = "full" (evaluated on
+# the whole result). "test_points": an identity checked at a few deterministic points (does not shrink
+# the result). "sampled": evaluated on a subset/compressed copy of the result → claim at most spot_checked.
+COVERAGE={op:{"response_consistent":"test_points"} for op in ("control.lti.series","control.lti.parallel","control.lti.feedback","control.lti.convert")}
+COVERAGE.update({"control.design.pid":{"formula_matches":"test_points"},"control.analysis.margin":{"grid_audit_clean":"sampled"},
+ "control.analysis.loopsens":{"closed_loop_identity":"test_points","sub_operator_checks":"sampled"}})
+# v0.3.6 E-13: result fields that are not usable when a post-condition fails (listed in receipt.evidence.unreliable).
+GUARDS={"control.analysis.ctrb_obsv":{"pbh_agrees_ctrb":["/ctrb/rank","/ctrb/full_rank","/minimal"],"pbh_agrees_obsv":["/obsv/rank","/obsv/full_rank","/minimal"]},
+ "control.analysis.loopsens":{"closed_loop_identity":["/open_loop","/closed_loop","/sensitivity"],"stability_consistent":["/closed_loop_stable"],"sub_operator_checks":["/margins","/gain_crossover_rad_s","/gain_crossover_hz","/step_metrics"]}}
+for op in ("control.lti.series","control.lti.parallel","control.lti.feedback"):
+    GUARDS[op]={"response_consistent":["/system"]}
+for op,c in COVERAGE.items(): RECEIPT[op]["coverage"]=c
+for op,g in GUARDS.items(): RECEIPT[op]["guards"]=g
 for op,(m,i,o) in ALL_OPS.items():
     m["receipt"]=RECEIPT[op]
     d=f"examples/{op}/"; w(d+"manifest.json",m); w(d+"input.schema.json",i); w(d+"output.schema.json",o)

@@ -1,0 +1,42 @@
+{
+  "request.json": {
+    "open_loop": {
+      "kind": "tf",
+      "num": [
+        10.0,
+        20.0
+      ],
+      "den": [
+        1.0,
+        3.0,
+        2.0,
+        0.0
+      ]
+    },
+    "closed_loop": {
+      "kind": "tf",
+      "num": [
+        10.0,
+        20.0
+      ],
+      "den": [
+        1.0,
+        3.0,
+        12.0,
+        20.0
+      ]
+    },
+    "closed_loop_stable": true,
+    "phase_margin": 17.964235916371365,
+    "gain_crossover_rad_s": 3.0842328377167663,
+    "bandwidth_rad_s": 4.824513387281809,
+    "step": {
+      "rise_time": 0.37,
+      "settling_time": 7.32,
+      "overshoot": 60.463348931239395,
+      "peak": 1.604633489312394,
+      "steady_state": 1.0
+    }
+  },
+  "note": "python-control 0.10.2: series / feedback / stability_margins / bandwidth / step_info chained (gen_golden_loopsens.py, family example_pi); not MATLAB"
+}

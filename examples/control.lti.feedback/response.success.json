@@ -4,7 +4,7 @@
   "dry_run": false,
   "operator": {
     "id": "control.lti.feedback",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
   },
   "request_id": "req-feedback-001",
@@ -74,7 +74,7 @@
     "method": {
       "id": "aeoi:feedback:polynomial-or-block",
       "routine": "connect::feedback_ss / polynomial feedback",
-      "provenance": "aeoi://operators/control.lti.feedback/0.3.0/manifest#/provenance"
+      "provenance": "aeoi://operators/control.lti.feedback/0.4.0/manifest#/provenance"
     },
     "assumptions": [
       {
@@ -137,14 +137,19 @@
       "convergence": null,
       "accuracy_grade": "B",
       "tolerance_class": "T2",
-      "credentials": null
+      "credentials": null,
+      "coverage": {
+        "response_consistent": "test_points",
+        "sample_times_equal": "full",
+        "all_finite": "full"
+      }
     },
     "fingerprint": {
-      "request": "sha256:84b9c238f4d625a0f4ecbc33c6926b8ed2d3f05f5b00545e587f9e0c3f53649a",
-      "result": "sha256:7f8ffe4dd2756bd648a715ebc2fb352de1b912f9c01a28f5a7a25f49067cda18",
+      "request": "sha256:764271e907a9e93490817b2f178c993692f0d821d82027635f404feaac05b017",
+      "result": "sha256:bafa1c7192aa4eda6f9c147b7f1750b5d04c818871861f70e33828a35d6dd3c6",
       "output_hash": "sha256:21feca9a7b46ce1c899960ff8161f6c7a1a62dcc1f890b52d2cc9ec9e7ac3ca0",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
-      "stable_across": "request: all platforms and builds of control.lti.feedback@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+      "stable_across": "request: all platforms and builds of control.lti.feedback@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
       "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",

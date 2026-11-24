@@ -148,7 +148,7 @@
       "basis": "交越频率为多项式实根（伴随矩阵特征值 + Newton），再在 G 上做割线修正；残差见 residual。相切/近重根时交越频率误差可达 O(√u)"
     },
     "evidence": {
-      "claim": "verified",
+      "claim": "spot_checked",
       "postconditions": {
         "grid_audit_clean": true
       },
@@ -156,7 +156,10 @@
       "convergence": null,
       "accuracy_grade": "B",
       "tolerance_class": "T3",
-      "credentials": null
+      "credentials": null,
+      "coverage": {
+        "grid_audit_clean": "sampled"
+      }
     },
     "fingerprint": {
       "request": "sha256:99eef92fb181f407d8bebfd819935594a3678bd607c576e7e4ad6ec9fbba3792",

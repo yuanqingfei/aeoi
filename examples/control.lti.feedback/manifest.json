@@ -1,9 +1,9 @@
 {
   "spec": "aeoi/0.3",
   "id": "control.lti.feedback",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "title": "Feedback interconnection",
-  "description": "反馈：sys1 在前向通道，sys2 在反馈通道。sign = -1（默认）为负反馈，+1 为正反馈。省略 sys2 表示单位反馈。",
+  "description": "闭环。推荐用具名角色：plant（必填）、controller（可省略 = 1）、sensor（反馈通路，可省略 = 单位反馈）。拓扑固定为 r → e = r − sensor·y → controller → plant → y，结果是闭环 T = plant·controller/(1 + sensor·plant·controller)（r→y），composition.loop_role = closed_loop：送给 stepinfo/step，不要送给 margin（裕度要用开环 L）。控制器永远在前向通路。也可用 sys1（前向）/sys2（反馈通路），角色由调用方负责；两种写法不能混用。",
   "category": "transform",
   "tags": [
     "lti",
@@ -16,12 +16,15 @@
       "维度按串联 / 并联 / 反馈的规则匹配",
       "不做零极点对消；minimal 为 null",
       "improper 的 tf/zpk（相对阶 ≤ 8）可以作为操作数，但 ss 输出会报 E.DOMAIN.IMPROPER_SYSTEM",
+      "具名角色（plant、controller、sensor）与位置参数（sys1、sys2）二选一，混用报 E.VALIDATION.OPTION_CONFLICT",
       "sign ∈ {+1,-1}，默认 -1；这是定义默认值，不是测量值",
       "E = I − sign·D₂·D₁ 可逆"
     ],
     "not_for": [
       "自动零极点对消",
-      "把 sign 留空时当成 0"
+      "把 sign 留空时当成 0",
+      "把控制器放进反馈通路（具名调用里 controller 总在前向通路；sensor 才是反馈通路）",
+      "求开环裕度（闭环 T 不是开环 L；用 control_lti_series 的具名角色或 control_analysis_loopsens）"
     ],
     "siso_only": false
   },
@@ -39,13 +42,13 @@
     ],
     "clean_room": {
       "declared": true,
-      "sources": "仅公开文献；MATLAB 仅作为黑盒参考（公开 API），v0.2 的 parity 参考为 python-control/scipy"
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
     }
   },
   "backend": {
     "library": "aeoi-control (pure Rust) + nalgebra 0.33",
     "routine": "connect::feedback_ss / polynomial feedback",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "binding": "native",
     "license": "MIT OR Apache-2.0"
   },
@@ -83,6 +86,54 @@
     "/sys2/D": {
       "policy": "densify",
       "max_dense_elements": 1000000
+    },
+    "/plant/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/plant/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/plant/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/plant/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/controller/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/controller/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/controller/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/controller/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sensor/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sensor/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sensor/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sensor/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
     }
   },
   "encodings": {
@@ -115,7 +166,7 @@
     "target": "A",
     "current": "B"
   },
-  "credentials": "aeoi://operators/control.lti.feedback/0.3.0/credentials",
+  "credentials": "aeoi://operators/control.lti.feedback/0.4.0/credentials",
   "errors": [
     "E.VALIDATION.SCHEMA",
     "E.VALIDATION.SHAPE",
@@ -133,7 +184,8 @@
     "E.INTERNAL.PANIC",
     "E.DOMAIN.SAMPLE_TIME_MISMATCH",
     "E.VALIDATION.SHAPE",
-    "E.DOMAIN.ALGEBRAIC_LOOP"
+    "E.DOMAIN.ALGEBRAIC_LOOP",
+    "E.VALIDATION.OPTION_CONFLICT"
   ],
   "warnings": [
     "W.DOMAIN.IMPROPER_OPERAND",
@@ -203,6 +255,14 @@
       "response_consistent",
       "sample_times_equal",
       "all_finite"
-    ]
+    ],
+    "coverage": {
+      "response_consistent": "test_points"
+    },
+    "guards": {
+      "response_consistent": [
+        "/system"
+      ]
+    }
   }
 }

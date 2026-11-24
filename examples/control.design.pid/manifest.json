@@ -1,9 +1,9 @@
 {
   "spec": "aeoi/0.3",
   "id": "control.design.pid",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "title": "PID controller",
-  "description": "按 parallel 或 standard 形式构造 PID，返回可被其他算子使用的 tf（或 proper 时的 ss）。Tf = 0 表示不加微分滤波，微分项非零时结果 improper。",
+  "description": "按 parallel 或 standard 形式构造 PID，返回可被其他算子使用的 tf（或 proper 时的 ss）。两种形式的字段互斥：parallel 只用 Kp、Ki、Kd、Tf；standard 只用 Kp、Ti、Td、Tf。不要的项直接省略，不要填 0 占位（尤其不要写 Ti = 0：没有积分就省略 Ti，或改用 parallel 并省略 Ki）。混用报 E.VALIDATION.OPTION_CONFLICT，附可直接应用的 JSON Patch。Tf = 0 表示不加微分滤波，微分项非零时结果 improper。返回的 result.system 原样作为 control_lti_series / control_lti_feedback 的 controller。",
   "category": "design",
   "tags": [
     "pid",
@@ -12,7 +12,8 @@
   "applicability": {
     "preconditions": [
       "form=parallel：C = Kp + Ki/s + Kd·s/(Tf·s+1)；Ki 或 Kd 为 0 时该项不出现（精确去掉引入的因子，不是数值对消）",
-      "form=standard：C = Kp·(1 + 1/(Ti·s) + Td·s/(Tf·s+1))；省略 Ti 表示没有积分",
+      "form=standard：C = Kp·(1 + 1/(Ti·s) + Td·s/(Tf·s+1))；省略 Ti 表示没有积分，Ti = 0 不是“没有积分”（会报 E.VALIDATION.OPTION_CONFLICT 并建议省略 Ti）",
+      "form 省略时默认 parallel；若只给了 standard 的字段（Ti/Td），报 OPTION_CONFLICT，补丁是加上 form = standard",
       "Tf = 0 且有微分项时结果 improper，并给出 W.DOMAIN.IMPROPER_RESULT",
       "增益是调用方给出的设计参数，没有安全默认值"
     ],
@@ -36,13 +37,13 @@
     ],
     "clean_room": {
       "declared": true,
-      "sources": "仅公开文献；MATLAB 仅作为黑盒参考（公开 API），v0.2 的 parity 参考为 python-control/scipy"
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
     }
   },
   "backend": {
     "library": "aeoi-control (pure Rust) + nalgebra 0.33",
     "routine": "pid::parallel / pid::standard",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "binding": "native",
     "license": "MIT OR Apache-2.0"
   },
@@ -77,7 +78,7 @@
     "target": "A",
     "current": "B"
   },
-  "credentials": "aeoi://operators/control.design.pid/0.3.0/credentials",
+  "credentials": "aeoi://operators/control.design.pid/0.4.0/credentials",
   "errors": [
     "E.VALIDATION.SCHEMA",
     "E.VALIDATION.RANGE",
@@ -124,6 +125,9 @@
     "postconditions": [
       "formula_matches",
       "all_finite"
-    ]
+    ],
+    "coverage": {
+      "formula_matches": "test_points"
+    }
   }
 }

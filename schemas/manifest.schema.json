@@ -395,6 +395,28 @@
           "items": {
             "type": "string"
           }
+        },
+        "coverage": {
+          "type": "object",
+          "description": "v0.3.6 E-12：后置条件的覆盖范围；未列出的为 full。test_points = 在若干确定性测试点上核对恒等式（不压缩结果）；sampled = 只在结果的子集或压缩副本上检查",
+          "additionalProperties": {
+            "enum": [
+              "full",
+              "test_points",
+              "sampled"
+            ]
+          }
+        },
+        "guards": {
+          "type": "object",
+          "description": "v0.3.6 E-13：后置条件 → 该条件失败时不可依赖的结果字段（JSON Pointer，相对 result）",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(/.*)?$"
+            }
+          }
         }
       },
       "additionalProperties": false

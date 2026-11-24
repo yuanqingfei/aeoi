@@ -9,7 +9,7 @@
   "properties": {
     "system": {
       "$ref": "aeoi://schemas/common/0.3/LtiSystem",
-      "description": "开环 SISO 系统 L(s)（单位负反馈）；tf/ss/zpk，ts>0 为离散"
+      "description": "开环 SISO 系统 L(s) = 控制器·对象（·传感器），按单位负反馈解释；tf/ss/zpk，ts>0 为离散。不要传闭环 T（control_lti_feedback 的结果）；有对象和控制器时可直接用 control_analysis_loopsens，或把 control_lti_series(controller, plant) 返回的 result.system 原样放在这里"
     },
     "exec": {
       "$ref": "aeoi://schemas/common/0.3/ExecOptions"

@@ -207,11 +207,20 @@ fn bridge_error(code: &str, msg: &str, fix: &str) -> Value {
 /// full envelope). Arrays longer than `max_len` numbers are replaced by an evenly spaced subset plus
 /// min/max, flagged with `_downsampled` so the model knows not to quote interpolated values.
 pub fn compact_for_model(env: &Value, max_len: usize) -> Value {
-    fn walk(v: &Value, max_len: usize) -> Value {
+    fn is_system(o: &Map<String, Value>) -> bool {
+        matches!(o.get("kind").and_then(|k| k.as_str()), Some("tf" | "ss" | "zpk")) && (o.contains_key("num") || o.contains_key("A") || o.contains_key("z"))
+    }
+    fn walk(v: &Value, max_len: usize, n: &mut usize) -> Value {
         match v {
             Value::Object(o) => {
+                // spec K-6 / F-6 (v0.3.6): an LtiSystem is a handle the model passes to the next call;
+                // it is never downsampled (a thinned system could not be chained).
+                if is_system(o) {
+                    return v.clone();
+                }
                 if let (Some(Value::Array(data)), Some(shape)) = (o.get("data"), o.get("shape")) {
                     if data.len() > max_len && data.iter().all(|x| x.is_number()) {
+                        *n += 1;
                         let nums: Vec<f64> = data.iter().filter_map(|x| x.as_f64()).collect();
                         let step = (nums.len() - 1) as f64 / (max_len - 1) as f64;
                         let idx: Vec<usize> = (0..max_len).map(|i| (i as f64 * step).round() as usize).collect();
@@ -221,35 +230,50 @@ pub fn compact_for_model(env: &Value, max_len: usize) -> Value {
                                 m.insert(k.clone(), x.clone());
                             }
                         }
-                        m.insert("_downsampled".into(), json!({"original_shape": shape, "kept_flat_indices": idx, "min": nums.iter().cloned().fold(f64::INFINITY, f64::min), "max": nums.iter().cloned().fold(f64::NEG_INFINITY, f64::max), "note": "数组过长，仅给出均匀抽样点；需要精确点值时请用显式频点/时间网格重新调用"}));
+                        m.insert("_downsampled".into(), json!({"original_shape": shape, "kept_flat_indices": idx, "min": nums.iter().cloned().fold(f64::INFINITY, f64::min), "max": nums.iter().cloned().fold(f64::NEG_INFINITY, f64::max), "note": "数组过长，仅给出均匀抽样点（这是展示视图，不是证据，不能当作已核对的数值）；需要精确点值时请用显式频点/时间网格重新调用"}));
                         m.insert("data".into(), Value::Array(idx.iter().map(|&i| json!(nums[i])).collect()));
                         return Value::Object(m);
                     }
                 }
-                Value::Object(o.iter().filter(|(k, _)| k.as_str() != "provenance").map(|(k, x)| (k.clone(), walk(x, max_len))).collect())
+                Value::Object(o.iter().filter(|(k, _)| k.as_str() != "provenance").map(|(k, x)| (k.clone(), walk(x, max_len, n))).collect())
             }
-            Value::Array(a) => Value::Array(a.iter().map(|x| walk(x, max_len)).collect()),
+            Value::Array(a) => Value::Array(a.iter().map(|x| walk(x, max_len, n)).collect()),
             _ => v.clone(),
         }
     }
-    let mut out = walk(env, max_len);
+    let mut n = 0;
+    let mut out = walk(env, max_len, &mut n);
     if let Some(r) = env.get("receipt").filter(|r| r.is_object()) {
-        out["receipt"] = receipt_for_model(r);
+        let mut short = receipt_for_model(r);
+        if n > 0 {
+            // spec E-13: the evidence is about the full result the operator computed, not this view
+            short["result_view"] = json!({"downsampled_arrays": n, "note": "result 中带 _downsampled 的数组只是抽样视图：claim 针对算子算出的完整结果，抽样的数值不能当作已核对的证据引用"});
+        }
+        out["receipt"] = short;
     }
     out
 }
 
 /// The model sees a short form of the receipt (spec 4.3): the evidence claim, failed post-conditions,
 /// exactness class, the assumptions the operator does NOT check (the model must make sure they hold or
-/// say so), and the result fingerprint to cite.
+/// say so), and the result fingerprint to cite. v0.3.6: `coverage` when a check is not over the whole
+/// result (E-12) and `unreliable_fields` when a failed check guards result fields (E-13).
 pub fn receipt_for_model(r: &Value) -> Value {
     let caller: Vec<Value> = r["assumptions"].as_array().into_iter().flatten()
         .filter(|a| a["enforced_by"] == "caller").map(|a| a["statement"].clone()).collect();
-    json!({
+    let mut out = json!({
         "claim": r["evidence"]["claim"], "failed_postconditions": r["evidence"]["failed"],
         "exactness": {"class": r["exactness"]["class"], "bound_kind": r["exactness"]["bound_kind"]},
         "unchecked_assumptions": caller, "method": r["method"]["id"], "fingerprint": r["fingerprint"]["result"],
-    })
+    });
+    if let Some(c) = r["evidence"].get("coverage") {
+        out["coverage"] = c.clone();
+    }
+    if let Some(u) = r["evidence"].get("unreliable") {
+        out["unreliable_fields"] = u.clone();
+        out["unreliable_note"] = json!("这些结果字段由失败的后置条件保护，不能作为结论引用或用于下一步");
+    }
+    out
 }
 
 #[cfg(test)]
@@ -259,7 +283,7 @@ mod tests {
     #[test]
     fn twelve_tools_with_names_valid_for_all_providers() {
         let b = Bridge::new();
-        assert_eq!(b.tools.len(), 18);
+        assert_eq!(b.tools.len(), 19);
         for t in &b.tools {
             assert!(t.name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'), "{}", t.name);
             assert!(t.name.len() <= 64);
@@ -305,6 +329,55 @@ mod tests {
         assert_eq!(c["result"]["y"]["value"]["data"].as_array().unwrap().len(), 50);
         assert!(c["result"]["y"]["value"]["_downsampled"].is_object());
         assert_eq!(env["result"]["y"]["value"]["data"].as_array().unwrap().len(), 1001);
+    }
+
+    #[test]
+    fn k6_systems_are_never_downsampled_and_views_are_flagged() {
+        let b = Bridge::new();
+        // a 12-state series result: A has 144 entries > 120, but it is a handle for the next call
+        let g = json!({"kind":"ss","A":{"dtype":"f64","shape":[6,6],"data":(0..36).map(|i| if i % 7 == 0 { -1.0 } else if i % 6 == 0 && i > 0 { 0.5 } else { 0.0 }).collect::<Vec<f64>>()},
+            "B":{"dtype":"f64","shape":[6,1],"data":[1,0,0,0,0,1]},"C":{"dtype":"f64","shape":[1,6],"data":[1,0,0,0,0,1]},"D":{"dtype":"f64","shape":[1,1],"data":[0]},"ts":0});
+        let (env, _) = b.call("control_lti_series", &json!({"sys1": g, "sys2": g}));
+        assert!(!is_error(&env), "{env}");
+        assert_eq!(env["result"]["system"]["A"]["data"].as_array().unwrap().len(), 144);
+        let c = compact_for_model(&env, 120);
+        assert_eq!(c["result"]["system"], env["result"]["system"], "LtiSystem must reach the model intact");
+        assert!(c["receipt"].get("result_view").is_none());
+        // a long response array is a view: flagged in the short receipt
+        let (env, _) = b.call("control_lti_impulse", &json!({"system":{"kind":"tf","num":[1],"den":[1,1],"ts":0},"time":{"mode":"uniform","t_final":10,"dt":0.01,"unit":"s"}}));
+        let c = compact_for_model(&env, 50);
+        assert!(c["receipt"]["result_view"]["downsampled_arrays"].as_u64().unwrap() >= 1);
+    }
+
+    #[test]
+    fn e13_ctrb_obsv_on_xg02_lists_unreliable_fields() {
+        // EngDesign XG_02 7th-order plant: Krylov rank (4) disagrees with PBH → unverified, and the
+        // rank / full_rank / minimal fields are named as unusable in the short receipt.
+        let a: Vec<f64> = vec![-3360.27884342382, 24650.4407238876, -24650.4407238876, 24650.4407238876, -24650.4407238876, 24650.4407238876, -6162.6101809719, -3270.26403683917, 10278.7248098086, -7476.39347226054, 7476.39347226054, -7476.39347226054, 7476.39347226054, -1869.09836806513, -2657.10970968037, 10628.4388387215, -13430.7701762696, 16233.1015138177, -16233.1015138177, 16233.1015138177, -4058.27537845441, -3954.03177459846, 15816.1270983939, -15816.1270983939, 13013.7957608458, -10211.4644232977, 10211.4644232977, -2552.86610582443, -2325.45756017668, 9301.83024070671, -9301.83024070671, 9301.83024070671, -12104.1615782548, 14906.4929158029, -3726.62322895072, -1665.81075466004, 6663.24301864017, -6663.24301864017, 6663.24301864017, -6663.24301864017, 3860.9116810921, -264.645085886005, -1596.51916299641, 6386.07665198562, -6386.07665198562, 6386.07665198562, -6386.07665198562, 6386.07665198562, -4398.85050054448];
+        let sys = json!({"kind":"ss","A":{"dtype":"f64","shape":[7,7],"data":a},"B":{"dtype":"f64","shape":[7,1],"data":[33.1501, 29.2147, 49.743, 55.4071, 43.2351, 22.8726, 24.9153]},
+            "C":{"dtype":"f64","shape":[1,7],"data":[41.1585, -164.6342, 164.6342, -164.6342, 164.6342, -164.6342, 41.1585]},"D":{"dtype":"f64","shape":[1,1],"data":[0]},"ts":0});
+        let (env, _) = b_call("control_analysis_ctrb_obsv", json!({"system": sys}));
+        assert_eq!(env["receipt"]["evidence"]["claim"], "unverified");
+        let short = compact_for_model(&env, 120);
+        let u: Vec<&str> = short["receipt"]["unreliable_fields"].as_array().unwrap().iter().map(|x| x.as_str().unwrap()).collect();
+        assert!(u.contains(&"/ctrb/rank") && u.contains(&"/minimal"), "{u:?}");
+    }
+    fn b_call(t: &str, a: Value) -> (Value, f64) {
+        Bridge::new().call(t, &a)
+    }
+
+    #[test]
+    fn k3_tool_descriptions_name_open_and_closed_loop() {
+        let b = Bridge::new();
+        let d = |t: &str| b.tool(t).unwrap().description.clone();
+        assert!(d("control_lti_feedback").contains("closed_loop") && d("control_lti_feedback").contains("不要送给 margin"));
+        assert!(d("control_lti_series").contains("open_loop"));
+        assert!(d("control_analysis_loopsens").contains("gain_crossover") && d("control_analysis_loopsens").contains("Hz"));
+        let m = &b.tool("control_analysis_margin").unwrap().json_schema["properties"]["system"]["description"];
+        assert!(m.as_str().unwrap().contains("不要传闭环 T"));
+        // K-6: every LtiSystem parameter tells the model to paste result.system verbatim
+        let bode = &b.tool("control_lti_bode").unwrap().json_schema["properties"]["system"]["description"];
+        assert!(bode.as_str().unwrap().contains("result.system"));
     }
 
     #[test]

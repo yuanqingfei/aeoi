@@ -1,20 +1,17 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "aeoi://schemas/control.lti.series/0.3.0/input",
+  "$id": "aeoi://schemas/control.lti.series/0.4.0/input",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "sys1",
-    "sys2"
-  ],
+  "required": [],
   "properties": {
     "sys1": {
       "$ref": "aeoi://schemas/common/0.3/LtiSystem",
-      "description": "前向第一个系统（输出接到 sys2）。tf 系数降幂；ss 为 row-major。ts 必须与 sys2 相同"
+      "description": "位置参数（不推荐）：前向第一个系统（输出接到 sys2）。tf 系数降幂；ss 为 row-major。ts 必须与 sys2 相同"
     },
     "sys2": {
       "$ref": "aeoi://schemas/common/0.3/LtiSystem",
-      "description": "第二个系统。结果是 sys2·sys1，不是 sys1·sys2"
+      "description": "位置参数：第二个系统。结果是 sys2·sys1，不是 sys1·sys2"
     },
     "output_kind": {
       "enum": [
@@ -32,6 +29,14 @@
       },
       "maxItems": 8,
       "description": "可选。上游调用的 receipt.fingerprint.request。只回显，不核验；没有就不要编"
+    },
+    "controller": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "具名角色：控制器 C（例如 control_design_pid 返回的 result.system，原样粘贴）。与 plant 一起给出，结果是开环 L = plant·controller"
+    },
+    "plant": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "具名角色：被控对象 G。与 controller 一起给出。不要和 sys1/sys2 混用"
     },
     "exec": {
       "$ref": "aeoi://schemas/common/0.3/ExecOptions"

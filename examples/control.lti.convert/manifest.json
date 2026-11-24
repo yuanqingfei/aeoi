@@ -44,7 +44,7 @@
     ],
     "clean_room": {
       "declared": true,
-      "sources": "仅公开文献；MATLAB 仅作为黑盒参考（公开 API），v0.2 的 parity 参考为 python-control/scipy"
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
     }
   },
   "backend": {
@@ -165,6 +165,9 @@
     },
     "postconditions": [
       "response_consistent"
-    ]
+    ],
+    "coverage": {
+      "response_consistent": "test_points"
+    }
   }
 }

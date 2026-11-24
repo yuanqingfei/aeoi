@@ -1,19 +1,17 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "aeoi://schemas/control.lti.feedback/0.3.0/input",
+  "$id": "aeoi://schemas/control.lti.feedback/0.4.0/input",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "sys1"
-  ],
+  "required": [],
   "properties": {
     "sys1": {
       "$ref": "aeoi://schemas/common/0.3/LtiSystem",
-      "description": "前向通道。省略 sys2 时必须是方的（单位反馈）"
+      "description": "位置参数（不推荐）：前向通道。省略 sys2 时必须是方的（单位反馈）"
     },
     "sys2": {
       "$ref": "aeoi://schemas/common/0.3/LtiSystem",
-      "description": "反馈通道。省略表示单位增益 D=I。负反馈是默认，不是把 sys2 写成负号"
+      "description": "位置参数：反馈通道。省略表示单位增益 D=I。负反馈是默认，不是把 sys2 写成负号"
     },
     "output_kind": {
       "enum": [
@@ -40,6 +38,18 @@
       "default": -1,
       "x-aeoi-provenance": "convention",
       "description": "反馈符号，只能是 -1（负反馈，默认，规范定义）或 +1（正反馈）。这是定义默认值，不是测量值，不需要引用用户原话"
+    },
+    "plant": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "具名角色：被控对象 G（必填，用具名写法时）。结果是闭环 T = G·C/(1 + H·G·C)"
+    },
+    "controller": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "具名角色：控制器 C，在前向通路（e → C → G）。省略表示 C = 1。不要把控制器放到 sensor"
+    },
+    "sensor": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "具名角色：反馈通路 H（传感器/测量动态）。省略表示单位反馈 H = 1。控制器不是 sensor"
     },
     "exec": {
       "$ref": "aeoi://schemas/common/0.3/ExecOptions"

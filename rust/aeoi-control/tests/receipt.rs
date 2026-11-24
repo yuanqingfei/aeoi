@@ -53,7 +53,10 @@ fn receipts_on_all_golden_requests() {
         // E-11: claim follows the manifest post-conditions; golden successes never fail one
         let post: Vec<&str> = m.manifest["receipt"]["postconditions"].as_array().unwrap().iter().map(|x| x.as_str().unwrap()).collect();
         let all_true = post.iter().all(|k| env["trust"]["checks"][*k] == json!(true));
-        let want = if post.is_empty() { "unchecked" } else if all_true { "verified" } else { "unverified" };
+        // E-12 (v0.3.6): a post-condition the manifest declares "sampled" caps the claim at spot_checked
+        let cov = &m.manifest["receipt"]["coverage"];
+        let any_sampled = post.iter().any(|k| cov[*k] == json!("sampled"));
+        let want = aeoi_core::receipt::claim_of(post.is_empty(), all_true, any_sampled);
         assert_eq!(r["evidence"]["claim"], want, "{}", p.display());
         assert_ne!(want, "unverified", "{}: a golden success fails post-conditions {:?}", p.display(), r["evidence"]["failed"]);
         *claims.entry(m.id.clone()).or_default().entry(want.to_string()).or_default() += 1;

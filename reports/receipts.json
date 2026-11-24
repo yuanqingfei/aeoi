@@ -1,13 +1,16 @@
 {
   "generated_by": "rust/aeoi-control/tests/receipt.rs",
-  "golden_successes": 664,
-  "golden_errors": 39,
+  "golden_successes": 675,
+  "golden_errors": 40,
   "claims_by_operator": {
     "control.analysis.ctrb_obsv": {
       "verified": 26
     },
+    "control.analysis.loopsens": {
+      "spot_checked": 11
+    },
     "control.analysis.margin": {
-      "verified": 44
+      "spot_checked": 44
     },
     "control.design.dlqr": {
       "verified": 22

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "aeoi://schemas/control.lti.feedback/0.3.0/output",
+  "$id": "aeoi://schemas/control.lti.feedback/0.4.0/output",
   "type": "object",
   "required": [
     "system",
@@ -32,7 +32,7 @@
     },
     "composition": {
       "type": "object",
-      "description": "operation、operands[].sha256（操作数 JSON 的 JCS 哈希）、sign、implicit_unity、lineage（只回显，不核验）"
+      "description": "operation、operands[]（role 与 sha256：操作数 JSON 的 JCS 哈希）、sign、implicit_unity、loop_role（open_loop = L、closed_loop = T、unspecified = 用 sys1/sys2 调用，角色由调用方负责；spec K-3）、topology、lineage（只回显，不核验）"
     }
   }
 }

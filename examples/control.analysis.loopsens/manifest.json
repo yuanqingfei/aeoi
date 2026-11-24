@@ -1,0 +1,268 @@
+{
+  "spec": "aeoi/0.3",
+  "id": "control.analysis.loopsens",
+  "version": "0.4.0",
+  "title": "Loop analysis from plant and controller",
+  "description": "一步得到单回路负反馈的开环、闭环和指标。输入对象 plant、控制器 controller（省略 = 1）、反馈通路 sensor（省略 = 单位反馈）。拓扑固定：r → e = r − sensor·y → controller → plant → y。返回 open_loop L = sensor·plant·controller（裕度、穿越频率作用在 L 上）、closed_loop T = plant·controller/(1+L)（r→y，阶跃指标作用在 T 上）、sensitivity S = 1/(1+L)；闭环极点与稳定性；L 的增益/相位裕度；两种带宽并各给 rad/s 与 Hz 两个字段：gain_crossover_*（|L| = 1 的开环穿越频率，常被叫作“回路带宽”）和 bandwidth_*（|T| 比直流增益低 3 dB 的闭环带宽）；给出 time 时还返回 T 的阶跃指标。结果等于依次调用 series、feedback、margin、stepinfo 的结果（同一 build 逐位相同），只是不会接错。",
+  "category": "analysis",
+  "tags": [
+    "lti",
+    "feedback",
+    "frequency-domain",
+    "time-domain",
+    "loop"
+  ],
+  "applicability": {
+    "preconditions": [
+      "SISO",
+      "plant、controller、sensor 的 ts 完全相同",
+      "controller 可以是 improper（理想微分）；open_loop / closed_loop 必须 proper 才能求裕度和阶跃指标，否则该项为 null 并给 W.DOMAIN.ANALYSIS_SKIPPED",
+      "负反馈；正反馈或其他拓扑用 control_lti_feedback 的位置参数",
+      "带宽定义：bandwidth_* 为 |T(jω)| 第一次降到 |T(0)| 以下 |bandwidth_drop_db| dB 的频率（默认 −3 dB）；gain_crossover_* 为 |L(jω)| = 1 的频率（多个时取 margin 选中的那个，全部见 margins.crossings.gain）",
+      "Hz 字段 = rad/s 字段 / (2π)，两者来自同一个数"
+    ],
+    "not_for": [
+      "MIMO",
+      "时滞（先用 control_lti_pade 得到有理近似，再作为 plant 的一部分串联）",
+      "自动整定（pidtune 尚未定义，见 spec A-4）",
+      "非线性"
+    ],
+    "siso_only": true
+  },
+  "provenance": {
+    "algorithm": "forward = series(controller → plant)，L = series(forward → sensor)，T = feedback(forward, sensor, sign = −1)，S = feedback(1, L)：与 control.lti.series / control.lti.feedback 同一实现（spec I-5、I-6）。闭环极点为 T 的极点。裕度 = control.analysis.margin(L)。闭环带宽：连续系统令 P(ω) = |N(jω)|² − 10^{drop/10}·|T(0)|²·|D(jω)|²（实系数偶多项式），取最小正实根，再在 |T| 上二分修正；离散系统在 (0, π/ts) 上做 4000 点对数网格扫描后二分。阶跃指标 = control.lti.stepinfo(T, time)。",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "K. Ogata, Modern Control Engineering, 5th ed., Prentice-Hall（串联、并联、反馈；阶跃指标）"
+      },
+      {
+        "type": "textbook",
+        "cite": "K. J. Åström, R. M. Murray, Feedback Systems, 2nd ed., Princeton, 2021, ch.11–12（回路传递函数、灵敏度函数、带宽定义）"
+      },
+      {
+        "type": "software",
+        "cite": "python-control 0.10 bandwidth / stability_margins 文档（仅作定义对照）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-control (pure Rust) + nalgebra 0.33",
+    "routine": "loopsens::analyze (connect + margin + stepinfo)",
+    "version": "0.4.0",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T3",
+  "sparse_support": {
+    "/plant/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/plant/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/plant/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/plant/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/controller/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/controller/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/controller/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/controller/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sensor/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sensor/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sensor/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/sensor/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_states": 100,
+    "max_degree": 64,
+    "max_relative_degree": 8,
+    "bandwidth_scan_points": 4000,
+    "max_grid_points": 10000000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/control.analysis.loopsens/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ZERO_DENOMINATOR",
+    "E.VALIDATION.NOT_CONJUGATE",
+    "E.VALIDATION.SPARSE_STRUCTURE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.DOMAIN.IMPROPER_SYSTEM",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.DOMAIN.SAMPLE_TIME_MISMATCH",
+    "E.DOMAIN.MIMO_NOT_SUPPORTED",
+    "E.DOMAIN.ALGEBRAIC_LOOP",
+    "E.VALIDATION.GRID",
+    "E.VALIDATION.RANGE",
+    "E.RESOURCE.COMPUTE_LIMIT",
+    "E.RESOURCE.OUTPUT_TOO_LARGE"
+  ],
+  "warnings": [
+    "W.DOMAIN.IMPROPER_OPERAND",
+    "W.DOMAIN.IMPROPER_RESULT",
+    "W.DOMAIN.NONMINIMAL_REALIZATION",
+    "W.NUMERICAL.ILL_CONDITIONED",
+    "W.VALIDATION.LEADING_ZEROS_STRIPPED",
+    "W.PERFORMANCE.SPARSE_DENSIFIED",
+    "W.NUMERICAL.CROSSING_RECOVERED",
+    "W.DOMAIN.CLOSED_LOOP_UNSTABLE",
+    "W.DOMAIN.UNSTABLE_SYSTEM",
+    "W.DOMAIN.NOT_SETTLED",
+    "W.DOMAIN.INFINITE_DC_GAIN",
+    "W.DOMAIN.ZERO_DC_GAIN",
+    "W.ACCURACY.GRID_TOO_COARSE",
+    "W.ACCURACY.AUTO_GRID",
+    "W.DOMAIN.ANALYSIS_SKIPPED"
+  ],
+  "mcp": {
+    "tool_name": "control_analysis_loopsens",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:loopsens:connect+margin+stepinfo",
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "plant、controller、sensor 准确描述回路（单位、符号、row-major 录入）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "topology",
+        "statement": "单回路负反馈 r → e = r − H·y → C → G → y",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "same_ts",
+        "statement": "三个系统采样周期相同",
+        "enforced_by": "error:E.DOMAIN.SAMPLE_TIME_MISMATCH"
+      },
+      {
+        "id": "siso",
+        "statement": "SISO",
+        "enforced_by": "error:E.DOMAIN.MIMO_NOT_SUPPORTED"
+      },
+      {
+        "id": "proper_for_metrics",
+        "statement": "裕度与阶跃指标要求 L、T proper，否则该项为 null",
+        "enforced_by": "warning:W.DOMAIN.ANALYSIS_SKIPPED"
+      },
+      {
+        "id": "definitions",
+        "statement": "带宽、阶跃阈值用请求里的值；省略则是规范默认 −3 dB、10–90%、2%",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "no_cancel",
+        "statement": "不做零极点对消",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "closed_loop_identity",
+      "stability_consistent",
+      "all_finite",
+      "sub_operator_checks"
+    ],
+    "coverage": {
+      "closed_loop_identity": "test_points",
+      "sub_operator_checks": "sampled"
+    },
+    "guards": {
+      "closed_loop_identity": [
+        "/open_loop",
+        "/closed_loop",
+        "/sensitivity"
+      ],
+      "stability_consistent": [
+        "/closed_loop_stable"
+      ],
+      "sub_operator_checks": [
+        "/margins",
+        "/gain_crossover_rad_s",
+        "/gain_crossover_hz",
+        "/step_metrics"
+      ]
+    }
+  }
+}

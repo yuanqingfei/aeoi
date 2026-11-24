@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.analysis.loopsens/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "plant"
+  ],
+  "properties": {
+    "plant": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "被控对象 G（SISO）。上一个工具返回了系统（例如 control_lti_pade 与对象串联的结果、control_lti_convert 的结果）就原样粘贴 result.system"
+    },
+    "controller": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "控制器 C，在前向通路。省略 = 1（只看对象本身的单位负反馈）。PID 用 control_design_pid 的 result.system 原样粘贴"
+    },
+    "sensor": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "反馈通路 H（测量动态）。省略 = 单位反馈。不要把控制器放在这里"
+    },
+    "time": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "t_final",
+            "dt",
+            "unit"
+          ],
+          "properties": {
+            "mode": {
+              "const": "uniform"
+            },
+            "t_final": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "dt": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "unit": {
+              "const": "s"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "unit"
+          ],
+          "properties": {
+            "mode": {
+              "const": "auto"
+            },
+            "t_final": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "exclusiveMinimum": 0
+            },
+            "unit": {
+              "const": "s"
+            }
+          },
+          "description": "启发式网格（见 manifest），不参与 parity 测试"
+        }
+      ],
+      "description": "可选。给出时返回闭环 T 的阶跃指标（step_metrics）：uniform（t_final、dt，单位 s）或 auto。不给则 step_metrics 为 null"
+    },
+    "rise_time_limits": {
+      "type": "array",
+      "items": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "default": [
+        0.1,
+        0.9
+      ],
+      "x-aeoi-provenance": "convention",
+      "description": "阶跃上升时间阈值，默认 [0.1, 0.9]。定义默认值，省略即可"
+    },
+    "settling_threshold": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 0.5,
+      "default": 0.02,
+      "x-aeoi-provenance": "convention",
+      "description": "调节带半宽，默认 0.02（2%）。定义默认值，省略即可"
+    },
+    "bandwidth_drop_db": {
+      "type": "number",
+      "exclusiveMaximum": 0,
+      "minimum": -60,
+      "default": -3,
+      "x-aeoi-provenance": "convention",
+      "description": "闭环带宽的下降量（dB，负数），默认 -3。定义默认值，省略即可"
+    },
+    "lineage": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 8,
+      "description": "可选。上游 receipt.fingerprint.request，只回显"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+    }
+  }
+}

@@ -1,9 +1,9 @@
 {
   "spec": "aeoi/0.3",
   "id": "control.lti.series",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "title": "Series interconnection",
-  "description": "串联：sys1 的输出接到 sys2 的输入，结果是 sys2·sys1。SISO 用多项式，状态空间用块公式。结果 system 可直接送给其他算子。",
+  "description": "串联。推荐用具名角色：controller 与 plant，结果是 L = plant·controller（控制器输出进对象），单位反馈时它就是开环 L，送给 margin；composition.loop_role = open_loop。也可用 sys1/sys2：结果是 sys2·sys1（sys1 的输出进 sys2），角色由调用方负责。两种写法不能混用。结果 system 原样传给下一个工具，不要手抄系数。",
   "category": "transform",
   "tags": [
     "lti",
@@ -14,11 +14,14 @@
       "两个操作数的 ts 必须完全相同（连续都是 0，或同一个采样周期）",
       "维度按串联 / 并联 / 反馈的规则匹配",
       "不做零极点对消；minimal 为 null",
-      "improper 的 tf/zpk（相对阶 ≤ 8）可以作为操作数，但 ss 输出会报 E.DOMAIN.IMPROPER_SYSTEM"
+      "improper 的 tf/zpk（相对阶 ≤ 8）可以作为操作数，但 ss 输出会报 E.DOMAIN.IMPROPER_SYSTEM",
+      "具名角色（controller、plant）与位置参数（sys1、sys2）二选一，混用报 E.VALIDATION.OPTION_CONFLICT",
+      "具名调用必须同时给出 controller 和 plant"
     ],
     "not_for": [
       "自动零极点对消（minreal）",
-      "不同采样周期"
+      "不同采样周期",
+      "把串联结果当成闭环 T（串联只得到开环 L，闭环用 control_lti_feedback 的具名角色或 control_analysis_loopsens）"
     ],
     "siso_only": false
   },
@@ -36,13 +39,13 @@
     ],
     "clean_room": {
       "declared": true,
-      "sources": "仅公开文献；MATLAB 仅作为黑盒参考（公开 API），v0.2 的 parity 参考为 python-control/scipy"
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
     }
   },
   "backend": {
     "library": "aeoi-control (pure Rust) + nalgebra 0.33",
     "routine": "connect::series_ss / polynomial product",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "binding": "native",
     "license": "MIT OR Apache-2.0"
   },
@@ -80,6 +83,38 @@
     "/sys2/D": {
       "policy": "densify",
       "max_dense_elements": 1000000
+    },
+    "/plant/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/plant/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/plant/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/plant/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/controller/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/controller/B": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/controller/C": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    },
+    "/controller/D": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
     }
   },
   "encodings": {
@@ -112,7 +147,7 @@
     "target": "A",
     "current": "B"
   },
-  "credentials": "aeoi://operators/control.lti.series/0.3.0/credentials",
+  "credentials": "aeoi://operators/control.lti.series/0.4.0/credentials",
   "errors": [
     "E.VALIDATION.SCHEMA",
     "E.VALIDATION.SHAPE",
@@ -129,7 +164,8 @@
     "E.RESOURCE.TIMEOUT",
     "E.INTERNAL.PANIC",
     "E.DOMAIN.SAMPLE_TIME_MISMATCH",
-    "E.VALIDATION.SHAPE"
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.OPTION_CONFLICT"
   ],
   "warnings": [
     "W.DOMAIN.IMPROPER_OPERAND",
@@ -194,6 +230,14 @@
       "response_consistent",
       "sample_times_equal",
       "all_finite"
-    ]
+    ],
+    "coverage": {
+      "response_consistent": "test_points"
+    },
+    "guards": {
+      "response_consistent": [
+        "/system"
+      ]
+    }
   }
 }

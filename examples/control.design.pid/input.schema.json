@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "aeoi://schemas/control.design.pid/0.3.0/input",
+  "$id": "aeoi://schemas/control.design.pid/0.4.0/input",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -25,26 +25,25 @@
       "type": "number",
       "default": 0,
       "x-aeoi-provenance": "convention",
-      "description": "parallel 的积分增益，默认 0（该项不出现）。不是测量值"
+      "description": "只用于 form=parallel：积分增益，默认 0（该项不出现）。standard 形式不要出现 Ki"
     },
     "Kd": {
       "type": "number",
       "default": 0,
       "x-aeoi-provenance": "convention",
-      "description": "parallel 的微分增益，默认 0。Tf=0 且 Kd≠0 时结果 improper"
+      "description": "只用于 form=parallel：微分增益，默认 0。Tf=0 且 Kd≠0 时结果 improper。standard 形式不要出现 Kd"
     },
     "Ti": {
       "type": "number",
-      "exclusiveMinimum": 0,
       "x-aeoi-provenance": "supplied",
-      "description": "standard 的积分时间（秒）。省略表示没有积分；给出时必须 > 0"
+      "description": "只用于 form=standard：积分时间（秒），必须 > 0。没有积分就省略 Ti，不要写 Ti=0；parallel 形式不要出现 Ti"
     },
     "Td": {
       "type": "number",
       "minimum": 0,
       "default": 0,
       "x-aeoi-provenance": "convention",
-      "description": "standard 的微分时间（秒），默认 0"
+      "description": "只用于 form=standard：微分时间（秒），默认 0。parallel 形式不要出现 Td"
     },
     "Tf": {
       "type": "number",

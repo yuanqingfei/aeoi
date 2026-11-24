@@ -246,6 +246,29 @@ fn batch2_examples() {
     }
 }
 
+/// v0.3.6 (K-4): control.analysis.loopsens example equals the chained python-control primitives.
+#[test]
+fn loopsens_example() {
+    let h = HostCtx::default();
+    let op = "control.analysis.loopsens";
+    let dir = format!("examples/{op}");
+    let env = call(op, &read(&format!("{dir}/request.json")), &h);
+    assert_eq!(env["status"], "ok", "{}", env["error"]);
+    let pub_ = read(&format!("{dir}/response.success.json"));
+    assert_eq!(env["reproducibility"]["output_hash"], pub_["reproducibility"]["output_hash"], "bitwise example");
+    assert_eq!(env["receipt"]["evidence"]["claim"], "spot_checked", "E-12: margins are grid-audited");
+    let rf = &read(&format!("{dir}/reference.python-control.json"))["request.json"];
+    let r = &env["result"];
+    let e = relf(&fvec(&r["closed_loop"]["num"]), &fvec(&rf["closed_loop"]["num"])).max(relf(&fvec(&r["closed_loop"]["den"]), &fvec(&rf["closed_loop"]["den"])));
+    assert!(e <= 1e-12, "T vs python-control {e:e}");
+    for (k, want) in [("bandwidth_rad_s", &rf["bandwidth_rad_s"]), ("gain_crossover_rad_s", &rf["gain_crossover_rad_s"])] {
+        assert!((f(&r[k]["value"]) - f(want)).abs() <= 1e-9 * f(want).abs(), "{k}");
+    }
+    assert!((f(&r["step_metrics"]["info"]["overshoot"]["value"]) - f(&rf["step"]["overshoot"])).abs() <= 1e-8);
+    let err = call(op, &read(&format!("{dir}/request.error.json")), &h);
+    assert_eq!(err["error"]["code"], read(&format!("{dir}/response.error.json"))["error"]["code"]);
+}
+
 /// Batch 3 (spec v0.3.5): interconnection, pid, stepinfo, pade.
 #[test]
 fn batch3_examples() {

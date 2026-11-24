@@ -224,6 +224,7 @@ impl Operator for Margin {
             let v = g(w);
             v.im / v.norm()
         };
+        ctx.check()?;
         let mut wp: Vec<f64> = wp.into_iter().map(|w| if w == 0.0 { 0.0 } else { self.refine(w, &fph) }).collect();
         let mut wc: Vec<f64> = wc.into_iter().map(|w| self.refine(w, &fmag)).collect();
         let mut ws = ws;
@@ -253,6 +254,10 @@ impl Operator for Margin {
             let grid: Vec<f64> = (0..npts).map(|k| lo * (hi / lo).powf(k as f64 / (npts - 1) as f64)).collect();
             let vals: Vec<C64> = grid.iter().map(|w| g(*w)).collect();
             for k in 0..npts - 1 {
+                // every loop here is bounded; the cooperative deadline (exec.timeout_ms) is a second guard
+                if k % 256 == 0 {
+                    ctx.check()?;
+                }
                 let (a, b) = (grid[k], grid[k + 1]);
                 let (ga, gb) = (vals[k], vals[k + 1]);
                 if !(ga.norm().is_finite() && gb.norm().is_finite()) {

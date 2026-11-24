@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/control.analysis.loopsens/0.4.0/output",
+  "type": "object",
+  "required": [
+    "open_loop",
+    "closed_loop",
+    "sensitivity",
+    "roles",
+    "closed_loop_poles",
+    "closed_loop_stable",
+    "margins",
+    "gain_crossover_rad_s",
+    "gain_crossover_hz",
+    "bandwidth_rad_s",
+    "bandwidth_hz",
+    "bandwidth_definition",
+    "step_metrics",
+    "composition"
+  ],
+  "properties": {
+    "open_loop": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "L = sensor·plant·controller。margin、穿越频率作用在它上面"
+    },
+    "closed_loop": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "T = plant·controller/(1+L)，r→y。stepinfo/step 作用在它上面"
+    },
+    "sensitivity": {
+      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "description": "S = 1/(1+L)，r→e"
+    },
+    "roles": {
+      "type": "object",
+      "description": "每个返回系统的角色说明（open_loop/closed_loop/sensitivity → 文字定义）"
+    },
+    "closed_loop_poles": {
+      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "description": "c128 向量，T 的极点，按实部升序、虚部降序"
+    },
+    "closed_loop_stable": {
+      "type": "boolean",
+      "description": "连续：T 的极点全部 Re < 0；离散：|p| < 1"
+    },
+    "margins": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "control.analysis.margin(L) 的 result；L 不 proper 时为 null"
+    },
+    "gain_crossover_rad_s": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "aeoi://schemas/common/0.3/Quantity",
+          "description": "unit=rad/s：|L(jω)| = 1 的开环穿越频率（margin 选中的那个）；没有穿越为 \"NaN\""
+        }
+      ]
+    },
+    "gain_crossover_hz": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "aeoi://schemas/common/0.3/Quantity",
+          "description": "unit=Hz：同一个穿越频率 / (2π)"
+        }
+      ]
+    },
+    "bandwidth_rad_s": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "aeoi://schemas/common/0.3/Quantity",
+          "description": "unit=rad/s：闭环 |T| 比 |T(0)| 低 |bandwidth_drop_db| dB 的第一个频率；T(0) = 0 或无穷时为 null，全频段不降为 \"Inf\""
+        }
+      ]
+    },
+    "bandwidth_hz": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "aeoi://schemas/common/0.3/Quantity",
+          "description": "unit=Hz：同一个闭环带宽 / (2π)"
+        }
+      ]
+    },
+    "bandwidth_definition": {
+      "type": "object",
+      "description": "drop_db、reference（dc_gain）、method（even_polynomial_roots 或 grid_bisection）"
+    },
+    "step_metrics": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "给出 time 时为 control.lti.stepinfo(T, time) 的 result，否则为 null"
+    },
+    "composition": {
+      "type": "object",
+      "description": "operation = loopsens，operands[]（role 与 sha256），controller_implicit、sensor_implicit、topology、lineage"
+    }
+  }
+}

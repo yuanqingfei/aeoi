@@ -1,0 +1,14 @@
+{
+  "reference": "python-control 0.10.2 (series, feedback, stability_margins, bandwidth, step_info). Not MATLAB.",
+  "cases": 12,
+  "worst_relative_error": {
+    "coefficients": 0.0,
+    "crossover_margin_bandwidth": 9.727774141765622e-13,
+    "step_metrics": 1.0969793476823535e-12
+  },
+  "tolerances": {
+    "coefficients": 1e-10,
+    "crossover_margin_bandwidth": 1e-6,
+    "step_metrics": 1e-8
+  }
+}

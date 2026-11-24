@@ -4,7 +4,7 @@
   "dry_run": false,
   "operator": {
     "id": "control.design.pid",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
   },
   "request_id": "req-pid-001",
@@ -67,7 +67,7 @@
     "method": {
       "id": "aeoi:pid:closed-form",
       "routine": "pid::parallel / pid::standard",
-      "provenance": "aeoi://operators/control.design.pid/0.3.0/manifest#/provenance"
+      "provenance": "aeoi://operators/control.design.pid/0.4.0/manifest#/provenance"
     },
     "assumptions": [
       {
@@ -104,14 +104,18 @@
       "convergence": null,
       "accuracy_grade": "B",
       "tolerance_class": "T1",
-      "credentials": null
+      "credentials": null,
+      "coverage": {
+        "formula_matches": "test_points",
+        "all_finite": "full"
+      }
     },
     "fingerprint": {
-      "request": "sha256:5983dfcf884fa0a95facddcf0d1fa42b476fec798e1078191bdb60034c163ed1",
-      "result": "sha256:736482e380d95f493acd0f3403a620c22038e820bc60e97f729d2e5d7de765e5",
+      "request": "sha256:4f82a164d6614a820d6ca86ba94c9705458900a297913cc2fabcd818960aca4d",
+      "result": "sha256:de90665708d8ab10a16f1224fb0fcb868c5f2a170df6eda1a9d84998d7cda888",
       "output_hash": "sha256:99aef018ad76687d7586893b3267197d3436bcc2674afcd2488eb1f920a4ee8d",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
-      "stable_across": "request: all platforms and builds of control.design.pid@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+      "stable_across": "request: all platforms and builds of control.design.pid@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
       "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",

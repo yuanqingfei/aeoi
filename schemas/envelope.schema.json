@@ -470,9 +470,11 @@
             "claim": {
               "enum": [
                 "verified",
+                "spot_checked",
                 "unverified",
                 "unchecked"
-              ]
+              ],
+              "description": "E-11/E-12（v0.3.6）：verified = 声明的后置条件全部为 true 且没有一项只在抽样/压缩后的结果上检查；spot_checked = 全部为 true 但至少一项是 sampled 覆盖，不能表述为“已验证”；unverified = 有后置条件为 false 或缺失；unchecked = 算子没有声明后置条件"
             },
             "postconditions": {
               "type": "object",
@@ -492,6 +494,24 @@
             "approximation": {
               "description": "仅近似算子（v0.3.5 A-2，目前是 control.lti.pade）。抄自 trust.approximation。其他算子不出现此字段。",
               "type": "object"
+            },
+            "coverage": {
+              "description": "v0.3.6 E-12：manifest receipt.coverage 声明了非 full 覆盖时出现。每个后置条件 → full | test_points | sampled",
+              "type": "object",
+              "additionalProperties": {
+                "enum": [
+                  "full",
+                  "test_points",
+                  "sampled"
+                ]
+              }
+            },
+            "unreliable": {
+              "description": "v0.3.6 E-13：有后置条件失败、且 manifest receipt.guards 为它列出了结果字段时出现：这些 JSON Pointer 指向的结果不可作为结论使用",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           }
         },

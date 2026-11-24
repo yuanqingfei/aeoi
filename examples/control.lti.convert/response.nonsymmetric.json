@@ -97,7 +97,10 @@
       "convergence": null,
       "accuracy_grade": "B",
       "tolerance_class": "T2",
-      "credentials": null
+      "credentials": null,
+      "coverage": {
+        "response_consistent": "test_points"
+      }
     },
     "fingerprint": {
       "request": "sha256:91af333af58eb71abbf21e90223c7a2d0d9b5e6dfd632f5368d0cd10692a8554",

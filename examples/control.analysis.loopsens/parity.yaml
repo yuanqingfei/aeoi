@@ -1,0 +1,21 @@
+# Parity — control.analysis.loopsens 0.4.0 (spec v0.3.6, K-4)
+operator: control.analysis.loopsens
+references:
+  - {engine: python-control, version: "0.10.2", role: primary, status: active, generator: gen_golden_loopsens.py, golden_store: "golden/python-control/control.analysis.loopsens/0.4.0/*.json", note: "the chained primitives: series(controller, plant)·sensor, feedback(plant·controller, sensor), stability_margins(L), bandwidth(T), step_info(T). NOT MATLAB. tf-only inputs, so memory_order_nonsymmetric is covered by series/feedback."}
+runner: "cargo test --release -p aeoi-control --test parity_loopsens"
+tolerance_class: T3
+memory_order_nonsymmetric: not_applicable
+compare:
+  "open_loop / closed_loop coefficients": "after dividing by the leading denominator coefficient, max |Δ| / max(1, max|ref|) ≤ 1e-10"
+  "gain_crossover_rad_s, phase_margin, bandwidth_rad_s": "|Δ| / max(1, |ref|) ≤ 1e-6 (null ↔ null)"
+  "step_metrics (rise, settling, overshoot, peak, steady state)": "|Δ| / max(1, |ref|) ≤ 1e-8 on the same uniform grid"
+  "bandwidth_hz, gain_crossover_hz": "exactly the rad/s value / 2π (K-5)"
+case_families:
+  - {name: example_pi, n: 1}
+  - {name: integrating_plant_lead, n: 1}
+  - {name: sensor_filter, n: 1}
+  - {name: plant_only, n: 1}
+  - {name: unstable_loop, n: 1}
+  - {name: random_pid, n: 6}
+  - {name: missing_plant, n: 1, expect: E.VALIDATION.SCHEMA}
+pass_rule: "loopsens equals the chained primitives within the tolerances above; plant is the only required role"

@@ -12,9 +12,11 @@ into the binaries we build. Regenerate the crate table with `python3 tools/gen_t
 
 ## Reference data and dev-only tools (not linked into any aeoi binary)
 
+All reference data in this repository comes from the open-source tools below; none of it was generated with MATLAB. Operator names follow MATLAB's public function names (and its toolbox grouping) only so that engineers can find them; definitions are written out in the spec.
+
 | Item | Use | License |
 |---|---|---|
-| python-control 0.10.2, scipy, numpy | generate `golden/python-control/` reference values (`gen_golden_pycontrol*.py`); values only, no code copied | BSD-3-Clause |
+| python-control 0.10.2, scipy, numpy | generate `golden/python-control/` reference values (`gen_golden_pycontrol*.py`, `gen_golden_b3.py`, `gen_golden_loopsens.py`); values only, no code copied | BSD-3-Clause |
 | mpmath | 50-digit reference values in `golden/mpmath/` (`gen_golden_mpmath.py`) | BSD-3-Clause |
 | tpt-control (rev 10e4320, © TPT Solutions) | `tools/xcheck-tpt/` cross-check harness, referenced by git rev; no source copied | MIT OR Apache-2.0 |
 | EngDesign (commit c8ec338, © 2025 EngDesign Benchmark Team) | 10 control/DSP task prompts, rubrics and reference solutions vendored verbatim in `eval/design/engdesign.json` (`tools/vendor_engdesign.py`); scoring re-implemented, no evaluator code copied | MIT — `eval/design/LICENSE-EngDesign` |

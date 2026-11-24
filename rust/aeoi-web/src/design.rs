@@ -22,15 +22,18 @@ pub const SUBMIT: &str = "submit_design";
 pub const DESIGN_ADDENDUM: &str = "\n\n## 设计评测模式\n\
 这是一次自动化的工程设计评测：没有用户可以追问，题目里的数值就是全部已知条件，不要提问。\n\
 流程：先给出设计，用工具把对象和控制器接起来再检查，不满足就修改，满足后调用 submit_design 提交。\
-只能提交一次。\n\
+只能提交一次。回合数有上限（见下方预算）：不提交就没有分数，所以在回合用完之前一定要提交当前最好的设计，并在说明里如实写出哪些指标没满足。\n\
 传递函数运算用工具，不要手算多项式：\
-control_design_pid 由 Kp、Ki、Kd（parallel）或 Kp、Ti、Td（standard）得到 C(s)，Tf 省略就是不加滤波；\
-control_lti_series 是 sys2·sys1（把对象接到控制器后面或反过来，看谁的输出进谁）；\
-control_lti_parallel 是相加；control_lti_feedback 默认 sign=-1 的负反馈，省略 sys2 就是单位反馈。\
-把上一个工具返回的 result.system 原样作为下一个的 sys1 或 sys2。\
-指标用 control_lti_stepinfo（10%–90% 上升、2% 调节带是定义默认值，不用改），裕度仍用 control_analysis_margin，\
+题目给的对象只录入一次；因式乘积（例如 (0.5s+1)(s+1)(2s+1)）用 control_lti_series 相乘，不要心算展开。\
+control_design_pid 由 Kp、Ki、Kd（parallel）或 Kp、Ti、Td（standard）得到 C(s)，两组字段不要混用，不需要的项直接省略（不要写 Ti=0），Tf 省略就是不加滤波。\
+检查回路首选 control_analysis_loopsens(plant, controller, sensor 可省略, time 可选)：一次返回开环 L、闭环 T、闭环稳定性、L 的增益/相位裕度、\
+gain_crossover_rad_s / gain_crossover_hz（|L|=1 的开环穿越频率）和 bandwidth_rad_s / bandwidth_hz（闭环 −3 dB 带宽），给出 time 时还有 T 的阶跃指标（10%–90% 上升、2% 调节带是定义默认值）。\
+题目要求“带宽”时，先判断它指开环穿越频率还是闭环 −3 dB 带宽，并注意题目用 Hz 还是 rad/s。\
+需要单独的系统时：control_lti_series(controller, plant) 得到开环 L；control_lti_feedback(plant, controller, sensor) 得到闭环 T（控制器在前向通路，sensor 是反馈通路）。\
+裕度 control_analysis_margin 只接受开环 L，阶跃指标 control_lti_stepinfo 用闭环 T。\
+把上一个工具返回的 result.system 原样作为下一个工具的参数，不要重新抄写系数。\
 频响用 control_lti_bode，极点用 control_lti_poles_zeros。\
-时滞用 control_lti_pade：delay 填题目给出或由题目算出的秒数，order 题目没写时用 10 并在说明里声明（这是本评测提示的约定，不是算子默认值）。\n\
+时滞用 control_lti_pade：delay 填题目给出或由题目算出的秒数，order 题目没写时用 10 并在说明里声明（这是本评测提示的约定，不是算子默认值）；得到的 Padé 系统要和对象串联后再作为 plant。\n\
 数值请直接写成数字（不要写表达式）。";
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -52,6 +55,7 @@ pub struct DesignResult {
     pub final_text: Option<String>,
     pub provider_error: Option<String>,
     pub total_tokens: u64,
+    pub budget_notices: usize,
     pub latency_s: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub controleval_task: Option<Value>,
@@ -179,19 +183,39 @@ pub struct DesignRun {
     pub stopped: String,
     pub error: Option<String>,
     pub total_tokens: u64,
+    /// spec AL-2: budget notices the harness injected (second-to-last and last turn).
+    pub budget_notices: usize,
+}
+
+/// spec AL-1/AL-2 (v0.3.6): the harness states the turn budget up front, warns two turns before the
+/// end, and on the last turn offers only the submission tool. It never submits for the model.
+pub fn budget_text(max_steps: usize) -> String {
+    format!("\n\n## 回合预算\n你最多有 {max_steps} 个模型回合（每次回复算一个回合，一次回复里可以并行调用多个工具）。最后一个回合只能调用 {SUBMIT}。")
 }
 
 pub async fn run_task(provider: &dyn Provider, bridge: &Bridge, task: &Value, max_steps: usize, call_timeout: Duration, mut on_turn: impl FnMut(&DesignRun)) -> DesignRun {
-    let system = format!("{}{DESIGN_ADDENDUM}", crate::agent::SYSTEM_PROMPT);
+    let system = format!("{}{DESIGN_ADDENDUM}{}", crate::agent::SYSTEM_PROMPT, budget_text(max_steps));
     let mut tools = bridge.tools.clone();
     tools.push(submit_tool(task));
     let prompt = model_prompt(task);
     let mut hist = vec![Msg::user(&prompt)];
-    let mut run = DesignRun { turns: vec![], tools: vec![], submission: None, final_text: None, stopped: String::new(), error: None, total_tokens: 0 };
+    let mut run = DesignRun { turns: vec![], tools: vec![], submission: None, final_text: None, stopped: String::new(), error: None, total_tokens: 0, budget_notices: 0 };
+    let submit_only = vec![submit_tool(task)];
     let mut nudges = 0;
     for step in 1..=max_steps {
+        let remaining = max_steps - step + 1;
+        let last = max_steps >= 2 && remaining == 1;
+        if max_steps >= 3 && remaining == 2 {
+            hist.push(Msg::user(&format!("{}还剩 2 个回合（含这一回合）。如果设计已经可以交，现在就调用 {SUBMIT}；下一回合是最后一回合，只能提交。", aeoi_bridge::llm::NUDGE_PREFIX)));
+            run.budget_notices += 1;
+        }
+        if last {
+            hist.push(Msg::user(&format!("{}这是最后一个回合，只能调用 {SUBMIT}：提交你目前最好的设计，在 summary 里如实写明哪些指标已用工具确认、哪些没有满足。", aeoi_bridge::llm::NUDGE_PREFIX)));
+            run.budget_notices += 1;
+        }
+        let tl = if last { &submit_only } else { &tools };
         let t0 = Instant::now();
-        let resp = match tokio::time::timeout(call_timeout, provider.chat(&system, &hist, &tools)).await {
+        let resp = match tokio::time::timeout(call_timeout, provider.chat(&system, &hist, tl)).await {
             Ok(Ok(r)) => r,
             Ok(Err(e)) => {
                 run.error = Some(e);
@@ -701,6 +725,7 @@ fn result_from(task: &Value, run: &DesignRun, latency_s: f64, scored: Option<(bo
         final_text: run.final_text.clone(),
         provider_error: run.error.clone(),
         total_tokens: run.total_tokens,
+        budget_notices: run.budget_notices,
         latency_s,
         controleval_task: if task["benchmark"] == "ControlEval" { Some(task["controleval"].clone()) } else { None },
         transcript_tools: run.tools.clone(),
@@ -715,7 +740,7 @@ pub async fn run_design(provider: &dyn Provider, bridge: &Bridge, tasks: &[Value
         let id = task["id"].as_str().unwrap_or("");
         eprintln!("[{}/{}] {} 开始（最多 {} 步，单次请求 {:.0} s，本题 {:.0} s）", i + 1, tasks.len(), id, opts.max_steps, opts.call_timeout.as_secs_f64(), opts.task_timeout.as_secs_f64());
         let t0 = Instant::now();
-        let running = DesignRun { turns: vec![], tools: vec![], submission: None, final_text: None, stopped: "running".into(), error: None, total_tokens: 0 };
+        let running = DesignRun { turns: vec![], tools: vec![], submission: None, final_text: None, stopped: "running".into(), error: None, total_tokens: 0, budget_notices: 0 };
         results.push(result_from(task, &running, 0.0, None));
         let slot = results.len() - 1;
         checkpoint(&summarize(provider, &results, t_all.elapsed().as_secs_f64(), opts));
@@ -737,6 +762,7 @@ pub async fn run_design(provider: &dyn Provider, bridge: &Bridge, tasks: &[Value
                 stopped: "task_timeout".into(),
                 error: Some(format!("task_timeout: 本题超过 {:.0} s", opts.task_timeout.as_secs_f64())),
                 total_tokens: results[slot].total_tokens,
+                budget_notices: results[slot].budget_notices,
             },
         };
         let quota = run.error.as_deref().map(|e| e.starts_with(crate::provider::QUOTA_EXHAUSTED)).unwrap_or(false);
@@ -960,6 +986,44 @@ mod tests {
         assert_eq!(r["model_turns"], 3);
         assert_eq!(r["pass"], false);
         assert_eq!(p.seen.lock().unwrap().len(), 3);
+    }
+
+    /// Records what the harness offered on each turn (spec AL-1/AL-2).
+    struct BudgetSpy {
+        offered: std::sync::Mutex<Vec<(Vec<String>, String, bool)>>,
+    }
+    impl Provider for BudgetSpy {
+        fn name(&self) -> &str {
+            "spy"
+        }
+        fn model(&self) -> &str {
+            "spy"
+        }
+        fn chat<'a>(&'a self, system: &'a str, msgs: &'a [crate::provider::Msg], tools: &'a [crate::tools::ToolDef]) -> crate::provider::BoxFut<'a, Result<crate::provider::ChatResponse, String>> {
+            let names = tools.iter().map(|t| t.name.clone()).collect::<Vec<_>>();
+            let last_user = msgs.iter().rev().find_map(|m| if let crate::provider::Msg::User { text } = m { Some(text.clone()) } else { None }).unwrap_or_default();
+            self.offered.lock().unwrap().push((names, last_user, system.contains("最多有 4 个模型回合")));
+            Box::pin(async { Ok(MockProvider::calls(vec![("control_lti_poles_zeros", json!({"system": {"kind": "tf", "num": [1.0], "den": [1.0, 1.0], "ts": 0.0}}))])) })
+        }
+    }
+
+    #[tokio::test]
+    async fn al_budget_is_stated_warned_and_last_turn_is_submit_only() {
+        let b = Bridge::new();
+        let p = BudgetSpy { offered: std::sync::Mutex::new(vec![]) };
+        let rep = run_design(&p, &b, &[task("ZC_02")], &opts(4), |_| {}).await;
+        let seen = p.offered.lock().unwrap().clone();
+        assert_eq!(seen.len(), 4);
+        assert!(seen.iter().all(|s| s.2), "system prompt states the budget");
+        assert!(seen[0].0.len() > 1 && seen[1].0.len() > 1 && seen[2].0.len() > 1);
+        assert!(!seen[1].1.contains("还剩 2 个回合"));
+        assert!(seen[2].1.contains("还剩 2 个回合"), "{}", seen[2].1);
+        assert_eq!(seen[3].0, vec![SUBMIT.to_string()], "last turn offers only the submission tool");
+        assert!(seen[3].1.contains("最后一个回合"));
+        let r = &rep["results"][0];
+        assert_eq!(r["budget_notices"], 2);
+        assert_eq!(r["submitted"], false, "the harness never submits for the model");
+        assert_eq!(r["stopped"], "max_steps");
     }
 
     struct SlowProvider {

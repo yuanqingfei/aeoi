@@ -34,6 +34,7 @@ pub mod connect;
 pub mod convert;
 pub mod ctrb_obsv;
 pub mod dlqr;
+pub mod loopsens;
 pub mod lqr;
 pub mod lyap;
 pub mod margin;
@@ -67,6 +68,7 @@ pub fn registry() -> Vec<Box<dyn DynOperator>> {
         Box::new(pid::Pid::new()),
         Box::new(stepinfo::StepInfo::new()),
         Box::new(pade::Pade::new()),
+        Box::new(loopsens::LoopSens::new()),
     ]
 }
 

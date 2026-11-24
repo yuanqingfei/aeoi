@@ -32,14 +32,54 @@ enum OpKind { Series, Parallel, Feedback }
 
 pub struct In {
     kind: OpKind,
+    /// sys1 (positional) / controller (named series) / plant (named feedback)
     a: Lti,
+    /// sys2 (positional) / plant (named series) / sensor or implicit unity (named feedback)
     b: Lti,
+    /// Named feedback with an explicit controller: forward path = a·pre (controller output → plant).
+    pre: Option<Lti>,
     sign: f64,
     output_kind: String,
     lineage: Value,
     hashes: Vec<(&'static str, String)>,
     improper_operand: bool,
     implicit_unity: bool,
+    controller_implicit: Option<bool>,
+    /// spec K-3: open_loop | closed_loop | unspecified (positional call, role is the caller's)
+    loop_role: &'static str,
+    topology: Option<&'static str>,
+}
+
+const NAMED: [&str; 3] = ["plant", "controller", "sensor"];
+const POSITIONAL: [&str; 2] = ["sys1", "sys2"];
+
+fn present(args: &Value, k: &str) -> bool {
+    args.get(k).is_some_and(|v| !v.is_null())
+}
+
+/// spec F-8 / K-1: named roles and positional operands are mutually exclusive. Each patch removes
+/// only fields that are present, so it applies cleanly to the original arguments.
+fn role_conflict(named: &[&str], pos: &[&str], kind: OpKind) -> OpError {
+    let rm = |ks: &[&str]| Value::Array(ks.iter().map(|k| json!({"op": "remove", "path": format!("/{k}")})).collect());
+    let what = if matches!(kind, OpKind::Series) { "controller、plant" } else { "plant、controller、sensor" };
+    OpError::new(
+        "E.VALIDATION.OPTION_CONFLICT",
+        format!("具名角色（{}）与位置参数（{}）不能混用：用一种写法描述同一个回路。", named.join("、"), pos.join("、")),
+        format!("推荐只保留具名角色（{what}），它们决定了谁在前向通路、谁在反馈通路；或者只保留 sys1/sys2。"),
+    )
+    .path(&format!("/{}", pos[0]))
+    .detail("conflicting_fields", json!(named.iter().chain(pos.iter()).collect::<Vec<_>>()))
+    .detail("groups", json!({"named": named, "positional": pos}))
+    .remedy(modify_input("keep_named", "去掉 sys1/sys2，只用具名角色", "medium", false, rm(pos)))
+    .remedy(modify_input("keep_positional", "去掉具名角色，只用 sys1/sys2", "medium", false, rm(named)))
+    .remedy(ask_user("roles", "向用户确认哪个系统是对象、哪个是控制器"))
+}
+
+fn missing(field: &str, msg: &str) -> OpError {
+    OpError::new("E.VALIDATION.SCHEMA", msg.to_string(), "按工具描述补上该字段（系统来自题目或上一个工具的 result.system），不要编造系统。")
+        .path(&format!("/{field}"))
+        .detail("violations", json!([{"path": "", "keyword": "required", "message": format!("'{field}' is a required property")}]))
+        .remedy(ask_user(field, &format!("向用户索取 {field}")))
 }
 
 fn shape_err(path: &str, msg: &str) -> OpError {
@@ -89,31 +129,34 @@ fn identity(m: usize, ts: f64) -> Lti {
 }
 
 fn load(kind: OpKind, meta: &OperatorMeta, args: &Value, host: &HostCtx) -> Result<(In, Vec<Warning>), OpError> {
+    let named: Vec<&str> = NAMED.iter().copied().filter(|k| present(args, k)).collect();
+    let pos: Vec<&str> = POSITIONAL.iter().copied().filter(|k| present(args, k)).collect();
+    if !named.is_empty() && !pos.is_empty() {
+        return Err(role_conflict(&named, &pos, kind));
+    }
+    if !named.is_empty() {
+        return load_named(kind, meta, args, host);
+    }
+    if !present(args, "sys1") {
+        return Err(match kind {
+            OpKind::Feedback => missing("plant", "缺少系统：用具名角色给出 plant（可选 controller、sensor），或用位置参数给出 sys1。"),
+            OpKind::Series => missing("controller", "缺少系统：用具名角色给出 controller 和 plant，或用位置参数给出 sys1 和 sys2。"),
+            OpKind::Parallel => missing("sys1", "缺少 sys1。"),
+        });
+    }
+    if !matches!(kind, OpKind::Feedback) && !present(args, "sys2") {
+        return Err(missing("sys2", "缺少 sys2。"));
+    }
     let mut warnings = Vec::new();
     let max_d = meta.max_dense("/sys1/A");
     let a = parse_sys(&args["sys1"], "/sys1", host, &mut warnings, max_d)?;
     let sign = args.get("sign").and_then(|x| x.as_f64()).unwrap_or(-1.0);
-    let (b, implicit_unity) = if matches!(kind, OpKind::Feedback) && !args.get("sys2").is_some_and(|v| !v.is_null()) {
-        let (ny, nu) = a.dims();
-        if ny != nu {
-            return Err(shape_err("/sys2", &format!("省略 sys2 表示单位反馈，要求 sys1 是方的，得到 {ny}×{nu}。")));
-        }
-        // SISO unity is the tf 1, so the polynomial path stays available (spec I-5).
-        let u = if ny == 1 { tf_siso(vec![1.0], vec![1.0], a.ts()) } else { identity(ny, a.ts()) };
-        (u, true)
+    let (b, implicit_unity) = if matches!(kind, OpKind::Feedback) && !present(args, "sys2") {
+        (unity_for(&a, "/sys2", "省略 sys2 表示单位反馈，要求 sys1 是方的")?, true)
     } else {
         (parse_sys(&args["sys2"], "/sys2", host, &mut warnings, max_d)?, false)
     };
-    if a.ts() != b.ts() {
-        return Err(OpError::new(
-            "E.DOMAIN.SAMPLE_TIME_MISMATCH",
-            format!("两个系统的采样周期不同：sys1.ts = {}，sys2.ts = {}。连续（0）与离散、或两个不同的采样周期不能互联。", a.ts(), b.ts()),
-            "离散化到同一个 ts（control.lti.c2d，采样周期必须由用户给出），或分别处理。",
-        )
-        .path("/sys2/ts")
-        .detail("ts", json!([a.ts(), b.ts()]))
-        .remedy(ask_user("ts", "向用户确认两个系统是否应该在同一采样周期下互联")));
-    }
+    same_ts(&[("sys1", &a), ("sys2", &b)])?;
     let (ny1, nu1) = a.dims();
     let (ny2, nu2) = b.dims();
     let dim_ok = match kind {
@@ -124,13 +167,115 @@ fn load(kind: OpKind, meta: &OperatorMeta, args: &Value, host: &HostCtx) -> Resu
     if !dim_ok {
         return Err(shape_err("/sys2", &format!("维度不匹配：sys1 是 {ny1}×{nu1}，sys2 是 {ny2}×{nu2}。")));
     }
-    check_states(meta, a.to_ss_checked().map(|s| s.a.nrows()).unwrap_or(0).max(b.to_ss_checked().map(|s| s.a.nrows()).unwrap_or(0)), "/sys1")?;
+    check_states(meta, nstates(&a).max(nstates(&b)), "/sys1")?;
     let output_kind = args.get("output_kind").and_then(|x| x.as_str()).unwrap_or("same").to_string();
     let lineage = args.get("lineage").cloned().unwrap_or(Value::Null);
     let h2 = if implicit_unity { hash_value(&lti_json(&b)) } else { hash_value(&args["sys2"]) };
     let hashes = vec![("sys1", hash_value(&args["sys1"])), ("sys2", h2)];
     let improper_operand = improper_lti(&a) || improper_lti(&b);
-    Ok((In { kind, a, b, sign, output_kind, lineage, hashes, improper_operand, implicit_unity }, warnings))
+    Ok((In { kind, a, b, pre: None, sign, output_kind, lineage, hashes, improper_operand, implicit_unity, controller_implicit: None, loop_role: "unspecified", topology: None }, warnings))
+}
+
+fn nstates(s: &Lti) -> usize {
+    s.to_ss_checked().map(|x| x.a.nrows()).unwrap_or(0)
+}
+
+fn unity_for(a: &Lti, path: &str, why: &str) -> Result<Lti, OpError> {
+    let (ny, nu) = a.dims();
+    if ny != nu {
+        return Err(shape_err(path, &format!("{why}，得到 {ny}×{nu}。")));
+    }
+    // SISO unity is the tf 1, so the polynomial path stays available (spec I-5).
+    Ok(if ny == 1 { tf_siso(vec![1.0], vec![1.0], a.ts()) } else { identity(ny, a.ts()) })
+}
+
+fn same_ts(sys: &[(&str, &Lti)]) -> Result<(), OpError> {
+    let (n0, s0) = sys[0];
+    for (n, s) in &sys[1..] {
+        if s.ts() != s0.ts() {
+            return Err(OpError::new(
+                "E.DOMAIN.SAMPLE_TIME_MISMATCH",
+                format!("两个系统的采样周期不同：{n0}.ts = {}，{n}.ts = {}。连续（0）与离散、或两个不同的采样周期不能互联。", s0.ts(), s.ts()),
+                "离散化到同一个 ts（control.lti.c2d，采样周期必须由用户给出），或分别处理。",
+            )
+            .path(&format!("/{n}/ts"))
+            .detail("ts", json!([s0.ts(), s.ts()]))
+            .remedy(ask_user("ts", "向用户确认两个系统是否应该在同一采样周期下互联")));
+        }
+    }
+    Ok(())
+}
+
+/// spec K-1/K-2: named roles. series(controller, plant) = plant·controller = open loop L (unity sensor);
+/// feedback(plant, controller?, sensor?) = closed loop T with the controller in the forward path.
+fn load_named(kind: OpKind, meta: &OperatorMeta, args: &Value, host: &HostCtx) -> Result<(In, Vec<Warning>), OpError> {
+    let mut warnings = Vec::new();
+    let max_d = meta.max_dense("/sys1/A");
+    let output_kind = args.get("output_kind").and_then(|x| x.as_str()).unwrap_or("same").to_string();
+    let lineage = args.get("lineage").cloned().unwrap_or(Value::Null);
+    match kind {
+        OpKind::Series => {
+            for k in ["controller", "plant"] {
+                if !present(args, k) {
+                    return Err(missing(k, &format!("具名串联需要同时给出 controller 和 plant，缺少 {k}。结果是开环 L = plant·controller。")));
+                }
+            }
+            let c = parse_sys(&args["controller"], "/controller", host, &mut warnings, max_d)?;
+            let g = parse_sys(&args["plant"], "/plant", host, &mut warnings, max_d)?;
+            same_ts(&[("controller", &c), ("plant", &g)])?;
+            let ((nyc, nuc), (nyg, nug)) = (c.dims(), g.dims());
+            if nyc != nug {
+                return Err(shape_err("/plant", &format!("controller 的输出数（{nyc}）必须等于 plant 的输入数（{nug}）；controller 是 {nyc}×{nuc}，plant 是 {nyg}×{nug}。")));
+            }
+            check_states(meta, nstates(&c).max(nstates(&g)), "/plant")?;
+            let hashes = vec![("controller", hash_value(&args["controller"])), ("plant", hash_value(&args["plant"]))];
+            let improper_operand = improper_lti(&c) || improper_lti(&g);
+            Ok((In { kind, a: c, b: g, pre: None, sign: 1.0, output_kind, lineage, hashes, improper_operand, implicit_unity: false, controller_implicit: Some(false),
+                     loop_role: "open_loop", topology: Some("u → controller → plant → y；L = plant·controller（单位反馈时的开环）") }, warnings))
+        }
+        OpKind::Feedback => {
+            if !present(args, "plant") {
+                return Err(missing("plant", "具名反馈必须给出 plant（controller、sensor 可省略）。"));
+            }
+            let sign = args.get("sign").and_then(|x| x.as_f64()).unwrap_or(-1.0);
+            let g = parse_sys(&args["plant"], "/plant", host, &mut warnings, max_d)?;
+            let c = if present(args, "controller") { Some(parse_sys(&args["controller"], "/controller", host, &mut warnings, max_d)?) } else { None };
+            let (nyg, nug) = g.dims();
+            if let Some(c) = &c {
+                same_ts(&[("plant", &g), ("controller", c)])?;
+                let (nyc, nuc) = c.dims();
+                if nyc != nug {
+                    return Err(shape_err("/controller", &format!("controller 的输出数（{nyc}）必须等于 plant 的输入数（{nug}）；controller 是 {nyc}×{nuc}，plant 是 {nyg}×{nug}。")));
+                }
+            }
+            let nu_fwd = c.as_ref().map(|c| c.dims().1).unwrap_or(nug);
+            let (h, implicit_unity) = if present(args, "sensor") {
+                let h = parse_sys(&args["sensor"], "/sensor", host, &mut warnings, max_d)?;
+                same_ts(&[("plant", &g), ("sensor", &h)])?;
+                let (nyh, nuh) = h.dims();
+                if nuh != nyg || nyh != nu_fwd {
+                    return Err(shape_err("/sensor", &format!("sensor 的输入数必须等于 plant 的输出数（{nyg}），输出数必须等于前向通路的输入数（{nu_fwd}）；sensor 是 {nyh}×{nuh}。")));
+                }
+                (h, false)
+            } else {
+                if nyg != nu_fwd {
+                    return Err(shape_err("/sensor", &format!("省略 sensor 表示单位反馈，要求前向通路是方的，得到 {nyg}×{nu_fwd}。")));
+                }
+                (if nyg == 1 { tf_siso(vec![1.0], vec![1.0], g.ts()) } else { identity(nyg, g.ts()) }, true)
+            };
+            let n_all = nstates(&g) + c.as_ref().map(nstates).unwrap_or(0) + nstates(&h);
+            check_states(meta, n_all, "/plant")?;
+            let unity_c = tf_siso(vec![1.0], vec![1.0], g.ts());
+            let hc = if c.is_some() { hash_value(&args["controller"]) } else { hash_value(&lti_json(&unity_c)) };
+            let hh = if implicit_unity { hash_value(&lti_json(&h)) } else { hash_value(&args["sensor"]) };
+            let hashes = vec![("plant", hash_value(&args["plant"])), ("controller", hc), ("sensor", hh)];
+            let improper_operand = improper_lti(&g) || improper_lti(&h) || c.as_ref().is_some_and(improper_lti);
+            let controller_implicit = Some(c.is_none());
+            Ok((In { kind, a: g, b: h, pre: c, sign, output_kind, lineage, hashes, improper_operand, implicit_unity, controller_implicit,
+                     loop_role: "closed_loop", topology: Some("r → e = r + sign·sensor·y → controller → plant → y；T = plant·controller/(1 − sign·sensor·plant·controller)，sign 默认 −1") }, warnings))
+        }
+        OpKind::Parallel => Err(missing("sys1", "并联只有位置参数 sys1、sys2。")),
+    }
 }
 
 /// State dimension when the system has a proper realization; None if improper (no ss).
@@ -331,67 +476,119 @@ fn realization_name(kind: OpKind, poly: bool) -> &'static str {
     }
 }
 
-fn execute_connect(inp: In, pre_warn: Vec<Warning>) -> Result<Output, OpError> {
-    let mut warnings = pre_warn;
-    if inp.improper_operand {
-        warnings.push(Warning::new("W.DOMAIN.IMPROPER_OPERAND", "有操作数不是 proper（分子阶次高于分母）。多项式结果仍会给出；需要状态空间实现时会报 E.DOMAIN.IMPROPER_SYSTEM。分析算子（step、bode、margin）不接受 improper 系统。").path("/sys1"));
-    }
+/// One interconnection step: returns (system, algebraic-loop rcond, polynomial path used).
+fn combine(kind: OpKind, a: &Lti, b: &Lti, sign: f64, output_kind: &str, warnings: &mut Vec<Warning>) -> Result<(Lti, Option<f64>, bool), OpError> {
     let mimo = {
-        let (ny, nu) = inp.a.dims();
-        let (ny2, nu2) = inp.b.dims();
+        let (ny, nu) = a.dims();
+        let (ny2, nu2) = b.dims();
         ny > 1 || nu > 1 || ny2 > 1 || nu2 > 1
     };
-    let poly = want_poly(inp.a.kind(), inp.b.kind(), &inp.output_kind, mimo);
-    let (sys, rcond, poly_used) = if poly {
-        match (siso_poly(&inp.a), siso_poly(&inp.b)) {
+    let poly = want_poly(a.kind(), b.kind(), output_kind, mimo);
+    if poly {
+        match (siso_poly(a), siso_poly(b)) {
             (Some(pa), Some(pb)) => {
-                let (num, den) = poly_bin(inp.kind, &pa, &pb, inp.sign)?;
-                (tf_siso(num, den, inp.a.ts()), None, true)
+                let (num, den) = poly_bin(kind, &pa, &pb, sign)?;
+                Ok((tf_siso(num, den, a.ts()), None, true))
             }
             _ => {
                 // SISO ss mixed with tf and output tf: block then ss2tf
-                let s1 = inp.a.to_ss_checked().ok_or_else(|| improper_ss("/sys1"))?;
-                let s2 = inp.b.to_ss_checked().ok_or_else(|| improper_ss("/sys2"))?;
+                let s1 = a.to_ss_checked().ok_or_else(|| improper_ss("/sys1"))?;
+                let s2 = b.to_ss_checked().ok_or_else(|| improper_ss("/sys2"))?;
                 check_states_pair(&s1, &s2)?;
-                let (ss, rc) = blocks(inp.kind, &s1, &s2, inp.sign)?;
-                (ss_to_lti(ss, true, &mut warnings)?, rc, false)
+                let (ss, rc) = blocks(kind, &s1, &s2, sign)?;
+                Ok((ss_to_lti(ss, true, warnings)?, rc, false))
             }
         }
     } else {
-        let s1 = inp.a.to_ss_checked().ok_or_else(|| improper_ss("/sys1"))?;
-        let s2 = inp.b.to_ss_checked().ok_or_else(|| improper_ss("/sys2"))?;
-        let (ss, rc) = blocks(inp.kind, &s1, &s2, inp.sign)?;
-        let as_tf = inp.output_kind == "tf";
-        (ss_to_lti(ss, as_tf, &mut warnings)?, rc, false)
+        let s1 = a.to_ss_checked().ok_or_else(|| improper_ss("/sys1"))?;
+        let s2 = b.to_ss_checked().ok_or_else(|| improper_ss("/sys2"))?;
+        let (ss, rc) = blocks(kind, &s1, &s2, sign)?;
+        Ok((ss_to_lti(ss, output_kind == "tf", warnings)?, rc, false))
+    }
+}
+
+/// Public for control.analysis.loopsens (spec K-4: the one-shot analysis is these same steps).
+pub(crate) fn series_lti(first: &Lti, second: &Lti, warnings: &mut Vec<Warning>) -> Result<Lti, OpError> {
+    combine(OpKind::Series, first, second, 1.0, "same", warnings).map(|r| r.0)
+}
+pub(crate) fn feedback_lti(fwd: &Lti, back: &Lti, warnings: &mut Vec<Warning>) -> Result<(Lti, Option<f64>), OpError> {
+    combine(OpKind::Feedback, fwd, back, -1.0, "same", warnings).map(|r| (r.0, r.1))
+}
+pub(crate) fn unity_siso(ts: f64) -> Lti {
+    tf_siso(vec![1.0], vec![1.0], ts)
+}
+pub(crate) fn feedback_identity(t: &Lti, fwd: &Lti, back: &Lti) -> (bool, usize, f64) {
+    identity_holds(OpKind::Feedback, t, fwd, back, -1.0)
+}
+pub(crate) fn series_identity(l: &Lti, first: &Lti, second: &Lti) -> (bool, usize, f64) {
+    identity_holds(OpKind::Series, l, first, second, 1.0)
+}
+pub(crate) fn is_improper(s: &Lti) -> bool {
+    improper_lti(s)
+}
+pub(crate) fn all_finite(s: &Lti) -> bool {
+    finite_lti(s)
+}
+
+fn execute_connect(inp: In, pre_warn: Vec<Warning>) -> Result<Output, OpError> {
+    let mut warnings = pre_warn;
+    if inp.improper_operand {
+        let p = if inp.loop_role == "unspecified" { "/sys1" } else if inp.pre.is_some() { "/controller" } else { "/plant" };
+        warnings.push(Warning::new("W.DOMAIN.IMPROPER_OPERAND", "有操作数不是 proper（分子阶次高于分母）。多项式结果仍会给出；需要状态空间实现时会报 E.DOMAIN.IMPROPER_SYSTEM。分析算子（step、bode、margin）不接受 improper 系统。").path(p));
+    }
+    // Named feedback with a controller: forward path first (controller output → plant input).
+    let (g1, fwd_check) = match &inp.pre {
+        Some(c) => {
+            let (fwd, _, _) = combine(OpKind::Series, c, &inp.a, 1.0, &inp.output_kind, &mut warnings)?;
+            let chk = identity_holds(OpKind::Series, &fwd, c, &inp.a, 1.0);
+            (fwd, Some(chk))
+        }
+        None => (inp.a.clone(), None),
     };
+    let (sys, rcond, poly_used) = combine(inp.kind, &g1, &inp.b, inp.sign, &inp.output_kind, &mut warnings)?;
     if improper_lti(&sys) {
         warnings.push(Warning::new("W.DOMAIN.IMPROPER_RESULT", "互联结果不是 proper。step / bode / margin / c2d 会拒绝它；先闭合回路，或给理想微分加滤波极点。").path("/output_kind"));
     }
     if let Some(rc) = rcond {
         if rc < 1e-8 {
-            warnings.push(Warning::new("W.NUMERICAL.ILL_CONDITIONED", format!("代数环矩阵 E 的 rcond = {rc:.3e} < 1e-8，闭环对直通项的舍入敏感。")).path("/sys2").details(json!({"rcond": rc})));
+            let p = if inp.loop_role == "unspecified" { "/sys2" } else { "/sensor" };
+            warnings.push(Warning::new("W.NUMERICAL.ILL_CONDITIONED", format!("代数环矩阵 E 的 rcond = {rc:.3e} < 1e-8，闭环对直通项的舍入敏感。")).path(p).details(json!({"rcond": rc})));
         }
     }
-    let (ok, npts, worst) = identity_holds(inp.kind, &sys, &inp.a, &inp.b, inp.sign);
+    let (mut ok, mut npts, mut worst) = identity_holds(inp.kind, &sys, &g1, &inp.b, inp.sign);
+    if let Some((ok2, n2, w2)) = fwd_check {
+        ok = ok && ok2;
+        npts += n2;
+        worst = worst.max(w2);
+    }
     let name = match inp.kind {
         OpKind::Series => "series",
         OpKind::Parallel => "parallel",
         OpKind::Feedback => "feedback",
     };
     let operands: Vec<Value> = inp.hashes.iter().map(|(role, h)| json!({"role": role, "sha256": h})).collect();
+    let mut composition = json!({
+        "operation": name,
+        "operands": operands,
+        "sign": if matches!(inp.kind, OpKind::Feedback) { json!(inp.sign) } else { Value::Null },
+        "implicit_unity": inp.implicit_unity,
+        "lineage": inp.lineage,
+        "lineage_checked": false,
+    });
+    // spec K-3: positional calls keep their v0.3.5 bytes (no loop_role key); named calls state the role.
+    if inp.loop_role != "unspecified" {
+        composition["loop_role"] = json!(inp.loop_role);
+        composition["topology"] = json!(inp.topology);
+        if let Some(ci) = inp.controller_implicit {
+            composition["controller_implicit"] = json!(ci);
+        }
+    }
     let result = json!({
         "system": lti_json(&sys),
         "realization": if poly_used { realization_name(inp.kind, true) } else if sys.kind()=="tf" { "ss2tf_characteristic_polynomial" } else { realization_name(inp.kind, false) },
         "minimal": Value::Null,
         "proper": !improper_lti(&sys),
-        "composition": {
-            "operation": name,
-            "operands": operands,
-            "sign": if matches!(inp.kind, OpKind::Feedback) { json!(inp.sign) } else { Value::Null },
-            "implicit_unity": inp.implicit_unity,
-            "lineage": inp.lineage,
-            "lineage_checked": false,
-        }
+        "composition": composition,
     });
     let trust = json!({
         "convergence": {"applicable": false},
@@ -496,6 +693,60 @@ mod tests {
         // 1/(s+1) in unity negative feedback = 1/(s+2)
         assert_eq!(u["result"]["system"]["num"], json!([1.0]));
         assert_eq!(u["result"]["system"]["den"], json!([1.0, 2.0]));
+    }
+    #[test]
+    fn k1_named_roles_fix_the_loop_topology() {
+        // EngDesign XG_13 live run: feedback(sys1 = G, sys2 = C) put the PID in the feedback path.
+        let g = tf(&[1.0], &[1.0, 10.0, 20.0]);
+        let c = tf(&[15.0, 40.0, 50.0], &[1.0, 0.0]); // Kp=40, Ki=50, Kd=15 (ideal derivative)
+        let t = run("control.lti.feedback", json!({"plant": g, "controller": c}));
+        assert_eq!(t["status"], "ok_with_warnings", "{}", t["error"]);
+        assert_eq!(t["result"]["system"]["num"], json!([15.0, 40.0, 50.0]));
+        assert_eq!(t["result"]["system"]["den"], json!([1.0, 25.0, 60.0, 50.0]));
+        assert_eq!(t["result"]["composition"]["loop_role"], "closed_loop");
+        assert_eq!(t["result"]["composition"]["controller_implicit"], false);
+        assert_eq!(t["receipt"]["evidence"]["claim"], "verified");
+        assert_eq!(t["receipt"]["evidence"]["coverage"]["response_consistent"], "test_points");
+        let roles: Vec<&str> = t["result"]["composition"]["operands"].as_array().unwrap().iter().map(|o| o["role"].as_str().unwrap()).collect();
+        assert_eq!(roles, ["plant", "controller", "sensor"]);
+        // the v0.3.5 mistake, still expressible positionally, gives G/(1+CG): numerator is not the PID's
+        let wrong = run("control.lti.feedback", json!({"sys1": g, "sys2": c}));
+        assert_ne!(wrong["result"]["system"]["num"], t["result"]["system"]["num"]);
+        assert!(wrong["result"]["composition"].get("loop_role").is_none(), "positional calls keep v0.3.5 bytes");
+        // open loop from named series
+        let l = run("control.lti.series", json!({"controller": c, "plant": g}));
+        assert_eq!(l["result"]["system"]["num"], json!([15.0, 40.0, 50.0]));
+        assert_eq!(l["result"]["system"]["den"], json!([1.0, 10.0, 20.0, 0.0]));
+        assert_eq!(l["result"]["composition"]["loop_role"], "open_loop");
+    }
+    #[test]
+    fn k1_sensor_is_the_feedback_path() {
+        let g = tf(&[1.0], &[1.0, 1.0]);
+        let h = tf(&[2.0], &[1.0, 3.0]);
+        let t = run("control.lti.feedback", json!({"plant": g, "sensor": h}));
+        // (s+3)/((s+1)(s+3)+2)
+        assert_eq!(t["result"]["system"]["num"], json!([1.0, 3.0]));
+        assert_eq!(t["result"]["system"]["den"], json!([1.0, 4.0, 5.0]));
+        assert_eq!(t["result"]["composition"]["controller_implicit"], true);
+        assert_eq!(t["result"]["composition"]["implicit_unity"], false);
+    }
+    #[test]
+    fn k1_mixing_roles_and_positional_is_option_conflict() {
+        let g = tf(&[1.0], &[1.0, 1.0]);
+        let req = json!({"plant": g, "sys2": g});
+        let e = run("control.lti.feedback", req.clone());
+        assert_eq!(e["error"]["code"], "E.VALIDATION.OPTION_CONFLICT");
+        let rem = e["error"]["remediation"].as_array().unwrap();
+        let keep = rem.iter().find(|r| r["id"] == "keep_named").unwrap();
+        let mut fixed = req.clone();
+        for p in keep["patch"].as_array().unwrap() {
+            fixed.as_object_mut().unwrap().remove(p["path"].as_str().unwrap().trim_start_matches('/')).expect("patch removes a present field");
+        }
+        assert_eq!(run("control.lti.feedback", fixed)["status"], "ok");
+        let e = run("control.lti.series", json!({"controller": g}));
+        assert_eq!(e["error"]["code"], "E.VALIDATION.SCHEMA");
+        assert_eq!(e["error"]["details"]["path"], "/plant");
+        assert_eq!(run("control.lti.series", json!({}))["error"]["code"], "E.VALIDATION.SCHEMA");
     }
     #[test]
     fn positive_static_loop_is_singular() {

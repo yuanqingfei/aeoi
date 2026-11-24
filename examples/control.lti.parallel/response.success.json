@@ -136,7 +136,12 @@
       "convergence": null,
       "accuracy_grade": "B",
       "tolerance_class": "T1",
-      "credentials": null
+      "credentials": null,
+      "coverage": {
+        "response_consistent": "test_points",
+        "sample_times_equal": "full",
+        "all_finite": "full"
+      }
     },
     "fingerprint": {
       "request": "sha256:2a0da635dc42156ea28a2749ca31b36aea6fb88ec3b46ecc039ec83fe1a0872a",

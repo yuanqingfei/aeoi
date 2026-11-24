@@ -16,6 +16,19 @@ use serde_json::{json, Map, Value};
 pub const RECEIPT_FORMAT: &str = "aeoi-receipt/1";
 pub const W_POSTCONDITION: &str = "W.EVIDENCE.POSTCONDITION_FAILED";
 
+/// E-11 + E-12: the evidence claim from (no post-conditions declared, all true, any sampled coverage).
+pub fn claim_of(none_declared: bool, all_true: bool, any_sampled: bool) -> &'static str {
+    if none_declared {
+        "unchecked"
+    } else if !all_true {
+        "unverified"
+    } else if any_sampled {
+        "spot_checked"
+    } else {
+        "verified"
+    }
+}
+
 pub fn request_fingerprint(id: &str, version: &str, input_hash: &str) -> String {
     hash_value(&json!({"operator": id, "version": version, "input_hash": input_hash}))
 }
@@ -72,10 +85,30 @@ pub fn build(m: &OperatorMeta, input_hash: &str, output_hash: &str, trust: &Valu
             failed.push(k.to_string());
         }
     }
-    let claim = if post.is_empty() { "unchecked" } else if failed.is_empty() { "verified" } else { "unverified" };
+    // E-12 (v0.3.6): a post-condition evaluated only on a sampled/compressed copy of the result is
+    // not evidence for the whole result: all-true with any "sampled" coverage → spot_checked.
+    let coverage = decl.get("coverage").and_then(|c| c.as_object()).filter(|c| !c.is_empty());
+    let sampled = coverage.is_some_and(|c| post.keys().any(|k| c.get(k).and_then(|v| v.as_str()) == Some("sampled")));
+    let claim = claim_of(post.is_empty(), failed.is_empty(), sampled);
+    // E-13 (v0.3.6): result fields guarded by a failed post-condition are listed as unreliable.
+    let mut unreliable: Vec<String> = Vec::new();
+    if let Some(g) = decl.get("guards").and_then(|g| g.as_object()) {
+        for k in &failed {
+            for p in g.get(k).and_then(|x| x.as_array()).into_iter().flatten().filter_map(|x| x.as_str()) {
+                if !unreliable.iter().any(|u| u == p) {
+                    unreliable.push(p.to_string());
+                }
+            }
+        }
+    }
     if !failed.is_empty() {
-        warnings.push(Warning::new(W_POSTCONDITION, format!("后置条件未满足或未给出：{}；结果不能视为已验证", failed.join(", ")))
-            .details(json!({"failed": failed, "postconditions": Value::Object(post.clone())})));
+        let mut d = json!({"failed": failed, "postconditions": Value::Object(post.clone())});
+        let mut msg = format!("后置条件未满足或未给出：{}；结果不能视为已验证", failed.join(", "));
+        if !unreliable.is_empty() {
+            msg.push_str(&format!("；不可依赖的结果字段：{}", unreliable.join(", ")));
+            d["unreliable"] = json!(unreliable);
+        }
+        warnings.push(Warning::new(W_POSTCONDITION, msg).details(d));
     }
     let conv = &trust["convergence"];
     let req = request_fingerprint(&m.id, &m.version, input_hash);
@@ -93,6 +126,18 @@ pub fn build(m: &OperatorMeta, input_hash: &str, output_hash: &str, trust: &Valu
     // keeps every existing operator's receipt byte-for-byte unchanged.
     if let Some(a) = trust.get("approximation").filter(|v| !v.is_null()) {
         evidence["approximation"] = a.clone();
+    }
+    // E-12/E-13: emitted only when the manifest declares non-full coverage / when a guarded check fails,
+    // so receipts of operators without such declarations stay byte-for-byte unchanged.
+    if let Some(c) = coverage {
+        let mut cov = Map::new();
+        for k in evidence["postconditions"].as_object().map(|o| o.keys().cloned().collect::<Vec<_>>()).unwrap_or_default() {
+            cov.insert(k.clone(), c.get(&k).cloned().unwrap_or_else(|| json!("full")));
+        }
+        evidence["coverage"] = Value::Object(cov);
+    }
+    if !unreliable.is_empty() {
+        evidence["unreliable"] = json!(unreliable);
     }
     json!({
         "format": RECEIPT_FORMAT,
@@ -249,4 +294,51 @@ pub fn verify(op: &dyn DynOperator, args: &Value, claimed: &Value, host: &HostCt
     }
     out["verdict"] = json!(verdict);
     out
+}
+
+#[cfg(test)]
+mod evidence_tests {
+    //! E-12 / E-13 (v0.3.6) on a synthetic manifest: sampled coverage caps the claim at spot_checked,
+    //! guarded fields of a failed post-condition are listed as unreliable.
+    use super::*;
+    fn meta(coverage: Value, guards: Value) -> OperatorMeta {
+        let man = json!({"id": "test.op", "version": "0.0.1", "determinism": "platform_bitwise", "tolerance_class": "T2",
+            "backend": {"routine": "r"},
+            "receipt": {"method_id": "m", "assumptions": [], "exactness": {"class": "approximate", "bound_kind": "none"},
+                        "postconditions": ["a", "b"], "coverage": coverage, "guards": guards}});
+        OperatorMeta::from_json(&man.to_string(), r#"{"type":"object"}"#, r#"{"type":"object"}"#)
+    }
+    fn run(m: &OperatorMeta, a: bool, b: bool) -> (Value, Vec<Warning>) {
+        let mut w = vec![];
+        let trust = json!({"checks": {"a": a, "b": b}, "convergence": {"applicable": false}, "accuracy_grade": "B", "credentials": null, "error_estimate": null});
+        (build(m, "sha256:00", "sha256:11", &trust, &mut w, "b", "p"), w)
+    }
+    #[test]
+    fn claims() {
+        assert_eq!(claim_of(true, true, false), "unchecked");
+        assert_eq!(claim_of(false, false, true), "unverified");
+        assert_eq!(claim_of(false, true, true), "spot_checked");
+        assert_eq!(claim_of(false, true, false), "verified");
+    }
+    #[test]
+    fn sampled_coverage_is_spot_checked_not_verified() {
+        let m = meta(json!({"a": "sampled"}), json!({}));
+        let (r, w) = run(&m, true, true);
+        assert_eq!(r["evidence"]["claim"], "spot_checked");
+        assert_eq!(r["evidence"]["coverage"], json!({"a": "sampled", "b": "full"}));
+        assert!(w.is_empty());
+        let m = meta(json!({"a": "test_points"}), json!({}));
+        assert_eq!(run(&m, true, true).0["evidence"]["claim"], "verified");
+    }
+    #[test]
+    fn failed_guard_lists_unreliable_fields() {
+        let m = meta(json!({}), json!({"b": ["/rank", "/minimal"]}));
+        let (r, w) = run(&m, true, false);
+        assert_eq!(r["evidence"]["claim"], "unverified");
+        assert_eq!(r["evidence"]["unreliable"], json!(["/rank", "/minimal"]));
+        assert!(r["evidence"].get("coverage").is_none(), "empty coverage map → no coverage key");
+        assert_eq!(w[0].to_json()["details"]["unreliable"], json!(["/rank", "/minimal"]));
+        let (r, _) = run(&m, true, true);
+        assert!(r["evidence"].get("unreliable").is_none());
+    }
 }

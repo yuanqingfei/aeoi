@@ -23,11 +23,45 @@ pub struct In {
     echoed: Value,
 }
 
-fn conflict(msg: &str, patch: Value) -> OpError {
-    OpError::new("E.VALIDATION.OPTION_CONFLICT", msg.to_string(), "去掉不属于该形式的参数，或改 form。")
-        .path("/form")
-        .remedy(modify_input("drop", "去掉冲突字段", "high", false, patch))
+const PARALLEL_ONLY: [&str; 2] = ["Ki", "Kd"];
+const STANDARD_ONLY: [&str; 2] = ["Ti", "Td"];
+
+/// spec F-8: one error code for every mutually-exclusive field problem. `fields` are the offending
+/// fields actually present; every patch only touches those (applies cleanly to the original arguments).
+fn conflict(form: &str, form_given: bool, fields: &[&str], other_form_ok: bool) -> OpError {
+    let (own, other) = if form == "parallel" { ("Kp、Ki、Kd、Tf", "standard") } else { ("Kp、Ti、Td、Tf", "parallel") };
+    let mut e = OpError::new(
+        "E.VALIDATION.OPTION_CONFLICT",
+        format!("form = {form}{} 只接受 {own}；{} 属于 {other} 形式。两种形式的字段不能混用。", if form_given { "" } else { "（省略 form 时的默认值）" }, fields.join("、")),
+        "不需要的项直接省略，不要填 0 占位。按 remediation 的补丁去掉多余字段，或改 form。",
+    )
+    .path(&format!("/{}", fields[0]))
+    .detail("form", json!(form))
+    .detail("form_given", json!(form_given))
+    .detail("conflicting_fields", json!(fields));
+    if other_form_ok {
+        // every non-Kp/Tf field present belongs to the other form: switching form is lossless
+        let op = if form_given { "replace" } else { "add" };
+        e = e.remedy(modify_input("switch_form", &format!("改为 form = {other}（给出的字段都属于该形式）"), "high", false, json!([{"op": op, "path": "/form", "value": other}])));
+    }
+    let rm: Vec<Value> = fields.iter().map(|k| json!({"op": "remove", "path": format!("/{k}")})).collect();
+    e.remedy(modify_input("drop", &format!("保留 form = {form}，去掉 {}", fields.join("、")), "medium", false, Value::Array(rm)))
         .remedy(ask_user("form", "向用户确认要用 parallel 还是 standard"))
+}
+
+/// Ti = 0 is read as "no integral" by people but means an infinite integral gain in the formula:
+/// a specific message and patch instead of a bare range/schema message (spec F-8).
+fn ti_zero(ti: f64) -> OpError {
+    OpError::new(
+        "E.VALIDATION.OPTION_CONFLICT",
+        format!("Ti = {ti} 不是“没有积分”：standard 形式里积分项是 Kp/(Ti·s)，Ti ≤ 0 没有定义。没有积分时省略 Ti。"),
+        "没有积分：去掉 Ti。要积分：给出 Ti > 0（秒），或改用 parallel 形式的 Ki。",
+    )
+    .path("/Ti")
+    .detail("form", json!("standard"))
+    .detail("conflicting_fields", json!(["Ti"]))
+    .remedy(modify_input("omit_integral", "去掉 Ti（没有积分项）", "medium", false, json!([{"op": "remove", "path": "/Ti"}])))
+    .remedy(ask_user("Ti", "向用户确认积分时间 Ti（秒）或是否不要积分"))
 }
 
 fn jn(x: f64) -> Value {
@@ -40,6 +74,7 @@ impl Operator for Pid {
         &self.meta
     }
     fn validate(&self, args: &Value, _host: &HostCtx) -> Result<(In, Vec<Warning>), OpError> {
+        let form_given = args.get("form").is_some_and(|v| !v.is_null());
         let form = args.get("form").and_then(|x| x.as_str()).unwrap_or("parallel");
         let kp = args["Kp"].as_f64().unwrap();
         let has = |k: &str| args.get(k).is_some_and(|v| !v.is_null());
@@ -48,21 +83,27 @@ impl Operator for Pid {
         let tf = args.get("Tf").and_then(|x| x.as_f64()).unwrap_or(0.0);
         let td = args.get("Td").and_then(|x| x.as_f64()).unwrap_or(0.0);
         let ti = args.get("Ti").and_then(|x| x.as_f64());
-        if form == "parallel" && (has("Ti") || has("Td")) {
-            return Err(conflict("parallel 形式用 Kp、Ki、Kd、Tf，不接受 Ti、Td。", json!([{"op":"remove","path":"/Ti"},{"op":"remove","path":"/Td"}])));
+        let (wrong, own): (&[&str], &[&str]) = if form == "parallel" { (&STANDARD_ONLY, &PARALLEL_ONLY) } else { (&PARALLEL_ONLY, &STANDARD_ONLY) };
+        let bad: Vec<&str> = wrong.iter().copied().filter(|k| has(k)).collect();
+        if !bad.is_empty() {
+            // switching form is offered only when it is lossless and leads to a valid request
+            let other_form_ok = !own.iter().any(|k| has(k)) && !ti.is_some_and(|t| t <= 0.0);
+            return Err(conflict(form, form_given, &bad, other_form_ok));
         }
-        if form == "standard" && (has("Ki") || has("Kd")) {
-            return Err(conflict("standard 形式用 Kp、Ti、Td、Tf，不接受 Ki、Kd。", json!([{"op":"remove","path":"/Ki"},{"op":"remove","path":"/Kd"}])));
+        if form == "standard" && ti.is_some_and(|t| t <= 0.0) {
+            return Err(ti_zero(ti.unwrap()));
         }
         let deriv = if form == "parallel" { kd != 0.0 } else { td != 0.0 };
         if tf > 0.0 && !deriv {
-            return Err(conflict(
-                "Tf > 0 是微分滤波时间常数，但没有微分项（Kd = 0 或 Td = 0）。不能静默忽略。",
-                json!([{"op": "remove", "path": "/Tf"}]),
-            ));
+            return Err(OpError::new("E.VALIDATION.OPTION_CONFLICT", "Tf > 0 是微分滤波时间常数，但没有微分项（Kd = 0 或 Td = 0）。不能静默忽略。", "去掉 Tf，或给出微分项。")
+                .path("/Tf")
+                .detail("form", json!(form))
+                .detail("conflicting_fields", json!(["Tf"]))
+                .remedy(modify_input("drop", "去掉 Tf", "high", false, json!([{"op": "remove", "path": "/Tf"}])))
+                .remedy(ask_user("Td", "向用户确认是否需要微分项")));
         }
-        if tf < 0.0 || td < 0.0 || ti.is_some_and(|t| t <= 0.0) {
-            return Err(OpError::new("E.VALIDATION.RANGE", "Tf、Td 必须 ≥ 0，Ti 必须 > 0。", "修正时间常数。").path("/Tf"));
+        if tf < 0.0 || td < 0.0 {
+            return Err(OpError::new("E.VALIDATION.RANGE", "Tf、Td 必须 ≥ 0。", "修正时间常数。").path(if tf < 0.0 { "/Tf" } else { "/Td" }));
         }
         let (num, den) = if form == "parallel" { parallel(kp, ki, kd, tf) } else { standard(kp, ti, td, tf) };
         let proper = degree(&num) <= degree(&den);
@@ -172,5 +213,67 @@ mod tests {
         // Kp * [Ti(Tf+Td), Ti+Tf, 1] / [Ti Tf, Ti, 0]
         assert!((n[0] - 2.0 * 4.0 * 0.6).abs() < 1e-12);
         assert!((d[0] - 0.4).abs() < 1e-12);
+    }
+
+    fn run(req: serde_json::Value) -> serde_json::Value {
+        let reg = crate::registry();
+        crate::find(&reg, "control.design.pid").unwrap().call(&req, &aeoi_core::HostCtx::default())
+    }
+    /// Apply an RFC 6902 patch of add/replace/remove ops on top-level keys (all F-8 patches are of this kind).
+    fn apply(req: &serde_json::Value, patch: &serde_json::Value) -> serde_json::Value {
+        let mut r = req.clone();
+        for op in patch.as_array().unwrap() {
+            let k = op["path"].as_str().unwrap().trim_start_matches('/');
+            match op["op"].as_str().unwrap() {
+                "remove" => assert!(r.as_object_mut().unwrap().remove(k).is_some(), "patch removes absent field {k}"),
+                "replace" => { assert!(r.get(k).is_some()); r[k] = op["value"].clone(); }
+                "add" => r[k] = op["value"].clone(),
+                o => panic!("{o}"),
+            }
+        }
+        r
+    }
+    fn patch_of<'a>(e: &'a serde_json::Value, id: &str) -> Option<&'a serde_json::Value> {
+        e["error"]["remediation"].as_array().unwrap().iter().find(|r| r["id"] == id).map(|r| &r["patch"])
+    }
+
+    #[test]
+    fn f8_ti_zero_under_parallel_is_option_conflict_with_clean_patch() {
+        // EngDesign XG_02 / XG_12 live run: parallel PID with a stray Ti = 0 was a bare schema error.
+        let req = serde_json::json!({"form": "parallel", "Kp": 0.02, "Ti": 0});
+        let e = run(req.clone());
+        assert_eq!(e["error"]["code"], "E.VALIDATION.OPTION_CONFLICT", "{}", e["error"]);
+        assert_eq!(e["error"]["details"]["conflicting_fields"], serde_json::json!(["Ti"]));
+        assert!(patch_of(&e, "switch_form").is_none(), "Ti = 0 is invalid in standard too: no switch offered");
+        let fixed = apply(&req, patch_of(&e, "drop").unwrap());
+        assert_eq!(run(fixed)["status"], "ok");
+    }
+    #[test]
+    fn f8_ti_zero_under_standard_has_specific_message() {
+        let req = serde_json::json!({"form": "standard", "Kp": 2.0, "Ti": 0, "Td": 0.1, "Tf": 0.01});
+        let e = run(req.clone());
+        assert_eq!(e["error"]["code"], "E.VALIDATION.OPTION_CONFLICT");
+        assert!(e["error"]["message"].as_str().unwrap().contains("不是“没有积分”"));
+        assert!(!e["error"]["message"].as_str().unwrap().contains("minimum"));
+        assert_eq!(run(apply(&req, patch_of(&e, "omit_integral").unwrap()))["status"], "ok");
+    }
+    #[test]
+    fn f8_mixed_forms_and_inferred_form() {
+        // standard with parallel gains: patch removes only the fields that are present
+        let req = serde_json::json!({"form": "standard", "Kp": 1.0, "Ti": 2.0, "Kd": 0.5});
+        let e = run(req.clone());
+        assert_eq!(e["error"]["code"], "E.VALIDATION.OPTION_CONFLICT");
+        assert_eq!(e["error"]["details"]["conflicting_fields"], serde_json::json!(["Kd"]));
+        assert!(patch_of(&e, "switch_form").is_none(), "Ti is present, switching to parallel would conflict");
+        assert_eq!(run(apply(&req, patch_of(&e, "drop").unwrap()))["status"], "ok");
+        // form omitted (default parallel) but only standard fields given: switching form is lossless
+        let req = serde_json::json!({"Kp": 1.0, "Ti": 2.0, "Td": 0.1});
+        let e = run(req.clone());
+        assert_eq!(e["error"]["code"], "E.VALIDATION.OPTION_CONFLICT");
+        let sw = patch_of(&e, "switch_form").unwrap();
+        assert_eq!(sw[0]["op"], "add");
+        let ok = run(apply(&req, sw));
+        assert_eq!(ok["status"], "ok_with_warnings", "ideal derivative → improper warning: {}", ok["error"]);
+        assert_eq!(ok["result"]["parameters"]["form"], "standard");
     }
 }

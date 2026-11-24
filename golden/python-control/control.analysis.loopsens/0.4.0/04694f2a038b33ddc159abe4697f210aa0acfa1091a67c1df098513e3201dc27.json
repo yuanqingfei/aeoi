@@ -1,0 +1,70 @@
+{
+ "spec": "aeoi/0.3",
+ "operator": "control.analysis.loopsens",
+ "operator_version": "0.4.0",
+ "case_family": "unstable_loop",
+ "request": {
+  "plant": {
+   "kind": "tf",
+   "num": [
+    1.0
+   ],
+   "den": [
+    1.0,
+    3.0,
+    3.0,
+    1.0
+   ],
+   "ts": 0.0,
+   "time_unit": "s"
+  },
+  "controller": {
+   "kind": "tf",
+   "num": [
+    20.0
+   ],
+   "den": [
+    1.0
+   ],
+   "ts": 0.0,
+   "time_unit": "s"
+  }
+ },
+ "reference_env": {
+  "engine": "python-control",
+  "python_control": "0.10.2",
+  "numpy": "2.5.5",
+  "python": "3.13.5",
+  "seed": 20261124,
+  "note": "python-control reference values; NOT MATLAB output"
+ },
+ "expected": {
+  "open_loop": {
+   "kind": "tf",
+   "num": [
+    20.0
+   ],
+   "den": [
+    1.0,
+    3.0,
+    3.0,
+    1.0
+   ]
+  },
+  "closed_loop": {
+   "kind": "tf",
+   "num": [
+    20.0
+   ],
+   "den": [
+    1.0,
+    3.0,
+    3.0,
+    21.0
+   ]
+  },
+  "closed_loop_stable": false,
+  "phase_margin": -25.148492815174194,
+  "gain_crossover_rad_s": 2.5235021294385263
+ }
+}

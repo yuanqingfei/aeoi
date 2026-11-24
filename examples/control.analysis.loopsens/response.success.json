@@ -1,0 +1,382 @@
+{
+  "spec": "aeoi/0.3",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "control.analysis.loopsens",
+    "version": "0.4.0",
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85"
+  },
+  "request_id": "req-loopsens-001",
+  "result": {
+    "open_loop": {
+      "kind": "tf",
+      "num": [
+        10.0,
+        20.0
+      ],
+      "den": [
+        1.0,
+        3.0,
+        2.0,
+        0.0
+      ],
+      "ts": 0.0,
+      "time_unit": "s"
+    },
+    "closed_loop": {
+      "kind": "tf",
+      "num": [
+        10.0,
+        20.0
+      ],
+      "den": [
+        1.0,
+        3.0,
+        12.0,
+        20.0
+      ],
+      "ts": 0.0,
+      "time_unit": "s"
+    },
+    "sensitivity": {
+      "kind": "tf",
+      "num": [
+        1.0,
+        3.0,
+        2.0,
+        0.0
+      ],
+      "den": [
+        1.0,
+        3.0,
+        12.0,
+        20.0
+      ],
+      "ts": 0.0,
+      "time_unit": "s"
+    },
+    "roles": {
+      "open_loop": "L = sensor·plant·controller：裕度、穿越频率用它（control_analysis_margin 的输入）",
+      "closed_loop": "T = plant·controller/(1+L)，r→y：阶跃指标用它（control_lti_stepinfo / step 的输入）",
+      "sensitivity": "S = 1/(1+L)，r→e"
+    },
+    "closed_loop_poles": {
+      "dtype": "c128",
+      "shape": [
+        3
+      ],
+      "data": [
+        [
+          -2.000000000000001,
+          0.0
+        ],
+        [
+          -0.5,
+          3.122498999199201
+        ],
+        [
+          -0.5,
+          -3.122498999199201
+        ]
+      ]
+    },
+    "closed_loop_stable": true,
+    "margins": {
+      "gain_margin": {
+        "unit": "1",
+        "value": "Inf"
+      },
+      "gain_margin_db": {
+        "unit": "dB",
+        "value": "Inf"
+      },
+      "phase_margin": {
+        "unit": "deg",
+        "value": 17.964235916371365
+      },
+      "stability_margin": {
+        "unit": "1",
+        "value": 0.2983672268638856
+      },
+      "phase_crossover_frequency": {
+        "unit": "rad/s",
+        "value": "NaN"
+      },
+      "gain_crossover_frequency": {
+        "unit": "rad/s",
+        "value": 3.0842328377167623
+      },
+      "stability_margin_frequency": {
+        "unit": "rad/s",
+        "value": 3.2368542715191335
+      },
+      "crossings": {
+        "phase": [],
+        "gain": [
+          {
+            "w_rad_s": 3.0842328377167623,
+            "phase_margin_deg": 17.964235916371365
+          }
+        ],
+        "stability": [
+          {
+            "w_rad_s": 3.2368542715191335,
+            "stability_margin": 0.2983672268638856
+          }
+        ]
+      },
+      "closed_loop_stable": true
+    },
+    "gain_crossover_rad_s": {
+      "unit": "rad/s",
+      "value": 3.0842328377167623
+    },
+    "gain_crossover_hz": {
+      "unit": "Hz",
+      "value": 0.4908709017689662
+    },
+    "bandwidth_rad_s": {
+      "unit": "rad/s",
+      "value": 4.824513387282439
+    },
+    "bandwidth_hz": {
+      "unit": "Hz",
+      "value": 0.7678451535990237
+    },
+    "bandwidth_definition": {
+      "drop_db": -3.0,
+      "reference": "dc_gain",
+      "of": "closed_loop",
+      "method": "even_polynomial_roots",
+      "statement": "第一个使 |T(jω)| < |T(0)|·10^(drop_db/20) 的频率"
+    },
+    "step_metrics": {
+      "definition": {
+        "rise_time_limits": [
+          0.1,
+          0.9
+        ],
+        "settling_threshold": 0.02,
+        "time_quantization": "grid_point",
+        "overshoot_unit": "%",
+        "steady_state_source": "dcgain",
+        "note": "上升/调节时间取第一个越过阈值的网格点，不插值。与连续时间穿越点之差 ≤ dt，记在 error_estimate.time_quantization_s，不占 T2 的 rtol。"
+      },
+      "stable": true,
+      "n_grid_points": 1001,
+      "info": {
+        "rise_time": {
+          "unit": "s",
+          "value": 0.37
+        },
+        "settling_time": {
+          "unit": "s",
+          "value": 7.32
+        },
+        "settling_min": {
+          "unit": "1",
+          "value": 0.6343723233782255
+        },
+        "settling_max": {
+          "unit": "1",
+          "value": 1.604633489312397
+        },
+        "overshoot": {
+          "unit": "%",
+          "value": 60.4633489312397
+        },
+        "undershoot": {
+          "unit": "%",
+          "value": 0.0
+        },
+        "peak": {
+          "unit": "1",
+          "value": 1.604633489312397
+        },
+        "peak_time": {
+          "unit": "s",
+          "value": 1.01
+        },
+        "steady_state": {
+          "unit": "1",
+          "value": 1.0,
+          "source": "dcgain"
+        },
+        "settled": true,
+        "window_limited": false
+      }
+    },
+    "composition": {
+      "operation": "loopsens",
+      "operands": [
+        {
+          "role": "plant",
+          "sha256": "sha256:bee5979ccb2f95f3511c79acf83d50967a3f4dcd4fc9286038b14af725333817"
+        },
+        {
+          "role": "controller",
+          "sha256": "sha256:04c74855e58adbdbbc4b7a9921f4f36340d980335a688dc61167a69e42be30fe"
+        },
+        {
+          "role": "sensor",
+          "sha256": "sha256:22a50c4022a6e54a408ae24af03577c7a782094c9caf45d3ad2cae0aad18e9d1"
+        }
+      ],
+      "controller_implicit": false,
+      "sensor_implicit": true,
+      "loop_role": "loop_analysis",
+      "topology": "r → e = r − sensor·y → controller → plant → y",
+      "lineage": null,
+      "lineage_checked": false
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "identity_rel": 2.288783399261118e-16,
+      "definition": "T·(1+L) = G·C、L = H·G·C、S·(1+L) = 1 在测试点上的相对残差（最大值）"
+    },
+    "condition": {
+      "identity_points": 12,
+      "algebraic_loop_rcond": null
+    },
+    "error_estimate": {
+      "identity_rel": 2.288783399261118e-16,
+      "basis": "互联恒等式在测试点上的相对残差，非严格上界；裕度与阶跃指标的误差见对应子算子（margin T3、stepinfo T2）"
+    },
+    "checks": {
+      "closed_loop_identity": true,
+      "stability_consistent": true,
+      "all_finite": true,
+      "sub_operator_checks": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "sub_operators": [
+        "control.lti.series",
+        "control.lti.feedback",
+        "control.analysis.margin",
+        "control.lti.stepinfo"
+      ]
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:loopsens:connect+margin+stepinfo",
+      "routine": "loopsens::analyze (connect + margin + stepinfo)",
+      "provenance": "aeoi://operators/control.analysis.loopsens/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "lti_model",
+        "statement": "plant、controller、sensor 准确描述回路（单位、符号、row-major 录入）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "topology",
+        "statement": "单回路负反馈 r → e = r − H·y → C → G → y",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "same_ts",
+        "statement": "三个系统采样周期相同",
+        "enforced_by": "error:E.DOMAIN.SAMPLE_TIME_MISMATCH"
+      },
+      {
+        "id": "siso",
+        "statement": "SISO",
+        "enforced_by": "error:E.DOMAIN.MIMO_NOT_SUPPORTED"
+      },
+      {
+        "id": "proper_for_metrics",
+        "statement": "裕度与阶跃指标要求 L、T proper，否则该项为 null",
+        "enforced_by": "warning:W.DOMAIN.ANALYSIS_SKIPPED"
+      },
+      {
+        "id": "definitions",
+        "statement": "带宽、阶跃阈值用请求里的值；省略则是规范默认 −3 dB、10–90%、2%",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "no_cancel",
+        "statement": "不做零极点对消",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "identity_rel": 2.288783399261118e-16
+      },
+      "basis": "互联恒等式在测试点上的相对残差，非严格上界；裕度与阶跃指标的误差见对应子算子（margin T3、stepinfo T2）"
+    },
+    "evidence": {
+      "claim": "spot_checked",
+      "postconditions": {
+        "closed_loop_identity": true,
+        "stability_consistent": true,
+        "all_finite": true,
+        "sub_operator_checks": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T3",
+      "credentials": null,
+      "coverage": {
+        "closed_loop_identity": "test_points",
+        "stability_consistent": "full",
+        "all_finite": "full",
+        "sub_operator_checks": "sampled"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:beb0742bbba4d085d10470edbc1e395b7d240688a267c9762d814e88156c15e3",
+      "result": "sha256:0c0b072650cc2ee097df821d08178d7fa06a6801d18fa9438fbfd36ee90c4861",
+      "output_hash": "sha256:6c3b154cdd81661953469ac9624d619091ccfdded60a4886a31bb9fad28fd5a5",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of control.analysis.loopsens@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.85",
+      "platform": "x86_64-linux",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T3",
+    "input_hash": "sha256:be6e92a6cbc92a1e8c0fe21e88cb214a86112e5c1f97480cb97c8f54eaa04abc",
+    "output_hash": "sha256:6c3b154cdd81661953469ac9624d619091ccfdded60a4886a31bb9fad28fd5a5",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 32.722784999999995
+  }
+}
