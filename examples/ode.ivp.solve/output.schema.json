@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/ode.ivp.solve/0.4.0/output",
+  "type": "object",
+  "required": [
+    "t",
+    "y",
+    "states",
+    "stats",
+    "tolerance",
+    "global_error"
+  ],
+  "properties": {
+    "t": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "输出时刻 [n_out]（t_eval，或 t0 到 tf 的 n_out 个等距点，与 numpy.linspace 相同）"
+    },
+    "y": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "解 [n_states, n_out]：第 i 行是 states[i]"
+    },
+    "states": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "stats": {
+      "type": "object",
+      "description": "n_steps（接受的步）、n_rejected、n_rhs_evals（不含全局误差重解）"
+    },
+    "tolerance": {
+      "type": "object",
+      "description": "实际使用的 rtol、atol（回显）"
+    },
+    "global_error": {
+      "type": "object",
+      "description": "以 rtol/10、atol/10 重解得到的估计：max_abs（每个状态在输出点上的最大 |y − y_fine|）与 max_scaled（max |y − y_fine| / (atol + rtol·|y|)）"
+    }
+  }
+}

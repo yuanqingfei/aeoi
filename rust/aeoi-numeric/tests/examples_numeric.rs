@@ -52,3 +52,36 @@ fn fft_example() {
     assert_eq!(e["error"]["code"], read(&format!("{dir}/response.error.json"))["error"]["code"]);
     assert!(!e["error"]["remediation"].as_array().unwrap().is_empty(), "remediation");
 }
+
+/// v0.4.8: request.json (damped oscillator, rtol 1e-8) agrees with scipy RK45 within T4; request.vdp.json
+/// (Van der Pol μ = 1 at the default rtol 1e-3, like ode45's defaults) is flagged by the a-posteriori estimate:
+/// tolerance_consistent fails and /y is declared unreliable (W.EVIDENCE.POSTCONDITION_FAILED); request.error.json
+/// is an E.VALIDATION.EXPRESSION with the 0-based position of the syntax error (spec 3.15).
+#[test]
+fn ode_example() {
+    let op = "ode.ivp.solve";
+    let dir = format!("examples/{op}");
+    let rf = read(&format!("{dir}/reference.python-control.json"));
+    for (rq, rs, rtol, atol) in [("request.json", "response.success.json", 1e-8, 1e-6), ("request.vdp.json", "response.vdp.json", 1e-3, 1e-6)] {
+        let req = read(&format!("{dir}/{rq}"));
+        let env = call(op, &req);
+        assert!(env["status"] == "ok" || env["status"] == "ok_with_warnings", "{rq}: {}", env["error"]);
+        assert_eq!(env["operator"]["build"].as_str().unwrap().split(' ').next(), Some("aeoi-numeric"));
+        assert_hash_on_same_platform(&env, &read(&format!("{dir}/{rs}")), &format!("{op} {rq}: bitwise example"));
+        let got: Vec<f64> = env["result"]["y"]["data"].as_array().unwrap().iter().map(|v| v.as_f64().unwrap()).collect();
+        let want: Vec<f64> = rf[rq]["y"].as_array().unwrap().iter().flat_map(|r| r.as_array().map(|a| a.clone()).unwrap_or_else(|| vec![r.clone()])).map(|v| v.as_f64().unwrap()).collect();
+        assert_eq!(got.len(), want.len(), "{rq}: y size");
+        let rtol = req.get("rtol").and_then(|v| v.as_f64()).unwrap_or(rtol);
+        let atol = req.get("atol").and_then(|v| v.as_f64()).unwrap_or(atol);
+        let d = got.iter().zip(&want).map(|(a, b)| (a - b).abs() / (atol + rtol * b.abs())).fold(0.0, f64::max);
+        assert!(d <= 10.0, "{rq}: vs scipy RK45 {d:.3e} × tol");
+    }
+    let vdp = call(op, &read(&format!("{dir}/request.vdp.json")));
+    assert_eq!(vdp["trust"]["checks"]["tolerance_consistent"], false, "default tolerances on Van der Pol are flagged");
+    assert!(vdp["warnings"].as_array().unwrap().iter().any(|w| w["code"] == "W.EVIDENCE.POSTCONDITION_FAILED"));
+    let e = call(op, &read(&format!("{dir}/request.error.json")));
+    assert_eq!(e["error"]["code"], "E.VALIDATION.EXPRESSION");
+    assert_eq!(e["error"]["code"], read(&format!("{dir}/response.error.json"))["error"]["code"]);
+    assert_eq!(e["error"]["details"]["position"], 12);
+    assert!(!e["error"]["remediation"].as_array().unwrap().is_empty(), "remediation");
+}

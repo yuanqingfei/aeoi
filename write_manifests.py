@@ -496,6 +496,37 @@ fft_out=outs("signal.spectral.fft",{"X":dict(M,description="c128，形状 [n_out
  "n":{"type":"integer","description":"实际变换长度"},"direction":{"enum":["forward","inverse"]},"normalization":{"enum":["backward","ortho","forward"]},"sides":{"enum":["two","one"]},
  "input_length":{"type":"integer","description":"x 最后一维的原长度；与 n 不同表示截断或补零"},"frequency_resolution":dict(Q,description="相邻频点间隔 fs/n")},
  ["X","frequency","n","direction","normalization","sides","input_length","frequency_resolution"],ver=V47)
+# ---- v0.4.8: ode.ivp.solve (expression language, spec 3.15)
+V48="0.4.0"
+EXPR={"type":"string","minLength":1,"maxLength":10000,"description":"AEOI 表达式（3.15）：+ − * / ^、括号、数字、已声明的名字、t、常数 pi，以及固定函数表"}
+NAME={"type":"string","pattern":"^[A-Za-z_][A-Za-z0-9_]*$"}
+ode=man("ode.ivp.solve","Initial value problem for ODEs","求解常微分方程组的初值问题 dy/dt = f(t, y)，y(t0) = y0。右端 f 用 AEOI 表达式语言写（3.15），状态与参数用名字声明，不按下标引用。显式 Runge–Kutta：Dormand–Prince 5(4)（与 MATLAB ode45、scipy RK45 同一方法），自适应步长按 rtol/atol 控制，输出点用 4 阶稠密输出。并用 10 倍更严的容差重解一遍，报告估计的全局误差。","analysis",["ode","ivp","simulation","runge-kutta"],
+ ["states 为不重复的名字，rhs 与之一一对应（第 i 个表达式是 d(states[i])/dt）","initial 给出每个状态的初值","t_span = [t0, tf]，tf ≠ t0；tf < t0 时反向积分","t_eval 在区间内、沿积分方向单调；与 n_out 二选一","非刚性问题；刚性问题会给 W.NUMERICAL.STIFF_PROBLEM"],
+ ["刚性问题的高效求解（需要隐式方法，将来作为同一算子的另一方法登记，3.14）","事件检测（过零停止）","微分代数方程（DAE）","带时滞的方程（DDE）","随机微分方程"],
+ "Dormand–Prince 5(4)，FSAL，系数与 scipy.integrate.RK45 相同（10.18 OD-3 列出）。误差：err = RMS_i(h·Σ_j E_j K_ji / (atol + rtol·max(|y_i|, |y_new,i|)))；err < 1 接受。步长因子：接受时 min(10, 0.9·err^{−1/5})（err = 0 时 10；刚被拒过的步不放大），拒绝时 max(0.2, 0.9·err^{−1/5})；右端出现非有限值的试探步按拒绝处理（因子 0.2）。最小步长 10·|nextafter(t) − t|。初始步长：Hairer–Nørsett–Wanner II.4 的经验算法（与 scipy select_initial_step 相同）。输出点：落在 (t_old, t] 内的点用该步的 4 阶稠密输出（Shampine P 矩阵）求值，t0 处即 y0。全局误差估计：同一方法以 rtol/10、atol/10 重解，在输出点上比较。刚性检测：Hairer DOPRI5 的 h·λ 估计连续 15 步 > 3.25",
+ [{"type":"paper","cite":"J. R. Dormand, P. J. Prince, A family of embedded Runge-Kutta formulae, J. Comput. Appl. Math. 6(1), 1980","doi":"10.1016/0771-050X(80)90013-3"},
+  {"type":"paper","cite":"L. F. Shampine, Some practical Runge-Kutta formulas, Math. Comp. 46(173), 1986","doi":"10.1090/S0025-5718-1986-0815836-3"},
+  {"type":"textbook","cite":"E. Hairer, S. P. Nørsett, G. Wanner, Solving Ordinary Differential Equations I: Nonstiff Problems, 2nd ed., Springer 1993, §II.4（步长控制、初始步长）与 §IV.2（DOPRI5 刚性检测）"}],
+ "ode::dopri54 (explicit Runge-Kutta, adaptive)","T4",{"max_states":1000,"max_steps":1000000,"max_output_points":100000,"max_output_values":1000000,"global_error_refinement":10,"tolerance_consistency_factor":100},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.EXPRESSION","E.VALIDATION.SHAPE","E.VALIDATION.RANGE","E.VALIDATION.GRID","E.VALIDATION.OPTION_CONFLICT","E.VALIDATION.NON_FINITE","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.STEP_SIZE_TOO_SMALL","E.RESOURCE.COMPUTE_LIMIT","E.RESOURCE.OUTPUT_TOO_LARGE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["W.NUMERICAL.STIFF_PROBLEM"],sparse={},ver=V48,backend=BACK_NUM("ode::dopri54"))
+ode_in=ins("ode.ivp.solve",{"states":{"type":"array","items":NAME,"minItems":1,"maxItems":1000,"uniqueItems":True},
+ "rhs":{"type":"array","items":EXPR,"minItems":1,"maxItems":1000},
+ "params":{"type":"object","propertyNames":{"pattern":"^[A-Za-z_][A-Za-z0-9_]*$"},"additionalProperties":{"type":"number"}},
+ "initial":{"type":"object","additionalProperties":{"type":"number"}},
+ "t_span":{"type":"array","items":{"type":"number"},"minItems":2,"maxItems":2},
+ "t_eval":{"type":"array","items":{"type":"number"},"minItems":1,"maxItems":100000},
+ "n_out":{"type":"integer","minimum":2,"maximum":100000,"default":101,"x-aeoi-provenance":"convention"},
+ "rtol":{"type":"number","exclusiveMinimum":0,"default":0.001,"x-aeoi-provenance":"convention"},
+ "atol":{"type":"number","exclusiveMinimum":0,"default":1e-06,"x-aeoi-provenance":"convention"},
+ "max_step":{"type":"number","exclusiveMinimum":0},"first_step":{"type":"number","exclusiveMinimum":0}},
+ ["states","rhs","initial","t_span"],{"x-aeoi-shape-constraints":["rhs 与 states 等长","initial 的键 = states"]},ver=V48)
+ode_out=outs("ode.ivp.solve",{"t":dict(M,description="输出时刻 [n_out]（t_eval，或 t0 到 tf 的 n_out 个等距点，与 numpy.linspace 相同）"),
+ "y":dict(M,description="解 [n_states, n_out]：第 i 行是 states[i]"),"states":{"type":"array","items":{"type":"string"}},
+ "stats":{"type":"object","description":"n_steps（接受的步）、n_rejected、n_rhs_evals（不含全局误差重解）"},
+ "tolerance":{"type":"object","description":"实际使用的 rtol、atol（回显）"},
+ "global_error":{"type":"object","description":"以 rtol/10、atol/10 重解得到的估计：max_abs（每个状态在输出点上的最大 |y − y_fine|）与 max_scaled（max |y − y_fine| / (atol + rtol·|y|)）"}},
+ ["t","y","states","stats","tolerance","global_error"],ver=V48)
 OUTSEL={"type":"object","additionalProperties":False,"properties":{"return_samples":{"enum":["all","decimated","none"],"default":"all"},"max_samples":{"type":"integer","minimum":2,"default":10001}}}
 lsim_in=ins("control.lti.lsim",{"system":LTI,"u":M,
  "time":{"type":"object","additionalProperties":False,"required":["dt","unit"],"properties":{"dt":{"type":"number","exclusiveMinimum":0},"t0":{"type":"number","default":0},"unit":{"const":"s"}}},
@@ -509,7 +540,7 @@ lsim_out=outs("control.lti.lsim",{"t":{"oneOf":[{"type":"null"},Q]},"y":{"oneOf"
  ["t","y","x","n_grid_points","interpolation","realization"],ver=V45)
 B3={"control.lti.series":(series,series_in,series_out),"control.lti.parallel":(par,par_in,par_out),"control.lti.feedback":(fb,fb_in,fb_out),
  "control.design.pid":(pid,pid_in,pid_out),"control.lti.stepinfo":(si,si_in,si_out),"control.lti.pade":(pade,pade_in,pade_out),
- "control.analysis.loopsens":(ls,ls_in,ls_out),"control.lti.lsim":(lsim,lsim_in,lsim_out),"control.design.pidtune":(pt,pt_in,pt_out),"signal.spectral.fft":(fft,fft_in,fft_out)}
+ "control.analysis.loopsens":(ls,ls_in,ls_out),"control.lti.lsim":(lsim,lsim_in,lsim_out),"control.design.pidtune":(pt,pt_in,pt_out),"signal.spectral.fft":(fft,fft_in,fft_out),"ode.ivp.solve":(ode,ode_in,ode_out)}
 _ws=[]
 for _m in (series,fb,mg,si):
     _ws+= [w for w in _m["warnings"] if w not in _ws]
@@ -537,6 +568,7 @@ DESC={
  "control.lti.feedback":{"plant":"具名角色：被控对象 G（必填，用具名写法时）。结果是闭环 T = G·C/(1 + H·G·C)","controller":"具名角色：控制器 C，在前向通路（e → C → G）。省略表示 C = 1。不要把控制器放到 sensor","sensor":"具名角色：反馈通路 H（传感器/测量动态）。省略表示单位反馈 H = 1。控制器不是 sensor","sys1":"位置参数（不推荐）：前向通道。省略 sys2 时必须是方的（单位反馈）","sys2":"位置参数：反馈通道。省略表示单位增益 D=I。负反馈是默认，不是把 sys2 写成负号","sign":"反馈符号，只能是 -1（负反馈，默认，规范定义）或 +1（正反馈）。这是定义默认值，不是测量值，不需要引用用户原话","output_kind":"same（默认）、tf 或 ss","lineage":"可选。上游 receipt.fingerprint.request，只回显，不核验"},
  "control.design.pid":{"form":"parallel（默认）：C=Kp+Ki/s+Kd·s/(Tf·s+1)。standard：C=Kp·(1+1/(Ti·s)+Td·s/(Tf·s+1))。这是定义默认值","Kp":"比例增益。设计参数，没有默认值；由调用方给定，不需要在用户原话里逐字出现，但不得在用户和题目都没给时擅自假设","Ki":"只用于 form=parallel：积分增益，默认 0（该项不出现）。standard 形式不要出现 Ki","Kd":"只用于 form=parallel：微分增益，默认 0。Tf=0 且 Kd≠0 时结果 improper。standard 形式不要出现 Kd","Ti":"只用于 form=standard：积分时间（秒），必须 > 0。没有积分就省略 Ti，不要写 Ti=0；parallel 形式不要出现 Ti","Td":"只用于 form=standard：微分时间（秒），默认 0。parallel 形式不要出现 Td","Tf":"微分滤波时间常数（秒），默认 0（不加滤波）。有微分项时 Tf=0 得到理想微分","output_kind":"tf（默认）或 ss。improper 时 ss 会报错","lineage":"可选。上游 receipt 指纹，只回显"},
  "control.lti.stepinfo":{"system":SYS_D,"time":"时间网格，与 step 相同：uniform（t_final、dt，单位 s）或 auto。指标相对这个网格定义","rise_time_limits":"上升时间的低/高阈值，默认 [0.1, 0.9]（10% 到 90%）。这是指标定义，不是对象的物理参数；省略即用默认，不必询问","settling_threshold":"调节带半宽，默认 0.02（2%）。定义默认值，省略即用默认"},
+ "ode.ivp.solve":{"states":"状态名列表，如 [\"x\", \"v\"]。顺序决定 y 的行序；表达式里按名字引用，不用下标","rhs":"右端表达式列表，与 states 一一对应：第 i 个是 d(states[i])/dt，如 [\"v\", \"-k*x - c*v\"]。可用 t、状态名、参数名、常数 pi、+ − * / ^（右结合，-x^2 = -(x^2)）与函数 sin cos tan asin acos atan atan2 sinh cosh tanh exp log log10 sqrt abs min max hypot sign","params":"参数名到数值，如 {\"k\": 4, \"c\": 0.5}；名字不能与状态名重复","initial":"初值，键为状态名，如 {\"x\": 1, \"v\": 0}；每个状态都要给","t_span":"[t0, tf]；tf < t0 时反向积分","t_eval":"输出时刻（在区间内、沿积分方向单调）。不给时用 n_out 个等距点","n_out":"不给 t_eval 时的输出点数，默认 101（含两端）。与 t_eval 二选一","rtol":"相对容差，默认 1e-3（与 MATLAB ode45、scipy 相同）。要更准就调小，如 1e-8","atol":"绝对容差，默认 1e-6","max_step":"最大步长（可选）","first_step":"初始步长（可选；不给时自动选择）"},
  "signal.spectral.fft":{"x":"要变换的序列：f64 或 c128，形状 [n] 或 [m, n]（m 个通道，沿最后一维变换，与 lsim 的 [nu, nt] 相同）。长数据可用 b64 或 ref 编码","n":"变换长度。缺省为 x 最后一维的长度；更短则截断，更长则在末尾补零（= MATLAB fft(x, n)）","direction":"forward（缺省）或 inverse","normalization":"backward（缺省：正变换不缩放、逆变换乘 1/n，与 MATLAB、numpy 相同）、ortho（两个方向都乘 1/√n）或 forward（正变换乘 1/n）","sides":"two（缺省，全部 n 个频点）或 one（只返回 0..fs/2，仅用于实数输入的正变换）","sample_rate_hz":"采样率（Hz）。给出时 frequency 以 Hz 为单位，否则以 cycles/sample 为单位"},
  "control.design.pidtune":{"plant":"被控对象 G（SISO、连续、proper）。上一个工具返回了系统就原样粘贴 result.system","type":"PI 或 PID。必填：控制器类型是设计决定，不由算子选","wc_rad_s":"目标增益穿越频率 ωc（rad/s）。必填，由用户或题目给出，算子不猜；不知道就问用户期望的响应速度（ωc 约为闭环带宽）","phase_margin_deg":"目标相位裕度（度），默认 60。定义默认值，省略即可","ti_td_ratio":"只用于 PID：Ti/Td 比，默认 4（Åström–Hägglund）。PI 不要给","derivative_filter_n":"只用于 PID：微分滤波 Tf = Td/N 的 N，默认 10。PI 不要给","lineage":"可选。上游 receipt.fingerprint.request，只回显"},
  "control.lti.lsim":{"system":SYS_D,"u":"输入采样，形状 [nu, nt]：第 i 行是第 i 个输入通道，第 k 列是 t_k = t0 + k·dt 时刻的值。SISO 可给一维 [nt]。长数据可用 b64 或 ref 编码（3.6）","time":"均匀网格：dt（s，> 0），t0（起始时刻，缺省 0），unit 固定 s。离散系统 dt 必须等于 ts。非均匀时间戳先重采样","interpolation":"采样之间的输入怎么解释：foh 线性（缺省，与 scipy lsim、python-control 相同），zoh 保持到下一个采样。离散系统不要给","x0":"初始状态 [n]，缺省 0。只用于 kind = ss：tf/zpk 没有状态坐标，要给初始状态先用 control_lti_convert 转成 ss","return_states":"true 时同时返回状态轨迹 x [n, nt]，缺省 false","output":"返回的采样点：all / decimated（最多 max_samples 点）/ none"},
@@ -595,6 +627,8 @@ RECEIPT={
  "control.lti.pade":{"method_id":"aeoi:pade:golub-van-loan-11.3.1","assumptions":[A("delay","delay 由调用方给出，不是假设值","caller"),A("order","阶次由调用方给出，不是假设值","caller"),A("diagonal","只做 [N/N] 对角近似","validation"),A("approximation","结果逼近 e^{-θs}，逼近误差在 approximation，不在系数舍入界里","validation")],
    "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["taylor_matched","dc_is_one","all_finite"]},
 }
+RECEIPT["ode.ivp.solve"]={"method_id":"aeoi:ode:dopri54","assumptions":[A("model","states、rhs、params、initial 准确描述要解的方程","caller"),A("expressions","每个 rhs 是合法的 AEOI 表达式，只引用已声明的名字（3.15）","error:E.VALIDATION.EXPRESSION"),A("smooth_nonstiff","f 在积分区间上足够光滑、问题非刚性","warning:W.NUMERICAL.STIFF_PROBLEM"),A("finite_rhs","f 在解经过的点上有限","error:E.NUMERICAL.NON_FINITE_EVALUATION"),A("tolerance_is_local","rtol/atol 控制每步的局部误差；全局误差可能更大，由重解估计","validation")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["all_finite","tolerance_consistent"]}
 RECEIPT["signal.spectral.fft"]={"method_id":"aeoi:fft:rustfft-scalar","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("uniform_sampling","x 是均匀采样序列；频率轴按 sample_rate_hz（或 cycles/sample）解释","caller"),A("conventions","符号、归一化、单双边、频率轴顺序按请求或规范默认","validation"),A("periodic_extension","DFT 把 x 视为周期 n 的序列；截断或补零改变频谱（泄漏），不是误差","caller")],
    "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["parseval","dft_spot_check","all_finite"]}
 RECEIPT["control.design.pidtune"]={"method_id":"aeoi:pidtune:frequency-point","assumptions":[A("lti_model","plant 准确描述被控对象（单位、符号）","caller"),A("siso_continuous","SISO、连续、proper","error:E.DOMAIN.NOT_CONTINUOUS"),A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("target_from_user","ωc 由调用方给出；PM、Ti/Td、N 用请求里的值或规范默认","validation"),A("achievable","所需控制器相位在 PI/PID 可达范围内","error:E.DOMAIN.TARGET_NOT_ACHIEVABLE"),A("closed_loop_stable","结果闭环稳定","error:E.DOMAIN.TARGET_NOT_ACHIEVABLE"),A("single_crossover","L 只有一个增益穿越点（否则实际相位裕度可能小于目标）","warning:W.DOMAIN.EXTRA_CROSSOVER")],
@@ -611,13 +645,15 @@ COVERAGE.update({"control.design.pid":{"formula_matches":"test_points"},"control
  "control.analysis.loopsens":{"closed_loop_identity":"test_points","sub_operator_checks":"sampled"},
  "control.lti.lsim":{"half_step_consistent":"test_points"},
  "control.design.pidtune":{"target_met":"test_points","sub_operator_checks":"sampled"},
- "signal.spectral.fft":{"parseval":"full","dft_spot_check":"sampled"}})
+ "signal.spectral.fft":{"parseval":"full","dft_spot_check":"sampled"},
+ "ode.ivp.solve":{"tolerance_consistent":"full"}})
 # v0.3.6 E-13: result fields that are not usable when a post-condition fails (listed in receipt.evidence.unreliable).
 GUARDS={"control.analysis.ctrb_obsv":{"pbh_agrees_ctrb":["/ctrb/rank","/ctrb/full_rank","/minimal"],"pbh_agrees_obsv":["/obsv/rank","/obsv/full_rank","/minimal"]},
  "control.analysis.loopsens":{"closed_loop_identity":["/open_loop","/closed_loop","/sensitivity"],"stability_consistent":["/closed_loop_stable"],"sub_operator_checks":["/margins","/gain_crossover_rad_s","/gain_crossover_hz","/step_metrics"]}}
 for op in ("control.lti.series","control.lti.parallel","control.lti.feedback"):
     GUARDS[op]={"response_consistent":["/system"]}
 GUARDS["control.lti.lsim"]={"half_step_consistent":["/y","/x"]}
+GUARDS["ode.ivp.solve"]={"tolerance_consistent":["/y"]}
 GUARDS["signal.spectral.fft"]={"parseval":["/X"],"dft_spot_check":["/X","/frequency"]}
 GUARDS["control.design.pidtune"]={"target_met":["/controller","/gains","/gains_standard"],"sub_operator_checks":["/achieved"]}
 for op,c in COVERAGE.items(): RECEIPT[op]["coverage"]=c

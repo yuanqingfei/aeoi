@@ -129,6 +129,20 @@ def m_fft_scale_wrong(r):                   # X scaled by 1/n (another normaliza
         z[0] /= n; z[1] /= n
 
 
+def m_ode_y_wrong(r):                       # one output value off by 100 × its own tolerance (atol + rtol·|y|)
+    tol = r["tolerance"]; d = r["y"]["data"]; i = len(d) // 2
+    d[i] += 100 * (tol["atol"] + tol["rtol"] * abs(d[i]))
+
+
+def m_ode_states_reordered(r):              # state labels reversed, rows of y untouched (rows no longer match the names)
+    if len(r["states"]) > 1:
+        r["states"] = list(reversed(r["states"]))
+
+
+def m_ode_overclaims(r, env):               # always claims tolerance_consistent, whatever the estimate said
+    env["trust"]["checks"]["tolerance_consistent"] = True
+
+
 # name -> (operator, transform)
 MUTANTS = {
     "pz_pole_wrong": ("control.lti.poles_zeros", m_pz_pole_wrong),
@@ -147,6 +161,9 @@ MUTANTS = {
     "fft_bin_wrong": ("signal.spectral.fft", m_fft_bin_wrong),
     "fft_shifted_frequencies": ("signal.spectral.fft", m_fft_shifted_frequencies),
     "fft_scale_wrong": ("signal.spectral.fft", m_fft_scale_wrong),
+    "ode_y_wrong": ("ode.ivp.solve", m_ode_y_wrong),
+    "ode_states_reordered": ("ode.ivp.solve", m_ode_states_reordered),
+    "ode_overclaims": ("ode.ivp.solve", m_ode_overclaims),
 }
 
 
@@ -159,7 +176,7 @@ def rewrite(line, op, f):
     env = res.get("structuredContent") if isinstance(res, dict) else None
     if not (isinstance(env, dict) and env.get("status") in ("ok", "ok_with_warnings") and (env.get("operator") or {}).get("id") == op):
         return line
-    f(env["result"])
+    f(env["result"], env) if f.__code__.co_argcount == 2 else f(env["result"])
     oh = H.output_hash(env["result"])
     env["reproducibility"]["output_hash"] = oh
     fp = (env.get("receipt") or {}).get("fingerprint")

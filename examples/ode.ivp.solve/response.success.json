@@ -1,0 +1,273 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "ode.ivp.solve",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "t": {
+      "dtype": "f64",
+      "shape": [
+        31
+      ],
+      "data": [
+        0.0,
+        0.5,
+        1.0,
+        1.5,
+        2.0,
+        2.5,
+        3.0,
+        3.5,
+        4.0,
+        4.5,
+        5.0,
+        5.5,
+        6.0,
+        6.5,
+        7.0,
+        7.5,
+        8.0,
+        8.5,
+        9.0,
+        9.5,
+        10.0,
+        10.5,
+        11.0,
+        11.5,
+        12.0,
+        12.5,
+        13.0,
+        13.5,
+        14.0,
+        14.5,
+        15.0
+      ]
+    },
+    "y": {
+      "dtype": "f64",
+      "shape": [
+        2,
+        31
+      ],
+      "data": [
+        1.0,
+        0.5689718887697313,
+        -0.2580702625338326,
+        -0.7201352182163709,
+        -0.4983255995535911,
+        0.09855066540853721,
+        0.5051055546584733,
+        0.41704063687998544,
+        -0.002596840574934608,
+        -0.3440029003559954,
+        -0.3368516769751856,
+        -0.050285277687818444,
+        0.22624010373894177,
+        0.2641053474147287,
+        0.0750176310869317,
+        -0.1423093773717395,
+        -0.20164979843660089,
+        -0.08219108431879547,
+        0.08410643359860429,
+        0.15017019575994267,
+        0.07911602264795718,
+        -0.04498864172776071,
+        -0.10910617942327674,
+        -0.07067879867696032,
+        0.01968224388378861,
+        0.07726163650996257,
+        0.06001855909290156,
+        -0.004114654798304911,
+        -0.053193588987045466,
+        -0.04904775565928869,
+        -0.00478005113849039,
+        0.0,
+        -1.5255153551539036,
+        -1.5032310004203746,
+        -0.23228583932944238,
+        1.0018487817346204,
+        1.1773935805461972,
+        0.3399501000581753,
+        -0.6289841381499404,
+        -0.898123692847609,
+        -0.37003546584632124,
+        0.37069140666913125,
+        0.6682358523829091,
+        0.354977974801719,
+        -0.19731269785361397,
+        -0.4850617860802759,
+        -0.31643014903160466,
+        0.08532718468507877,
+        0.3431518401436783,
+        0.26827917242923843,
+        -0.01658874744967517,
+        -0.23599483153911835,
+        -0.21896575910016491,
+        -0.022550935675345798,
+        0.15705248347551828,
+        0.17322144371648912,
+        0.042107369868777715,
+        -0.10032944706434462,
+        -0.13333845751682266,
+        -0.049247878621010585,
+        0.06063981768184548,
+        0.10007475874020856
+      ]
+    },
+    "states": [
+      "x",
+      "v"
+    ],
+    "stats": {
+      "n_steps": 358,
+      "n_rejected": 11,
+      "n_rhs_evals": 2216
+    },
+    "tolerance": {
+      "rtol": 1e-08,
+      "atol": 1e-10
+    },
+    "global_error": {
+      "max_abs": [
+        4.408453269100221e-09,
+        8.770371873190186e-09
+      ],
+      "max_scaled": 14.38675640909242,
+      "method": "同一方法以 rtol/10、atol/10 重解，在输出点上比较"
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "global_error_max_scaled": 14.38675640909242,
+      "definition": "max_{i,k} |y − y_fine| / (atol + rtol·|y|)，y_fine 以 rtol/10、atol/10 重解；≤ 100 记为 tolerance_consistent"
+    },
+    "condition": {
+      "stiffness_detected_at": null
+    },
+    "error_estimate": {
+      "y_abs_max": 8.770371873190186e-09,
+      "basis": "后验估计：与 10 倍更严容差的解之差，近似当前解的全局误差（更严的解本身误差约小 10^(4/5) 倍以上）。非严格上界；rtol/atol 只控制每步的局部误差"
+    },
+    "checks": {
+      "all_finite": true,
+      "tolerance_consistent": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "refinement_solve": {
+        "n_steps": 569,
+        "n_rejected": 8,
+        "n_rhs_evals": 3464
+      },
+      "tolerance_consistency_factor": 100.0,
+      "direction": 1
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:ode:dopri54",
+      "routine": "ode::dopri54",
+      "provenance": "aeoi://operators/ode.ivp.solve/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "model",
+        "statement": "states、rhs、params、initial 准确描述要解的方程",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "expressions",
+        "statement": "每个 rhs 是合法的 AEOI 表达式，只引用已声明的名字（3.15）",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "smooth_nonstiff",
+        "statement": "f 在积分区间上足够光滑、问题非刚性",
+        "enforced_by": "warning:W.NUMERICAL.STIFF_PROBLEM"
+      },
+      {
+        "id": "finite_rhs",
+        "statement": "f 在解经过的点上有限",
+        "enforced_by": "error:E.NUMERICAL.NON_FINITE_EVALUATION"
+      },
+      {
+        "id": "tolerance_is_local",
+        "statement": "rtol/atol 控制每步的局部误差；全局误差可能更大，由重解估计",
+        "enforced_by": "validation"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "y_abs_max": 8.770371873190186e-09
+      },
+      "basis": "后验估计：与 10 倍更严容差的解之差，近似当前解的全局误差（更严的解本身误差约小 10^(4/5) 倍以上）。非严格上界；rtol/atol 只控制每步的局部误差"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "all_finite": true,
+        "tolerance_consistent": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T4",
+      "credentials": null,
+      "coverage": {
+        "all_finite": "full",
+        "tolerance_consistent": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:a098e8719bc369d466f3122a9a495f293667916faa60e6ad9d0cb3a87efccd5e",
+      "result": "sha256:66d9a26263db74e980acf1151f81f6f269b26541403fd7416d29815b34f5948d",
+      "output_hash": "sha256:dd0679d25cc95709691eb6b75cb2d2359683a2c1028c4a2b4ed4d2ea623ebe30",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of ode.ivp.solve@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T4",
+    "input_hash": "sha256:6d058a8dc149ec042c27392d99d689058029c3079c91ce6ccd7ba9de5e95ecc9",
+    "output_hash": "sha256:dd0679d25cc95709691eb6b75cb2d2359683a2c1028c4a2b4ed4d2ea623ebe30",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "glibc 2.39",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.447292
+  }
+}

@@ -72,7 +72,14 @@ fn receipts_on_all_golden_requests() {
         let any_sampled = post.iter().any(|k| cov[*k] == json!("sampled"));
         let want = aeoi_core::receipt::claim_of(post.is_empty(), all_true, any_sampled);
         assert_eq!(r["evidence"]["claim"], want, "{}", p.display());
-        assert_ne!(want, "unverified", "{}: a golden success fails post-conditions {:?}", p.display(), r["evidence"]["failed"]);
+        // golden successes never fail a post-condition, unless the case says the failure is the honest answer
+        // (v0.4.8, ode: tolerance_consistent fails at the requested tolerances; predicted by the generator)
+        if case.get("expect_postcondition_failed").is_some() {
+            assert_eq!(want, "unverified", "{}: expected failed post-conditions {}", p.display(), case["expect_postcondition_failed"]);
+            assert_eq!(r["evidence"]["failed"], case["expect_postcondition_failed"], "{}", p.display());
+        } else {
+            assert_ne!(want, "unverified", "{}: a golden success fails post-conditions {:?}", p.display(), r["evidence"]["failed"]);
+        }
         *claims.entry(m.id.clone()).or_default().entry(want.to_string()).or_default() += 1;
         // replay on the same build + platform must be bitwise (P-7)
         let v = verify(op, &case["request"], &env, &h);

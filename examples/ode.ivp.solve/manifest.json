@@ -1,0 +1,173 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "ode.ivp.solve",
+  "version": "0.4.0",
+  "title": "Initial value problem for ODEs",
+  "description": "求解常微分方程组的初值问题 dy/dt = f(t, y)，y(t0) = y0。右端 f 用 AEOI 表达式语言写（3.15），状态与参数用名字声明，不按下标引用。显式 Runge–Kutta：Dormand–Prince 5(4)（与 MATLAB ode45、scipy RK45 同一方法），自适应步长按 rtol/atol 控制，输出点用 4 阶稠密输出。并用 10 倍更严的容差重解一遍，报告估计的全局误差。",
+  "category": "analysis",
+  "tags": [
+    "ode",
+    "ivp",
+    "simulation",
+    "runge-kutta"
+  ],
+  "applicability": {
+    "preconditions": [
+      "states 为不重复的名字，rhs 与之一一对应（第 i 个表达式是 d(states[i])/dt）",
+      "initial 给出每个状态的初值",
+      "t_span = [t0, tf]，tf ≠ t0；tf < t0 时反向积分",
+      "t_eval 在区间内、沿积分方向单调；与 n_out 二选一",
+      "非刚性问题；刚性问题会给 W.NUMERICAL.STIFF_PROBLEM"
+    ],
+    "not_for": [
+      "刚性问题的高效求解（需要隐式方法，将来作为同一算子的另一方法登记，3.14）",
+      "事件检测（过零停止）",
+      "微分代数方程（DAE）",
+      "带时滞的方程（DDE）",
+      "随机微分方程"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "Dormand–Prince 5(4)，FSAL，系数与 scipy.integrate.RK45 相同（10.18 OD-3 列出）。误差：err = RMS_i(h·Σ_j E_j K_ji / (atol + rtol·max(|y_i|, |y_new,i|)))；err < 1 接受。步长因子：接受时 min(10, 0.9·err^{−1/5})（err = 0 时 10；刚被拒过的步不放大），拒绝时 max(0.2, 0.9·err^{−1/5})；右端出现非有限值的试探步按拒绝处理（因子 0.2）。最小步长 10·|nextafter(t) − t|。初始步长：Hairer–Nørsett–Wanner II.4 的经验算法（与 scipy select_initial_step 相同）。输出点：落在 (t_old, t] 内的点用该步的 4 阶稠密输出（Shampine P 矩阵）求值，t0 处即 y0。全局误差估计：同一方法以 rtol/10、atol/10 重解，在输出点上比较。刚性检测：Hairer DOPRI5 的 h·λ 估计连续 15 步 > 3.25",
+    "references": [
+      {
+        "type": "paper",
+        "cite": "J. R. Dormand, P. J. Prince, A family of embedded Runge-Kutta formulae, J. Comput. Appl. Math. 6(1), 1980",
+        "doi": "10.1016/0771-050X(80)90013-3"
+      },
+      {
+        "type": "paper",
+        "cite": "L. F. Shampine, Some practical Runge-Kutta formulas, Math. Comp. 46(173), 1986",
+        "doi": "10.1090/S0025-5718-1986-0815836-3"
+      },
+      {
+        "type": "textbook",
+        "cite": "E. Hairer, S. P. Nørsett, G. Wanner, Solving Ordinary Differential Equations I: Nonstiff Problems, 2nd ed., Springer 1993, §II.4（步长控制、初始步长）与 §IV.2（DOPRI5 刚性检测）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "ode::dopri54",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T4",
+  "sparse_support": {},
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_states": 1000,
+    "max_steps": 1000000,
+    "max_output_points": 100000,
+    "max_output_values": 1000000,
+    "global_error_refinement": 10,
+    "tolerance_consistency_factor": 100
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/ode.ivp.solve/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.EXPRESSION",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.RANGE",
+    "E.VALIDATION.GRID",
+    "E.VALIDATION.OPTION_CONFLICT",
+    "E.VALIDATION.NON_FINITE",
+    "E.NUMERICAL.NON_FINITE_EVALUATION",
+    "E.NUMERICAL.STEP_SIZE_TOO_SMALL",
+    "E.RESOURCE.COMPUTE_LIMIT",
+    "E.RESOURCE.OUTPUT_TOO_LARGE",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.NUMERICAL.STIFF_PROBLEM"
+  ],
+  "mcp": {
+    "tool_name": "ode_ivp_solve",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:ode:dopri54",
+    "assumptions": [
+      {
+        "id": "model",
+        "statement": "states、rhs、params、initial 准确描述要解的方程",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "expressions",
+        "statement": "每个 rhs 是合法的 AEOI 表达式，只引用已声明的名字（3.15）",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "smooth_nonstiff",
+        "statement": "f 在积分区间上足够光滑、问题非刚性",
+        "enforced_by": "warning:W.NUMERICAL.STIFF_PROBLEM"
+      },
+      {
+        "id": "finite_rhs",
+        "statement": "f 在解经过的点上有限",
+        "enforced_by": "error:E.NUMERICAL.NON_FINITE_EVALUATION"
+      },
+      {
+        "id": "tolerance_is_local",
+        "statement": "rtol/atol 控制每步的局部误差；全局误差可能更大，由重解估计",
+        "enforced_by": "validation"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "all_finite",
+      "tolerance_consistent"
+    ],
+    "coverage": {
+      "tolerance_consistent": "full"
+    },
+    "guards": {
+      "tolerance_consistent": [
+        "/y"
+      ]
+    }
+  }
+}

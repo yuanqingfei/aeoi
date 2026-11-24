@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/ode.ivp.solve/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "states",
+    "rhs",
+    "initial",
+    "t_span"
+  ],
+  "properties": {
+    "states": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "minItems": 1,
+      "maxItems": 1000,
+      "uniqueItems": true,
+      "description": "状态名列表，如 [\"x\", \"v\"]。顺序决定 y 的行序；表达式里按名字引用，不用下标"
+    },
+    "rhs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 10000,
+        "description": "AEOI 表达式（3.15）：+ − * / ^、括号、数字、已声明的名字、t、常数 pi，以及固定函数表"
+      },
+      "minItems": 1,
+      "maxItems": 1000,
+      "description": "右端表达式列表，与 states 一一对应：第 i 个是 d(states[i])/dt，如 [\"v\", \"-k*x - c*v\"]。可用 t、状态名、参数名、常数 pi、+ − * / ^（右结合，-x^2 = -(x^2)）与函数 sin cos tan asin acos atan atan2 sinh cosh tanh exp log log10 sqrt abs min max hypot sign"
+    },
+    "params": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "number"
+      },
+      "description": "参数名到数值，如 {\"k\": 4, \"c\": 0.5}；名字不能与状态名重复"
+    },
+    "initial": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number"
+      },
+      "description": "初值，键为状态名，如 {\"x\": 1, \"v\": 0}；每个状态都要给"
+    },
+    "t_span": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "[t0, tf]；tf < t0 时反向积分"
+    },
+    "t_eval": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 1,
+      "maxItems": 100000,
+      "description": "输出时刻（在区间内、沿积分方向单调）。不给时用 n_out 个等距点"
+    },
+    "n_out": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 100000,
+      "default": 101,
+      "x-aeoi-provenance": "convention",
+      "description": "不给 t_eval 时的输出点数，默认 101（含两端）。与 t_eval 二选一"
+    },
+    "rtol": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "default": 0.001,
+      "x-aeoi-provenance": "convention",
+      "description": "相对容差，默认 1e-3（与 MATLAB ode45、scipy 相同）。要更准就调小，如 1e-8"
+    },
+    "atol": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "default": 1e-06,
+      "x-aeoi-provenance": "convention",
+      "description": "绝对容差，默认 1e-6"
+    },
+    "max_step": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "最大步长（可选）"
+    },
+    "first_step": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "初始步长（可选；不给时自动选择）"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  },
+  "x-aeoi-shape-constraints": [
+    "rhs 与 states 等长",
+    "initial 的键 = states"
+  ]
+}

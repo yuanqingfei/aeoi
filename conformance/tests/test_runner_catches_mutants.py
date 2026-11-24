@@ -34,6 +34,9 @@ PROXY_EXPECT = {
     "fft_bin_wrong": ("signal.spectral.fft", "X: per channel"),
     "fft_shifted_frequencies": ("signal.spectral.fft", "frequency: |Δ|"),
     "fft_scale_wrong": ("signal.spectral.fft", "Parseval, recomputed by the runner"),
+    "ode_y_wrong": ("ode.ivp.solve", "y vs truth"),
+    "ode_states_reordered": ("ode.ivp.solve", "states echo the request"),
+    "ode_overclaims": ("ode.ivp.solve", "tolerance_consistent = true ⇒"),
 }
 
 # mutant -> substring that must appear among the names of the failed checks

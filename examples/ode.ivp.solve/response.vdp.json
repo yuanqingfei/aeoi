@@ -1,0 +1,265 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok_with_warnings",
+  "dry_run": false,
+  "operator": {
+    "id": "ode.ivp.solve",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "t": {
+      "dtype": "f64",
+      "shape": [
+        21
+      ],
+      "data": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0,
+        9.0,
+        10.0,
+        11.0,
+        12.0,
+        13.0,
+        14.0,
+        15.0,
+        16.0,
+        17.0,
+        18.0,
+        19.0,
+        20.0
+      ]
+    },
+    "y": {
+      "dtype": "f64",
+      "shape": [
+        2,
+        21
+      ],
+      "data": [
+        2.0,
+        1.5080370580141262,
+        0.322814693250714,
+        -1.8677649721380565,
+        -1.7758693239304437,
+        -0.8997181292470126,
+        1.1593584578242675,
+        1.9381594292927506,
+        1.2560762716776794,
+        -0.30520537113001844,
+        -2.0069790685048057,
+        -1.5340981581361208,
+        -0.3816366646975421,
+        1.833209187084649,
+        1.7593826554159966,
+        0.8740835870212134,
+        -1.2111469422133394,
+        -1.9369380012358002,
+        -1.2471518914343453,
+        0.32768418127758225,
+        2.0093526974643097,
+        0.0,
+        -0.7803671759160008,
+        -1.8337367795568669,
+        -1.0843057812266639,
+        0.6106061580995525,
+        1.2513941328103955,
+        2.556327127422686,
+        -0.39994936124054997,
+        -0.9551668029002588,
+        -2.4491941585592745,
+        -0.0499534921432343,
+        0.7654853484294071,
+        1.7712479473898504,
+        1.1684604881756337,
+        -0.6114279006332888,
+        -1.2740384160956408,
+        -2.509234377442247,
+        0.4143103982709157,
+        0.9631460417816873,
+        2.4673387876616464,
+        0.029191248633866518
+      ]
+    },
+    "states": [
+      "x",
+      "v"
+    ],
+    "stats": {
+      "n_steps": 52,
+      "n_rejected": 20,
+      "n_rhs_evals": 434
+    },
+    "tolerance": {
+      "rtol": 0.001,
+      "atol": 1e-06
+    },
+    "global_error": {
+      "max_abs": [
+        0.12009923907527509,
+        0.17310711592828532
+      ],
+      "max_scaled": 2422.0010569388132,
+      "method": "同一方法以 rtol/10、atol/10 重解，在输出点上比较"
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "global_error_max_scaled": 2422.0010569388132,
+      "definition": "max_{i,k} |y − y_fine| / (atol + rtol·|y|)，y_fine 以 rtol/10、atol/10 重解；≤ 100 记为 tolerance_consistent"
+    },
+    "condition": {
+      "stiffness_detected_at": null
+    },
+    "error_estimate": {
+      "y_abs_max": 0.17310711592828532,
+      "basis": "后验估计：与 10 倍更严容差的解之差，近似当前解的全局误差（更严的解本身误差约小 10^(4/5) 倍以上）。非严格上界；rtol/atol 只控制每步的局部误差"
+    },
+    "checks": {
+      "all_finite": true,
+      "tolerance_consistent": false
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "refinement_solve": {
+        "n_steps": 75,
+        "n_rejected": 23,
+        "n_rhs_evals": 590
+      },
+      "tolerance_consistency_factor": 100.0,
+      "direction": 1
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:ode:dopri54",
+      "routine": "ode::dopri54",
+      "provenance": "aeoi://operators/ode.ivp.solve/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "model",
+        "statement": "states、rhs、params、initial 准确描述要解的方程",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "expressions",
+        "statement": "每个 rhs 是合法的 AEOI 表达式，只引用已声明的名字（3.15）",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "smooth_nonstiff",
+        "statement": "f 在积分区间上足够光滑、问题非刚性",
+        "enforced_by": "warning:W.NUMERICAL.STIFF_PROBLEM"
+      },
+      {
+        "id": "finite_rhs",
+        "statement": "f 在解经过的点上有限",
+        "enforced_by": "error:E.NUMERICAL.NON_FINITE_EVALUATION"
+      },
+      {
+        "id": "tolerance_is_local",
+        "statement": "rtol/atol 控制每步的局部误差；全局误差可能更大，由重解估计",
+        "enforced_by": "validation"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "y_abs_max": 0.17310711592828532
+      },
+      "basis": "后验估计：与 10 倍更严容差的解之差，近似当前解的全局误差（更严的解本身误差约小 10^(4/5) 倍以上）。非严格上界；rtol/atol 只控制每步的局部误差"
+    },
+    "evidence": {
+      "claim": "unverified",
+      "postconditions": {
+        "all_finite": true,
+        "tolerance_consistent": false
+      },
+      "failed": [
+        "tolerance_consistent"
+      ],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T4",
+      "credentials": null,
+      "coverage": {
+        "all_finite": "full",
+        "tolerance_consistent": "full"
+      },
+      "unreliable": [
+        "/y"
+      ]
+    },
+    "fingerprint": {
+      "request": "sha256:b72b278ca5da5c6fb7608cdf9ff11883429828f0966defbcdf700dc2686eac3c",
+      "result": "sha256:02cdada523f9ae2d7ed92acfe9abc2395fb20bd51622300200cae6f3372ee413",
+      "output_hash": "sha256:4695c611d3e60f00c1550dfd258a05593bbabb782dfe70319d007b4246949563",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of ode.ivp.solve@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "glibc 2.39",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [
+    {
+      "code": "W.EVIDENCE.POSTCONDITION_FAILED",
+      "message": "后置条件未满足或未给出：tolerance_consistent；结果不能视为已验证；不可依赖的结果字段：/y",
+      "details": {
+        "failed": [
+          "tolerance_consistent"
+        ],
+        "postconditions": {
+          "all_finite": true,
+          "tolerance_consistent": false
+        },
+        "unreliable": [
+          "/y"
+        ]
+      }
+    }
+  ],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T4",
+    "input_hash": "sha256:436766aeec1141b0da488077430f5536e31888b6b0cec36478a9048a626af3c6",
+    "output_hash": "sha256:4695c611d3e60f00c1550dfd258a05593bbabb782dfe70319d007b4246949563",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "glibc 2.39",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.283719
+  }
+}

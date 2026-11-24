@@ -1,0 +1,62 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "ode.ivp.solve",
+ "operator_version": "0.4.0",
+ "case_family": "constant_rhs_precedence",
+ "request": {
+  "states": [
+   "y"
+  ],
+  "rhs": [
+   "2^3^2 - -2^2*3"
+  ],
+  "initial": {
+   "y": 0.0
+  },
+  "t_span": [
+   0,
+   1
+  ],
+  "n_out": 5
+ },
+ "reference_env": {
+  "engine": "scipy.integrate.solve_ivp RK45 (truth: analytic or DOP853 rtol 1e-13)",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "expression_evaluator": "independent Python recursive-descent parser of spec 3.15",
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "t": [
+   0.0,
+   0.25,
+   0.5,
+   0.75,
+   1.0
+  ],
+  "y": [
+   0.0,
+   131.0,
+   262.00000000000006,
+   393.0000000000002,
+   524.0000000000005
+  ],
+  "shape": [
+   1,
+   5
+  ],
+  "truth": [
+   0.0,
+   131.0,
+   262.0,
+   393.0,
+   524.0
+  ],
+  "truth_kind": "analytic",
+  "scipy_nfev": 32,
+  "scipy_global_error_max_abs": 4.547473508864641e-13,
+  "scipy_max_scaled_vs_fine": 0.0,
+  "tolerance_consistent": true
+ }
+}

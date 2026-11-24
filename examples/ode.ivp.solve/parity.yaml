@@ -1,0 +1,30 @@
+# Parity test spec — ode.ivp.solve 0.4.0 (AEOI v0.4.8-draft)
+operator: ode.ivp.solve
+references:
+  - {engine: scipy, version: "scipy 1.18.1 solve_ivp(method = RK45)", role: dev_reference, status: active,
+     generator: gen_golden_ode.py, golden_store: "golden/python-control/ode.ivp.solve/0.4.0/*.json",
+     note: "NOT MATLAB output. Same Dormand–Prince 5(4) pair, error norm and step-size controller as the operator (spec 10.18 OD-2); the right-hand sides are evaluated by an independent Python parser of spec 3.15"}
+  - {engine: truth, role: high_precision_reference, status: active,
+     note: "analytic solution where one exists (cross-checked against DOP853 rtol 1e-13 by the generator), otherwise scipy DOP853 at rtol 1e-13, atol 1e-14"}
+  - {engine: MATLAB, role: ground_truth, status: planned,
+     note: "ode45 uses the same pair but a different error norm (max, not RMS), a different initial step and Refine = 4 output; compare against the truth, not step by step"}
+runner: "cargo test --release -p aeoi-numeric --test parity_ode"
+tolerance_class: T4
+compare:
+  y: {against: truth, bound: "per point |y − truth| ≤ max(10·(atol + rtol·|truth|), 2·E_ref + 1e-13·max|y|)",
+      note: "E_ref = the reference RK45's own max global error on the case. Closeness to the reference RK45's values is recorded, not asserted: two correct runs part as soon as one accept/reject decision differs (kinks of min/max/abs/sign, chaos, long horizons)"}
+  t: {rtol: "4ε"}
+  states / tolerance: exact echo
+  global_error: {recorded: "estimate / actual error (median 0.92, max 1.03 on the suite)"}
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py (rule_ode). No trust.* value of the implementation is used as a tolerance
+  y: "shape exact; per point |y − truth| ≤ max(10·(atol + rtol·|truth|), 2·E_ref + 1e-13·max|y|), rtol/atol = the request's effective values"
+  t: "|Δ| ≤ 4ε·max(1, |t|)"
+  echoed: "states (same order), tolerance {rtol, atol} = effective values"
+  honesty: "recomputed by the runner against the truth: trust.checks.tolerance_consistent = true ⇒ max |y − truth| / (atol + rtol·|truth|) ≤ 1000"
+case_families:
+  - {name: "decay_param / decay_default_tol / harmonic / damped_oscillator / forced_first_order / backward", n: 6, note: "analytic"}
+  - {name: "constant_rhs_precedence / functions", n: 2, note: "3.15 precedence (2^3^2 = 512, -2^2 = -4) and the whole function table"}
+  - {name: "explicit_t_eval / explicit_defaults / first_and_max_step", n: 3}
+  - {name: "van_der_pol_mu1 / van_der_pol_mu1_default_tol / lotka_volterra / pendulum / lorenz_short", n: 5, note: "truth by DOP853; default tolerances and pendulum are flagged tolerance_consistent = false"}
+  - {name: stiff_van_der_pol_mu100, n: 1, expect: "W.NUMERICAL.STIFF_PROBLEM"}
+  - {name: errors, n: 17, expect: "E.VALIDATION.EXPRESSION ×7 (syntax, unknown name/function, arity, non-ASCII, reserved name, param shadows state), SHAPE, RANGE, GRID, OPTION_CONFLICT, SCHEMA, E.NUMERICAL.NON_FINITE_EVALUATION, E.NUMERICAL.STEP_SIZE_TOO_SMALL, ..."}

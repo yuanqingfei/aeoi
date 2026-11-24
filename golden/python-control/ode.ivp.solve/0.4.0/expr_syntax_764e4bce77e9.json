@@ -1,0 +1,36 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "ode.ivp.solve",
+ "operator_version": "0.4.0",
+ "case_family": "expr_syntax",
+ "request": {
+  "states": [
+   "x",
+   "v"
+  ],
+  "rhs": [
+   "v",
+   "-k*x +"
+  ],
+  "params": {
+   "k": 4.0
+  },
+  "initial": {
+   "x": 1.0,
+   "v": 0.0
+  },
+  "t_span": [
+   0,
+   1
+  ]
+ },
+ "reference_env": {
+  "engine": "scipy.integrate.solve_ivp RK45 (truth: analytic or DOP853 rtol 1e-13)",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "expression_evaluator": "independent Python recursive-descent parser of spec 3.15",
+  "note": "NOT MATLAB output"
+ },
+ "expected_error": "E.VALIDATION.EXPRESSION"
+}

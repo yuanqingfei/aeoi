@@ -31,13 +31,15 @@ macro_rules! operator_struct {
     };
 }
 
+pub mod expr;
 pub mod fft;
+pub mod ode;
 
 use aeoi_core::DynOperator;
 
 /// All operators in this crate.
 pub fn registry() -> Vec<Box<dyn DynOperator>> {
-    vec![Box::new(fft::Fft::new())]
+    vec![Box::new(fft::Fft::new()), Box::new(ode::OdeIvp::new())]
 }
 
 /// Look up by operator id or MCP tool name.

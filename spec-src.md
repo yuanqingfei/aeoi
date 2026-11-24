@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.7-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.8-draft
 
-> 状态：Draft v0.4.7 · 2026-11-24 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.8 · 2026-11-24 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.8 新增第 23 个算子 `ode.ivp.solve`（10.18，对应 `ode45`），并为它定下表达式语言（3.15）：右端 f(t, y) 作为数据传递，语法、优先级、函数表、求值顺序与上限都写进规范，算子只解析和求值，不执行代码。状态和参数按名字给出。方法照抄 scipy RK45 的步长决策；rtol/atol 只约束局部误差，所以算子用 tol/10 重解来估计全局误差，超出 100 倍容差时把 `y` 标为不可依赖。一致性规则对照精确解而不是参考求解器的步长序列，并由运行器检查 `tolerance_consistent` 的声明是否属实。一致性规则覆盖 10 / 23 = 43% 的算子。
 >
 > v0.4.7 进入控制以外的第一个领域：`signal.spectral.fft`（10.17）。约定（归一化、单双边、频率轴顺序）全部显式并回显，频率轴总是返回；运算路径不得依赖运行时 CPU 特性。实现放在新 crate `aeoi-numeric`，前端改用跨领域注册表 `aeoi-ops`；`operator.build` 报告实现所在的 crate。一致性规则覆盖 9 / 22 = 41% 的算子。
 >
@@ -361,6 +363,43 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 - MS-10 策略有两个来源：宿主或部署层（用户或组织的规定，例如“只用经过审计的库”），以及模型生成的请求。生效策略 = 宿主策略与请求策略的交集：`require` 取交集，`constraints` 取更严的（`min_exactness` 取较高者，`backend_library_in` 取交集）。合并后候选集为空时按 MS-6 报错。请求 MUST NOT 能放宽宿主策略。宿主策略由绑定层在调用算子前合并进 `exec.method_policy`；这是请求的一部分，不是对结果的改写，所以不违反 B-1。算子只处理它实际收到的 `exec.method_policy`。
 - MS-11 LLM 绑定默认隐藏 `exec`（F-6），模型因此不能改策略；宿主策略仍按 MS-10 注入，当前被允许的方法集合 SHOULD 写进工具描述（F-1），让模型知道有哪些方法可用。绑定层若允许模型自己提出 `method_policy`，它只能收紧宿主策略。
 
+### 3.15 表达式语言（v0.4.8）
+
+到 v0.4.7 为止，算子的输入都是数据：数、数组、系统。ODE 的右端 f(t, y) 是一个函数。JSON 只能传数据。把代码（Python、MATLAB 的匿名函数）交给算子执行，既不安全，也无法复现，因为结果取决于哪个解释器、哪个版本。所以 v0.4.8 用一种小的表达式语言，让函数也作为数据传递。语法固定，函数表固定，算子只解析、只求值，不执行任何代码。以后凡是要由用户给出函数的算子（非线性方程、优化目标、被积函数）都复用本节。参考实现在 `aeoi-numeric::expr`。golden 生成脚本里另有一个独立的 Python 实现（`gen_golden_ode.py`），它只依据本节写成。
+
+- EX-1 **语法**（EBNF；空白为空格、制表符、CR、LF，可出现在任意两个记号之间）：
+
+  ```text
+  expr    = sum
+  sum     = product { ("+" | "-") product }          左结合
+  product = unary { ("*" | "/") unary }              左结合
+  unary   = ("+" | "-") unary | power
+  power   = primary [ "^" unary ]                    右结合：2^3^2 = 2^(3^2) = 512；-x^2 = -(x^2)；2^-1 = 0.5
+  primary = number | name | name "(" expr { "," expr } ")" | "(" expr ")"
+  number  = digits [ "." { digit } ] [ exponent ] | "." digits [ exponent ]
+  exponent= ("e" | "E") [ "+" | "-" ] digits
+  name    = ( letter | "_" ) { letter | digit | "_" }
+  ```
+
+  优先级从低到高：`+ -`（二元）、`* /`、一元 `+ -`、`^`。乘方的优先级高于一元负号，这一点与数学书写和 MATLAB 相同，与 Excel 不同（Excel 里 `-2^2` 等于 4）。所以 `- -2^2*3` 的值是 −((−(2²))·3) = +12。乘方只写作 `^`，`**` 和 MATLAB 的 `.^` 都是语法错误。只允许 ASCII 字符。`×`、`÷`、`·`、`²` 报 `non_ascii`，并指出它的位置。
+- EX-2 **名字**。表达式里的名字只能是以下三种：算子声明的变量（ODE 中是 `t`、状态名、参数名，见 10.18 OD-1）、函数表里的函数名、常量 `pi`。名字区分大小写。变量名 MUST 符合 `name` 的语法，MUST NOT 与函数名、`pi` 或算子的保留名（ODE 的保留名是 `t`）相同，同一作用域里的变量名也 MUST NOT 重复。违反时报 `bad_name` 或 `duplicate_name`。用了未声明的名字报 `unknown_name`。语言里没有赋值、条件、循环，也不能自定义函数，所以每个表达式的求值时间是 O(节点数)，一定会结束。
+- EX-3 **函数表**（名字是保留的；参数个数不对报 `arity`）：
+
+  | 函数 | 参数 | 定义 |
+  |---|---|---|
+  | `sin` `cos` `tan` `asin` `acos` `atan` `sinh` `cosh` `tanh` `exp` `log` `log10` `sqrt` `abs` | 1 | 同名的 IEEE-754 / C 函数；`log` 为自然对数 |
+  | `atan2(y, x)` | 2 | y 在前（与 C、MATLAB、numpy 相同），值域 (−π, π] |
+  | `hypot(x, y)` | 2 | √(x² + y²)，中间结果不溢出 |
+  | `min(a, b)`、`max(a, b)` | 2 | 任一参数为 NaN 时结果为 NaN（与 C 的 `fmin`/`fmax` 不同：后者会忽略 NaN，模型里的 NaN 不应被悄悄吞掉） |
+  | `sign(x)` | 1 | x > 0 为 1，x < 0 为 −1，x = ±0 为 +0，NaN 为 NaN |
+  | `a ^ b` | — | IEEE `pow`：`0^0 = 1`，负底数的非整数次幂为 NaN（`(-8)^(1/3)` 不是 −2） |
+
+  定义域外的值（如 `log(-1)`、`sqrt(-1)`）按 IEEE 给 NaN 或 ±Inf，解析时不报错。表达式不知道这些值会用在哪里，是否出错由算子决定（ODE 见 OD-6）。
+- EX-4 **求值顺序**。值等于把语法树按 binary64 逐节点计算的结果：从左到右，MUST NOT 重结合（`a + b + c` 就是 `(a + b) + c`），MUST NOT 合并为 FMA，MUST NOT 做会改变结果位的代数化简。常量子表达式可以预先算好，因为位相同。数字字面量按最近舍入转成 binary64；超出范围的字面量（`1e999`）报 `not_finite`。`+ − * /` 和 `sqrt` 是正确舍入的；其余初等函数取自平台的 libm，libm 属于 P-1 平台描述的一部分。所以 `platform_bitwise` 的范围是同平台、同 libm，跨平台时只在容差内一致。
+- EX-5 **规模上限**：每个表达式最多 10 000 个字符、10 000 个语法树节点，嵌套深度不超过 200。超出时分别报 `too_long`、`too_many_nodes`、`too_deep`。深度有上限，所以递归下降解析器不会因栈溢出而崩溃（X-3）。
+- EX-6 **错误**。静态错误一律报 `E.VALIDATION.EXPRESSION`（新码）。`details` 包含：`path`（指向出错表达式的 JSON Pointer，如 `/rhs/1`）、`expression`（原文）、`position`（从 0 起算的字符偏移）、`kind`（取值为 `syntax`、`unknown_name`、`arity`、`non_ascii`、`too_long`、`too_many_nodes`、`too_deep`、`not_finite`、`bad_name`、`duplicate_name`）。`message` 的最后一行是原文加一个指向错误位置的 `^`。所有表达式都先通过检查，然后才开始求值，不会出现算到一半才发现第三个表达式写错的情况。remediation 是 `modify_input`（改写该表达式）和 `ask_user`。
+- EX-7 实现 MUST NOT 借用宿主语言的 `eval` 或任何能执行代码的机制，也 MUST NOT 接受本节以外的语法或函数（不提供“方便的扩展”）。两个实现只要都遵守本节，对同一个表达式就有相同的语义；golden 里的右端由 Python 实现求值，参考实现与它的差别只来自 libm。
+
 ## 4. 结果信封与可信度元数据
 
 ### 4.1 规则
@@ -460,15 +499,17 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 
 | 类别 | 何时使用 | `retryable` 默认 | 已登记的码（v0.3 新增的加粗） |
 |---|---|---|---|
-| `VALIDATION` | 输入不符合 schema 或语义约束 | true（改输入） | `SCHEMA`、`SHAPE`、`DTYPE`、`RANGE`、`NON_FINITE`、`NOT_SYMMETRIC`、`NOT_CONJUGATE`、`ZERO_DENOMINATOR`、`GRID`、`SPARSE_STRUCTURE`、`DIGEST_MISMATCH`、`REF_UNSUPPORTED`、`REF_FORBIDDEN`、**`OPTION_CONFLICT`**、**`RANK_DEFICIENT`**、**`UNGROUNDED_INPUT`**（v0.3.1，绑定层）、**`METHOD_UNAVAILABLE`**（v0.4） |
+| `VALIDATION` | 输入不符合 schema 或语义约束 | true（改输入） | `SCHEMA`、`SHAPE`、`DTYPE`、`RANGE`、`NON_FINITE`、`NOT_SYMMETRIC`、`NOT_CONJUGATE`、`ZERO_DENOMINATOR`、`GRID`、`SPARSE_STRUCTURE`、`DIGEST_MISMATCH`、`REF_UNSUPPORTED`、`REF_FORBIDDEN`、**`OPTION_CONFLICT`**、**`RANK_DEFICIENT`**、**`UNGROUNDED_INPUT`**（v0.3.1，绑定层）、**`METHOD_UNAVAILABLE`**（v0.4）、`EXPRESSION`（v0.4.8，3.15） |
 | `DOMAIN` | 输入合法，但数学问题本身无解/不适用 | 视情况 | `IMPROPER_SYSTEM`、`NOT_STABILIZABLE`、`R_NOT_POSITIVE_DEFINITE`、`WEIGHT_NOT_PSD`、`HAMILTONIAN_IMAG_AXIS_EIG`、`ABOVE_NYQUIST`、**`MIMO_NOT_SUPPORTED`**、**`DEGENERATE_SYSTEM`**、**`NOT_CONTINUOUS`**、**`NOT_CONTROLLABLE`**、**`POLE_MULTIPLICITY`**、**`LYAP_SINGULAR`**、**`SYMPLECTIC_UNIT_CIRCLE_EIG`** |
-| `NUMERICAL` | 问题理论上可解，但数值上失败或不可信 | true（正则化/放宽/换算法） | `SINGULAR`、`NO_CONVERGENCE`、`POLE_ON_GRID` |
+| `NUMERICAL` | 问题理论上可解，但数值上失败或不可信 | true（正则化/放宽/换算法） | `SINGULAR`、`NO_CONVERGENCE`、`POLE_ON_GRID`、`NON_FINITE_EVALUATION`（v0.4.8）、`STEP_SIZE_TOO_SMALL`（v0.4.8） |
 | `RESOURCE` | 超时、超规模、被取消 | true | `TIMEOUT`、`INPUT_TOO_LARGE`、`COMPUTE_LIMIT`、`OUTPUT_TOO_LARGE` |
 | `INTERNAL` | 实现缺陷或后端异常 | false（可原样重试一次） | `PANIC`（`BACKEND`、`INVARIANT_VIOLATED` 为保留码，v0.2 算子未使用） |
 
-已登记的 warning（v0.3.3 新增框架级 `W.EVIDENCE.POSTCONDITION_FAILED`，见 E-7a、E-11）：`W.NUMERICAL.{NEAR_POLE, ZERO_ON_GRID, ILL_CONDITIONED, LARGE_RESIDUAL, NEAR_UNCONTROLLABLE, **RANK_AMBIGUOUS, CROSSING_RECOVERED, PLACEMENT_INACCURATE, CONVERSION_DISCREPANCY**}`、`W.DOMAIN.{UNSTABLE_SYSTEM, NOT_SETTLED, INFINITE_DC_GAIN, ZERO_DC_GAIN, **UNDEFINED_DC_GAIN, NONMINIMAL_REALIZATION, REALIZATION_DEPENDENT, GRAMIAN_UNDEFINED, CLOSED_LOOP_UNSTABLE, DIRECT_FEEDTHROUGH_IGNORED**}`、`W.ACCURACY.{GRID_TOO_COARSE, AUTO_GRID, **ALIASING**}`、`W.VALIDATION.{LEADING_ZEROS_STRIPPED, SYMMETRIZED}`、`W.PERFORMANCE.SPARSE_DENSIFIED`（加粗为 v0.3 新增）。
+已登记的 warning（v0.3.3 新增框架级 `W.EVIDENCE.POSTCONDITION_FAILED`，见 E-7a、E-11）：`W.NUMERICAL.{NEAR_POLE, ZERO_ON_GRID, ILL_CONDITIONED, LARGE_RESIDUAL, NEAR_UNCONTROLLABLE, **RANK_AMBIGUOUS, CROSSING_RECOVERED, PLACEMENT_INACCURATE, CONVERSION_DISCREPANCY**, STIFF_PROBLEM（v0.4.8）}`、`W.DOMAIN.{UNSTABLE_SYSTEM, NOT_SETTLED, INFINITE_DC_GAIN, ZERO_DC_GAIN, **UNDEFINED_DC_GAIN, NONMINIMAL_REALIZATION, REALIZATION_DEPENDENT, GRAMIAN_UNDEFINED, CLOSED_LOOP_UNSTABLE, DIRECT_FEEDTHROUGH_IGNORED**}`、`W.ACCURACY.{GRID_TOO_COARSE, AUTO_GRID, **ALIASING**}`、`W.VALIDATION.{LEADING_ZEROS_STRIPPED, SYMMETRIZED}`、`W.PERFORMANCE.SPARSE_DENSIFIED`（加粗为 v0.3 新增）。
 
 v0.3.1 新增码：`UNGROUNDED_INPUT` 由 LLM 绑定层（不是算子）返回，表示 `x-aeoi-provenance: "user"` 的输入没有用户原话作为来源（F-5(c)），`retryable: true` 但只能在问过用户之后重试。v0.3 新增码的含义：`OPTION_CONFLICT` 选项组合矛盾（O-2）；`RANK_DEFICIENT` 输入矩阵列不满秩（`place` 的 B）；`MIMO_NOT_SUPPORTED` 该算子/表示只支持 SISO（R-8、`margin`）；`DEGENERATE_SYSTEM` 系统矩阵非满法秩，零点无定义（R-9）；`NOT_CONTINUOUS` 需要连续系统却给了离散系统（`c2d`）；`NOT_CONTROLLABLE` 有不可控模态，无法任意配置极点（`place`；与 `NOT_STABILIZABLE` 区分：后者只关心不稳定模态）；`POLE_MULTIPLICITY` 期望极点重数超过输入数 m；`LYAP_SINGULAR` Lyapunov 方程奇异（连续 λᵢ + λ̄ⱼ ≈ 0，离散 λᵢλ̄ⱼ ≈ 1）；`SYMPLECTIC_UNIT_CIRCLE_EIG` DARE 的辛矩阵束在单位圆上有特征值（单位圆上的模态不被 Q 观测）。这些都是 `DOMAIN`/`VALIDATION`：调数值参数无效（X-1）。
+
+v0.4.8 新增码：`E.VALIDATION.EXPRESSION`（表达式的静态错误，3.15 EX-6）、`E.NUMERICAL.NON_FINITE_EVALUATION`（模型在某点算出 NaN/Inf）、`E.NUMERICAL.STEP_SIZE_TOO_SMALL`（自适应步长缩到下限）与 `W.NUMERICAL.STIFF_PROBLEM`，含义见 10.18 OD-6、OD-7。
 
 v0.4 新增码：`METHOD_UNAVAILABLE` 由算子返回（3.14 MS-6）：`exec.method_policy` 的硬约束没有任何已登记的方法能满足。`retryable: true`，修复是改策略或问用户。类别固定为 5 个，所以它归 `VALIDATION`（改输入可以解决），不另设 `METHOD` 类别。
 
@@ -1561,6 +1602,67 @@ A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与�
 
 44 个 golden 用例（36 个成功、8 个错误；含 2、合数、素数长度，三种归一化 × 两个方向，单边奇偶，补零与截断，多通道，8192 点 b64 输入）：与 numpy 的最大范数相对差 8.4e-16，与 mpmath 精确值 2.9e-16，频率轴 2.2e-16（`aeoi-numeric/tests/parity_fft.rs`，`reports/parity-fft.json`）。
 
+## 10.18 `ode.ivp.solve`：常微分方程初值问题（v0.4.8）
+
+这是第二个控制以外的算子（领域 `ode`，实现在 crate `aeoi-numeric`），对应 MATLAB 里最常用的 `ode45`。右端用 3.15 的表达式语言给出。参考值来自 scipy `solve_ivp(method = "RK45")` 与精确解（有解析解时用解析解，否则用 DOP853 在 rtol 1e-13 下的解），都不是 MATLAB 的结果。ODE 求解器最常见的问题不在算法：求解器只控制每一步的局部误差，用户却把结果当作“精确到 rtol”。缺省容差下的 Van der Pol 振子，全局误差可达 0.23，求解器照样报告成功。所以本节的重点是把实际达到的精度报告出来。
+
+**规范性条款**
+
+- OD-1 **问题与命名**。求解 y′ = f(t, y)，y(t0) = y0，t 从 t0 积到 tf。`states` 是状态名数组，它的顺序决定输出 `y` 的行序。`rhs[i]` 是 d(states[i])/dt 的表达式，`rhs` 的长度必须与 `states` 相同，否则报 `E.VALIDATION.SHAPE`。`params` 是“名字 → 数”的映射。`initial` 是“状态名 → 初值”的映射，键的集合必须正好等于 `states`，缺键或多键都报 `SHAPE`。`t_span = [t0, tf]` 要求 t0 ≠ tf（否则报 `RANGE`）；tf < t0 表示反向积分。表达式里能用的变量是 `t`、状态名和参数名；参数名与状态名重复时报 `E.VALIDATION.EXPRESSION`，`kind` 为 `duplicate_name`。状态用名字而不用下标，是因为 Agent 写 `"-k*x - c*v"` 比写 `"-p[0]*y[0] - p[1]*y[1]"` 更不容易把顺序弄错，就算弄错了，读者也能一眼看出来。
+- OD-2 **方法**：Dormand–Prince 5(4)，用 5 阶解推进（局部外推），FSAL，系数为精确有理数。步长控制与 scipy RK45 完全相同：
+  - 误差范数取 RMS：‖e‖ = √(mean_i (e_i / (atol + rtol·max(|y_i|, |y_new_i|)))²)，‖e‖ < 1 时接受；
+  - 接受时步长乘 min(10, 0.9·‖e‖^(−1/5))（‖e‖ = 0 时乘 10），同一步里被拒过的不再放大；拒绝时乘 max(0.2, 0.9·‖e‖^(−1/5))；
+  - 最小步长为 10·|nextafter(t, 积分方向) − t|，步长不超过 `max_step`；
+  - 初始步长：给了 `first_step` 就用它，否则按 Hairer–Nørsett–Wanner 的估计算法（与 scipy `select_initial_step` 相同）。
+
+  MATLAB `ode45` 用的是同一对公式，但误差范数取最大值而不是 RMS，初始步长的取法不同，还要在每步内插出 Refine = 4 个点，所以它的结果与本算子只在容差范围内一致，不会逐位相同。照抄 scipy 的步长决策，是为了有一个开放、可查的参考：两边的每一个差异都能追到具体的一步。
+- OD-3 **输出时刻**。输出时刻要么由 `t_eval` 给出（必须落在 `t_span` 内并沿积分方向严格单调，否则分别报 `RANGE` 和 `GRID`），要么由 `n_out` 给出（缺省 101，按 numpy `linspace` 的公式等距取点，含两端）。两者同时给出报 `OPTION_CONFLICT`（F-8）。落在 (t_old, t_new] 里的输出点，用这一步的 Shampine 四阶稠密输出求值；t0 处直接取 y0。结果包含：`t`、`y`（形状 [n_states, n_out]，第 i 行对应 `states[i]`）、回显的 `states`、实际生效的 `tolerance {rtol, atol}`（O-1）、`stats {n_steps, n_rejected, n_rhs_evals}` 和 `global_error`（OD-5）。
+- OD-4 **容差**。`rtol` 缺省 1e-3，`atol` 缺省 1e-6，与 `ode45` 和 scipy 相同；`atol` 只能是一个标量。rtol < 100·ε 时报 `E.VALIDATION.RANGE`，并附上把 rtol 改成 100·ε 的补丁。scipy 遇到这种情况会悄悄把 rtol 抬高，本算子不这样做：调用方要求的精度在 f64 里达不到，这件事必须让调用方知道。rtol 和 atol 只约束每一步的局部误差，不约束全局误差。
+- OD-5 **全局误差的后验估计**。算子用同一方法、以 rtol/10 和 atol/10 再解一次，在输出点上比较两次的结果，给出 `global_error.max_abs`（每个状态一项）和 `max_scaled` = max |y − y_fine| / (atol + rtol·|y|)。后置条件 `tolerance_consistent` 成立当且仅当 `max_scaled` ≤ 100（manifest 中的 `limits.tolerance_consistency_factor`），它覆盖全部 `y`（`full`），守护 `/y`。不成立时按 E-7a 发出 `W.EVIDENCE.POSTCONDITION_FAILED`，`/y` 列为不可依赖。`bound_kind` 为 `a_posteriori_heuristic`：误差 ∝ tol^(4/5) 时，更严的那次解的误差约小 6 倍，所以这个差值近似等于本次解的全局误差，但不是严格上界。代价是 rhs 求值次数约为单解的 2.6 倍。在 golden 上，估计值与实际误差之比的中位数是 0.92，最大是 1.03。示例 `request.vdp.json`（μ = 1，缺省容差）的估计值是 0.17（实际误差 0.23），`max_scaled` = 2422，结果被标记为不可依赖。
+- OD-6 **失败**。初始点的右端不是有限值时，报 `E.NUMERICAL.NON_FINITE_EVALUATION`（新码）。积分过程中，某次试探步的任一阶段出现非有限值，就把这一步当作被拒绝，缩小步长重试。步长缩到最小步长以下时：如果最后一次试探是非有限值（解爆破或碰到奇点，例如 y′ = y²、y(0) = 1 在 t = 1 处），报 `NON_FINITE_EVALUATION`；否则报 `E.NUMERICAL.STEP_SIZE_TOO_SMALL`（新码）。两种情况的 `details` 都给出出事的 t 和 h。接受步与拒绝步合计超过 `limits.max_steps`（10⁶）时，报 `E.RESOURCE.COMPUTE_LIMIT`，remediation 指出问题可能是刚性的。失败时不返回部分结果。
+- OD-7 **刚性**。按 Hairer DOPRI5 的检测方法：每 1000 个接受步检查一次，处于可疑状态时每步都检查；用 h·ρ̂ 估计 h·|λ|，其中 ρ̂ = ‖k7 − k6‖ / ‖y_new − y_stage6‖。h·ρ̂ > 3.25 累计 15 次（中间连续 6 次不可疑就清零）时，发出一次 `W.NUMERICAL.STIFF_PROBLEM`（新码），`details` 给出开始出现刚性的 t。这时结果仍然返回，因为它是准确的，只是代价高。本算子还没有隐式方法（对应 `ode15s`），所以 remediation 是告诉调用方这一点并 `ask_user`。
+- OD-8 **确定性**：`platform_bitwise`。右端通过 libm 求值（EX-4），所以只在同一平台、同一 libm 上逐位相同。
+
+新码：`E.VALIDATION.EXPRESSION`（3.15 EX-6）、`E.NUMERICAL.NON_FINITE_EVALUATION`、`E.NUMERICAL.STEP_SIZE_TOO_SMALL`、`W.NUMERICAL.STIFF_PROBLEM`。前两个 NUMERICAL 码的意思是：问题本身可能有解，换容差、换输出区间或换方法也许能成功（X-1）。解在有限时间内爆破属于问题本身的性质，可数值上无法把它和步长失败区分开，所以仍归 NUMERICAL，由 message 给出“可能爆破”的判断。
+
+**Manifest** — `examples/ode.ivp.solve/manifest.json`
+
+```json
+{{jsonc:examples/ode.ivp.solve/manifest.json}}
+```
+
+**请求**（阻尼振子 x″ + 0.4·x′ + 4·x = 0，x(0) = 1；参数 k、c 按名字给出，rtol 1e-8）
+
+```json
+{{file:examples/ode.ivp.solve/request.json}}
+```
+
+**成功响应**（31 个输出点；全局误差估计 8.8e-9，`max_scaled` = 14.4 ≤ 100，`tolerance_consistent` 成立）
+
+```json
+{{jsonc:examples/ode.ivp.solve/response.success.json}}
+```
+
+**缺省容差的例子** — `request.vdp.json`：Van der Pol 振子，μ = 1，[0, 20]，rtol 和 atol 取缺省值（与 `ode45` 相同）。响应 `response.vdp.json` 的状态是 `ok_with_warnings`：`max_scaled` = 2422，`tolerance_consistent` = false，`/y` 被列为不可依赖。它与 scipy RK45 在同样设置下的结果一致，两者相对精确解的误差都是 0.23。
+
+**错误请求与响应**（表达式末尾缺操作数：EX-6，`position` = 12）
+
+```json
+{{jsonc:examples/ode.ivp.solve/request.error.json}}
+```
+
+```json
+{{jsonc:examples/ode.ivp.solve/response.error.json}}
+```
+
+**Parity 测试规格** — `examples/ode.ivp.solve/parity.yaml`
+
+```yaml
+{{file:examples/ode.ivp.solve/parity.yaml}}
+```
+
+共 34 个 golden 用例，17 个成功、17 个错误。对精确解的检验是逐点的 |y − truth| ≤ max(10·(atol + rtol·|truth|), 2·E_ref + 1e-13·max|y|)，最坏的一点用掉了界的 0.50（`functions`）。与 scipy RK45 的差别只记录、不断言：在 `functions` 用例里，min、max 带来的折点让两边的接受/拒绝决策分了岔，差到容差的 20.9 倍，可两边相对精确解的误差几乎相同（1.60e-7 和 1.58e-7）；其余用例的差别都在容差的 1.2e-3 倍以内。μ = 100 的 Van der Pol 用例触发了 `W.NUMERICAL.STIFF_PROBLEM`。结果见 `aeoi-numeric/tests/parity_ode.rs` 和 `reports/parity-ode.json`。
+
 ## 11. Rust 参考实现（v0.3）
 
 ### 11.1 结构
@@ -1745,14 +1847,45 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 
 1. 在有授权的机器上运行 `matlab/gen_golden_bode.m`（并补 step/lqr 脚本），先核对 `memory_order_nonsymmetric` 用例与 python-control 一致，再跑通第一份 A 级凭证
 2. ~~修复 `lqr` 病态 R 的精度差距~~（v0.3.2 用补偿 Newton–Kleinman 完成）；剩余：平衡 + 有序 Schur（或广义特征值）作为符号函数不收敛时的后备路径，以及 `dlqr` 的同类精化
-3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17），下一个是 ODE 初值问题（需要先定表达式语言）；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
+3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；ODE 之后可做隐式/刚性方法（`ode15s`）、事件检测、`interp1`、`polyfit`、线性方程组与 `fzero`/`fsolve`（复用 3.15）；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
 5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；v0.3.4 另有 `aeoi-web design`。v0.3.5 实现了试点里排在前面的算子（串联、并联、反馈、PID 构造、stepinfo、Padé），v0.3.6 加了具名角色、`loopsens`（含带宽读数）和回合预算。下一步是按 A-4 写 `pidtune`（必须先声明对象类、指标和唯一性），以及控制器离散化和 MIMO 裕度；扩充问答题、加入"Agent + 裸 scipy"对照组。非线性吸引域仍不做。
 6. 用 Tauri 打包 `aeoi-web` 为桌面应用（复用 axum 服务与静态页面）
-7. 一致性套件（9.4）：v0.2 有 6 个算子的数值规则（作者定的下限：有规则的算子 ≥ 全部算子的 30%，以后提高），参考实现 456 / 0 / 278 通过；`lyap` 的 Python 第二实现 44 个用例通过；7 种注入缺陷与 8 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；按 3.14 在参考实现里实现 `exec.method_policy`、`receipt.alternatives` 与 `method_selection`
+7. 一致性套件（9.4）：v0.4.8 有 10 个算子的数值规则（10 / 23 = 43%；作者定的下限是 30%，以后提高），参考实现 715 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 19 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
 8. 根据以上反馈修订，冻结 v1.0
 
 ## 13. Changelog
+
+### v0.4.8-draft（2026-11-24）
+
+起因：按 MATLAB 使用频率排的第二个非控制算子 `ode45`。作者选定右端用“安全表达式语言”给出：规范定语法、优先级、函数表与求值顺序，不执行代码，以后的领域复用。线协议标识与核心 schema 不变；已有算子的结果不变。
+
+**规范改动**
+
+| # | 条款 | 改动 | 原因 |
+|---|---|---|---|
+| 1 | 3.15 EX-1 – EX-7（新节） | 表达式语言：EBNF、优先级（`^` 右结合且高于一元负号）、名字规则、函数表、逐节点 binary64 求值、规模上限、`E.VALIDATION.EXPRESSION`（`position`、`kind`） | 函数不能作为 JSON 数据传；执行代码既不安全也不可复现 |
+| 2 | 10.18 OD-1 – OD-8 | 新算子 `ode.ivp.solve` 0.4.0（领域 `ode`）：Dormand–Prince 5(4)，步长决策与 scipy RK45 相同；状态与参数按名字给出 | 见上 |
+| 3 | OD-4 | rtol < 100ε 报错，不像 scipy 那样悄悄抬高 | 达不到的精度要让调用方知道 |
+| 4 | OD-5 | 用 tol/10 重解估计全局误差；`max_scaled` > 100 时 `tolerance_consistent` 不成立，`/y` 不可依赖 | rtol/atol 只控制局部误差；缺省容差下的 Van der Pol 误差 0.23 而求解器报告成功 |
+| 5 | OD-6、OD-7、5.1 | 新码 `E.NUMERICAL.NON_FINITE_EVALUATION`、`E.NUMERICAL.STEP_SIZE_TOO_SMALL`、`W.NUMERICAL.STIFF_PROBLEM` | 爆破、步长失败与刚性需要不同的修复 |
+| 6 | 9.4 CF-6 的应用 | ODE 的一致性对照精确解，界为 max(10·tol, 2·E_ref)；与参考求解器之差只记录 | 两个正确的 RK45 在折点处会因一次接受/拒绝决策不同而分岔：`functions` 用例两者差容差的 20.9 倍，相对精确解的误差却相同（1.60e-7、1.58e-7） |
+| 7 | golden 约定 | 用例可写 `expect_postcondition_failed`：后置条件不成立就是正确答案（由生成脚本用 scipy 独立预测） | 原来的收据测试假定 golden 成功用例的后置条件全部成立；`pendulum`、`van_der_pol_mu1`、缺省容差的 Van der Pol 如实报告不成立 |
+
+**已做的改动**
+
+| 位置 | 改动 |
+|---|---|
+| `rust/aeoi-numeric/src/expr.rs`（新） | 3.15 的解析器与求值器（3 个单元测试） |
+| `rust/aeoi-numeric/src/ode.rs`（新） | DOPRI5(4)、稠密输出、刚性检测、全局误差估计（5 个单元测试）；`tests/parity_ode.rs`（新）、`tests/examples_numeric.rs` 加 `ode_example` |
+| `write_manifests.py` | `ode.ivp.solve` 的 manifest、schema、L-1 描述、receipt（`a_posteriori_heuristic`，后置条件 `all_finite`、`tolerance_consistent`） |
+| `gen_golden_ode.py`（新）、`golden/python-control/ode.ivp.solve/0.4.0` | 34 个用例（17 成功、17 错误）；右端由独立的 Python 表达式实现求值；解析解另用 DOP853 交叉核对 |
+| `conformance/rules_numeric.py`、`tests/proxy_mutant.py` | `rule_ode`；变异 `ode_y_wrong`、`ode_states_reordered`、`ode_overclaims` |
+| `rust/aeoi-ops/tests/receipt.rs` | 认 `expect_postcondition_failed` |
+
+开发中发现两处错误。第一处：`constant_rhs_precedence` 的精确解写错了（把 `- -2^2*3` 当成 −12，实际是 +12）。parity 测试没有报错，因为两个实现都按 3.15 正确求值，与 scipy 的误差相同，而界里含 2·E_ref。之后生成脚本对每个解析解都用 DOP853 交叉核对。第二处：第一版 parity 断言与 scipy 逐点相差 ≤ 10·tol，`functions` 用例因此失败（见规范改动第 6 条）。
+
+**结果**：`cargo test` 180 / 0；parity 34 / 34（对精确解最坏用掉界的 0.50，估计误差 / 实际误差的中位数 0.92、最大 1.03）；参考实现一致性 715 通过 / 0 失败 / 291 跳过（`ode` 34 + 默认值 11 + 方法选择 1）；变异测试 28 / 28；`validate_examples.py` 退出码 0；有数值规则的算子 10 / 23 = 43%。
 
 ### v0.4.7-draft（2026-11-24）
 
