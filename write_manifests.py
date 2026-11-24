@@ -1,7 +1,7 @@
 """Source of truth for v0.2 manifests and I/O schemas (examples/<id>/{manifest,input.schema,output.schema}.json).
 The Rust crates embed these files at compile time."""
 import json, os
-SPEC="aeoi/0.3"; C="aeoi://schemas/common/0.3/"
+SPEC="aeoi/0.4"; C="aeoi://schemas/common/0.4/"
 def w(p,o):
     os.makedirs(os.path.dirname(p),exist_ok=True); json.dump(o,open(p,"w"),indent=2,ensure_ascii=False); open(p,"a").write("\n")
 CLEAN={"declared":True,"sources":"仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"}

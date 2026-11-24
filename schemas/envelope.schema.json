@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "aeoi://schemas/envelope/0.3",
+  "$id": "aeoi://schemas/envelope/0.4",
   "type": "object",
   "required": [
     "spec",
@@ -11,7 +11,7 @@
   ],
   "properties": {
     "spec": {
-      "const": "aeoi/0.3"
+      "const": "aeoi/0.4"
     },
     "status": {
       "enum": [
@@ -74,7 +74,7 @@
           "type": "null"
         },
         {
-          "$ref": "aeoi://schemas/error/0.3"
+          "$ref": "aeoi://schemas/error/0.4"
         }
       ]
     },
@@ -290,7 +290,7 @@
         "remediation": {
           "type": "array",
           "items": {
-            "$ref": "aeoi://schemas/error/0.3#/$defs/Remediation"
+            "$ref": "aeoi://schemas/error/0.4#/$defs/Remediation"
           }
         }
       }

@@ -9,15 +9,15 @@
   ],
   "properties": {
     "K": {
-      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "$ref": "aeoi://schemas/common/0.4/Matrix",
       "description": "[m,n]，u=−Kx"
     },
     "S": {
-      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "$ref": "aeoi://schemas/common/0.4/Matrix",
       "description": "[n,n] 对称半正定"
     },
     "closed_loop_poles": {
-      "$ref": "aeoi://schemas/common/0.3/Matrix",
+      "$ref": "aeoi://schemas/common/0.4/Matrix",
       "description": "c128 向量 [n]，按实部升序、虚部降序排列"
     }
   }

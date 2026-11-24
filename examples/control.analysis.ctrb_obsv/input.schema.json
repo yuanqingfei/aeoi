@@ -8,7 +8,7 @@
   ],
   "properties": {
     "system": {
-      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "$ref": "aeoi://schemas/common/0.4/LtiSystem",
       "description": "被分析的 LTI 系统：tf（num/den 按降幂）、ss（A/B/C/D 稠密矩阵，row-major）或 zpk；ts=0 连续，ts>0 为离散采样周期（s）。上一个工具返回了 result.system 时，把那个 JSON 对象原样放在这里，不要手抄或改写系数（spec K-6）。判断可控性只需 A、B：用户没给 C、D 时用 kind=\"ss\"，C = {dtype:\"f64\", shape:[1,n], data:[0,…,0]}、D = {dtype:\"f64\", shape:[1,m], data:[0,…,0]}（不影响可控性结果，回答时只报告可控性）；判断可观性只需 A、C：没给 B、D 时 B 取 shape [n,1] 全零"
     },
     "gramians": {
@@ -22,7 +22,7 @@
       "description": "相对秩容差 σ_i > rank_rtol·σ_max；缺省 max(行,列)·ε"
     },
     "exec": {
-      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+      "$ref": "aeoi://schemas/common/0.4/ExecOptions"
     }
   }
 }

@@ -1,8 +1,8 @@
 # AEOI — AI Engineering Operator Interface
 
-面向 AI Agent 的工程计算算子接口规范（v0.3-draft）及其 Rust 参考实现。
+面向 AI Agent 的工程计算算子接口规范（v0.4-draft）及其 Rust 参考实现。v0.4-draft 新增的方法登记与选择（3.14）、跨实现一致性（9.4）目前只有规范文本，参考实现尚未实现。
 
-- `spec-v0.3.md` — 规范全文（源稿 `spec-src.md`，`python3 build_spec.py` 生成；`spec-v0.2.md`、`spec-v0.1.md` 为历史版本）
+- `spec-v0.4.md` — 规范全文（源稿 `spec-src.md`，`python3 build_spec.py` 生成；`spec-v0.3.md`、`spec-v0.2.md`、`spec-v0.1.md` 为历史版本）
 - `schemas/` — JSON Schema（common / manifest / envelope / error）
 - `examples/` — 19 个示例算子：v0.2 的 `control.lti.bode`、`control.lti.step`、`control.design.lqr`；v0.3 的 `control.lti.convert`、`control.lti.poles_zeros`、`control.analysis.ctrb_obsv`、`control.analysis.margin`、`control.lti.c2d`、`control.lti.impulse`、`control.math.lyap`、`control.design.place`、`control.design.dlqr`；v0.3.5 的 `control.lti.series`、`control.lti.parallel`、`control.lti.feedback`、`control.design.pid`、`control.lti.stepinfo`、`control.lti.pade`；v0.3.6 的 `control.analysis.loopsens`（对象 + 控制器的一次性开环/闭环分析）
 - `golden/python-control/` — 对照参考用例（参考值来自 python-control/scipy，**非 MATLAB**）

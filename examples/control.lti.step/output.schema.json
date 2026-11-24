@@ -14,7 +14,7 @@
           "type": "null"
         },
         {
-          "$ref": "aeoi://schemas/common/0.3/Quantity"
+          "$ref": "aeoi://schemas/common/0.4/Quantity"
         }
       ]
     },
@@ -24,7 +24,7 @@
           "type": "null"
         },
         {
-          "$ref": "aeoi://schemas/common/0.3/Quantity",
+          "$ref": "aeoi://schemas/common/0.4/Quantity",
           "description": "shape [ny,nu,nt]"
         }
       ]

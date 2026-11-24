@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""spec-src.md → spec-v0.3.md.
+"""spec-src.md → spec-v0.4.md.
 {{file:path}}  inlines a file verbatim.
 {{jsonc:path}} inlines a JSON file re-indented, with numeric arrays longer than 16 elements shortened
                for readability (marked "…(+N)…"; the full content is in the file)."""
@@ -28,5 +28,5 @@ def sub(m):
     text = (root / path).read_text()
     return text.rstrip("\n") if kind == "file" else compact(json.loads(text))
 out = re.sub(r"\{\{(file|jsonc):([^}]+)\}\}", sub, src)
-(root / "spec-v0.3.md").write_text(out)
-print("spec-v0.3.md", len(out.splitlines()), "lines")
+(root / "spec-v0.4.md").write_text(out)
+print("spec-v0.4.md", len(out.splitlines()), "lines")

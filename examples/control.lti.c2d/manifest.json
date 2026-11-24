@@ -1,5 +1,5 @@
 {
-  "spec": "aeoi/0.3",
+  "spec": "aeoi/0.4",
   "id": "control.lti.c2d",
   "version": "0.3.0",
   "title": "Continuous-to-discrete conversion",

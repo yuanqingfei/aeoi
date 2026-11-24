@@ -9,7 +9,7 @@
   ],
   "properties": {
     "system": {
-      "$ref": "aeoi://schemas/common/0.3/LtiSystem",
+      "$ref": "aeoi://schemas/common/0.4/LtiSystem",
       "description": "被分析的 LTI 系统：tf（num/den 按降幂）、ss（A/B/C/D 稠密矩阵，row-major）或 zpk；ts=0 连续，ts>0 为离散采样周期（s）。上一个工具返回了 result.system 时，把那个 JSON 对象原样放在这里，不要手抄或改写系数（spec K-6）"
     },
     "time": {
@@ -92,7 +92,7 @@
       "description": "调节带半宽，默认 0.02（2%）。定义默认值，省略即用默认"
     },
     "exec": {
-      "$ref": "aeoi://schemas/common/0.3/ExecOptions"
+      "$ref": "aeoi://schemas/common/0.4/ExecOptions"
     }
   }
 }
