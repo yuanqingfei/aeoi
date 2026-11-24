@@ -417,6 +417,131 @@
               "pattern": "^(/.*)?$"
             }
           }
+        },
+        "alternatives": {
+          "type": "array",
+          "description": "v0.4 MS-1：除 default（本对象）之外的已登记方法。允许的方法集合 = {method_id} ∪ {alternatives[].method_id}；方法 id 在同一算子内唯一（MS-2）",
+          "items": {
+            "type": "object",
+            "required": [
+              "method_id",
+              "assumptions",
+              "exactness",
+              "postconditions",
+              "backend",
+              "algorithm"
+            ],
+            "properties": {
+              "method_id": {
+                "type": "string",
+                "pattern": "^[a-z0-9_.:+-]+$"
+              },
+              "assumptions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "statement",
+                    "enforced_by"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "statement": {
+                      "type": "string"
+                    },
+                    "enforced_by": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "exactness": {
+                "type": "object",
+                "required": [
+                  "class",
+                  "bound_kind"
+                ],
+                "properties": {
+                  "class": {
+                    "enum": [
+                      "exact",
+                      "correctly_rounded",
+                      "approximate"
+                    ]
+                  },
+                  "bound_kind": {
+                    "enum": [
+                      "rigorous",
+                      "a_priori",
+                      "a_posteriori_heuristic",
+                      "none"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "postconditions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "coverage": {
+                "type": "object",
+                "description": "v0.3.6 E-12：后置条件的覆盖范围；未列出的为 full。test_points = 在若干确定性测试点上核对恒等式（不压缩结果）；sampled = 只在结果的子集或压缩副本上检查",
+                "additionalProperties": {
+                  "enum": [
+                    "full",
+                    "test_points",
+                    "sampled"
+                  ]
+                }
+              },
+              "guards": {
+                "type": "object",
+                "description": "v0.3.6 E-13：后置条件 → 该条件失败时不可依赖的结果字段（JSON Pointer，相对 result）",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^(/.*)?$"
+                  }
+                }
+              },
+              "backend": {
+                "$ref": "#/properties/backend"
+              },
+              "algorithm": {
+                "type": "string",
+                "description": "一句话说明算法（M-5）"
+              },
+              "determinism": {
+                "enum": [
+                  "bitwise",
+                  "platform_bitwise",
+                  "tolerance",
+                  "seeded"
+                ]
+              },
+              "tolerance_class": {
+                "enum": [
+                  "T0",
+                  "T1",
+                  "T2",
+                  "T3",
+                  "T4",
+                  "T5",
+                  "T6"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "description": "v0.4 MS-1：另一个已登记的方法，与 receipt（default 方法）同形，另加 backend 与 algorithm"
+          }
         }
       },
       "additionalProperties": false

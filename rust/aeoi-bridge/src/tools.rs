@@ -29,6 +29,8 @@ pub struct Bridge {
     reg: Vec<Box<dyn DynOperator>>,
     pub tools: Vec<ToolDef>,
     host: HostCtx,
+    /// Host/deployment method policy (spec MS-10); merged into every call's `exec.method_policy`.
+    host_method_policy: Option<Value>,
 }
 
 fn description_for(op: &dyn DynOperator) -> String {
@@ -52,6 +54,11 @@ fn description_for(op: &dyn DynOperator) -> String {
     }
     if m["applicability"]["siso_only"] == true {
         d.push_str(" 仅 SISO。");
+    }
+    // MS-11: tell the model which methods exist when there is a choice (single-method operators: unchanged text).
+    let methods = aeoi_core::method::registered(m);
+    if methods.len() > 1 {
+        d.push_str(&format!(" 可用计算方法（缺省第一个）：{}。", methods.iter().map(|x| x.id.as_str()).collect::<Vec<_>>().join("、")));
     }
     d
 }
@@ -87,7 +94,14 @@ impl Bridge {
                 }
             })
             .collect();
-        Bridge { reg, tools, host: HostCtx::default() }
+        Bridge { reg, tools, host: HostCtx::default(), host_method_policy: None }
+    }
+
+    /// Set the host policy (MS-10): e.g. `{"constraints": {"backend_library_in": ["audited-lib"]}}`. The model cannot
+    /// loosen it: a request-supplied `method_policy` is intersected with it, never the other way round.
+    pub fn with_method_policy(mut self, policy: Value) -> Bridge {
+        self.host_method_policy = Some(policy);
+        self
     }
 
     pub fn tool(&self, name: &str) -> Option<&ToolDef> {
@@ -140,6 +154,9 @@ impl Bridge {
                     let mut a = args.clone();
                     let exec = a.as_object_mut().unwrap().entry("exec").or_insert_with(|| json!({}));
                     if let Some(e) = exec.as_object_mut() {
+                        if let Some(p) = aeoi_core::method::merge_policies(self.host_method_policy.as_ref(), e.get("method_policy")) {
+                            e.insert("method_policy".into(), p);
+                        }
                         e.entry("request_id").or_insert_with(|| json!(format!("web-{}", CALLS.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1)));
                     }
                     op.call(&a, &self.host)

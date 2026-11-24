@@ -153,6 +153,12 @@ impl<T: Operator> DynOperator for T {
             let e = e.remedy(ask_user("ask", "若无法确定字段含义，向用户确认"));
             return error_envelope(m, &request_id, &e, &[], t0);
         }
+        // 1b. method selection (spec 3.14 MS-6): hard constraints only, never a silent fallback.
+        let method_policy = exec.get("method_policy").filter(|p| !p.is_null());
+        let method = match crate::method::resolve(&m.manifest, method_policy) {
+            Ok(x) => x,
+            Err(e) => return error_envelope(m, &request_id, &e, &[], t0),
+        };
         // 2-4. semantic validation (also resolves b64/ref/sparse)
         let validated = catch_unwind(AssertUnwindSafe(|| self.validate(args, host)));
         let (input, mut warnings) = match validated {
@@ -163,6 +169,7 @@ impl<T: Operator> DynOperator for T {
         let mut ctx = ExecCtx::new(exec.get("timeout_ms").and_then(|x| x.as_u64()).unwrap_or(30_000));
         ctx.seed = exec.get("seed").and_then(|x| x.as_u64());
         ctx.trust_full = exec.get("trust_level").and_then(|x| x.as_str()) == Some("full");
+        ctx.method = method.id.clone();
         let mut hash_args = args.clone();
         if let Some(o) = hash_args.as_object_mut() {
             o.remove("exec");
@@ -190,7 +197,9 @@ impl<T: Operator> DynOperator for T {
         let mut result = out.result;
         let output_hash = hash_value(&canonicalize_for_hash(&result, host));
         // spec 4.3 receipt + E-11 (no evidence, no success claim): may append W.EVIDENCE.POSTCONDITION_FAILED
-        let receipt = crate::receipt::build(m, &input_hash, &output_hash, &out.trust, &mut warnings, &build_string(), &platform());
+        // MS-7: method_selection only when the request carried a method_policy (otherwise byte-identical to v0.3).
+        let selection = method_policy.map(|p| json!({"policy": p, "used": method.id}));
+        let receipt = crate::receipt::build_for(m, &method, selection, &input_hash, &output_hash, &out.trust, &mut warnings, &build_string(), &platform());
         if exec.get("output_encoding").and_then(|x| x.as_str()) == Some("b64") {
             encode_b64_inplace(&mut result, host);
         }
@@ -206,7 +215,7 @@ impl<T: Operator> DynOperator for T {
             "warnings": warnings.iter().map(|w| w.to_json()).collect::<Vec<_>>(),
             "error": Value::Null,
             "reproducibility": {
-                "determinism": m.determinism, "tolerance_class": m.tolerance_class,
+                "determinism": method.determinism, "tolerance_class": method.tolerance_class,
                 "input_hash": input_hash, "output_hash": output_hash,
                 "platform": platform(),
                 "cpu_features": cpu_features(),

@@ -137,7 +137,7 @@ def man(id_,title,desc,cat,tags,pre,notfor,algo,refs,routine,tol,limits,errors,w
      "backend":dict(BACK3(routine),version=ver),"determinism":det,"tolerance_class":tol,"sparse_support":sparse,"encodings":ENC,"limits":limits,
      "input_schema":{"$ref":"./input.schema.json"},"output_schema":{"$ref":"./output.schema.json"},
      "conformance":{"target":"L3","current":"L2"},"accuracy_grade":{"target":"A","current":"B"},
-     "credentials":f"aeoi://operators/{id_}/{ver}/credentials","errors":errors,"warnings":warnings,
+     "credentials":f"aeoi://operators/{id_}/{ver}/credentials","errors":errors+([] if "E.VALIDATION.METHOD_UNAVAILABLE" in errors else ["E.VALIDATION.METHOD_UNAVAILABLE"]),"warnings":warnings,
      "mcp":{"tool_name":id_.replace(".","_"),"annotations":ANN}}
 def ins(id_,props,req,extra=None,ver=V3):
     o={"$schema":"https://json-schema.org/draft/2020-12/schema","$id":f"aeoi://schemas/{id_}/{ver}/input","type":"object","additionalProperties":False,"required":req,"properties":dict(props,exec=EXEC)}

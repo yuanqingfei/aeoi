@@ -2,7 +2,7 @@
 
 > 状态：Draft v0.4 · 2026-11-23 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
 >
-> v0.4 为第二个实现和不同的计算方法在规范里留出位置，增加两组条款：同一算子可以登记多个计算方法，请求用 `exec.method_policy` 约束所用的方法（3.14，规则 MS-1 – MS-11）；换一个实现是否等价于参考实现，由跨实现一致性的判定规则回答（9.4，规则 CF-1 – CF-12）。**这两组目前只有规范文本：参考实现与 schema 里的新字段（`method_policy`、`alternatives`、`method_selection`）还没有加**（第 13 章 v0.4-draft 列出需要的改动）。线协议标识升为 `aeoi/0.4`，核心 schema 的 `$id` 升为 `/0.4`（与 v0.3 的做法相同，12.1 第 15 项）：标识已经改到 `schemas/`、`examples/`、`write_manifests.py` 与 Rust 的 `aeoi_core::SPEC` 常量里，**但 Rust 尚未重新编译或运行测试**。信封字段只增不减，`input_hash`、`fingerprint` 都不含 `spec`，所以除标识外结果字节不变；v0.3 的消费者若校验 `spec` 或 schema `$id` 需要同步更新（0.x 期间 MINOR 可破坏，G-4）。不认识 `method_policy` 的旧实现会按 3.3 R-4 返回 `E.VALIDATION.SCHEMA`，不会静默忽略硬约束。以下 v0.3.x 各段是各自版本当时的陈述，按原样保留。
+> v0.4 为第二个实现和不同的计算方法在规范里留出位置，增加两组条款：同一算子可以登记多个计算方法，请求用 `exec.method_policy` 约束所用的方法（3.14，规则 MS-1 – MS-11）；换一个实现是否等价于参考实现，由跨实现一致性的判定规则回答（9.4，规则 CF-1 – CF-12）。**3.14 的 schema 字段（`method_policy`、`alternatives`、`method_selection`）与参考实现的方法解析、重放、宿主策略合并已经加上；9.4 有一致性套件 v0.1（只覆盖 `lyap`）。**参考实现的每个算子仍只登记一个方法，多方法的路径由单元测试用合成 manifest 覆盖（第 13 章 v0.4-draft 有改动清单）。线协议标识升为 `aeoi/0.4`，核心 schema 的 `$id` 升为 `/0.4`（与 v0.3 的做法相同，12.1 第 15 项）：标识已经改到 `schemas/`、`examples/`、`write_manifests.py` 与 Rust 的 `aeoi_core::SPEC` 常量里，**Rust 在标识改动后的 `cargo test` 结果与改动前相同（见第 13 章 v0.4-draft）**。信封字段只增不减，`input_hash`、`fingerprint` 都不含 `spec`，所以除标识外结果字节不变；v0.3 的消费者若校验 `spec` 或 schema `$id` 需要同步更新（0.x 期间 MINOR 可破坏，G-4）。不认识 `method_policy` 的旧实现会按 3.3 R-4 返回 `E.VALIDATION.SCHEMA`，不会静默忽略硬约束。以下 v0.3.x 各段是各自版本当时的陈述，按原样保留。
 >
 > v0.3.6 根据 EngDesign 真模型运行（`reports/design-live.md`）补规则：回路里的系统按角色命名（对象、控制器、反馈通路），一次调用得到开环与闭环（新算子 `control.analysis.loopsens`），带宽字段名写明 Hz 或 rad/s（3.13 K-1 – K-6）；互斥选项的冲突统一报错并给出只删除已出现字段的补丁（F-8）；抽样或压缩数据上的检查不算“已验证”（E-12、E-13，新 claim `spot_checked`）；Agent 循环在回合用完之前必须提交（8.4 AL-1 – AL-3）。线协议标识仍为 `aeoi/0.3`：信封只增加可选字段，位置参数调用的 `series`/`feedback` 结果字节不变。
 >
@@ -312,7 +312,7 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 
 到 v0.3.6 为止，一个算子版本只有一个方法：manifest 的 `receipt.method_id` 写死，收据的 `method.id` 回显它。于是“换一个实现”或“换一种算法”只能靠发布新的算子版本，用户也没有办法要求“只用经过审计的库”。v0.4 允许同一个算子登记多个方法，并让请求在这些方法之间选择。
 
-**方法 id 和算子 id 不是一回事。** 算子 id（M-2）说的是“算什么”，例如 `control.math.lyap`；方法 id（4.3 R-1）说的是“怎么算”，例如 `aeoi:lqr:sign-function+kform-newton-kleinman-dot2`。同一个算子可以有几种算法，各自有自己的精确性类、误差界和前提。以下条款是规范性要求；v0.4-draft 起，参考实现尚未实现。
+**方法 id 和算子 id 不是一回事。** 算子 id（M-2）说的是“算什么”，例如 `control.math.lyap`；方法 id（4.3 R-1）说的是“怎么算”，例如 `aeoi:lqr:sign-function+kform-newton-kleinman-dot2`。同一个算子可以有几种算法，各自有自己的精确性类、误差界和前提。以下条款是规范性要求；参考实现已实现解析、收据、重放与宿主策略合并（`aeoi-core::method`、`aeoi-bridge`），但每个算子仍只登记一个方法。
 
 **登记**
 - MS-1 manifest 的 `receipt`（4.3 R-1）描述 `default` 方法，其 `method_id` 就是缺省方法的 id。同一算子的其他方法登记在可选的 `receipt.alternatives[]`，每项与 `receipt` 同形（`method_id`、`assumptions`、`exactness`、`postconditions`，以及可选的 `coverage`、`guards`），另加必填的 `backend`（M-6 的对象）与 `algorithm`（M-5 的一句话），可选的 `determinism`、`tolerance_class`（缺省继承算子级声明）。允许的方法集合 = `{receipt.method_id} ∪ {alternatives[].method_id}`。没有 `alternatives` 的算子只有一个方法，v0.3 的 manifest 不需要修改。
@@ -1551,7 +1551,7 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 15. ~~**（v0.4 新）线协议标识**~~ **已决定：升为 `aeoi/0.4`，核心 schema 的 `$id` 升为 `/0.4`。** 作者先决定保持 `aeoi/0.3`（理由是新增字段全部可选，与 v0.3.1、v0.3.5、v0.3.6 的做法一致），随后改为随版本升级。做法与 v0.3 相同（第 13 章 v0.3-draft 第 1 行）：`spec` 与 `$id` 一起升；`golden/` 不改（文件名是内容哈希，V-3；其中的 `spec` 记录生成时的版本，没有测试或脚本比较它）；`reports/` 是历史运行记录，不改。没有兼容层：v0.4 的实现只发 `aeoi/0.4`，是否同时接受 `aeoi/0.3` 的 manifest/信封留给消费者。`input_hash`、`fingerprint` 不含 `spec`，不受影响。
 16. **（v0.4 新）`method_policy` 的细节**：~~`prefer` 是否保留~~ 已决定去掉（3.14 MS-5），以后若有“偏好但不强制”的需求再加，届时要同时定义回退顺序与收据里的回显。仍待定：字段名；`constraints` 还需要哪些键（例如对 `bound_kind` 的要求）；`METHOD_UNAVAILABLE` 归 `VALIDATION` 还是 `DOMAIN`；`receipt.alternatives` 是否要求 `backend` 与 `algorithm` 必填。
 17. **（v0.4 新）内核级接入的接口**：数值内核如何挂到宿主（输入输出是否限于数值数组加元数据、错误如何跨 ABI 表达、内存归属、收据由哪一层生成）。需要先对照 `aeoi-core` 现有的 `validate`/`execute` 分层（8.2）再设计；它不是 8.3 的 `aeoi-capi`。
-18. **（v0.4 新）宿主策略的表达与注入**：3.14 MS-10 规定了合并语义，但宿主策略从哪里来（配置文件、MCP 客户端、会话参数）、如何审计，属于绑定层设计，尚未写。
+18. **（v0.4 新）宿主策略的表达与注入**：3.14 MS-10 规定了合并语义，但宿主策略从哪里来（配置文件、MCP 客户端、会话参数）、如何审计，属于绑定层设计，尚未写。参考实现的 `Bridge::with_method_policy` 只提供合并这一步，策略的来源（目前只能由嵌入方在代码里设置）、持久化与审计都没有设计。
 19. **（v0.4 新，一致性套件发现）`$ref` 约定**：manifest 的输入、输出 schema 用 `aeoi://schemas/common/0.4/Matrix` 引用通用类型，标准 JSON Schema 解析不了（应为 `aeoi://schemas/common/0.4#/$defs/Matrix`），3.9 也没有说明这种写法。要么改写所有 schema，要么在 3.9 写明约定。
 20. **（v0.4 新，一致性套件发现）`lyap` 的 Q 对称性**：input schema 把 Q 描述为“对称”，10.10 的算法说明写“Q 非对称也可解”，二者要统一；`W.VALIDATION.SYMMETRIZED` 已在 manifest 声明，但规范没有规定触发条件（Q 非对称？结果被对称化？）。第二实现第一版因把非对称 Q 对称化，在 golden 的 4 个用例上失败。
 21. **（v0.4 新，一致性套件发现）默认值没有用例**：`lyap` 的 `type` 默认 `continuous`，golden 里没有省略它的用例，F-7 的“默认值回显”也无人检验。套件需要“省略可选字段”的用例族。
@@ -1571,7 +1571,7 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 
 ### v0.4-draft（2026-11-23）
 
-起因：准备写第二个实现（先 Python，再 C 的数值内核）时发现两处规范是空的：一个算子版本只能有一个方法 id，没有办法登记另一种算法，用户也没有办法要求“只用经过审计的库”；换一个实现是否等价于参考实现，没有判定规则，`parity.yaml` 只说明参考实现怎么测自己。这一版的规范改动只是文本，参考实现、schema 与示例都没有动；另加了一致性套件 v0.1（`conformance/`，只覆盖 `lyap`，没有在参考实现上跑过）。线协议标识升为 `aeoi/0.4`（已决定，12.1 第 15 项）：`spec` 与核心 schema 的 `$id` 一起升，改动见下表第 7 行。
+起因：准备写第二个实现（先 Python，再 C 的数值内核）时发现两处规范是空的：一个算子版本只能有一个方法 id，没有办法登记另一种算法，用户也没有办法要求“只用经过审计的库”；换一个实现是否等价于参考实现，没有判定规则，`parity.yaml` 只说明参考实现怎么测自己。这一版先改规范文本，随后补上 schema 与参考实现（见下“已做的改动”）；另加了一致性套件 v0.1（`conformance/`，只做了 `lyap` 的数值比较规则；在参考实现上的运行结果：734 个用例中 100 通过、0 失败，其余 634 个因没有比较规则而跳过）。线协议标识升为 `aeoi/0.4`（已决定，12.1 第 15 项）：`spec` 与核心 schema 的 `$id` 一起升，改动见下表第 7 行。
 
 **规范改动**
 
@@ -1585,18 +1585,24 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 | 6 | 12、附录 A | 新开放问题 14 – 21（19 – 21 由一致性套件的第一次运行发现）；下一步 7；附录 A 加 `spec-v0.4.md` 与 `conformance/` | |
 | 7 | 0、2.2、4.2、12.1 第 15 项 | 线协议标识升为 `aeoi/0.4`，核心 schema `$id` 升为 `/0.4`（与 v0.3 的做法相同） | 作者决定：新增字段后版本号与线标识保持同步 |
 
-**已改（只涉及标识）**：`schemas/*`（`$id`、`$ref`、`spec` 的 const）、`examples/**`（manifest 的 `spec`、示例响应、输入输出 schema 里对核心 schema 的引用）、`write_manifests.py`、`validate_examples.py`、`rust/`（`aeoi_core::SPEC`、`schema.rs` 两处单元测试字面量、`aeoi-mcp` 的 e2e 断言与说明文字）、`conformance/`。没有改：`golden/`、`reports/`、`gen_golden_*.py`（它们只记录生成当时的版本）。除 `validate_examples.py`（459 个 golden 请求与全部示例校验通过）和一致性套件（44 个用例、7 个变异测试）外，**Rust 没有重新编译或测试**。
+**已改（只涉及标识）**：`schemas/*`（`$id`、`$ref`、`spec` 的 const）、`examples/**`（manifest 的 `spec`、示例响应、输入输出 schema 里对核心 schema 的引用）、`write_manifests.py`、`validate_examples.py`、`rust/`（`aeoi_core::SPEC`、`schema.rs` 两处单元测试字面量、`aeoi-mcp` 的 e2e 断言与说明文字）、`conformance/`。没有改：`golden/`、`reports/`、`gen_golden_*.py`（它们只记录生成当时的版本）。`validate_examples.py`（459 个 golden 请求与全部示例校验通过）、一致性套件（44 个用例、7 个变异测试）通过；Rust 在 WSL（x86_64-linux）上，标识改动前后 `cargo test` 的结果相同，只有上面两个与平台有关的示例测试失败（见下）。
 
-**需要但尚未做的改动（参考实现与数据）**
+**已做的改动（参考实现与数据）**
 
 | 位置 | 改动 |
 |---|---|
-| `schemas/common.schema.json` | `ExecOptions` 增加 `method_policy` |
-| `schemas/manifest.schema.json` | `receipt` 增加可选的 `alternatives[]`（需确认 `receipt` 对象是否允许新增属性） |
-| `schemas/envelope.schema.json` | `Receipt` 增加可选的 `method_selection` |
-| `aeoi-core` | 方法解析（MS-6）、`method_selection`、`verify` 的 `require: [used]` 重放与 `method_unavailable` verdict |
-| `aeoi-bridge` | 宿主策略合并（MS-10）、工具描述里的允许方法集合（MS-11） |
-| `conformance/`、`aeoi-conformance` | 套件与运行器（9.4） |
+| `schemas/common.schema.json` | `ExecOptions.method_policy`；新定义 `MethodPolicy`（`require`、`constraints.min_exactness`、`constraints.backend_library_in`，封闭对象，没有 `prefer`） |
+| `schemas/manifest.schema.json` | `receipt.alternatives[]`（与 `receipt` 同形，另必填 `backend`、`algorithm`，可选 `determinism`、`tolerance_class`） |
+| `schemas/envelope.schema.json` | `Receipt.method_selection`（`policy`、`used`） |
+| `examples/*/manifest.json`、`write_manifests.py` | 19 个 manifest 的 `errors` 声明 `E.VALIDATION.METHOD_UNAVAILABLE`（CF-8：发出的码必须声明） |
+| `aeoi-core` | 新模块 `method`：登记（`registered`）、解析（`resolve`，MS-6）、策略合并（`merge_policies`，MS-10）、重放策略（`replay_policy`，MS-9）；`operator.rs` 在语义校验前解析方法，收据按所用方法生成并在请求带策略时加 `method_selection`；`verify` 以 `require: [used]` 重放，缺方法时 verdict 为 `method_unavailable`；`ExecCtx.method` 把所选方法 id 交给算子 |
+| `aeoi-mcp` | `aeoi_verify` 的 verdict 枚举加 `method_unavailable` |
+| `aeoi-bridge` | `Bridge::with_method_policy`（宿主策略与请求策略合并后写入 `exec.method_policy`，请求只能收紧）；算子登记多于一个方法时，工具描述列出允许的方法（MS-11）；只登记一个方法的算子描述不变 |
+| 测试 | `aeoi-core/src/method.rs` 单元测试（合成多方法 manifest：登记顺序与继承、`require` / `constraints`、无解报错与理由、策略合并）；`aeoi-control/tests/method_policy.rs`（对 `pade`：无策略时收据与 v0.3 相同、策略不改请求指纹与结果、无解策略报 `METHOD_UNAVAILABLE`、畸形策略报 `SCHEMA`、重放与 `method_unavailable`）；`aeoi-control` 与 `aeoi-mcp` 的示例测试只在示例所在平台（`reproducibility.platform` 与 `cpu_features` 相同）比较 `output_hash`，其余平台只跑数值检查（见下） |
+
+**`platform_bitwise` 的示例测试（已修）**：示例的 `output_hash` 是在 x86_64-linux + avx512f 上生成的。2.1 与 P-7 对 `platform_bitwise` 只承诺“同 build、同平台（含 CPU 特性）”逐位相同，但示例测试无条件比较哈希，所以换一台 CPU 特性不同的机器（WSL、x86_64-linux、无 avx512f）上 `pade`、`ctrb_obsv` 非对称示例和 MCP e2e 失败。改动前后失败相同，所以与标识改动无关。现在平台或 CPU 特性不同时跳过哈希比较（并打印说明），`verify` 的 e2e 在这种情况下接受 `tolerance_match`；数值检查（对照 python-control / mpmath）照常运行。**这只是修了测试的假设，没有查清这两个示例在另一台机器上具体差在哪几位**；`pade` 的网格由 `powf`、`exp` 算出，依赖 libm，是最可能的来源。
+
+**仍未做**：算子端没有任何一个真正登记第二个方法（`alternatives` 的路径只有合成 manifest 的单元测试）；`conformance/` 里只有 `lyap` 有数值比较规则。
 
 ### v0.3.6-draft（2026-11-23）
 

@@ -74,7 +74,16 @@ fn exactness(decl: &Value, trust: &Value) -> Value {
 /// a declared post-condition that is false (or missing from trust.checks) adds W.EVIDENCE.POSTCONDITION_FAILED.
 pub fn build(m: &OperatorMeta, input_hash: &str, output_hash: &str, trust: &Value, warnings: &mut Vec<Warning>,
              build: &str, platform: &str) -> Value {
-    let decl = &m.manifest["receipt"];
+    let method = crate::method::resolve(&m.manifest, None).expect("default method");
+    build_for(m, &method, None, input_hash, output_hash, trust, warnings, build, platform)
+}
+
+/// `build` for the method actually used (spec 3.14): its declaration, routine, determinism and tolerance class.
+/// `selection` (MS-7) is `{policy, used}` and is emitted only when the request carried `exec.method_policy`.
+#[allow(clippy::too_many_arguments)]
+pub fn build_for(m: &OperatorMeta, method: &crate::method::Method, selection: Option<Value>, input_hash: &str, output_hash: &str,
+                 trust: &Value, warnings: &mut Vec<Warning>, build: &str, platform: &str) -> Value {
+    let decl = &method.decl;
     let checks = &trust["checks"];
     let mut post = Map::new();
     let mut failed = Vec::new();
@@ -119,7 +128,7 @@ pub fn build(m: &OperatorMeta, input_hash: &str, output_hash: &str, trust: &Valu
         "failed": failed,
         "convergence": if conv["applicable"] == Value::Bool(true) { json!({"converged": conv["converged"].clone(), "iterations": conv["iterations"].clone()}) } else { Value::Null },
         "accuracy_grade": trust["accuracy_grade"].clone(),
-        "tolerance_class": m.tolerance_class,
+        "tolerance_class": method.tolerance_class,
         "credentials": trust["credentials"].clone(),
     });
     // spec 4.3 / A-1: only approximation operators set trust.approximation. Omitting the key
@@ -139,11 +148,11 @@ pub fn build(m: &OperatorMeta, input_hash: &str, output_hash: &str, trust: &Valu
     if !unreliable.is_empty() {
         evidence["unreliable"] = json!(unreliable);
     }
-    json!({
+    let mut receipt = json!({
         "format": RECEIPT_FORMAT,
         "method": {
             "id": decl["method_id"].clone(),
-            "routine": m.manifest["backend"]["routine"].clone(),
+            "routine": method.routine.clone(),
             "provenance": format!("aeoi://operators/{}/{}/manifest#/provenance", m.id, m.version),
         },
         "assumptions": decl["assumptions"].clone(),
@@ -154,14 +163,18 @@ pub fn build(m: &OperatorMeta, input_hash: &str, output_hash: &str, trust: &Valu
             "result": res,
             "output_hash": output_hash,
             "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
-            "stable_across": format!("request: all platforms and builds of {}@{}; result: same build + platform guaranteed ({}, P-7), other platforms only when the result is bitwise equal", m.id, m.version, m.determinism),
+            "stable_across": format!("request: all platforms and builds of {}@{}; result: same build + platform guaranteed ({}, P-7), other platforms only when the result is bitwise equal", m.id, m.version, method.determinism),
         },
         "replay": {
             "build": build,
             "platform": platform,
             "verify": {"mcp_tool": "aeoi_verify", "cli": "aeoi-call verify <operator> <request.json> <envelope.json>", "wasm": "verify(operator, request, envelope)"},
         },
-    })
+    });
+    if let Some(sel) = selection {
+        receipt["method_selection"] = sel;
+    }
+    receipt
 }
 
 /// Normwise comparison of two results: per top-level field, ‖Δ‖∞ ≤ rtol·max(‖a‖∞, ‖b‖∞) (or ≤ 1e-14·‖whole‖∞
@@ -237,8 +250,29 @@ pub fn verify(op: &dyn DynOperator, args: &Value, claimed: &Value, host: &HostCt
     let m = op.meta();
     let receipt = if claimed.get("receipt").is_some() { &claimed["receipt"] } else { claimed };
     let claimed_result = claimed.get("result").filter(|r| !r.is_null());
+    // MS-9: a receipt that records a method selection is replayed with exactly the method that produced the
+    // claimed result (`require: [used]`), not with the original policy (which may have come from the host).
+    let used = receipt["method_selection"]["used"].as_str().filter(|_| claimed.get("status").and_then(|s| s.as_str()) != Some("error"));
+    let replay_args;
+    let args = match used {
+        Some(u) => {
+            let mut a = args.clone();
+            if !a["exec"].is_object() {
+                a["exec"] = json!({});
+            }
+            a["exec"]["method_policy"] = crate::method::replay_policy(u);
+            replay_args = a;
+            &replay_args
+        }
+        None => args,
+    };
     let fresh = op.call(args, host);
     let fresh_status = fresh["status"].as_str().unwrap_or("").to_string();
+    if used.is_some() && fresh["error"]["code"] == crate::method::METHOD_UNAVAILABLE {
+        return json!({"verdict": "method_unavailable", "claimed_method": used, "rerun_error": fresh["error"].clone(),
+            "note": "收据所用的方法在重放环境里没有登记：无法重放（MS-9）；两个不同方法之间的比较属于一致性判定，不是重放",
+            "operator": {"id": m.id, "version": m.version}});
+    }
     // error envelopes carry no receipt: compare the error code
     if claimed.get("status").and_then(|s| s.as_str()) == Some("error") || fresh_status == "error" {
         let same = claimed["status"] == fresh["status"] && claimed["error"]["code"] == fresh["error"]["code"];

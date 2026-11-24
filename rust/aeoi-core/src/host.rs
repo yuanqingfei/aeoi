@@ -26,11 +26,13 @@ pub struct ExecCtx {
     pub deadline: Instant,
     pub seed: Option<u64>,
     pub trust_full: bool,
+    /// Id of the method selected for this call (spec 3.14 MS-6); operators with several methods branch on it.
+    pub method: String,
 }
 
 impl ExecCtx {
     pub fn new(timeout_ms: u64) -> Self {
-        ExecCtx { deadline: Instant::now() + Duration::from_millis(timeout_ms), seed: None, trust_full: false }
+        ExecCtx { deadline: Instant::now() + Duration::from_millis(timeout_ms), seed: None, trust_full: false, method: String::new() }
     }
     /// Cooperative deadline check for long loops.
     pub fn check(&self) -> Result<(), OpError> {

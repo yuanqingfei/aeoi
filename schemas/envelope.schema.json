@@ -560,6 +560,24 @@
               "type": "object"
             }
           }
+        },
+        "method_selection": {
+          "type": "object",
+          "description": "v0.4 MS-7：请求带 exec.method_policy 时出现；policy 为回显，used 为实际所用方法 id（等于 method.id）",
+          "required": [
+            "policy",
+            "used"
+          ],
+          "properties": {
+            "policy": {
+              "$ref": "aeoi://schemas/common/0.4/MethodPolicy"
+            },
+            "used": {
+              "type": "string",
+              "pattern": "^[a-z0-9_.:+-]+$"
+            }
+          },
+          "additionalProperties": false
         }
       }
     }

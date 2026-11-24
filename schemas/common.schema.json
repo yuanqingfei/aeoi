@@ -147,7 +147,22 @@
         "tolerance": { "type": "object", "description": "仅允许覆盖 manifest 中声明为 overridable 的容差", "additionalProperties": { "type": "number", "exclusiveMinimum": 0 } },
         "trust_level": { "enum": ["summary", "full"], "default": "summary" },
         "dry_run": { "type": "boolean", "default": false, "description": "只做校验与代价估计，不执行" },
-        "output_encoding": { "enum": ["json", "b64"], "default": "json", "description": "结果中稠密数组的编码；b64 时为 DenseMatrixB64" }
+        "output_encoding": { "enum": ["json", "b64"], "default": "json", "description": "结果中稠密数组的编码；b64 时为 DenseMatrixB64" },
+        "method_policy": { "$ref": "aeoi://schemas/common/0.4/MethodPolicy" }
+      }
+    },
+    "MethodPolicy": {
+      "type": "object", "additionalProperties": false,
+      "description": "v0.4 MS-5：对所用计算方法的硬约束。不进入 input_hash。候选集 = 允许的方法 ∩ require ∩ 满足 constraints 的方法；为空则 E.VALIDATION.METHOD_UNAVAILABLE",
+      "properties": {
+        "require": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9_.:+-]+$" }, "minItems": 1, "uniqueItems": true, "description": "只能用其中的方法 id" },
+        "constraints": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "min_exactness": { "enum": ["exact", "correctly_rounded", "approximate"], "description": "所用方法的精确性类 MUST 不低于它（exact > correctly_rounded > approximate）" },
+            "backend_library_in": { "type": "array", "items": { "type": "string" }, "minItems": 1, "uniqueItems": true, "description": "所用方法的 backend.library MUST 属于其中" }
+          }
+        }
       }
     }
   }

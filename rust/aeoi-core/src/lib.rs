@@ -7,6 +7,7 @@ pub mod matrix;
 pub mod lti;
 pub mod schema;
 pub mod linalg;
+pub mod method;
 pub mod operator;
 pub mod poly;
 pub mod receipt;

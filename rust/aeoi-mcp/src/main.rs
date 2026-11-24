@@ -70,7 +70,7 @@ impl Server {
                                "arguments": {"type": "object", "description": "原调用的 arguments（与产生该收据时相同）"},
                                "envelope": {"type": "object", "description": "被验证的 AEOI 信封（含 receipt 与 result），或单独的 receipt 对象"}}},
             "outputSchema": {"type": "object", "required": ["verdict", "operator"],
-                "properties": {"verdict": {"enum": ["bitwise_match", "tolerance_match", "mismatch", "request_mismatch", "result_tampered", "error_reproduced", "status_mismatch"]},
+                "properties": {"verdict": {"enum": ["bitwise_match", "tolerance_match", "mismatch", "request_mismatch", "result_tampered", "error_reproduced", "status_mismatch", "method_unavailable"]},
                                "operator": {"type": "object"}, "max_rel_diff": {"type": "number"}, "note": {"type": "string"}}},
             "annotations": {"readOnlyHint": true, "idempotentHint": true, "openWorldHint": false},
             "_meta": {"aeoi/spec": aeoi_core::SPEC, "aeoi/kind": "verifier"},
