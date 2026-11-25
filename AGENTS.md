@@ -10,7 +10,7 @@ AEOI（AI Engineering Operator Interface Spec）是叠加在 MCP 之上的工程
 - 有 claude.ai Project 时，另有交接文档 `claude/aeoi-handoff.md`（未提交的改动与待办）。
 
 ## 必须遵守
-1. **提交、推送要作者当次明确同意。**
+1. **提交、推送不必等作者确认（作者 2026-11-25 授权），但每个里程碑都要提交并推送，不留未推送的提交。打 tag / 正式发布（GitHub Release、MCP 目录）仍要作者当次同意。**
 2. 每个新算子同时带：schema（经 `write_manifests.py`）、Rust 实现、golden（`gen_golden_<op>.py`）、示例与 `parity.yaml`、一致性规则与代理变异；它逼出的规范问题写进规范和 Changelog。一次 1–2 个算子。
 3. 一致性容差来自套件，不来自被测实现自报的值（CF-6）。有数值规则的算子 ≥ 全部算子的 30%。
 4. 验证一律看**退出码**，不要只看输出的最后一行。

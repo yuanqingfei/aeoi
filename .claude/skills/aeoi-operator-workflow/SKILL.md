@@ -13,7 +13,7 @@ AEOI（AI Engineering Operator Interface Spec）是叠加在 MCP 之上的工程
 - 分工：handoff 是易变状态；本文件是不变的做法；历史在规范 Changelog。不要另建 changelog 文件。
 
 ## 作者的规则（不可违反）
-- **每次提交、推送都要作者在当次明确同意。** 不要因为上次同意过就提交。
+- **提交、推送不必等作者确认**（作者 2026-11-25 授权）；做完一步就提交并推送，不留未推送的提交。**打 tag / 正式发布仍要作者当次同意。**
 - 提交：`git -c user.name=Claude -c user.email=noreply@anthropic.com commit`；推送：`git -c push.negotiate=true push origin main`；提交信息末尾带会话给出的 attribution 行。
 - 路线：不断加新算子，一方面扩大用户群，一方面让算子逼出规范问题并写进规范。一次 1–2 个。领域按 MATLAB 使用频率排（控制已告一段落；已做 fft、ode45；候选 interp1、polyfit、linsolve、fzero/fsolve、butter+filter、eig/svd、integral）。
 - 一致性数值规则覆盖的算子 ≥ 全部算子的 30%（以后提高）；每加一个算子都带规则。
