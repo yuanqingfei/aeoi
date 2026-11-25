@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.system.solve/0.4.0/output",
+  "type": "object",
+  "required": [
+    "x",
+    "residual_norm",
+    "method",
+    "shape",
+    "refinement_steps"
+  ],
+  "properties": {
+    "x": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "解：b 为 [m] 时是 [n]，b 为 [m, k] 时是 [n, k]"
+    },
+    "residual_norm": {
+      "description": "‖b − A·x‖₂（每个右端项一个；b 为向量时是一个数）"
+    },
+    "method": {
+      "enum": [
+        "lu_partial_pivoting",
+        "householder_qr"
+      ]
+    },
+    "shape": {
+      "type": "object",
+      "description": "m、n、rhs（右端项个数）、kind（square 或 overdetermined）"
+    },
+    "refinement_steps": {
+      "type": "integer",
+      "description": "迭代精化实际做的步数（各右端项取最大；超定为 0）"
+    }
+  }
+}

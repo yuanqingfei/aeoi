@@ -143,6 +143,23 @@ def m_ode_overclaims(r, env):               # always claims tolerance_consistent
     env["trust"]["checks"]["tolerance_consistent"] = True
 
 
+def m_linsolve_x_wrong(r):                 # one solution component off by 1e-9 (relative)
+    d = r["x"]["data"]; d[0] = d[0] * (1 + 1e-9) + 1e-9
+
+
+def m_linsolve_overclaims(r, env):          # always claims a backward-stable solution
+    env["trust"]["checks"]["backward_stable"] = True
+
+
+def m_interp1_one_ulp(r):                   # every value one ulp up: inside the tolerance, but node hits are no longer exact
+    import math
+    r["yq"]["data"] = [math.nextafter(v, math.inf) if isinstance(v, float) else v for v in r["yq"]["data"]]
+
+
+def m_interp1_count_wrong(r):               # out_of_range_count off by one
+    r["out_of_range_count"] = r["out_of_range_count"] + 1
+
+
 # name -> (operator, transform)
 MUTANTS = {
     "pz_pole_wrong": ("control.lti.poles_zeros", m_pz_pole_wrong),
@@ -164,6 +181,10 @@ MUTANTS = {
     "ode_y_wrong": ("ode.ivp.solve", m_ode_y_wrong),
     "ode_states_reordered": ("ode.ivp.solve", m_ode_states_reordered),
     "ode_overclaims": ("ode.ivp.solve", m_ode_overclaims),
+    "linsolve_x_wrong": ("linalg.system.solve", m_linsolve_x_wrong),
+    "linsolve_overclaims": ("linalg.system.solve", m_linsolve_overclaims),
+    "interp1_one_ulp": ("interp.grid.interp1", m_interp1_one_ulp),
+    "interp1_count_wrong": ("interp.grid.interp1", m_interp1_count_wrong),
 }
 
 

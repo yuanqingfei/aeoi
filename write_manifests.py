@@ -527,6 +527,45 @@ ode_out=outs("ode.ivp.solve",{"t":dict(M,description="输出时刻 [n_out]（t_e
  "tolerance":{"type":"object","description":"实际使用的 rtol、atol（回显）"},
  "global_error":{"type":"object","description":"以 rtol/10、atol/10 重解得到的估计：max_abs（每个状态在输出点上的最大 |y − y_fine|）与 max_scaled（max |y − y_fine| / (atol + rtol·|y|)）"}},
  ["t","y","states","stats","tolerance","global_error"],ver=V48)
+# ---- v0.4.10: linalg.system.solve, interp.grid.interp1
+V410="0.4.0"
+lsol=man("linalg.system.solve","Solve a linear system","解线性方程组 A·X = B（A 为实数稠密矩阵）。方阵：带部分选主元的 LU 分解，再用补偿算术算残差做至多 3 步迭代精化；超定（行多于列）：Householder QR 求最小二乘解；欠定（行少于列）报错。结果带后向误差、1-范数条件数估计与前向误差估计（= MATLAB 的 A\b 用于方阵与超定的情形）。","analysis",["linalg","solve","least-squares","mldivide"],
+ ["A 为 [m, n] 实数矩阵，m ≥ n（方阵或超定）","b 为 [m] 或 [m, k]（k 个右端项，每列一个）","A 列满秩（方阵即非奇异）"],
+ ["欠定方程组（m < n；最小范数解将来作为另一方法）","复数方程组（0.4.0 未支持）","大型稀疏方程组（需迭代法或稀疏分解）","特殊结构（对称正定、带状、三角）的专用加速"],
+ "方阵：LU 分解 P·A = L·U，部分选主元（每列取 |a_ik| 最大的第一行，与 LAPACK dgetf2 相同），前代/回代求解；迭代精化：r = b − A·x 用补偿算术（Dot2，Ogita–Rump–Oishi，无 FMA）计算，解 A·δ = r，x ← x + δ，‖δ‖∞ ≤ 2u‖x‖∞ 或修正量未减半即停，至多 3 步。超定：Householder QR（LAPACK dgeqr2/dlarfg 约定），x = R⁻¹·(Qᵀb) 的前 n 行；秩判定 |r_jj| ≤ max(m, n)·u·max|r_ii| 报 E.NUMERICAL.SINGULAR。条件数：‖A‖₁·est(‖A⁻¹‖₁)（超定用 R），Hager–Higham 1-范数估计（至多 5 次迭代 + 交错向量）。后向误差：方阵 η = ‖b − A·x‖∞ / (‖A‖∞‖x‖∞ + ‖b‖∞)；超定 η = ‖Aᵀr‖₂ / (‖A‖_F·(‖r‖₂ + ‖A‖_F‖x‖₂))，残差均以补偿算术计算",
+ [{"type":"textbook","cite":"N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §9（LU）、§12（迭代精化）、§15（条件数估计）、§19–20（QR 与最小二乘）"},
+  {"type":"paper","cite":"N. J. Higham, FORTRAN codes for estimating the one-norm of a real or complex matrix, ACM TOMS 14(4), 1988","doi":"10.1145/50063.214386"},
+  {"type":"paper","cite":"T. Ogita, S. M. Rump, S. Oishi, Accurate sum and dot product, SIAM J. Sci. Comput. 26(6), 2005","doi":"10.1137/030601818"}],
+ "linsolve::solve (LU partial pivoting + refinement / Householder QR)","T1",{"max_dimension":2000,"max_rhs":1000,"max_refinement_steps":3},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.ENCODING","E.DOMAIN.UNDERDETERMINED","E.NUMERICAL.SINGULAR","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["W.NUMERICAL.ILL_CONDITIONED","W.PERFORMANCE.SPARSE_DENSIFIED"],
+ sparse={"/A":{"policy":"densify","max_dense_elements":4000000}},ver=V410,backend=BACK_NUM("linsolve::solve"))
+lsol_in=ins("linalg.system.solve",{"A":M,"b":M,"refinement":{"enum":["auto","none"],"default":"auto","x-aeoi-provenance":"convention"}},["A","b"],
+ {"x-aeoi-shape-constraints":["A: [m, n]，m ≥ n","b: [m] 或 [m, k]"]},ver=V410)
+lsol_out=outs("linalg.system.solve",{"x":dict(M,description="解：b 为 [m] 时是 [n]，b 为 [m, k] 时是 [n, k]"),
+ "residual_norm":{"description":"‖b − A·x‖₂（每个右端项一个；b 为向量时是一个数）"},
+ "method":{"enum":["lu_partial_pivoting","householder_qr"]},
+ "shape":{"type":"object","description":"m、n、rhs（右端项个数）、kind（square 或 overdetermined）"},
+ "refinement_steps":{"type":"integer","description":"迭代精化实际做的步数（各右端项取最大；超定为 0）"}},
+ ["x","residual_norm","method","shape","refinement_steps"],ver=V410)
+itp=man("interp.grid.interp1","1-D interpolation","一维插值：给定严格递增的采样点 x 与数据 y，求查询点 xq 上的值。方法 linear（缺省）、nearest、previous、next、pchip（保形三次）、spline（not-a-knot 三次样条），与 MATLAB interp1 的同名方法相同。查询点超出数据范围时缺省报错，由调用方显式选择 nan、clamp 或 extrapolate。","analysis",["interpolation","interp1","spline","pchip","table"],
+ ["x 为 [n] 严格递增，n ≥ 2","y 为 [n] 或 [k, n]（每行一个通道）","xq 为 [q]，任意顺序"],
+ ["散乱数据与多维插值（interp2/griddata）","平滑与拟合（数据有噪声时用拟合，不用插值）","周期样条与其他端点条件"],
+ "区间定位：二分查找，x_i ≤ xq < x_{i+1}（xq = x_{n−1} 取最后一段）；xq 恰为节点时直接返回该点的 y。linear：slope·(xq − x_i) + y_i（numpy.interp 的运算顺序）。nearest：xq ≥ x_i/2 + x_{i+1}/2 时取 y_{i+1}，否则 y_i（中点归右，同 MATLAB 与 scipy nearest-up）。previous/next：y_i / y_{i+1}。pchip：Fritsch–Butland 加权调和平均斜率，端点用保形三点公式（Moler, Numerical Computing with MATLAB §3.6）。spline：not-a-knot 端点条件的斜率方程组（三对角，LAPACK dgtsv 部分选主元；n = 3 为过三点的抛物线，n = 2 为直线）。三次段按 scipy PPoly 求值 ((c0·d + c1)·d + c2)·d + c3。范围外：extrapolation = error（缺省，E.DOMAIN.EXTRAPOLATION_REQUIRED）/ nan / clamp（端点值）/ extrapolate（linear 与三次方法延长端点那一段；nearest/previous/next 取端点值）",
+ [{"type":"paper","cite":"F. N. Fritsch, J. Butland, A method for constructing local monotone piecewise cubic interpolants, SIAM J. Sci. Stat. Comput. 5(2), 1984","doi":"10.1137/0905021"},
+  {"type":"textbook","cite":"C. de Boor, A Practical Guide to Splines, rev. ed., Springer 2001, Ch. IV（not-a-knot 端点条件）"},
+  {"type":"textbook","cite":"C. Moler, Numerical Computing with MATLAB, SIAM 2004, §3（pchip、spline）"}],
+ "interp1::eval (piecewise linear / cubic Hermite / not-a-knot spline)","T1",{"max_points":10000000,"max_output_values":10000000},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.GRID","E.VALIDATION.ENCODING","E.DOMAIN.EXTRAPOLATION_REQUIRED","E.NUMERICAL.SINGULAR","E.RESOURCE.OUTPUT_TOO_LARGE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["W.ACCURACY.EXTRAPOLATED"],sparse={},ver=V410,backend=BACK_NUM("interp1::eval"))
+itp_in=ins("interp.grid.interp1",{"x":M,"y":M,"xq":M,
+ "method":{"enum":["linear","nearest","previous","next","pchip","spline"],"default":"linear","x-aeoi-provenance":"convention"},
+ "extrapolation":{"enum":["error","nan","clamp","extrapolate"],"default":"error","x-aeoi-provenance":"convention"}},["x","y","xq"],
+ {"x-aeoi-shape-constraints":["x: [n] 严格递增","y: [n] 或 [k, n]","xq: [q]"]},ver=V410)
+itp_out=outs("interp.grid.interp1",{"yq":dict(M,description="插值结果：y 为 [n] 时 [q]，y 为 [k, n] 时 [k, q]；extrapolation = nan 时范围外为 NaN"),
+ "method":{"enum":["linear","nearest","previous","next","pchip","spline"]},"extrapolation":{"enum":["error","nan","clamp","extrapolate"]},
+ "out_of_range_count":{"type":"integer","description":"落在 [x_0, x_{n−1}] 之外的查询点个数"}},
+ ["yq","method","extrapolation","out_of_range_count"],ver=V410)
 OUTSEL={"type":"object","additionalProperties":False,"properties":{"return_samples":{"enum":["all","decimated","none"],"default":"all"},"max_samples":{"type":"integer","minimum":2,"default":10001}}}
 lsim_in=ins("control.lti.lsim",{"system":LTI,"u":M,
  "time":{"type":"object","additionalProperties":False,"required":["dt","unit"],"properties":{"dt":{"type":"number","exclusiveMinimum":0},"t0":{"type":"number","default":0},"unit":{"const":"s"}}},
@@ -540,7 +579,7 @@ lsim_out=outs("control.lti.lsim",{"t":{"oneOf":[{"type":"null"},Q]},"y":{"oneOf"
  ["t","y","x","n_grid_points","interpolation","realization"],ver=V45)
 B3={"control.lti.series":(series,series_in,series_out),"control.lti.parallel":(par,par_in,par_out),"control.lti.feedback":(fb,fb_in,fb_out),
  "control.design.pid":(pid,pid_in,pid_out),"control.lti.stepinfo":(si,si_in,si_out),"control.lti.pade":(pade,pade_in,pade_out),
- "control.analysis.loopsens":(ls,ls_in,ls_out),"control.lti.lsim":(lsim,lsim_in,lsim_out),"control.design.pidtune":(pt,pt_in,pt_out),"signal.spectral.fft":(fft,fft_in,fft_out),"ode.ivp.solve":(ode,ode_in,ode_out)}
+ "control.analysis.loopsens":(ls,ls_in,ls_out),"control.lti.lsim":(lsim,lsim_in,lsim_out),"control.design.pidtune":(pt,pt_in,pt_out),"signal.spectral.fft":(fft,fft_in,fft_out),"ode.ivp.solve":(ode,ode_in,ode_out),"linalg.system.solve":(lsol,lsol_in,lsol_out),"interp.grid.interp1":(itp,itp_in,itp_out)}
 _ws=[]
 for _m in (series,fb,mg,si):
     _ws+= [w for w in _m["warnings"] if w not in _ws]
@@ -569,6 +608,8 @@ DESC={
  "control.design.pid":{"form":"parallel（默认）：C=Kp+Ki/s+Kd·s/(Tf·s+1)。standard：C=Kp·(1+1/(Ti·s)+Td·s/(Tf·s+1))。这是定义默认值","Kp":"比例增益。设计参数，没有默认值；由调用方给定，不需要在用户原话里逐字出现，但不得在用户和题目都没给时擅自假设","Ki":"只用于 form=parallel：积分增益，默认 0（该项不出现）。standard 形式不要出现 Ki","Kd":"只用于 form=parallel：微分增益，默认 0。Tf=0 且 Kd≠0 时结果 improper。standard 形式不要出现 Kd","Ti":"只用于 form=standard：积分时间（秒），必须 > 0。没有积分就省略 Ti，不要写 Ti=0；parallel 形式不要出现 Ti","Td":"只用于 form=standard：微分时间（秒），默认 0。parallel 形式不要出现 Td","Tf":"微分滤波时间常数（秒），默认 0（不加滤波）。有微分项时 Tf=0 得到理想微分","output_kind":"tf（默认）或 ss。improper 时 ss 会报错","lineage":"可选。上游 receipt 指纹，只回显"},
  "control.lti.stepinfo":{"system":SYS_D,"time":"时间网格，与 step 相同：uniform（t_final、dt，单位 s）或 auto。指标相对这个网格定义","rise_time_limits":"上升时间的低/高阈值，默认 [0.1, 0.9]（10% 到 90%）。这是指标定义，不是对象的物理参数；省略即用默认，不必询问","settling_threshold":"调节带半宽，默认 0.02（2%）。定义默认值，省略即用默认"},
  "ode.ivp.solve":{"states":"状态名列表，如 [\"x\", \"v\"]。顺序决定 y 的行序；表达式里按名字引用，不用下标","rhs":"右端表达式列表，与 states 一一对应：第 i 个是 d(states[i])/dt，如 [\"v\", \"-k*x - c*v\"]。可用 t、状态名、参数名、常数 pi、+ − * / ^（右结合，-x^2 = -(x^2)）与函数 sin cos tan asin acos atan atan2 sinh cosh tanh exp log log10 sqrt abs min max hypot sign","params":"参数名到数值，如 {\"k\": 4, \"c\": 0.5}；名字不能与状态名重复","initial":"初值，键为状态名，如 {\"x\": 1, \"v\": 0}；每个状态都要给","t_span":"[t0, tf]；tf < t0 时反向积分","t_eval":"输出时刻（在区间内、沿积分方向单调）。不给时用 n_out 个等距点","n_out":"不给 t_eval 时的输出点数，默认 101（含两端）。与 t_eval 二选一","rtol":"相对容差，默认 1e-3（与 MATLAB ode45、scipy 相同）。要更准就调小，如 1e-8","atol":"绝对容差，默认 1e-6","max_step":"最大步长（可选）","first_step":"初始步长（可选；不给时自动选择）"},
+ "linalg.system.solve":{"A":"系数矩阵 [m, n]，row-major（MATLAB 是 column-major，先转置再展平）；m ≥ n。大矩阵可用 b64 或 ref 编码","b":"右端项：[m]（一个）或 [m, k]（k 个，每列一个）","refinement":"auto（缺省：用补偿残差做至多 3 步迭代精化）或 none（只做一次 LU 求解，与 MATLAB 的 A\\b 相同）。只影响方阵"},
+ "interp.grid.interp1":{"x":"采样点 [n]，严格递增","y":"采样值：[n]，或 [k, n]（k 个通道，每行一个；MATLAB 习惯按列存，要转置）","xq":"查询点 [q]，任意顺序","method":"linear（缺省）、nearest（中点归右）、previous、next、pchip（保形三次，不过冲）、spline（not-a-knot 三次样条，可能过冲）","extrapolation":"查询点超出 [x 的最小值, 最大值] 时：error（缺省，报错并给出可选补丁）、nan（标成缺失）、clamp（取端点值）、extrapolate（延长端点那一段）。不确定时问用户"},
  "signal.spectral.fft":{"x":"要变换的序列：f64 或 c128，形状 [n] 或 [m, n]（m 个通道，沿最后一维变换，与 lsim 的 [nu, nt] 相同）。长数据可用 b64 或 ref 编码","n":"变换长度。缺省为 x 最后一维的长度；更短则截断，更长则在末尾补零（= MATLAB fft(x, n)）","direction":"forward（缺省）或 inverse","normalization":"backward（缺省：正变换不缩放、逆变换乘 1/n，与 MATLAB、numpy 相同）、ortho（两个方向都乘 1/√n）或 forward（正变换乘 1/n）","sides":"two（缺省，全部 n 个频点）或 one（只返回 0..fs/2，仅用于实数输入的正变换）","sample_rate_hz":"采样率（Hz）。给出时 frequency 以 Hz 为单位，否则以 cycles/sample 为单位"},
  "control.design.pidtune":{"plant":"被控对象 G（SISO、连续、proper）。上一个工具返回了系统就原样粘贴 result.system","type":"PI 或 PID。必填：控制器类型是设计决定，不由算子选","wc_rad_s":"目标增益穿越频率 ωc（rad/s）。必填，由用户或题目给出，算子不猜；不知道就问用户期望的响应速度（ωc 约为闭环带宽）","phase_margin_deg":"目标相位裕度（度），默认 60。定义默认值，省略即可","ti_td_ratio":"只用于 PID：Ti/Td 比，默认 4（Åström–Hägglund）。PI 不要给","derivative_filter_n":"只用于 PID：微分滤波 Tf = Td/N 的 N，默认 10。PI 不要给","lineage":"可选。上游 receipt.fingerprint.request，只回显"},
  "control.lti.lsim":{"system":SYS_D,"u":"输入采样，形状 [nu, nt]：第 i 行是第 i 个输入通道，第 k 列是 t_k = t0 + k·dt 时刻的值。SISO 可给一维 [nt]。长数据可用 b64 或 ref 编码（3.6）","time":"均匀网格：dt（s，> 0），t0（起始时刻，缺省 0），unit 固定 s。离散系统 dt 必须等于 ts。非均匀时间戳先重采样","interpolation":"采样之间的输入怎么解释：foh 线性（缺省，与 scipy lsim、python-control 相同），zoh 保持到下一个采样。离散系统不要给","x0":"初始状态 [n]，缺省 0。只用于 kind = ss：tf/zpk 没有状态坐标，要给初始状态先用 control_lti_convert 转成 ss","return_states":"true 时同时返回状态轨迹 x [n, nt]，缺省 false","output":"返回的采样点：all / decimated（最多 max_samples 点）/ none"},
@@ -631,6 +672,10 @@ RECEIPT["ode.ivp.solve"]={"method_id":"aeoi:ode:dopri54","assumptions":[A("model
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["all_finite","tolerance_consistent"]}
 RECEIPT["signal.spectral.fft"]={"method_id":"aeoi:fft:rustfft-scalar","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("uniform_sampling","x 是均匀采样序列；频率轴按 sample_rate_hz（或 cycles/sample）解释","caller"),A("conventions","符号、归一化、单双边、频率轴顺序按请求或规范默认","validation"),A("periodic_extension","DFT 把 x 视为周期 n 的序列；截断或补零改变频谱（泄漏），不是误差","caller")],
    "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["parseval","dft_spot_check","all_finite"]}
+RECEIPT["linalg.system.solve"]={"method_id":"aeoi:linsolve:lu-refine-or-householder-qr","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("not_underdetermined","m ≥ n","error:E.DOMAIN.UNDERDETERMINED"),A("full_rank","A 列满秩（方阵非奇异）","error:E.NUMERICAL.SINGULAR"),A("conditioning","κ·u ≪ 1，否则解没有有效数字（前向误差 ≈ κ·η）","warning:W.NUMERICAL.ILL_CONDITIONED"),A("row_major","A 按 row-major 录入","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["backward_stable","all_finite"]}
+RECEIPT["interp.grid.interp1"]={"method_id":"aeoi:interp1:piecewise","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("strictly_increasing","x 严格递增","error:E.VALIDATION.GRID"),A("in_range","查询点在数据范围内，或调用方显式选择了范围外的处理","error:E.DOMAIN.EXTRAPOLATION_REQUIRED"),A("model","插值反映的是数据之间的一种约定曲线（方法决定），不是真实函数；与真实函数的误差算子无法估计","caller"),A("channels","y 每行一个通道","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["all_finite","pieces_interpolate","spline_c2","local_bounds"]}
 RECEIPT["control.design.pidtune"]={"method_id":"aeoi:pidtune:frequency-point","assumptions":[A("lti_model","plant 准确描述被控对象（单位、符号）","caller"),A("siso_continuous","SISO、连续、proper","error:E.DOMAIN.NOT_CONTINUOUS"),A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("target_from_user","ωc 由调用方给出；PM、Ti/Td、N 用请求里的值或规范默认","validation"),A("achievable","所需控制器相位在 PI/PID 可达范围内","error:E.DOMAIN.TARGET_NOT_ACHIEVABLE"),A("closed_loop_stable","结果闭环稳定","error:E.DOMAIN.TARGET_NOT_ACHIEVABLE"),A("single_crossover","L 只有一个增益穿越点（否则实际相位裕度可能小于目标）","warning:W.DOMAIN.EXTRA_CROSSOVER")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["target_met","closed_loop_stable","sub_operator_checks","all_finite"]}
 RECEIPT["control.lti.lsim"]={"method_id":"aeoi:lsim:block-expm-pade13-recursion","assumptions":LTI_A+[A("interpolation","采样之间的输入按 foh（线性）或 zoh（保持）解释；响应对这个解释精确","validation"),A("uniform_grid","均匀网格 t_k = t0 + k·dt；离散系统 dt = ts","error:E.VALIDATION.GRID"),A("x0_coordinates","x0 属于给定的 ss 实现","error:E.VALIDATION.OPTION_CONFLICT"),A("input_sampling","输入采样足以描述真实输入（结果对真实输入的误差取决于采样）","caller"),A("grid","dt 足以分辨系统动态","warning:W.ACCURACY.GRID_TOO_COARSE")],
@@ -646,7 +691,9 @@ COVERAGE.update({"control.design.pid":{"formula_matches":"test_points"},"control
  "control.lti.lsim":{"half_step_consistent":"test_points"},
  "control.design.pidtune":{"target_met":"test_points","sub_operator_checks":"sampled"},
  "signal.spectral.fft":{"parseval":"full","dft_spot_check":"sampled"},
- "ode.ivp.solve":{"tolerance_consistent":"full"}})
+ "ode.ivp.solve":{"tolerance_consistent":"full"},
+ "linalg.system.solve":{"backward_stable":"full"},
+ "interp.grid.interp1":{"pieces_interpolate":"full","spline_c2":"full","local_bounds":"full"}})
 # v0.3.6 E-13: result fields that are not usable when a post-condition fails (listed in receipt.evidence.unreliable).
 GUARDS={"control.analysis.ctrb_obsv":{"pbh_agrees_ctrb":["/ctrb/rank","/ctrb/full_rank","/minimal"],"pbh_agrees_obsv":["/obsv/rank","/obsv/full_rank","/minimal"]},
  "control.analysis.loopsens":{"closed_loop_identity":["/open_loop","/closed_loop","/sensitivity"],"stability_consistent":["/closed_loop_stable"],"sub_operator_checks":["/margins","/gain_crossover_rad_s","/gain_crossover_hz","/step_metrics"]}}
@@ -654,6 +701,8 @@ for op in ("control.lti.series","control.lti.parallel","control.lti.feedback"):
     GUARDS[op]={"response_consistent":["/system"]}
 GUARDS["control.lti.lsim"]={"half_step_consistent":["/y","/x"]}
 GUARDS["ode.ivp.solve"]={"tolerance_consistent":["/y"]}
+GUARDS["linalg.system.solve"]={"backward_stable":["/x"]}
+GUARDS["interp.grid.interp1"]={"pieces_interpolate":["/yq"],"spline_c2":["/yq"],"local_bounds":["/yq"]}
 GUARDS["signal.spectral.fft"]={"parseval":["/X"],"dft_spot_check":["/X","/frequency"]}
 GUARDS["control.design.pidtune"]={"target_met":["/controller","/gains","/gains_standard"],"sub_operator_checks":["/achieved"]}
 for op,c in COVERAGE.items(): RECEIPT[op]["coverage"]=c

@@ -1,0 +1,40 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.system.solve",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.DOMAIN.UNDERDETERMINED",
+    "category": "domain",
+    "retryable": true,
+    "message": "A 是 2×3（方程少于未知数），解不唯一。本算子只解方阵与超定（最小二乘）方程组。",
+    "agent_hint": "补足方程（增加约束），或说明要哪一个解（例如最小范数解）；最小范数解将来作为另一个方法提供。",
+    "details": {
+      "path": "/A/shape",
+      "m": 2,
+      "n": 3
+    },
+    "remediation": [
+      {
+        "id": "which_solution",
+        "kind": "ask_user",
+        "description": "方程不够：要补充哪些约束，或要哪一种解（最小范数、稀疏……）",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.086361
+  }
+}

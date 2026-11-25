@@ -1,0 +1,165 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "interp.grid.interp1",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "yq": {
+      "dtype": "f64",
+      "shape": [
+        11
+      ],
+      "data": [
+        0.0,
+        0.0,
+        0.0,
+        0.5,
+        1.0,
+        1.0,
+        1.0,
+        2.5,
+        4.0,
+        4.0,
+        4.0
+      ]
+    },
+    "method": "pchip",
+    "extrapolation": "error",
+    "out_of_range_count": 0
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "piece_end_rel": 0.0,
+      "spline_c2_rel": null,
+      "definition": "每段三次多项式在右端点处与数据之差 / (|y_k| + |y_{k+1}| + (|s_k| + |s_{k+1}|)·h)；样条：内部节点两侧二阶导之差 / 全局尺度（最大的二阶导项与 max|y|/max(h)² 中的较大者）"
+    },
+    "condition": {
+      "n": 6,
+      "min_spacing": 1.0
+    },
+    "error_estimate": {
+      "kind": "rounding_only",
+      "note": "只含舍入误差（相对量级 ~10u）；插值本身相对未知函数的误差取决于数据，算子无法估计"
+    },
+    "checks": {
+      "all_finite": true,
+      "pieces_interpolate": true,
+      "spline_c2": true,
+      "local_bounds": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "local_bounds_violations": 0,
+      "local_bounds_applies": true
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:interp1:piecewise",
+      "routine": "interp1::eval",
+      "provenance": "aeoi://operators/interp.grid.interp1/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "strictly_increasing",
+        "statement": "x 严格递增",
+        "enforced_by": "error:E.VALIDATION.GRID"
+      },
+      {
+        "id": "in_range",
+        "statement": "查询点在数据范围内，或调用方显式选择了范围外的处理",
+        "enforced_by": "error:E.DOMAIN.EXTRAPOLATION_REQUIRED"
+      },
+      {
+        "id": "model",
+        "statement": "插值反映的是数据之间的一种约定曲线（方法决定），不是真实函数；与真实函数的误差算子无法估计",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "channels",
+        "statement": "y 每行一个通道",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": null
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "all_finite": true,
+        "pieces_interpolate": true,
+        "spline_c2": true,
+        "local_bounds": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "all_finite": "full",
+        "pieces_interpolate": "full",
+        "spline_c2": "full",
+        "local_bounds": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:175e418212e35fa46469222fd93ca51c85e718dbaec8ae36e01a836ede63cc6b",
+      "result": "sha256:dbfc2b98c7bf54769895232fac363a46478d67309a6300b5db8a2ff7d7b46cae",
+      "output_hash": "sha256:50523c0b5bca2756544d0e1bcd06a603cd29d11113dacb8e14b2c66b29de852d",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of interp.grid.interp1@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:362309c6ab7ce4a6bebb47f4e0761abce97535e9009dfbdf3ae7328d4e0eed4a",
+    "output_hash": "sha256:50523c0b5bca2756544d0e1bcd06a603cd29d11113dacb8e14b2c66b29de852d",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.193354
+  }
+}

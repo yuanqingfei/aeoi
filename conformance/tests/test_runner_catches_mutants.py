@@ -37,6 +37,10 @@ PROXY_EXPECT = {
     "ode_y_wrong": ("ode.ivp.solve", "y vs truth"),
     "ode_states_reordered": ("ode.ivp.solve", "states echo the request"),
     "ode_overclaims": ("ode.ivp.solve", "tolerance_consistent = true ⇒"),
+    "linsolve_x_wrong": ("linalg.system.solve", "x vs exact answer"),
+    "linsolve_overclaims": ("linalg.system.solve", "backward_stable = true ⇒"),
+    "interp1_one_ulp": ("interp.grid.interp1", "node hits exact"),
+    "interp1_count_wrong": ("interp.grid.interp1", "out_of_range_count recomputed"),
 }
 
 # mutant -> substring that must appear among the names of the failed checks

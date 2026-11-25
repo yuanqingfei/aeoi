@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/interp.grid.interp1/0.4.0/output",
+  "type": "object",
+  "required": [
+    "yq",
+    "method",
+    "extrapolation",
+    "out_of_range_count"
+  ],
+  "properties": {
+    "yq": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "插值结果：y 为 [n] 时 [q]，y 为 [k, n] 时 [k, q]；extrapolation = nan 时范围外为 NaN"
+    },
+    "method": {
+      "enum": [
+        "linear",
+        "nearest",
+        "previous",
+        "next",
+        "pchip",
+        "spline"
+      ]
+    },
+    "extrapolation": {
+      "enum": [
+        "error",
+        "nan",
+        "clamp",
+        "extrapolate"
+      ]
+    },
+    "out_of_range_count": {
+      "type": "integer",
+      "description": "落在 [x_0, x_{n−1}] 之外的查询点个数"
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "linalg.system.solve",
+ "operator_version": "0.4.0",
+ "case_family": "square_exact_integer",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    3,
+    3
+   ],
+   "data": [
+    2.0,
+    1.0,
+    1.0,
+    4.0,
+    -6.0,
+    0.0,
+    -2.0,
+    7.0,
+    2.0
+   ]
+  },
+  "b": {
+   "dtype": "f64",
+   "shape": [
+    3
+   ],
+   "data": [
+    3.0,
+    16.0,
+    -10.0
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "numpy.linalg (LAPACK dgesv / dgelsd)",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261125,
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "x": [
+   1.0,
+   -2.0,
+   3.0
+  ],
+  "x_true": [
+   1.0,
+   -2.0,
+   3.0
+  ],
+  "shape": [
+   3
+  ],
+  "kappa": 31.5,
+  "kappa_norm": "1",
+  "method": "lu_partial_pivoting",
+  "numpy_forward_error": 0.0
+ }
+}

@@ -1,0 +1,47 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "interp.grid.interp1",
+ "operator_version": "0.4.0",
+ "case_family": "bad_extrapolation",
+ "request": {
+  "x": {
+   "dtype": "f64",
+   "shape": [
+    2
+   ],
+   "data": [
+    0.0,
+    1.0
+   ]
+  },
+  "y": {
+   "dtype": "f64",
+   "shape": [
+    2
+   ],
+   "data": [
+    0.0,
+    1.0
+   ]
+  },
+  "xq": {
+   "dtype": "f64",
+   "shape": [
+    1
+   ],
+   "data": [
+    0.5
+   ]
+  },
+  "extrapolation": "zero"
+ },
+ "reference_env": {
+  "engine": "numpy.interp / scipy.interpolate (interp1d nearest-up, previous, next; PchipInterpolator; CubicSpline not-a-knot)",
+  "numpy": "2.5.3",
+  "scipy": "1.18.1",
+  "python": "3.13.18",
+  "seed": 20261125,
+  "note": "NOT MATLAB output"
+ },
+ "expected_error": "E.VALIDATION.SCHEMA"
+}

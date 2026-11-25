@@ -1,0 +1,169 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "linalg.system.solve",
+  "version": "0.4.0",
+  "title": "Solve a linear system",
+  "description": "解线性方程组 A·X = B（A 为实数稠密矩阵）。方阵：带部分选主元的 LU 分解，再用补偿算术算残差做至多 3 步迭代精化；超定（行多于列）：Householder QR 求最小二乘解；欠定（行少于列）报错。结果带后向误差、1-范数条件数估计与前向误差估计（= MATLAB 的 A\b 用于方阵与超定的情形）。",
+  "category": "analysis",
+  "tags": [
+    "linalg",
+    "solve",
+    "least-squares",
+    "mldivide"
+  ],
+  "applicability": {
+    "preconditions": [
+      "A 为 [m, n] 实数矩阵，m ≥ n（方阵或超定）",
+      "b 为 [m] 或 [m, k]（k 个右端项，每列一个）",
+      "A 列满秩（方阵即非奇异）"
+    ],
+    "not_for": [
+      "欠定方程组（m < n；最小范数解将来作为另一方法）",
+      "复数方程组（0.4.0 未支持）",
+      "大型稀疏方程组（需迭代法或稀疏分解）",
+      "特殊结构（对称正定、带状、三角）的专用加速"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "方阵：LU 分解 P·A = L·U，部分选主元（每列取 |a_ik| 最大的第一行，与 LAPACK dgetf2 相同），前代/回代求解；迭代精化：r = b − A·x 用补偿算术（Dot2，Ogita–Rump–Oishi，无 FMA）计算，解 A·δ = r，x ← x + δ，‖δ‖∞ ≤ 2u‖x‖∞ 或修正量未减半即停，至多 3 步。超定：Householder QR（LAPACK dgeqr2/dlarfg 约定），x = R⁻¹·(Qᵀb) 的前 n 行；秩判定 |r_jj| ≤ max(m, n)·u·max|r_ii| 报 E.NUMERICAL.SINGULAR。条件数：‖A‖₁·est(‖A⁻¹‖₁)（超定用 R），Hager–Higham 1-范数估计（至多 5 次迭代 + 交错向量）。后向误差：方阵 η = ‖b − A·x‖∞ / (‖A‖∞‖x‖∞ + ‖b‖∞)；超定 η = ‖Aᵀr‖₂ / (‖A‖_F·(‖r‖₂ + ‖A‖_F‖x‖₂))，残差均以补偿算术计算",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §9（LU）、§12（迭代精化）、§15（条件数估计）、§19–20（QR 与最小二乘）"
+      },
+      {
+        "type": "paper",
+        "cite": "N. J. Higham, FORTRAN codes for estimating the one-norm of a real or complex matrix, ACM TOMS 14(4), 1988",
+        "doi": "10.1145/50063.214386"
+      },
+      {
+        "type": "paper",
+        "cite": "T. Ogita, S. M. Rump, S. Oishi, Accurate sum and dot product, SIAM J. Sci. Comput. 26(6), 2005",
+        "doi": "10.1137/030601818"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "linsolve::solve",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {
+    "/A": {
+      "policy": "densify",
+      "max_dense_elements": 4000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_dimension": 2000,
+    "max_rhs": 1000,
+    "max_refinement_steps": 3
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/linalg.system.solve/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ENCODING",
+    "E.DOMAIN.UNDERDETERMINED",
+    "E.NUMERICAL.SINGULAR",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.NUMERICAL.ILL_CONDITIONED",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "linalg_system_solve",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:linsolve:lu-refine-or-householder-qr",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "not_underdetermined",
+        "statement": "m ≥ n",
+        "enforced_by": "error:E.DOMAIN.UNDERDETERMINED"
+      },
+      {
+        "id": "full_rank",
+        "statement": "A 列满秩（方阵非奇异）",
+        "enforced_by": "error:E.NUMERICAL.SINGULAR"
+      },
+      {
+        "id": "conditioning",
+        "statement": "κ·u ≪ 1，否则解没有有效数字（前向误差 ≈ κ·η）",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      },
+      {
+        "id": "row_major",
+        "statement": "A 按 row-major 录入",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "backward_stable",
+      "all_finite"
+    ],
+    "coverage": {
+      "backward_stable": "full"
+    },
+    "guards": {
+      "backward_stable": [
+        "/x"
+      ]
+    }
+  }
+}

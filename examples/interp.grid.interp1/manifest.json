@@ -1,0 +1,173 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "interp.grid.interp1",
+  "version": "0.4.0",
+  "title": "1-D interpolation",
+  "description": "一维插值：给定严格递增的采样点 x 与数据 y，求查询点 xq 上的值。方法 linear（缺省）、nearest、previous、next、pchip（保形三次）、spline（not-a-knot 三次样条），与 MATLAB interp1 的同名方法相同。查询点超出数据范围时缺省报错，由调用方显式选择 nan、clamp 或 extrapolate。",
+  "category": "analysis",
+  "tags": [
+    "interpolation",
+    "interp1",
+    "spline",
+    "pchip",
+    "table"
+  ],
+  "applicability": {
+    "preconditions": [
+      "x 为 [n] 严格递增，n ≥ 2",
+      "y 为 [n] 或 [k, n]（每行一个通道）",
+      "xq 为 [q]，任意顺序"
+    ],
+    "not_for": [
+      "散乱数据与多维插值（interp2/griddata）",
+      "平滑与拟合（数据有噪声时用拟合，不用插值）",
+      "周期样条与其他端点条件"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "区间定位：二分查找，x_i ≤ xq < x_{i+1}（xq = x_{n−1} 取最后一段）；xq 恰为节点时直接返回该点的 y。linear：slope·(xq − x_i) + y_i（numpy.interp 的运算顺序）。nearest：xq ≥ x_i/2 + x_{i+1}/2 时取 y_{i+1}，否则 y_i（中点归右，同 MATLAB 与 scipy nearest-up）。previous/next：y_i / y_{i+1}。pchip：Fritsch–Butland 加权调和平均斜率，端点用保形三点公式（Moler, Numerical Computing with MATLAB §3.6）。spline：not-a-knot 端点条件的斜率方程组（三对角，LAPACK dgtsv 部分选主元；n = 3 为过三点的抛物线，n = 2 为直线）。三次段按 scipy PPoly 求值 ((c0·d + c1)·d + c2)·d + c3。范围外：extrapolation = error（缺省，E.DOMAIN.EXTRAPOLATION_REQUIRED）/ nan / clamp（端点值）/ extrapolate（linear 与三次方法延长端点那一段；nearest/previous/next 取端点值）",
+    "references": [
+      {
+        "type": "paper",
+        "cite": "F. N. Fritsch, J. Butland, A method for constructing local monotone piecewise cubic interpolants, SIAM J. Sci. Stat. Comput. 5(2), 1984",
+        "doi": "10.1137/0905021"
+      },
+      {
+        "type": "textbook",
+        "cite": "C. de Boor, A Practical Guide to Splines, rev. ed., Springer 2001, Ch. IV（not-a-knot 端点条件）"
+      },
+      {
+        "type": "textbook",
+        "cite": "C. Moler, Numerical Computing with MATLAB, SIAM 2004, §3（pchip、spline）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "interp1::eval",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {},
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_points": 10000000,
+    "max_output_values": 10000000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/interp.grid.interp1/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.GRID",
+    "E.VALIDATION.ENCODING",
+    "E.DOMAIN.EXTRAPOLATION_REQUIRED",
+    "E.NUMERICAL.SINGULAR",
+    "E.RESOURCE.OUTPUT_TOO_LARGE",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.ACCURACY.EXTRAPOLATED"
+  ],
+  "mcp": {
+    "tool_name": "interp_grid_interp1",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:interp1:piecewise",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "strictly_increasing",
+        "statement": "x 严格递增",
+        "enforced_by": "error:E.VALIDATION.GRID"
+      },
+      {
+        "id": "in_range",
+        "statement": "查询点在数据范围内，或调用方显式选择了范围外的处理",
+        "enforced_by": "error:E.DOMAIN.EXTRAPOLATION_REQUIRED"
+      },
+      {
+        "id": "model",
+        "statement": "插值反映的是数据之间的一种约定曲线（方法决定），不是真实函数；与真实函数的误差算子无法估计",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "channels",
+        "statement": "y 每行一个通道",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_priori"
+    },
+    "postconditions": [
+      "all_finite",
+      "pieces_interpolate",
+      "spline_c2",
+      "local_bounds"
+    ],
+    "coverage": {
+      "pieces_interpolate": "full",
+      "spline_c2": "full",
+      "local_bounds": "full"
+    },
+    "guards": {
+      "pieces_interpolate": [
+        "/yq"
+      ],
+      "spline_c2": [
+        "/yq"
+      ],
+      "local_bounds": [
+        "/yq"
+      ]
+    }
+  }
+}

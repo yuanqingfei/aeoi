@@ -1,0 +1,191 @@
+{
+  "reference": "numpy.linalg (LAPACK dgesv / dgelsd); exact answer for the stored data by mpmath at 60 digits. Not MATLAB.",
+  "cases": 30,
+  "error_cases": 10,
+  "worst_forward_error_over_tolerance": 0.004860845640861823,
+  "more_accurate_than_numpy": 12,
+  "min_kappa1_estimate_ratio": 0.9999848466035294,
+  "tolerance": "‖x − x_true‖∞/‖x_true‖∞ ≤ 1e-12 · max(1, κ/100) (T1, V-6 κ scaling)",
+  "cases_detail": [
+    {
+      "family": "hilbert_10",
+      "forward_error": 0.0,
+      "numpy_forward_error": 7.163294510018044e-6,
+      "kappa": 35354317677230.72,
+      "kappa1_estimate": 35353781939238.01,
+      "backward_error": 2.5073352903964097e-18,
+      "refinement_steps": 3
+    },
+    {
+      "family": "hilbert_13_warns",
+      "forward_error": 0.8254606139579037,
+      "numpy_forward_error": 0.13744221882557042,
+      "kappa": 5.463829984686348e+18,
+      "kappa1_estimate": 4.629298504704049e+17,
+      "backward_error": 4.140584137519944e-18,
+      "refinement_steps": 1
+    },
+    {
+      "family": "hilbert_6",
+      "forward_error": 0.0,
+      "numpy_forward_error": 2.613252570035965e-10,
+      "kappa": 29070279.010209024,
+      "kappa1_estimate": 29070279.002948772,
+      "backward_error": 2.268491461398726e-18,
+      "refinement_steps": 2
+    },
+    {
+      "family": "lsq_consistent",
+      "forward_error": 8.326672684688674e-16,
+      "numpy_forward_error": 7.771561172376096e-16,
+      "kappa": 2.4853884175742866,
+      "kappa1_estimate": 3.55602229029833,
+      "backward_error": 6.96810971312717e-17,
+      "refinement_steps": 0
+    },
+    {
+      "family": "lsq_multi_rhs",
+      "forward_error": 1.3776513845722145e-16,
+      "numpy_forward_error": 6.888256922861073e-16,
+      "kappa": 1.6768348882399542,
+      "kappa1_estimate": 2.7907286166311076,
+      "backward_error": 3.835408049569254e-17,
+      "refinement_steps": 0
+    },
+    {
+      "family": "lsq_polyfit_cubic",
+      "forward_error": 3.817248179724367e-15,
+      "numpy_forward_error": 7.294981497309789e-16,
+      "kappa": 117.86062419489305,
+      "kappa1_estimate": 224.65163673790963,
+      "backward_error": 1.3035843141546386e-17,
+      "refinement_steps": 0
+    },
+    {
+      "family": "lsq_random",
+      "forward_error": 3.6366883910254244e-16,
+      "numpy_forward_error": 1.4546753564101698e-15,
+      "kappa": 2.258176209114607,
+      "kappa1_estimate": 3.5686526348604692,
+      "backward_error": 3.1511504228232034e-17,
+      "refinement_steps": 0
+    },
+    {
+      "family": "lsq_vandermonde_ill",
+      "forward_error": 2.955444786402106e-11,
+      "numpy_forward_error": 4.865738345979771e-11,
+      "kappa": 608010.417273425,
+      "kappa1_estimate": 2088772.6338589739,
+      "backward_error": 5.2157669703558114e-17,
+      "refinement_steps": 0
+    },
+    {
+      "family": "square_column_rhs",
+      "forward_error": 0.0,
+      "numpy_forward_error": 6.128805182285635e-15,
+      "kappa": 490.7566491689446,
+      "kappa1_estimate": 490.75664916893965,
+      "backward_error": 2.450435886149963e-17,
+      "refinement_steps": 2
+    },
+    {
+      "family": "square_exact_integer",
+      "forward_error": 0.0,
+      "numpy_forward_error": 0.0,
+      "kappa": 31.5,
+      "kappa1_estimate": 31.5,
+      "backward_error": 0.0,
+      "refinement_steps": 1
+    },
+    {
+      "family": "square_multi_rhs",
+      "forward_error": 0.0,
+      "numpy_forward_error": 1.3985931200062055e-16,
+      "kappa": 15.658518397088518,
+      "kappa1_estimate": 15.658518397088518,
+      "backward_error": 1.5186697589816415e-17,
+      "refinement_steps": 2
+    },
+    {
+      "family": "square_needs_pivoting",
+      "forward_error": 0.0,
+      "numpy_forward_error": 0.0,
+      "kappa": 4.0,
+      "kappa1_estimate": 4.0,
+      "backward_error": 2.5e-21,
+      "refinement_steps": 1
+    },
+    {
+      "family": "square_random",
+      "forward_error": 0.0,
+      "numpy_forward_error": 2.0399170082607265e-15,
+      "kappa": 692.1461976025835,
+      "kappa1_estimate": 692.146197602587,
+      "backward_error": 6.772367457034567e-18,
+      "refinement_steps": 2
+    },
+    {
+      "family": "square_random",
+      "forward_error": 0.0,
+      "numpy_forward_error": 3.147840241726732e-16,
+      "kappa": 34.06367276304927,
+      "kappa1_estimate": 34.06367276304926,
+      "backward_error": 3.268253449475092e-17,
+      "refinement_steps": 1
+    },
+    {
+      "family": "square_random",
+      "forward_error": 0.0,
+      "numpy_forward_error": 0.0,
+      "kappa": 10.800228367438335,
+      "kappa1_estimate": 10.800228367438335,
+      "backward_error": 1.6483880520582334e-18,
+      "refinement_steps": 1
+    },
+    {
+      "family": "square_random",
+      "forward_error": 0.0,
+      "numpy_forward_error": 0.0,
+      "kappa": 1.0,
+      "kappa1_estimate": 1.0,
+      "backward_error": 2.876015265627632e-17,
+      "refinement_steps": 1
+    },
+    {
+      "family": "square_random",
+      "forward_error": 0.0,
+      "numpy_forward_error": 1.1517620724073749e-14,
+      "kappa": 2736.6279768207096,
+      "kappa1_estimate": 2736.6279768207846,
+      "backward_error": 1.0459790376416459e-17,
+      "refinement_steps": 2
+    },
+    {
+      "family": "square_refinement_none",
+      "forward_error": 4.411007797199237e-16,
+      "numpy_forward_error": 6.371455707065564e-16,
+      "kappa": 80.26937794755793,
+      "kappa1_estimate": 80.26937794755793,
+      "backward_error": 4.1730323849783527e-17,
+      "refinement_steps": 0
+    },
+    {
+      "family": "wilkinson_growth_refined",
+      "forward_error": 1.2985282857142988e-16,
+      "numpy_forward_error": 0.9009264217233477,
+      "kappa": 60.0,
+      "kappa1_estimate": 60.0,
+      "backward_error": 3.309668478879007e-18,
+      "refinement_steps": 2
+    },
+    {
+      "family": "wilkinson_growth_unrefined",
+      "forward_error": 0.9009264217233477,
+      "numpy_forward_error": 0.9009264217233477,
+      "kappa": 60.0,
+      "kappa1_estimate": 60.0,
+      "backward_error": 0.021414791507675692,
+      "refinement_steps": 0
+    }
+  ]
+}

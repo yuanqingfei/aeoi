@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.9-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.10-draft
 
-> 状态：Draft v0.4.9 · 2026-11-24 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.10 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.10 新增两个算子：线性方程组 `linalg.system.solve`（10.19，对应 `A\b`，带迭代精化、条件数估计和后向误差）和一维插值 `interp.grid.interp1`（10.20，范围外缺省报错）。
 >
 > v0.4.9 为分发做准备：参考实现把纯 Rust 数学库编入二进制，并让矩阵乘法固定使用通用内核，结果不再依赖操作系统的数学库和 CPU 特性（2.1，新条款 M-7a）。9 个示例的末几位变了，都在容差类内。之后是多平台发布流水线、Claude Desktop 一键安装包（MCPB）和 MCP 公开目录登记（12.2 第 6 项）。
 >
@@ -504,14 +506,16 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 | 类别 | 何时使用 | `retryable` 默认 | 已登记的码（v0.3 新增的加粗） |
 |---|---|---|---|
 | `VALIDATION` | 输入不符合 schema 或语义约束 | true（改输入） | `SCHEMA`、`SHAPE`、`DTYPE`、`RANGE`、`NON_FINITE`、`NOT_SYMMETRIC`、`NOT_CONJUGATE`、`ZERO_DENOMINATOR`、`GRID`、`SPARSE_STRUCTURE`、`DIGEST_MISMATCH`、`REF_UNSUPPORTED`、`REF_FORBIDDEN`、**`OPTION_CONFLICT`**、**`RANK_DEFICIENT`**、**`UNGROUNDED_INPUT`**（v0.3.1，绑定层）、**`METHOD_UNAVAILABLE`**（v0.4）、`EXPRESSION`（v0.4.8，3.15） |
-| `DOMAIN` | 输入合法，但数学问题本身无解/不适用 | 视情况 | `IMPROPER_SYSTEM`、`NOT_STABILIZABLE`、`R_NOT_POSITIVE_DEFINITE`、`WEIGHT_NOT_PSD`、`HAMILTONIAN_IMAG_AXIS_EIG`、`ABOVE_NYQUIST`、**`MIMO_NOT_SUPPORTED`**、**`DEGENERATE_SYSTEM`**、**`NOT_CONTINUOUS`**、**`NOT_CONTROLLABLE`**、**`POLE_MULTIPLICITY`**、**`LYAP_SINGULAR`**、**`SYMPLECTIC_UNIT_CIRCLE_EIG`** |
+| `DOMAIN` | 输入合法，但数学问题本身无解/不适用 | 视情况 | `IMPROPER_SYSTEM`、`NOT_STABILIZABLE`、`R_NOT_POSITIVE_DEFINITE`、`WEIGHT_NOT_PSD`、`HAMILTONIAN_IMAG_AXIS_EIG`、`ABOVE_NYQUIST`、**`MIMO_NOT_SUPPORTED`**、**`DEGENERATE_SYSTEM`**、**`NOT_CONTINUOUS`**、**`NOT_CONTROLLABLE`**、**`POLE_MULTIPLICITY`**、**`LYAP_SINGULAR`**、**`SYMPLECTIC_UNIT_CIRCLE_EIG`**、`UNDERDETERMINED`（v0.4.10）、`EXTRAPOLATION_REQUIRED`（v0.4.10） |
 | `NUMERICAL` | 问题理论上可解，但数值上失败或不可信 | true（正则化/放宽/换算法） | `SINGULAR`、`NO_CONVERGENCE`、`POLE_ON_GRID`、`NON_FINITE_EVALUATION`（v0.4.8）、`STEP_SIZE_TOO_SMALL`（v0.4.8） |
 | `RESOURCE` | 超时、超规模、被取消 | true | `TIMEOUT`、`INPUT_TOO_LARGE`、`COMPUTE_LIMIT`、`OUTPUT_TOO_LARGE` |
 | `INTERNAL` | 实现缺陷或后端异常 | false（可原样重试一次） | `PANIC`（`BACKEND`、`INVARIANT_VIOLATED` 为保留码，v0.2 算子未使用） |
 
-已登记的 warning（v0.3.3 新增框架级 `W.EVIDENCE.POSTCONDITION_FAILED`，见 E-7a、E-11）：`W.NUMERICAL.{NEAR_POLE, ZERO_ON_GRID, ILL_CONDITIONED, LARGE_RESIDUAL, NEAR_UNCONTROLLABLE, **RANK_AMBIGUOUS, CROSSING_RECOVERED, PLACEMENT_INACCURATE, CONVERSION_DISCREPANCY**, STIFF_PROBLEM（v0.4.8）}`、`W.DOMAIN.{UNSTABLE_SYSTEM, NOT_SETTLED, INFINITE_DC_GAIN, ZERO_DC_GAIN, **UNDEFINED_DC_GAIN, NONMINIMAL_REALIZATION, REALIZATION_DEPENDENT, GRAMIAN_UNDEFINED, CLOSED_LOOP_UNSTABLE, DIRECT_FEEDTHROUGH_IGNORED**}`、`W.ACCURACY.{GRID_TOO_COARSE, AUTO_GRID, **ALIASING**}`、`W.VALIDATION.{LEADING_ZEROS_STRIPPED, SYMMETRIZED}`、`W.PERFORMANCE.SPARSE_DENSIFIED`（加粗为 v0.3 新增）。
+已登记的 warning（v0.3.3 新增框架级 `W.EVIDENCE.POSTCONDITION_FAILED`，见 E-7a、E-11）：`W.NUMERICAL.{NEAR_POLE, ZERO_ON_GRID, ILL_CONDITIONED, LARGE_RESIDUAL, NEAR_UNCONTROLLABLE, **RANK_AMBIGUOUS, CROSSING_RECOVERED, PLACEMENT_INACCURATE, CONVERSION_DISCREPANCY**, STIFF_PROBLEM（v0.4.8）}`、`W.DOMAIN.{UNSTABLE_SYSTEM, NOT_SETTLED, INFINITE_DC_GAIN, ZERO_DC_GAIN, **UNDEFINED_DC_GAIN, NONMINIMAL_REALIZATION, REALIZATION_DEPENDENT, GRAMIAN_UNDEFINED, CLOSED_LOOP_UNSTABLE, DIRECT_FEEDTHROUGH_IGNORED**}`、`W.ACCURACY.{GRID_TOO_COARSE, AUTO_GRID, **ALIASING**, EXTRAPOLATED（v0.4.10）}`、`W.VALIDATION.{LEADING_ZEROS_STRIPPED, SYMMETRIZED}`、`W.PERFORMANCE.SPARSE_DENSIFIED`（加粗为 v0.3 新增）。
 
 v0.3.1 新增码：`UNGROUNDED_INPUT` 由 LLM 绑定层（不是算子）返回，表示 `x-aeoi-provenance: "user"` 的输入没有用户原话作为来源（F-5(c)），`retryable: true` 但只能在问过用户之后重试。v0.3 新增码的含义：`OPTION_CONFLICT` 选项组合矛盾（O-2）；`RANK_DEFICIENT` 输入矩阵列不满秩（`place` 的 B）；`MIMO_NOT_SUPPORTED` 该算子/表示只支持 SISO（R-8、`margin`）；`DEGENERATE_SYSTEM` 系统矩阵非满法秩，零点无定义（R-9）；`NOT_CONTINUOUS` 需要连续系统却给了离散系统（`c2d`）；`NOT_CONTROLLABLE` 有不可控模态，无法任意配置极点（`place`；与 `NOT_STABILIZABLE` 区分：后者只关心不稳定模态）；`POLE_MULTIPLICITY` 期望极点重数超过输入数 m；`LYAP_SINGULAR` Lyapunov 方程奇异（连续 λᵢ + λ̄ⱼ ≈ 0，离散 λᵢλ̄ⱼ ≈ 1）；`SYMPLECTIC_UNIT_CIRCLE_EIG` DARE 的辛矩阵束在单位圆上有特征值（单位圆上的模态不被 Q 观测）。这些都是 `DOMAIN`/`VALIDATION`：调数值参数无效（X-1）。
+
+v0.4.10 新增码：`UNDERDETERMINED` 方程个数少于未知数，解不唯一（LS-1）；`EXTRAPOLATION_REQUIRED` 查询点超出数据范围，而调用方没有说明怎么处理（IP-3）；警告 `W.ACCURACY.EXTRAPOLATED` 结果中有外推得到的值。
 
 v0.4.8 新增码：`E.VALIDATION.EXPRESSION`（表达式的静态错误，3.15 EX-6）、`E.NUMERICAL.NON_FINITE_EVALUATION`（模型在某点算出 NaN/Inf）、`E.NUMERICAL.STEP_SIZE_TOO_SMALL`（自适应步长缩到下限）与 `W.NUMERICAL.STIFF_PROBLEM`，含义见 10.18 OD-6、OD-7。
 
@@ -9497,6 +9501,977 @@ case_families:
 
 共 34 个 golden 用例，17 个成功、17 个错误。对精确解的检验是逐点的 |y − truth| ≤ max(10·(atol + rtol·|truth|), 2·E_ref + 1e-13·max|y|)，最坏的一点用掉了界的 0.50（`functions`）。与 scipy RK45 的差别只记录、不断言：在 `functions` 用例里，min、max 带来的折点让两边的接受/拒绝决策分了岔，差到容差的 20.9 倍，可两边相对精确解的误差几乎相同（1.60e-7 和 1.58e-7）；其余用例的差别都在容差的 1.2e-3 倍以内。μ = 100 的 Van der Pol 用例触发了 `W.NUMERICAL.STIFF_PROBLEM`。结果见 `aeoi-numeric/tests/parity_ode.rs` 和 `reports/parity-ode.json`。
 
+## 10.19 `linalg.system.solve`：线性方程组（v0.4.10）
+
+对应 MATLAB 的 `A\b`，按 MATLAB 使用频率排在 `fft`、`ode45` 之后。参考值来自 numpy.linalg（LAPACK `dgesv`、`dgelsd`），真值是 mpmath 以 60 位精度对**存储下来的 f64 数据**求出的解；都不是 MATLAB 的结果。这个算子逼出的规范问题是：一个“解”到底能信多少。MATLAB 只在 rcond < ε 时打印一行警告，调用方拿不到条件数，也拿不到后向误差；而对 Hilbert 13 这样的矩阵，解可能一位有效数字都没有。
+
+**规范性条款**
+
+- LS-1 **范围**（作者决定，2026-11-25）。A 为实数稠密 [m, n] 矩阵，b 为 [m] 或 [m, k]，每列一个右端项。
+  - m = n：解方阵方程组。
+  - m > n：最小二乘解。
+  - m < n：报 `E.DOMAIN.UNDERDETERMINED`（新码），remediation 为 `ask_user`。MATLAB 此时给的是“基本解”，它不是最小范数解，也不唯一，所以不能悄悄返回一个解。最小范数解以后按 3.14 作为另一个方法登记。
+  - 复数 A 报 `E.VALIDATION.DTYPE`，0.4.0 不支持。
+- LS-2 **方阵的解法**：LU 分解，部分选主元，每列取 |a_ik| 最大的第一行，与 LAPACK `dgetf2` 相同；某步主元恰为 0 报 `E.NUMERICAL.SINGULAR`。
+  - `refinement = auto`（缺省）时，再做至多 3 步固定精度迭代精化：残差 r = b − A·x 用补偿算术（Dot2，无 FMA，跨平台逐位相同）计算，解 A·δ = r，令 x ← x + δ。‖δ‖∞ ≤ 2u‖x‖∞ 或修正量没有减半时停止。
+  - 精化在每个平台上的结果相同；κ·u ≪ 1 时，它把前向误差压到 u 的量级。`refinement = none` 只做一次 LU 求解，与 MATLAB 相同。
+  - golden 上的实测：Hilbert 10（κ₁ = 3.5e13）上，numpy 的相对误差是 7.2e-6，本算子是 0；Wilkinson 增长矩阵（n = 60，部分选主元增长 2⁵⁹）上，numpy 的误差是 0.90，本算子精化 2 步后为 1.3e-16。
+- LS-3 **超定的解法**：Householder QR（LAPACK `dgeqr2`/`dlarfg` 的约定），x = R⁻¹·(Qᵀb) 的前 n 行。
+  - 秩判定：|r_jj| ≤ max(m, n)·u·max|r_ii| 时报 `E.NUMERICAL.SINGULAR`，`details` 给出估计秩。QR 不选列主元，所以列秩不足时最小二乘解不唯一，不能返回。
+  - 超定情形不做精化。
+- LS-4 **后向误差与后置条件 `backward_stable`**。残差一律用补偿算术计算。
+  - 方阵：η = ‖b − A·x‖∞ / (‖A‖∞‖x‖∞ + ‖b‖∞)（Rigal–Gaches 范数后向误差），要求 η ≤ 10·n·u。
+  - 超定：η = ‖Aᵀr‖₂ / (‖A‖_F·(‖r‖₂ + ‖A‖_F‖x‖₂))，即最小二乘解的最优性，要求 η ≤ 10·m·u。
+  - 多个右端项取最大值。不成立时 `/x` 列为不可依赖（E-13）。golden 里不做精化的 Wilkinson 用例 η = 0.021，如实报告不成立。
+- LS-5 **条件数与前向误差估计**。κ₁ ≈ ‖A‖₁·est(‖A⁻¹‖₁)，超定时对 R 估计；est 用 Hager–Higham 1-范数估计器：固定起始向量，至多 5 次迭代，加上交错向量。它是下界；κ·u ≪ 1 时，golden 上它与真值之比是 1.00。
+  - 前向误差估计：方阵 κ₁·η；超定 η·(2κ + κ²·‖r‖/(‖A‖‖x‖))（Golub–Van Loan 5.3.8）。
+  - rcond = 1/κ₁ < ε 时发 `W.NUMERICAL.ILL_CONDITIONED`（阈值同 MATLAB），`details` 给出 rcond 和 κ₁。这时的解可能没有有效数字，调用方从信封里就能看到。
+- LS-6 **输出**：`x`（b 为 [m] 时是 [n]，为 [m, k] 时是 [n, k]）、`residual_norm`（每个右端项的 ‖r‖₂）、`method`（`lu_partial_pivoting` 或 `householder_qr`）、`shape {m, n, rhs, kind}`、`refinement_steps`。
+- LS-7 **确定性**：`platform_bitwise`，全部运算是 f64 加减乘除与 `sqrt`/`hypot`（M-7a）。
+
+新码：`E.DOMAIN.UNDERDETERMINED`。
+
+**Manifest** — `examples/linalg.system.solve/manifest.json`
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "id": "linalg.system.solve",
+  "version": "0.4.0",
+  "title": "Solve a linear system",
+  "description": "解线性方程组 A·X = B（A 为实数稠密矩阵）。方阵：带部分选主元的 LU 分解，再用补偿算术算残差做至多 3 步迭代精化；超定（行多于列）：Householder QR 求最小二乘解；欠定（行少于列）报错。结果带后向误差、1-范数条件数估计与前向误差估计（= MATLAB 的 A\b 用于方阵与超定的情形）。",
+  "category": "analysis",
+  "tags": ["linalg", "solve", "least-squares", "mldivide"],
+  "applicability": {
+    "preconditions": ["A 为 [m, n] 实数矩阵，m ≥ n（方阵或超定）", "b 为 [m] 或 [m, k]（k 个右端项，每列一个）", "A 列满秩（方阵即非奇异）"],
+    "not_for": ["欠定方程组（m < n；最小范数解将来作为另一方法）", "复数方程组（0.4.0 未支持）", "大型稀疏方程组（需迭代法或稀疏分解）", "特殊结构（对称正定、带状、三角）的专用加速"],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "方阵：LU 分解 P·A = L·U，部分选主元（每列取 |a_ik| 最大的第一行，与 LAPACK dgetf2 相同），前代/回代求解；迭代精化：r = b − A·x 用补偿算术（Dot2，Ogita–Rump–Oishi，无 FMA）计算，解 A·δ = r，x ← x + δ，‖δ‖∞ ≤ 2u‖x‖∞ 或修正量未减半即停，至多 3 步。超定：Householder QR（LAPACK dgeqr2/dlarfg 约定），x = R⁻¹·(Qᵀb) 的前 n 行；秩判定 |r_jj| ≤ max(m, n)·u·max|r_ii| 报 E.NUMERICAL.SINGULAR。条件数：‖A‖₁·est(‖A⁻¹‖₁)（超定用 R），Hager–Higham 1-范数估计（至多 5 次迭代 + 交错向量）。后向误差：方阵 η = ‖b − A·x‖∞ / (‖A‖∞‖x‖∞ + ‖b‖∞)；超定 η = ‖Aᵀr‖₂ / (‖A‖_F·(‖r‖₂ + ‖A‖_F‖x‖₂))，残差均以补偿算术计算",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §9（LU）、§12（迭代精化）、§15（条件数估计）、§19–20（QR 与最小二乘）"
+      },
+      {
+        "type": "paper",
+        "cite": "N. J. Higham, FORTRAN codes for estimating the one-norm of a real or complex matrix, ACM TOMS 14(4), 1988",
+        "doi": "10.1145/50063.214386"
+      },
+      {
+        "type": "paper",
+        "cite": "T. Ogita, S. M. Rump, S. Oishi, Accurate sum and dot product, SIAM J. Sci. Comput. 26(6), 2005",
+        "doi": "10.1137/030601818"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "linsolve::solve",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {
+    "/A": {
+      "policy": "densify",
+      "max_dense_elements": 4000000
+    }
+  },
+  "encodings": {
+    "input": ["json", "b64", "ref"],
+    "output": ["json", "b64"]
+  },
+  "limits": {
+    "max_dimension": 2000,
+    "max_rhs": 1000,
+    "max_refinement_steps": 3
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/linalg.system.solve/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ENCODING",
+    "E.DOMAIN.UNDERDETERMINED",
+    "E.NUMERICAL.SINGULAR",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": ["W.NUMERICAL.ILL_CONDITIONED", "W.PERFORMANCE.SPARSE_DENSIFIED"],
+  "mcp": {
+    "tool_name": "linalg_system_solve",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:linsolve:lu-refine-or-householder-qr",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "not_underdetermined",
+        "statement": "m ≥ n",
+        "enforced_by": "error:E.DOMAIN.UNDERDETERMINED"
+      },
+      {
+        "id": "full_rank",
+        "statement": "A 列满秩（方阵非奇异）",
+        "enforced_by": "error:E.NUMERICAL.SINGULAR"
+      },
+      {
+        "id": "conditioning",
+        "statement": "κ·u ≪ 1，否则解没有有效数字（前向误差 ≈ κ·η）",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      },
+      {
+        "id": "row_major",
+        "statement": "A 按 row-major 录入",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": ["backward_stable", "all_finite"],
+    "coverage": {
+      "backward_stable": "full"
+    },
+    "guards": {
+      "backward_stable": ["/x"]
+    }
+  }
+}
+```
+
+**请求与响应**（3×3，精确解 x = [1, −2, 3]；精化 1 步后逐位等于精确解）
+
+```json
+{
+  "A": {
+    "dtype": "f64",
+    "shape": [
+      3,
+      3
+    ],
+    "data": [
+      4.0,
+      -2.0,
+      1.0,
+      -2.0,
+      4.0,
+      -2.0,
+      1.0,
+      -2.0,
+      4.0
+    ]
+  },
+  "b": {
+    "dtype": "f64",
+    "shape": [
+      3
+    ],
+    "data": [
+      11.0,
+      -16.0,
+      17.0
+    ]
+  }
+}
+```
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.system.solve",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "x": {
+      "dtype": "f64",
+      "shape": [3],
+      "data": [1.0, -2.0, 3.0]
+    },
+    "residual_norm": 0.0,
+    "method": "lu_partial_pivoting",
+    "shape": {
+      "m": 3,
+      "n": 3,
+      "rhs": 1,
+      "kind": "square"
+    },
+    "refinement_steps": 1
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "backward_error": 0.0,
+      "threshold": 3.3306690738754696e-15,
+      "definition": "‖b − A·x‖∞ / (‖A‖∞‖x‖∞ + ‖b‖∞)（范数后向误差，Rigal–Gaches）；残差用补偿算术（Dot2）计算，取各列最大"
+    },
+    "condition": {
+      "kappa1_estimate": 6.0,
+      "rcond": 0.16666666666666666,
+      "of": "A",
+      "estimator": "Hager–Higham 1-范数估计（LAPACK dlacn2 思路），下界，通常与真值相差不到 3 倍"
+    },
+    "error_estimate": {
+      "x_rel_forward_inf": 0.0,
+      "basis": "一阶界 ‖Δx‖/‖x‖ ≲ κ₁·η"
+    },
+    "checks": {
+      "backward_stable": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "refinement": "auto",
+      "norm1_A": 8.0
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:linsolve:lu-refine-or-householder-qr",
+      "routine": "linsolve::solve",
+      "provenance": "aeoi://operators/linalg.system.solve/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "not_underdetermined",
+        "statement": "m ≥ n",
+        "enforced_by": "error:E.DOMAIN.UNDERDETERMINED"
+      },
+      {
+        "id": "full_rank",
+        "statement": "A 列满秩（方阵非奇异）",
+        "enforced_by": "error:E.NUMERICAL.SINGULAR"
+      },
+      {
+        "id": "conditioning",
+        "statement": "κ·u ≪ 1，否则解没有有效数字（前向误差 ≈ κ·η）",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      },
+      {
+        "id": "row_major",
+        "statement": "A 按 row-major 录入",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "x_rel_forward_inf": 0.0
+      },
+      "basis": "一阶界 ‖Δx‖/‖x‖ ≲ κ₁·η"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "backward_stable": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "backward_stable": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:bfda05f33a04c32aaeedb420a31d4bd77de8347999fae5b65bc79cd11f7da8d9",
+      "result": "sha256:0a61e0c178003cecee53e6d04b3aa4ca4120dd37138b2b9be437e588172c3160",
+      "output_hash": "sha256:7205ac249a629a741b536b145f7d996521d65d1b5740570a7ea441319ef88d55",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.system.solve@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:455ffc7eca964ed39ccf981223dbf18e775ce9eff2e3aed8280372a71a603559",
+    "output_hash": "sha256:7205ac249a629a741b536b145f7d996521d65d1b5740570a7ea441319ef88d55",
+    "platform": "x86_64-linux",
+    "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.157477
+  }
+}
+```
+
+**病态的例子** — `request.ill.json`：Hilbert 13，κ₁ ≈ 5.5e18。响应 `response.ill.json` 的状态是 `ok_with_warnings`，带 `W.NUMERICAL.ILL_CONDITIONED`。估计的 κ₁ 只有真值的 1/12，因为 κ·u > 1 时估计器本身也不可靠；但 rcond < ε 已经足以说明解不可信。
+
+**错误请求与响应**（2×3 欠定：LS-1）
+
+```json
+{
+  "A": {
+    "dtype": "f64",
+    "shape": [2, 3],
+    "data": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+  },
+  "b": {
+    "dtype": "f64",
+    "shape": [2],
+    "data": [1.0, 2.0]
+  }
+}
+```
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.system.solve",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.DOMAIN.UNDERDETERMINED",
+    "category": "domain",
+    "retryable": true,
+    "message": "A 是 2×3（方程少于未知数），解不唯一。本算子只解方阵与超定（最小二乘）方程组。",
+    "agent_hint": "补足方程（增加约束），或说明要哪一个解（例如最小范数解）；最小范数解将来作为另一个方法提供。",
+    "details": {
+      "path": "/A/shape",
+      "m": 2,
+      "n": 3
+    },
+    "remediation": [
+      {
+        "id": "which_solution",
+        "kind": "ask_user",
+        "description": "方程不够：要补充哪些约束，或要哪一种解（最小范数、稀疏……）",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.086361
+  }
+}
+```
+
+**Parity 测试规格** — `examples/linalg.system.solve/parity.yaml`
+
+```yaml
+# Parity test spec — linalg.system.solve 0.4.0 (AEOI v0.4.10-draft)
+operator: linalg.system.solve
+references:
+  - {engine: numpy, version: "numpy.linalg.solve (LAPACK dgesv) / numpy.linalg.lstsq (LAPACK dgelsd)", role: dev_reference, status: active,
+     generator: gen_golden_linsolve.py, golden_store: "golden/python-control/linalg.system.solve/0.4.0/*.json",
+     note: "NOT MATLAB output. MATLAB A\\b: dgesv for square, Householder QR for overdetermined (no refinement)"}
+  - {engine: mpmath, role: high_precision_reference, status: active,
+     note: "exact answer for the stored f64 data: 60-digit LU (square) or normal equations (least squares)"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_linsolve"
+tolerance_class: T1
+compare:
+  x: {against: exact answer, bound: "‖x − x_true‖∞ / ‖x_true‖∞ ≤ 1e-12 · max(1, κ/100)  (T1 with the κ scaling of V-6; κ = cond₁(A) for square, cond₂(A) for least squares, computed from the reference request)",
+      note: "with the default refinement the square cases are exact to the last bit or nearly so; numpy's errors (no refinement) are recorded for comparison"}
+  kappa1_estimate: {bound: "lower bound, ≥ 0.3·κ₁ when κ·ε < 1e-2"}
+  method / shape: exact
+  flagged cases: "expect_postcondition_failed (Wilkinson's growth matrix with refinement = none): the flag is asserted, accuracy is not"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py (rule_linsolve). No trust.* value of the implementation is used as a tolerance
+  x: "shape exact; ‖x − x_true‖∞/‖x_true‖∞ ≤ 1e-12 · max(1, κ/100), κ from the reference"
+  echoed: "method (lu_partial_pivoting / householder_qr), shape.kind"
+  recomputed: "the runner recomputes the backward error of the returned x from the request in exact rational arithmetic: square ‖b − A x‖∞/(‖A‖∞‖x‖∞ + ‖b‖∞) ≤ 10·n·u, least squares ‖Aᵀr‖₂/(‖A‖_F(‖r‖₂ + ‖A‖_F‖x‖₂)) ≤ 10·m·u; skipped for flagged cases"
+case_families:
+  - {name: "square_random ×5 / multi_rhs / column_rhs / exact_integer / needs_pivoting / refinement_none", n: 10}
+  - {name: "hilbert_6 / hilbert_10 / hilbert_13_warns", n: 3, note: "κ up to 5e18; 13 → W.NUMERICAL.ILL_CONDITIONED"}
+  - {name: "wilkinson_growth_refined / wilkinson_growth_unrefined", n: 2, note: "growth 2^59: unrefined is flagged (backward_stable = false), refined is exact"}
+  - {name: "lsq_random / polyfit_cubic / consistent / multi_rhs / vandermonde_ill", n: 5}
+  - {name: errors, n: 10, expect: "E.DOMAIN.UNDERDETERMINED, E.NUMERICAL.SINGULAR ×3 (rank-1, zero column, rank-deficient least squares), E.VALIDATION.SHAPE ×2, DTYPE, NON_FINITE, SCHEMA ×2"}
+```
+
+共 30 个 golden 用例，20 个成功、10 个错误。对精确解的误差，最坏的用例用掉了容差的 4.9e-3；20 个成功用例中，有 12 个比 numpy 更准。结果见 `aeoi-numeric/tests/parity_linsolve.rs` 和 `reports/parity-linsolve.json`。
+
+## 10.20 `interp.grid.interp1`：一维插值（v0.4.10）
+
+对应 MATLAB 的 `interp1`。参考值来自 numpy.interp 与 scipy.interpolate：`interp1d` 的 nearest-up、previous、next，以及 `PchipInterpolator`、`CubicSpline(not-a-knot)`。不是 MATLAB 的结果。这个算子逼出的规范问题是“数据范围之外”。MATLAB 在这里自相矛盾：linear、nearest 缺省返回 NaN，pchip、spline 缺省外推。同一个查询点，换一个方法就从“缺失”变成一个看似可信的数，调用方不会注意到。
+
+**规范性条款**
+
+- IP-1 **输入**：x 为 [n]，严格递增，n ≥ 2。不满足报 `E.VALIDATION.GRID`，并指出是哪个点；整体递减时提示把 x 和 y 一起倒序。y 为 [n] 或 [k, n]，每行一个通道，与 `fft`、`lsim` 相同；MATLAB 按列存，[n, k] 报 `SHAPE` 并提示转置。xq 为 [q]，顺序任意。
+- IP-2 **方法**（与 MATLAB 同名方法定义相同）：
+  - linear：slope·(xq − x_i) + y_i，运算顺序同 numpy.interp。
+  - nearest：xq ≥ x_i/2 + x_{i+1}/2 时取 y_{i+1}，中点归右，同 MATLAB 与 scipy nearest-up。
+  - previous、next。
+  - pchip：Fritsch–Butland 加权调和平均斜率，端点用保形三点公式。
+  - spline：not-a-knot 三次样条，斜率方程是三对角的，用 LAPACK `dgtsv` 的部分选主元消元求解；n = 3 时是过三点的抛物线，n = 2 时是直线。
+
+  区间定位规则：x_i ≤ xq < x_{i+1}，xq = x_{n−1} 时取最后一段。三次段按 scipy PPoly 的方式求值：((c0·d + c1)·d + c2)·d + c3。**查询点恰好落在节点上时，直接返回该节点的 y**，对所有方法都成立。
+- IP-3 **范围外**（作者决定，2026-11-25）：`extrapolation` 缺省为 `error`。有查询点落在 [x_0, x_{n−1}] 之外时，报 `E.DOMAIN.EXTRAPOLATION_REQUIRED`（新码），`details` 给出范围外的点数、第一个这样的点、x 与 xq 的范围，并附三个 `modify_input` 补丁，分别加上 `extrapolation = nan`、`clamp`、`extrapolate`。三个补丁都要求用户确认（R-2），因为选哪一个改变的是结果的含义。各取值的含义：
+  - `nan`：标成缺失。
+  - `clamp`：取最近端点的值。
+  - `extrapolate`：linear 与三次方法把端点那一段延长；nearest、previous、next 取端点值。只要真的发生了外推，就发 `W.ACCURACY.EXTRAPOLATED`（新码）。
+- IP-4 **输出**：`yq`（[q] 或 [k, q]）、回显的 `method` 与 `extrapolation`，以及 `out_of_range_count`。
+- IP-5 **后置条件**：
+  - `pieces_interpolate`：每个三次段在右端点处与数据之差 ≤ 64u（相对局部尺度）。
+  - `spline_c2`：样条在内部节点两侧的二阶导一致（≤ 6.4e4·u，相对全局尺度）。
+  - `local_bounds`：除 spline 外，所有方法的值都落在所在区间两端值之间（pchip 的保形性就体现在这里）。
+  - `all_finite`：`extrapolation = nan` 有意给出的 NaN 不算违反。
+- IP-6 **后置条件一律报告**。框架把 manifest 里列出、但 `trust.checks` 里缺失的后置条件算作不成立（E-11），所以每个方法都报告全部四项。对某个方法没有意义的项按空真处理：线性方法没有三次段，`pieces_interpolate` 为真；非样条方法的 `spline_c2` 为真；spline 不保证 `local_bounds`，该项也记为真，并在 `derived.local_bounds_applies` 里写明不适用。以后为“只对部分方法有意义的后置条件”专设一种写法，作为开放问题 26。
+- IP-7 **确定性**：`platform_bitwise`，只用 f64 四则运算（M-7a）。
+
+新码：`E.DOMAIN.EXTRAPOLATION_REQUIRED`、`W.ACCURACY.EXTRAPOLATED`。
+
+**Manifest** — `examples/interp.grid.interp1/manifest.json`
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "id": "interp.grid.interp1",
+  "version": "0.4.0",
+  "title": "1-D interpolation",
+  "description": "一维插值：给定严格递增的采样点 x 与数据 y，求查询点 xq 上的值。方法 linear（缺省）、nearest、previous、next、pchip（保形三次）、spline（not-a-knot 三次样条），与 MATLAB interp1 的同名方法相同。查询点超出数据范围时缺省报错，由调用方显式选择 nan、clamp 或 extrapolate。",
+  "category": "analysis",
+  "tags": ["interpolation", "interp1", "spline", "pchip", "table"],
+  "applicability": {
+    "preconditions": ["x 为 [n] 严格递增，n ≥ 2", "y 为 [n] 或 [k, n]（每行一个通道）", "xq 为 [q]，任意顺序"],
+    "not_for": ["散乱数据与多维插值（interp2/griddata）", "平滑与拟合（数据有噪声时用拟合，不用插值）", "周期样条与其他端点条件"],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "区间定位：二分查找，x_i ≤ xq < x_{i+1}（xq = x_{n−1} 取最后一段）；xq 恰为节点时直接返回该点的 y。linear：slope·(xq − x_i) + y_i（numpy.interp 的运算顺序）。nearest：xq ≥ x_i/2 + x_{i+1}/2 时取 y_{i+1}，否则 y_i（中点归右，同 MATLAB 与 scipy nearest-up）。previous/next：y_i / y_{i+1}。pchip：Fritsch–Butland 加权调和平均斜率，端点用保形三点公式（Moler, Numerical Computing with MATLAB §3.6）。spline：not-a-knot 端点条件的斜率方程组（三对角，LAPACK dgtsv 部分选主元；n = 3 为过三点的抛物线，n = 2 为直线）。三次段按 scipy PPoly 求值 ((c0·d + c1)·d + c2)·d + c3。范围外：extrapolation = error（缺省，E.DOMAIN.EXTRAPOLATION_REQUIRED）/ nan / clamp（端点值）/ extrapolate（linear 与三次方法延长端点那一段；nearest/previous/next 取端点值）",
+    "references": [
+      {
+        "type": "paper",
+        "cite": "F. N. Fritsch, J. Butland, A method for constructing local monotone piecewise cubic interpolants, SIAM J. Sci. Stat. Comput. 5(2), 1984",
+        "doi": "10.1137/0905021"
+      },
+      {
+        "type": "textbook",
+        "cite": "C. de Boor, A Practical Guide to Splines, rev. ed., Springer 2001, Ch. IV（not-a-knot 端点条件）"
+      },
+      {
+        "type": "textbook",
+        "cite": "C. Moler, Numerical Computing with MATLAB, SIAM 2004, §3（pchip、spline）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "interp1::eval",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {},
+  "encodings": {
+    "input": ["json", "b64", "ref"],
+    "output": ["json", "b64"]
+  },
+  "limits": {
+    "max_points": 10000000,
+    "max_output_values": 10000000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/interp.grid.interp1/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.GRID",
+    "E.VALIDATION.ENCODING",
+    "E.DOMAIN.EXTRAPOLATION_REQUIRED",
+    "E.NUMERICAL.SINGULAR",
+    "E.RESOURCE.OUTPUT_TOO_LARGE",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": ["W.ACCURACY.EXTRAPOLATED"],
+  "mcp": {
+    "tool_name": "interp_grid_interp1",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:interp1:piecewise",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "strictly_increasing",
+        "statement": "x 严格递增",
+        "enforced_by": "error:E.VALIDATION.GRID"
+      },
+      {
+        "id": "in_range",
+        "statement": "查询点在数据范围内，或调用方显式选择了范围外的处理",
+        "enforced_by": "error:E.DOMAIN.EXTRAPOLATION_REQUIRED"
+      },
+      {
+        "id": "model",
+        "statement": "插值反映的是数据之间的一种约定曲线（方法决定），不是真实函数；与真实函数的误差算子无法估计",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "channels",
+        "statement": "y 每行一个通道",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_priori"
+    },
+    "postconditions": ["all_finite", "pieces_interpolate", "spline_c2", "local_bounds"],
+    "coverage": {
+      "pieces_interpolate": "full",
+      "spline_c2": "full",
+      "local_bounds": "full"
+    },
+    "guards": {
+      "pieces_interpolate": ["/yq"],
+      "spline_c2": ["/yq"],
+      "local_bounds": ["/yq"]
+    }
+  }
+}
+```
+
+**请求与响应**（台阶状数据，pchip：结果单调，不越过数据范围）
+
+```json
+{
+  "x": {
+    "dtype": "f64",
+    "shape": [
+      6
+    ],
+    "data": [
+      0.0,
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+      5.0
+    ]
+  },
+  "y": {
+    "dtype": "f64",
+    "shape": [
+      6
+    ],
+    "data": [
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      4.0,
+      4.0
+    ]
+  },
+  "xq": {
+    "dtype": "f64",
+    "shape": [
+      11
+    ],
+    "data": [
+      0.0,
+      0.5,
+      1.0,
+      1.5,
+      2.0,
+      2.5,
+      3.0,
+      3.5,
+      4.0,
+      4.5,
+      5.0
+    ]
+  },
+  "method": "pchip"
+}
+```
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "interp.grid.interp1",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "yq": {
+      "dtype": "f64",
+      "shape": [11],
+      "data": [0.0, 0.0, 0.0, 0.5, 1.0, 1.0, 1.0, 2.5, 4.0, 4.0, 4.0]
+    },
+    "method": "pchip",
+    "extrapolation": "error",
+    "out_of_range_count": 0
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "piece_end_rel": 0.0,
+      "spline_c2_rel": null,
+      "definition": "每段三次多项式在右端点处与数据之差 / (|y_k| + |y_{k+1}| + (|s_k| + |s_{k+1}|)·h)；样条：内部节点两侧二阶导之差 / 全局尺度（最大的二阶导项与 max|y|/max(h)² 中的较大者）"
+    },
+    "condition": {
+      "n": 6,
+      "min_spacing": 1.0
+    },
+    "error_estimate": {
+      "kind": "rounding_only",
+      "note": "只含舍入误差（相对量级 ~10u）；插值本身相对未知函数的误差取决于数据，算子无法估计"
+    },
+    "checks": {
+      "all_finite": true,
+      "pieces_interpolate": true,
+      "spline_c2": true,
+      "local_bounds": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "local_bounds_violations": 0,
+      "local_bounds_applies": true
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:interp1:piecewise",
+      "routine": "interp1::eval",
+      "provenance": "aeoi://operators/interp.grid.interp1/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "strictly_increasing",
+        "statement": "x 严格递增",
+        "enforced_by": "error:E.VALIDATION.GRID"
+      },
+      {
+        "id": "in_range",
+        "statement": "查询点在数据范围内，或调用方显式选择了范围外的处理",
+        "enforced_by": "error:E.DOMAIN.EXTRAPOLATION_REQUIRED"
+      },
+      {
+        "id": "model",
+        "statement": "插值反映的是数据之间的一种约定曲线（方法决定），不是真实函数；与真实函数的误差算子无法估计",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "channels",
+        "statement": "y 每行一个通道",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": null
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "all_finite": true,
+        "pieces_interpolate": true,
+        "spline_c2": true,
+        "local_bounds": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "all_finite": "full",
+        "pieces_interpolate": "full",
+        "spline_c2": "full",
+        "local_bounds": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:175e418212e35fa46469222fd93ca51c85e718dbaec8ae36e01a836ede63cc6b",
+      "result": "sha256:dbfc2b98c7bf54769895232fac363a46478d67309a6300b5db8a2ff7d7b46cae",
+      "output_hash": "sha256:50523c0b5bca2756544d0e1bcd06a603cd29d11113dacb8e14b2c66b29de852d",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of interp.grid.interp1@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:362309c6ab7ce4a6bebb47f4e0761abce97535e9009dfbdf3ae7328d4e0eed4a",
+    "output_hash": "sha256:50523c0b5bca2756544d0e1bcd06a603cd29d11113dacb8e14b2c66b29de852d",
+    "platform": "x86_64-linux",
+    "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.193354
+  }
+}
+```
+
+**对照** — `request.spline.json` 用同一组数据和 spline：结果在 x = 0.5 处是 −0.39，在 x = 4.5 处是 4.94，都越出了数据范围 [0, 4]。这是三次样条的正常行为，不是错误，所以样条不做 `local_bounds` 检查。
+
+**错误请求与响应**（查询点 6.0 超出 [0, 5]，缺省 `extrapolation = error`：IP-3）
+
+```json
+{
+  "x": {
+    "dtype": "f64",
+    "shape": [6],
+    "data": [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+  },
+  "y": {
+    "dtype": "f64",
+    "shape": [6],
+    "data": [0.0, 0.0, 1.0, 1.0, 4.0, 4.0]
+  },
+  "xq": {
+    "dtype": "f64",
+    "shape": [2],
+    "data": [2.5, 6.0]
+  }
+}
+```
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "interp.grid.interp1",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.DOMAIN.EXTRAPOLATION_REQUIRED",
+    "category": "domain",
+    "retryable": true,
+    "message": "1 个查询点在数据范围 [0, 5] 之外（第一个是 xq[1] = 6；xq 范围 [2.5, 6]）。插值只在数据范围内有依据；范围外要不要给值、怎么给，需要调用方决定。",
+    "agent_hint": "问用户范围外要哪种处理，再加上 extrapolation：nan（标成缺失）、clamp（取端点值）或 extrapolate（把端点那一段延长）。",
+    "details": {
+      "path": "/xq/data/1",
+      "count": 1,
+      "x_range": [0.0, 5.0],
+      "xq_range": [2.5, 6.0]
+    },
+    "remediation": [
+      {
+        "id": "extrapolation_nan",
+        "kind": "modify_input",
+        "description": "范围外给 NaN（标成缺失）",
+        "confidence": "medium",
+        "requires_user_confirmation": true,
+        "patch": [
+          {
+            "op": "add",
+            "path": "/extrapolation",
+            "value": "nan"
+          }
+        ]
+      },
+      {
+        "id": "extrapolation_clamp",
+        "kind": "modify_input",
+        "description": "范围外取最近端点的值",
+        "confidence": "medium",
+        "requires_user_confirmation": true,
+        "patch": [
+          {
+            "op": "add",
+            "path": "/extrapolation",
+            "value": "clamp"
+          }
+        ]
+      },
+      {
+        "id": "extrapolation_extrapolate",
+        "kind": "modify_input",
+        "description": "把端点那一段（直线或三次多项式）延长",
+        "confidence": "low",
+        "requires_user_confirmation": true,
+        "patch": [
+          {
+            "op": "add",
+            "path": "/extrapolation",
+            "value": "extrapolate"
+          }
+        ]
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.150581
+  }
+}
+```
+
+**Parity 测试规格** — `examples/interp.grid.interp1/parity.yaml`
+
+```yaml
+# Parity test spec — interp.grid.interp1 0.4.0 (AEOI v0.4.10-draft)
+operator: interp.grid.interp1
+references:
+  - {engine: scipy, version: "numpy.interp; scipy.interpolate interp1d (nearest-up, previous, next, linear extrapolation), PchipInterpolator, CubicSpline(not-a-knot)", role: dev_reference, status: active,
+     generator: gen_golden_interp1.py, golden_store: "golden/python-control/interp.grid.interp1/0.4.0/*.json",
+     note: "NOT MATLAB output. Same definitions as MATLAB interp1 for these methods; MATLAB's default outside the data range (NaN or extrapolation, by method) is not AEOI's default (error)"}
+  - {engine: exact, role: high_precision_reference, status: active, note: "spline on cubic data and every cubic/linear method on a straight line reproduce the function exactly"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_interp1"
+tolerance_class: T1
+compare:
+  yq: {bound: "|yq − ref| ≤ 1e-12 · max(1, max|y|) per value; NaN at the same places", recorded: "bitwise-equal cases (29 of 44)"}
+  warnings: "W.ACCURACY.EXTRAPOLATED exactly when extrapolation = extrapolate and a query is outside"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py (rule_interp1)
+  yq: "shape exact; |yq − ref| ≤ 1e-12 · max(1, max|y|); NaN at the same places"
+  echoed: "method, extrapolation, out_of_range_count (recomputed by the runner from x and xq)"
+  recomputed: "the runner checks, from the request alone, that each value equals y at an exact node hit, lies within the interval's end values for every method except spline, and equals the clamp value outside the range when extrapolation = clamp"
+case_families:
+  - {name: "random_<method> ×6 / default_linear / multichannel ×3 / two_points ×2 / three_points ×2 / four_points_spline", n: 15}
+  - {name: "spline_cubic_exact / <method>_line_exact ×3", n: 4, note: "exact answers"}
+  - {name: "nearest_ties_right / previous_next ×2 / pchip_step_data / spline_step_data_overshoots / pchip_sign_changes", n: 6}
+  - {name: "outside_<nan|clamp|extrapolate>_<method> ×18 / inside_with_extrapolate_no_warning", n: 19}
+  - {name: errors, n: 12, expect: "E.DOMAIN.EXTRAPOLATION_REQUIRED ×2, E.VALIDATION.GRID ×3, SHAPE ×4, NON_FINITE, SCHEMA ×2"}
+```
+
+共 56 个 golden 用例，44 个成功、12 个错误。成功用例中，29 个与参考逐位相同；最大偏差是 3.0e-16·max(1, max|y|)，与精确值的最大偏差是 2.3e-16。结果见 `aeoi-numeric/tests/parity_interp1.rs` 和 `reports/parity-interp1.json`。
+
 ## 11. Rust 参考实现（v0.3）
 
 ### 11.1 结构
@@ -9677,19 +10652,42 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 23. ~~**（v0.4.2 新，一致性规则发现）`lyap` 的 mpmath 容差不一致**~~ **已决定（v0.4.3）：一致性对所有参考引擎用同一个 κ 缩放容差。** 高精度参考（mpmath）只是更准的参考值，不是更严的要求。`parity.yaml` 里的“1e-12 不放宽”是参考实现自己的精度目标，由它的 `cargo test` 检验：参考实现带精化，实测 `lyap` ≤ 7e-15；而没有精化的后向稳定算法达不到，SciPy 在 `lyap`（κ ≈ 1.6e8）上为 7.5e-9，在 `lqr`（cond(R) = 1e11）上为 3.7e-9。把它当门槛会让标准实现无法通过。`lqr` 的 mpmath 分支同样改为 `cond_S` 缩放（v0.4.2 时误设为 1e-12）。试过用 CARE 的一阶条件数（闭环 Lyapunov 算子）缩放，最病态的用例容差 ≥ 1，等于不检查，所以没有采用；剩下的个别超差（上面 SciPy 的 `lqr` 用例超出 6.5 倍）按 CF-7 登记 `known_deviations`。原问题：：`parity.yaml` 对 mpmath 用例写“rel_fro ≤ 1e-12，不放宽”，运行器的 `lyap` 规则对所有引擎都用 T2 × max(1, κ/100)。`lqr` 的新规则对 mpmath 用 1e-12。改 `lyap` 规则会影响 Python 第二实现在病态用例上的结果，需要先重跑。
 24. **（v0.4.4 新，写默认值用例时发现）默认值与请求指纹**：H-1 按请求原样计算 `input_hash`，不补默认值，所以“省略 `type`”与“写出 `type: continuous`”的请求指纹不同，而 4.3 R-3 说请求指纹表示“同一个问题”。要么在哈希前补齐 schema 默认值（会改变所有省略了默认值的已发布 `input_hash` 与 golden 文件名之外的指纹，需要一次迁移），要么在 R-3 写明指纹只认字面相同的请求。一致性套件目前只要求结果相同，不比较这两个指纹。
 25. **（v0.4.9 新，发布流水线证实全平台逐位相同后）`platform_bitwise` 升为 `bitwise`**：参考实现已在 5 个平台上对全部 golden 逐位相同（2.1、M-7a），但 manifest 仍声明较弱的 `platform_bitwise`。改声明是新的承诺（G-2 MINOR），23 个算子要一起升版本、重新生成 manifest 与示例；还要决定 `aeoi_verify` 在 `bitwise` 下遇到跨平台差异时的判定（现在跨平台只给 `tolerance_match`）。建议随下一批算子升版本时一并处理。
+26. **（v0.4.10 新）只对部分方法有意义的后置条件**：`interp1` 的 `spline_c2` 只适用于 spline，`local_bounds` 不适用于 spline。E-11 把缺失的后置条件算作不成立，所以现在只能按空真报告（IP-6）。可选做法：manifest 的 `receipt.postconditions` 允许按 `method` 条件列出，或在 `trust.checks` 里允许 `null` 表示“不适用”。两种都改核心 schema（MINOR），留到第二个有此需要的算子出现时再定。
 
 ### 12.2 下一步（建议顺序）
 
 1. 在有授权的机器上运行 `matlab/gen_golden_bode.m`（并补 step/lqr 脚本），先核对 `memory_order_nonsymmetric` 用例与 python-control 一致，再跑通第一份 A 级凭证
 2. ~~修复 `lqr` 病态 R 的精度差距~~（v0.3.2 用补偿 Newton–Kleinman 完成）；剩余：平衡 + 有序 Schur（或广义特征值）作为符号函数不收敛时的后备路径，以及 `dlqr` 的同类精化
-3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；ODE 之后可做隐式/刚性方法（`ode15s`）、事件检测、`interp1`、`polyfit`、线性方程组与 `fzero`/`fsolve`（复用 3.15）；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
+3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；v0.4.10 加了 `linalg.system.solve`（10.19）与 `interp.grid.interp1`（10.20）；之后按 MATLAB 使用频率做 `polyfit`、`butter` + `filter`、`fzero`/`fsolve`（复用 3.15）、优化、`eig`/`svd`、`integral`，以及隐式/刚性方法（`ode15s`）与事件检测；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
 5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；v0.3.4 另有 `aeoi-web design`。v0.3.5 实现了试点里排在前面的算子（串联、并联、反馈、PID 构造、stepinfo、Padé），v0.3.6 加了具名角色、`loopsens`（含带宽读数）和回合预算。下一步是按 A-4 写 `pidtune`（必须先声明对象类、指标和唯一性），以及控制器离散化和 MIMO 裕度；扩充问答题、加入"Agent + 裸 scipy"对照组。非线性吸引域仍不做。
 6. 分发：为 `aeoi-mcp` 发布各平台预编译二进制（GitHub Releases）、Claude Desktop 一键安装扩展、登记到 MCP 公开目录（v0.4.9：数学库、矩阵乘法内核与 FFT 旋转因子已统一，5 个平台的 golden 哈希完全相同；`v0.4.9` 是第一个正式发布）；之后做纯浏览器的结果查看器（`aeoi-wasm`：结果、信任信息、收据与本地重放）。不做独立的图形界面客户端或自带 LLM 的聊天客户端：AEOI 的客户端是 MCP 宿主
-7. 一致性套件（9.4）：v0.4.8 有 10 个算子的数值规则（10 / 23 = 43%；作者定的下限是 30%，以后提高），参考实现 715 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 19 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
+7. 一致性套件（9.4）：v0.4.10 有 12 个算子的数值规则（12 / 25 = 48%；作者定的下限是 30%，以后提高），参考实现 813 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 23 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
 8. 根据以上反馈修订，冻结 v1.0
 
 ## 13. Changelog
+
+### v0.4.10-draft（2026-11-25）
+
+起因：按 MATLAB 使用频率继续加算子，作者选了 `A\b` 与 `interp1`，并定了两件事：插值范围外缺省报错、外推要显式选择；线性方程组支持方阵与超定最小二乘，欠定报错。线协议标识（`aeoi/0.4`）、核心 schema 和已有算子的版本都不变。
+
+**规范改动**
+
+| # | 位置 | 改动 | 理由 |
+|---|---|---|---|
+| 1 | 10.19 LS-1 – LS-7 | 新算子 `linalg.system.solve` 0.4.0：方阵用 LU（部分选主元）加至多 3 步迭代精化，超定用 Householder QR；报告后向误差、κ₁ 估计和前向误差估计 | MATLAB 只在 rcond < ε 时打印警告；调用方需要从信封里看出解能信几位 |
+| 2 | 10.19 LS-1 | 欠定报 `E.DOMAIN.UNDERDETERMINED`（新码），不返回 MATLAB 的“基本解” | 基本解不唯一，也不是最小范数解，悄悄返回会被当成“唯一答案” |
+| 3 | 10.20 IP-1 – IP-7 | 新算子 `interp.grid.interp1` 0.4.0：linear、nearest、previous、next、pchip、spline，y 每行一个通道 | 与 `fft`、`lsim` 的通道约定一致 |
+| 4 | 10.20 IP-3 | 范围外缺省 `E.DOMAIN.EXTRAPOLATION_REQUIRED`（新码），附 nan / clamp / extrapolate 三个须用户确认的补丁；实际外推时发 `W.ACCURACY.EXTRAPOLATED`（新码） | MATLAB 对不同方法的缺省行为不同（NaN 或外推），换方法会不声不响地改变结果的含义 |
+| 5 | 10.20 IP-6、开放问题 26 | 只对部分方法有意义的后置条件按空真报告，`derived` 里注明是否适用 | E-11 把缺失的后置条件算作不成立；正式写法留作开放问题 |
+| 6 | 5.1 | 登记上面三个新码 | — |
+
+**实现与验证**
+
+- golden：`linalg.system.solve` 30 个用例（10 个错误），真值来自 mpmath 60 位；`interp.grid.interp1` 56 个用例（12 个错误），参考值来自 numpy/scipy。
+- 精化的效果：Hilbert 10 上 numpy 的相对误差为 7.2e-6，本算子为 0；Wilkinson 增长矩阵上 numpy 为 0.90，本算子为 1.3e-16。不做精化的 Wilkinson 用例如实报告 `backward_stable = false`（golden 标记 `expect_postcondition_failed`）。
+- `interp1`：44 个成功用例中 29 个与 scipy 逐位相同，最大偏差 3.0e-16（相对）。
+- 一致性套件：两个算子都有数值规则（12 / 25 = 48%），参考实现 813 / 0 / 291；新增 4 种代理改写，都被预期的检查抓住。
 
 ### v0.4.9-draft（2026-11-24）
 

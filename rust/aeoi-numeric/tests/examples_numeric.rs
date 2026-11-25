@@ -85,3 +85,64 @@ fn ode_example() {
     assert_eq!(e["error"]["details"]["position"], 12);
     assert!(!e["error"]["remediation"].as_array().unwrap().is_empty(), "remediation");
 }
+
+/// v0.4.10: request.json (3×3, x = [1, −2, 3] exactly), request.lsq.json (straight-line least squares),
+/// request.ill.json (Hilbert 13: W.NUMERICAL.ILL_CONDITIONED, rcond < ε), request.error.json (2×3:
+/// E.DOMAIN.UNDERDETERMINED with an ask_user remedy).
+#[test]
+fn linsolve_example() {
+    let op = "linalg.system.solve";
+    let dir = format!("examples/{op}");
+    let rf = read(&format!("{dir}/reference.python-control.json"));
+    for (rq, rs) in [("request.json", "response.success.json"), ("request.lsq.json", "response.lsq.json"), ("request.ill.json", "response.ill.json")] {
+        let req = read(&format!("{dir}/{rq}"));
+        let env = call(op, &req);
+        assert!(env["status"] == "ok" || env["status"] == "ok_with_warnings", "{rq}: {}", env["error"]);
+        assert_eq!(env["operator"]["build"].as_str().unwrap().split(' ').next(), Some("aeoi-numeric"));
+        assert_hash_on_same_platform(&env, &read(&format!("{dir}/{rs}")), &format!("{op} {rq}: bitwise example"));
+        if rq == "request.ill.json" {
+            assert!(env["warnings"].as_array().unwrap().iter().any(|w| w["code"] == "W.NUMERICAL.ILL_CONDITIONED"));
+            continue;
+        }
+        let got: Vec<f64> = env["result"]["x"]["data"].as_array().unwrap().iter().map(|v| v.as_f64().unwrap()).collect();
+        let want: Vec<f64> = rf[rq]["x_true"].as_array().unwrap().iter().map(|v| v.as_f64().unwrap()).collect();
+        for (g, w) in got.iter().zip(&want) {
+            assert!((g - w).abs() <= 1e-14 * w.abs().max(1.0), "{rq}: {g} vs {w}");
+        }
+    }
+    let e = call(op, &read(&format!("{dir}/request.error.json")));
+    assert_eq!(e["error"]["code"], "E.DOMAIN.UNDERDETERMINED");
+    assert_eq!(e["error"]["code"], read(&format!("{dir}/response.error.json"))["error"]["code"]);
+    assert_eq!(e["error"]["remediation"][0]["kind"], "ask_user");
+}
+
+/// v0.4.10: the same step-like data through pchip (request.json: stays within each interval, monotone) and
+/// spline (request.spline.json: overshoots below 0 and above 4); request.error.json has a query outside the
+/// data range → E.DOMAIN.EXTRAPOLATION_REQUIRED with three patches, each needing the user's confirmation.
+#[test]
+fn interp1_example() {
+    let op = "interp.grid.interp1";
+    let dir = format!("examples/{op}");
+    let rf = read(&format!("{dir}/reference.python-control.json"));
+    for (rq, rs) in [("request.json", "response.success.json"), ("request.spline.json", "response.spline.json")] {
+        let env = call(op, &read(&format!("{dir}/{rq}")));
+        assert_eq!(env["status"], "ok", "{rq}: {}", env["error"]);
+        assert_hash_on_same_platform(&env, &read(&format!("{dir}/{rs}")), &format!("{op} {rq}: bitwise example"));
+        let got: Vec<f64> = env["result"]["yq"]["data"].as_array().unwrap().iter().map(|v| v.as_f64().unwrap()).collect();
+        let want: Vec<f64> = rf[rq]["yq"].as_array().unwrap().iter().map(|v| v.as_f64().unwrap()).collect();
+        for (g, w) in got.iter().zip(&want) {
+            assert!((g - w).abs() <= 1e-12 * 4.0, "{rq}: {g} vs {w}");
+        }
+        let (lo, hi) = got.iter().fold((f64::INFINITY, f64::NEG_INFINITY), |(a, b), &v| (a.min(v), b.max(v)));
+        if rq == "request.json" {
+            assert!(lo >= 0.0 && hi <= 4.0, "pchip stays in the data range");
+        } else {
+            assert!(lo < 0.0 && hi > 4.0, "spline overshoots on step data");
+        }
+    }
+    let e = call(op, &read(&format!("{dir}/request.error.json")));
+    assert_eq!(e["error"]["code"], "E.DOMAIN.EXTRAPOLATION_REQUIRED");
+    let rem = e["error"]["remediation"].as_array().unwrap();
+    assert_eq!(rem.len(), 3);
+    assert!(rem.iter().all(|r| r["requires_user_confirmation"] == true));
+}

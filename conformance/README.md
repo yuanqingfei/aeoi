@@ -1,6 +1,6 @@
 # AEOI 跨实现一致性套件（v0.3）
 
-规范 9.4（CF-1 – CF-12）的实现。**状态：10 个算子有数值规则（控制：`lyap`、`poles_zeros`、`bode`、`step`、`lqr`、`c2d`、`lsim`、`pidtune`；信号：`fft`；ODE：`ode.ivp.solve`），占 23 个算子的 43%；参考实现（Rust）全部通过；Python 第二实现只做 `lyap`。**
+规范 9.4（CF-1 – CF-12）的实现。**状态：12 个算子有数值规则（控制：`lyap`、`poles_zeros`、`bode`、`step`、`lqr`、`c2d`、`lsim`、`pidtune`；信号：`fft`；ODE：`ode.ivp.solve`；线性代数：`linalg.system.solve`；插值：`interp.grid.interp1`），占 25 个算子的 48%；参考实现（Rust）全部通过；Python 第二实现只做 `lyap`。**
 
 ## 内容
 
@@ -8,10 +8,10 @@
 |---|---|
 | `aeoi_conformance.py` | 运行器。只通过 MCP stdio 驱动被测实现（CF-3），用例直接读 `golden/`（CF-2） |
 | `aeoi_hash.py` | 规范 3.7 / 4.3 R-3 / P-2 的独立重写（RFC 8785 JCS、数组摘要、请求指纹）。运行器用它重算指纹，不采信被测实现自报的值 |
-| `rules_numeric.py` | 控制以外的算子：`fft`（规范 v0.4.7，含运行器从请求的 x 与返回的 X 独立重算 Parseval）；`ode.ivp.solve`（规范 v0.4.8：对照精确解而不是参考求解器的步长序列；运行器用精确解检查 `tolerance_consistent = true` 的声明是否属实） |
+| `rules_numeric.py` | 控制以外的算子：`fft`（规范 v0.4.7，含运行器从请求的 x 与返回的 X 独立重算 Parseval）；`ode.ivp.solve`（规范 v0.4.8：对照精确解而不是参考求解器的步长序列；运行器用精确解检查 `tolerance_consistent = true` 的声明是否属实）；`linalg.system.solve`（规范 v0.4.10：运行器用有理数精确重算后向误差，并检查 `backward_stable = true` 的声明是否属实）；`interp.grid.interp1`（规范 v0.4.10：节点处必须精确、范围外点数由运行器重数） |
 | `rules_control.py` | `poles_zeros`、`bode`、`step`、`lqr`、`c2d` 的数值规则（v0.2），`lsim`（规范 v0.4.5）、`pidtune`（规范 v0.4.6，含运行器用返回的控制器重算 L(jωc)）；`lyap` 的规则在运行器里 |
 | `impls/python_scipy/server.py` | 第二实现：Python + SciPy，只做 `lyap`，线级（MCP stdio） |
-| `tests/test_runner_catches_mutants.py` | 证明规则既不太松也不太严：对第二实现注入 8 种缺陷；再经 `proxy_mutant.py` 对参考实现做 19 种改写（v0.4.8 加了 `ode_y_wrong`、`ode_states_reordered`、`ode_overclaims`），错误答案（含相位整体加 360°）必须失败，等价答案（换极点顺序、相似变换、tf 分子分母同乘常数）必须通过 |
+| `tests/test_runner_catches_mutants.py` | 证明规则既不太松也不太严：对第二实现注入 8 种缺陷；再经 `proxy_mutant.py` 对参考实现做 23 种改写（v0.4.8 加了 `ode_y_wrong`、`ode_states_reordered`、`ode_overclaims`；v0.4.10 加了 `linsolve_x_wrong`、`linsolve_overclaims`、`interp1_one_ulp`、`interp1_count_wrong`），错误答案（含相位整体加 360°）必须失败，等价答案（换极点顺序、相似变换、tf 分子分母同乘常数）必须通过 |
 | `tests/proxy_mutant.py` | 包住参考实现的 MCP 代理，按 `$AEOI_MUTANT` 改写一个算子的结果并重算 `output_hash` |
 
 ## 运行
@@ -51,7 +51,7 @@ python3 conformance/tests/test_runner_catches_mutants.py
 
 ## 已知限制
 
-- 6 个算子有数值规则；其余 13 个算子（`convert`、`ctrb_obsv`、`margin`、`impulse`、`place`、`dlqr`、`series`、`parallel`、`feedback`、`pid`、`stepinfo`、`pade`、`loopsens`）的成功用例是 `skip`。
+- 12 个算子有数值规则；其余 13 个算子（`convert`、`ctrb_obsv`、`margin`、`impulse`、`place`、`dlqr`、`series`、`parallel`、`feedback`、`pid`、`stepinfo`、`pade`、`loopsens`）的成功用例是 `skip`。
 - 新规则只在参考实现上跑过，目标是有一个独立的第二实现来检验（现有的 Python 第二实现只做 `lyap`）。
 - 哈希只支持 `json` 编码的稠密数组；`b64` / `ref` / 稀疏数组的请求不重算指纹。
 - 没有 CF-10 的逐方法运行：参考实现已实现 `method_policy`（v0.4），但还没有哪个算子在 `receipt.alternatives` 里登记第二个方法。

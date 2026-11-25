@@ -1,0 +1,38 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "linalg.system.solve",
+ "operator_version": "0.4.0",
+ "case_family": "one_d_A",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    3
+   ],
+   "data": [
+    1.0,
+    2.0,
+    3.0
+   ]
+  },
+  "b": {
+   "dtype": "f64",
+   "shape": [
+    3
+   ],
+   "data": [
+    1.0,
+    2.0,
+    3.0
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "numpy.linalg (LAPACK dgesv / dgelsd)",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261125,
+  "note": "NOT MATLAB output"
+ },
+ "expected_error": "E.VALIDATION.SHAPE"
+}

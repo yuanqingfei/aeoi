@@ -1,0 +1,67 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "interp.grid.interp1",
+ "operator_version": "0.4.0",
+ "case_family": "nearest_ties_right",
+ "request": {
+  "x": {
+   "dtype": "f64",
+   "shape": [
+    4
+   ],
+   "data": [
+    0.0,
+    1.0,
+    2.0,
+    4.0
+   ]
+  },
+  "y": {
+   "dtype": "f64",
+   "shape": [
+    4
+   ],
+   "data": [
+    10.0,
+    20.0,
+    30.0,
+    40.0
+   ]
+  },
+  "xq": {
+   "dtype": "f64",
+   "shape": [
+    5
+   ],
+   "data": [
+    0.5,
+    1.5,
+    3.0,
+    2.99,
+    1.0
+   ]
+  },
+  "method": "nearest"
+ },
+ "reference_env": {
+  "engine": "numpy.interp / scipy.interpolate (interp1d nearest-up, previous, next; PchipInterpolator; CubicSpline not-a-knot)",
+  "numpy": "2.5.3",
+  "scipy": "1.18.1",
+  "python": "3.13.18",
+  "seed": 20261125,
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "yq": [
+   20.0,
+   30.0,
+   40.0,
+   30.0,
+   20.0
+  ],
+  "shape": [
+   5
+  ],
+  "y_scale": 40.0
+ }
+}

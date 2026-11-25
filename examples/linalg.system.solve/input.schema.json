@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.system.solve/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "A",
+    "b"
+  ],
+  "properties": {
+    "A": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "系数矩阵 [m, n]，row-major（MATLAB 是 column-major，先转置再展平）；m ≥ n。大矩阵可用 b64 或 ref 编码"
+    },
+    "b": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "右端项：[m]（一个）或 [m, k]（k 个，每列一个）"
+    },
+    "refinement": {
+      "enum": [
+        "auto",
+        "none"
+      ],
+      "default": "auto",
+      "x-aeoi-provenance": "convention",
+      "description": "auto（缺省：用补偿残差做至多 3 步迭代精化）或 none（只做一次 LU 求解，与 MATLAB 的 A\\b 相同）。只影响方阵"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  },
+  "x-aeoi-shape-constraints": [
+    "A: [m, n]，m ≥ n",
+    "b: [m] 或 [m, k]"
+  ]
+}

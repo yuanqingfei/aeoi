@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/interp.grid.interp1/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "x",
+    "y",
+    "xq"
+  ],
+  "properties": {
+    "x": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "采样点 [n]，严格递增"
+    },
+    "y": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "采样值：[n]，或 [k, n]（k 个通道，每行一个；MATLAB 习惯按列存，要转置）"
+    },
+    "xq": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "查询点 [q]，任意顺序"
+    },
+    "method": {
+      "enum": [
+        "linear",
+        "nearest",
+        "previous",
+        "next",
+        "pchip",
+        "spline"
+      ],
+      "default": "linear",
+      "x-aeoi-provenance": "convention",
+      "description": "linear（缺省）、nearest（中点归右）、previous、next、pchip（保形三次，不过冲）、spline（not-a-knot 三次样条，可能过冲）"
+    },
+    "extrapolation": {
+      "enum": [
+        "error",
+        "nan",
+        "clamp",
+        "extrapolate"
+      ],
+      "default": "error",
+      "x-aeoi-provenance": "convention",
+      "description": "查询点超出 [x 的最小值, 最大值] 时：error（缺省，报错并给出可选补丁）、nan（标成缺失）、clamp（取端点值）、extrapolate（延长端点那一段）。不确定时问用户"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  },
+  "x-aeoi-shape-constraints": [
+    "x: [n] 严格递增",
+    "y: [n] 或 [k, n]",
+    "xq: [q]"
+  ]
+}

@@ -1,0 +1,161 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.system.solve",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "x": {
+      "dtype": "f64",
+      "shape": [
+        3
+      ],
+      "data": [
+        1.0,
+        -2.0,
+        3.0
+      ]
+    },
+    "residual_norm": 0.0,
+    "method": "lu_partial_pivoting",
+    "shape": {
+      "m": 3,
+      "n": 3,
+      "rhs": 1,
+      "kind": "square"
+    },
+    "refinement_steps": 1
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "backward_error": 0.0,
+      "threshold": 3.3306690738754696e-15,
+      "definition": "‖b − A·x‖∞ / (‖A‖∞‖x‖∞ + ‖b‖∞)（范数后向误差，Rigal–Gaches）；残差用补偿算术（Dot2）计算，取各列最大"
+    },
+    "condition": {
+      "kappa1_estimate": 6.0,
+      "rcond": 0.16666666666666666,
+      "of": "A",
+      "estimator": "Hager–Higham 1-范数估计（LAPACK dlacn2 思路），下界，通常与真值相差不到 3 倍"
+    },
+    "error_estimate": {
+      "x_rel_forward_inf": 0.0,
+      "basis": "一阶界 ‖Δx‖/‖x‖ ≲ κ₁·η"
+    },
+    "checks": {
+      "backward_stable": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "refinement": "auto",
+      "norm1_A": 8.0
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:linsolve:lu-refine-or-householder-qr",
+      "routine": "linsolve::solve",
+      "provenance": "aeoi://operators/linalg.system.solve/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "not_underdetermined",
+        "statement": "m ≥ n",
+        "enforced_by": "error:E.DOMAIN.UNDERDETERMINED"
+      },
+      {
+        "id": "full_rank",
+        "statement": "A 列满秩（方阵非奇异）",
+        "enforced_by": "error:E.NUMERICAL.SINGULAR"
+      },
+      {
+        "id": "conditioning",
+        "statement": "κ·u ≪ 1，否则解没有有效数字（前向误差 ≈ κ·η）",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      },
+      {
+        "id": "row_major",
+        "statement": "A 按 row-major 录入",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "x_rel_forward_inf": 0.0
+      },
+      "basis": "一阶界 ‖Δx‖/‖x‖ ≲ κ₁·η"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "backward_stable": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "backward_stable": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:bfda05f33a04c32aaeedb420a31d4bd77de8347999fae5b65bc79cd11f7da8d9",
+      "result": "sha256:0a61e0c178003cecee53e6d04b3aa4ca4120dd37138b2b9be437e588172c3160",
+      "output_hash": "sha256:7205ac249a629a741b536b145f7d996521d65d1b5740570a7ea441319ef88d55",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.system.solve@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:455ffc7eca964ed39ccf981223dbf18e775ce9eff2e3aed8280372a71a603559",
+    "output_hash": "sha256:7205ac249a629a741b536b145f7d996521d65d1b5740570a7ea441319ef88d55",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.157477
+  }
+}

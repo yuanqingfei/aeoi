@@ -1,0 +1,41 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "linalg.system.solve",
+ "operator_version": "0.4.0",
+ "case_family": "underdetermined",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    3
+   ],
+   "data": [
+    -0.6184874392636347,
+    -0.9865835790125213,
+    0.39465693054185125,
+    0.5694219138324467,
+    -0.7167059333252469,
+    -1.174023373152392
+   ]
+  },
+  "b": {
+   "dtype": "f64",
+   "shape": [
+    2
+   ],
+   "data": [
+    1.0,
+    2.0
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "numpy.linalg (LAPACK dgesv / dgelsd)",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261125,
+  "note": "NOT MATLAB output"
+ },
+ "expected_error": "E.DOMAIN.UNDERDETERMINED"
+}
