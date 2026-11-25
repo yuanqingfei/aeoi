@@ -182,10 +182,21 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" --title "AEOI $GITHUB_REF_NAME" --notes-file release/NOTES.md --generate-notes \
             dist/aeoi-*.tar.gz dist/aeoi-*.zip dist/aeoi.mcpb dist/SHA256SUMS dist/conformance-*.json
-      - name: MCP registry
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      - name: MCP registry (mcp-publisher pinned and Sigstore-verified, as the registry docs prescribe)
+        env:
+          MCP_PUBLISHER_VERSION: v1.8.1
         run: |
+          set -euo pipefail
           python3 tools/write_server_json.py "$GITHUB_REF_NAME" "$(sha256sum dist/aeoi.mcpb | cut -d' ' -f1)" > server.json
           cat server.json
-          curl -sSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          archive=mcp-publisher_linux_amd64.tar.gz
+          base=https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}
+          curl --fail -sSL -o "$archive" "$base/$archive"
+          curl --fail -sSL -o "$archive.sigstore.json" "$base/$archive.sigstore.json"
+          cosign verify-blob --bundle "$archive.sigstore.json" \
+            --certificate-identity "https://github.com/modelcontextprotocol/registry/.github/workflows/release.yml@refs/tags/${MCP_PUBLISHER_VERSION}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" "$archive"
+          tar xzf "$archive" mcp-publisher
           ./mcp-publisher login github-oidc
           ./mcp-publisher publish
