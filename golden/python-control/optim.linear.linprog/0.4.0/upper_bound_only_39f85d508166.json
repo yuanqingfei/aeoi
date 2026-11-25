@@ -1,0 +1,44 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "optim.linear.linprog",
+ "operator_version": "0.4.0",
+ "case_family": "upper_bound_only",
+ "request": {
+  "c": [
+   -1.0,
+   -2.0
+  ],
+  "ub": [
+   3.0,
+   4.0
+  ],
+  "A": [
+   [
+    1.0,
+    1.0
+   ]
+  ],
+  "b": [
+   5.0
+  ]
+ },
+ "reference_env": {
+  "engine": "scipy.optimize (linprog HiGHS / minimize SLSQP, Nelder-Mead)",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "fval": -9.0,
+  "x_highs": [
+   1.0,
+   4.0
+  ],
+  "x_exact": [
+   1.0,
+   4.0
+  ],
+  "unique": true
+ }
+}

@@ -1,6 +1,7 @@
 """Numeric comparison rules (spec 9.4 CF-6) for operators outside control: signal.spectral.fft (v0.4.7),
 ode.ivp.solve (v0.4.8), linalg.system.solve and interp.grid.interp1 (v0.4.10), fit.poly.polyfit,
-linalg.decomp.eig and linalg.decomp.svd (v0.4.11), signal.design.butter and signal.filter.filter (v0.4.12), nonlinear.root.fzero and nonlinear.system.fsolve (v0.4.13).
+linalg.decomp.eig and linalg.decomp.svd (v0.4.11), signal.design.butter and signal.filter.filter (v0.4.12), nonlinear.root.fzero and nonlinear.system.fsolve (v0.4.13), optim.linear.linprog, optim.local.fmincon and
+optim.local.fminsearch (v0.4.14).
 
 Same ground rules as rules_control.py: tolerances from the suite (parity.yaml), every scale computed here from
 the reference request or values, nothing the implementation reports is used.
@@ -393,7 +394,80 @@ def rule_fsolve(case, env, manifest, req=None, expected=None):
             check("‖F(x)‖∞ recomputed by the runner ≤ 1e-10·(1 + ‖x‖∞) and equal to the returned residual  [10.27 FS-5]", max(fn / (1 + max(abs(v) for v in x)), max(abs(a - b) for a, b in zip(F, fr)) * 1e6), 1e-10)]
 
 
+# ---------------------------------------------------------------- optim.* (v0.4.14)
+def _bnd(v, n, default):
+    return [default if v is None else (float("inf") if x == "Inf" else float("-inf") if x == "-Inf" else float(x)) for x in (v or [None] * n)]
+
+
+def rule_linprog(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = expected or case["expected"]; r = env["result"]
+    c = np.array(req["c"], float); n = len(c); x = np.array([num(v) for v in r["x"]])
+    A = np.array(req.get("A", []), float).reshape(-1, n); b = np.array(req.get("b", []), float)
+    Ae = np.array(req.get("Aeq", []), float).reshape(-1, n); be = np.array(req.get("beq", []), float)
+    lb = np.array(_bnd(req.get("lb"), n, float("-inf"))); ub = np.array(_bnd(req.get("ub"), n, float("inf")))
+    L = r["lambda"]; li = np.array([num(v) for v in L["ineqlin"]]); le = np.array([num(v) for v in L["eqlin"]])
+    llo = np.array([num(v) for v in L["lower"]]); lup = np.array([num(v) for v in L["upper"]])
+    sc = max(1.0, float(np.max(np.abs(np.r_[b, be, c]))) if (b.size + be.size + c.size) else 1.0)
+    prim = max([0.0] + list(A @ x - b) + list(np.abs(Ae @ x - be)) + list(lb - x) + list(x - ub)) / sc
+    stat = float(np.max(np.abs(c + A.T @ li + Ae.T @ le - llo + lup))) / max(1.0, float(np.max(np.abs(c))))
+    neg = float(max([0.0] + list(-li) + list(-llo) + list(-lup)))
+    fe = abs(float(num(r["fval"])) - e["fval"]) / max(1.0, abs(e["fval"]))
+    out = [check("fval vs HiGHS: |Δ| ≤ 1e-9·max(1, |f*|)  [T1]", fe, 1e-9),
+           check("KKT recomputed by the runner from the request and the returned x, λ (feasibility, stationarity, λ ≥ 0)  [10.28 LP-4]", max(prim, stat, neg), 1e-8)]
+    if e.get("unique"):
+        want = np.array(e["x_exact"] if e.get("x_exact") else e["x_highs"])
+        out.append(check("x vs the unique optimal vertex  [T1]", float(np.max(np.abs(x - want)) / max(1.0, np.max(np.abs(want)))), 1e-9))
+    return out
+
+
+def rule_fmincon(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = expected or case["expected"]; r = env["result"]
+    names = req["unknowns"]; P = req.get("params", {}); x = np.array([num(v) for v in r["x"]], float); n = len(x)
+    want = np.array(e["x_exact"] if e.get("x_exact") else e["x_slsqp"])
+    ex = float(np.max(np.abs(x - want)) / max(1.0, np.max(np.abs(want))))
+    gi = [_expr(s_, names, P) for s_ in req.get("nonlinear_ineq", [])]; ge = [_expr(s_, names, P) for s_ in req.get("nonlinear_eq", [])]
+    lb = _bnd(req.get("lb"), n, float("-inf")); ub = _bnd(req.get("ub"), n, float("inf"))
+    viol = max([0.0] + [g(*x) for g in gi] + [abs(h(*x)) for h in ge] + [lb[j] - x[j] for j in range(n)] + [x[j] - ub[j] for j in range(n)]
+               + [float(np.dot(row, x) - bi) for row, bi in zip(req.get("A", []), req.get("b", []))] + [abs(float(np.dot(row, x) - bi)) for row, bi in zip(req.get("Aeq", []), req.get("beq", []))])
+    # stationarity of the Lagrangian with central differences
+    f = _expr(req["objective"], names, P); L = r["lambda"]
+    lam = [float(num(v)) for v in L["ineqnonlin"]]; nu = [float(num(v)) for v in L["eqnonlin"]]
+    li = [float(num(v)) for v in L["ineqlin"]]; le = [float(num(v)) for v in L["eqlin"]]
+    lo = [float(num(v)) for v in L["lower"]]; up = [float(num(v)) for v in L["upper"]]
+    def grad(fun):
+        g = []
+        for j in range(n):
+            h = 1e-6 * max(1.0, abs(x[j])); xp = x.copy(); xm = x.copy(); xp[j] += h; xm[j] -= h
+            g.append((fun(*xp) - fun(*xm)) / (2 * h))
+        return np.array(g)
+    gl = grad(f)
+    for l, g in zip(lam, gi): gl = gl + l * grad(g)
+    for l, h in zip(nu, ge): gl = gl + l * grad(h)
+    for l, row in zip(li, req.get("A", [])): gl = gl + l * np.array(row)
+    for l, row in zip(le, req.get("Aeq", [])): gl = gl + l * np.array(row)
+    gl = gl - np.array(lo) + np.array(up)
+    stat = float(np.max(np.abs(gl))) / max(1.0, float(np.max(np.abs(grad(f)))))
+    return [check("x vs the analytic optimum (else SLSQP): ≤ 1e-6 relative  [T2]", ex, 1e-6),
+            check("constraint violation recomputed by the runner (own evaluator)  [10.29 FC-5]", viol, 1e-7),
+            check("Lagrangian stationarity with the returned multipliers, central differences  [10.29 FC-5]", stat, 1e-5)]
+
+
+def rule_fminsearch(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = expected or case["expected"]; r = env["result"]
+    names = req["unknowns"]; f = _expr(req["objective"], names, req.get("params", {}))
+    x = [float(num(v)) for v in r["x"]]; want = e["x_exact"]; tx = req.get("tol_x", 1e-4); tf = req.get("tol_fun", 1e-4)
+    ex = max(abs(a - b) for a, b in zip(x, want)) / max(1.0, max(abs(v) for v in want))
+    fx = f(*x); worst = 0.0
+    for j in range(len(x)):
+        h = tx * max(1.0, abs(x[j]))
+        for sg in (-1, 1):
+            y = list(x); y[j] += sg * h; worst = max(worst, fx - f(*y))
+    return [check("x vs the analytic optimum: ≤ 10·tol_x relative  [T3]", ex, 10 * tx),
+            check("probe recomputed by the runner: f(x) ≤ f(x ± h·e_j) + tol_fun  [10.30 NM-4]", worst, tf)]
+
+
 RULES = {"signal.spectral.fft": rule_fft, "ode.ivp.solve": rule_ode, "linalg.system.solve": rule_linsolve, "interp.grid.interp1": rule_interp1,
          "fit.poly.polyfit": rule_polyfit, "linalg.decomp.eig": rule_eig, "linalg.decomp.svd": rule_svd,
          "signal.design.butter": rule_butter, "signal.filter.filter": rule_filter,
-         "nonlinear.root.fzero": rule_fzero, "nonlinear.system.fsolve": rule_fsolve}
+         "nonlinear.root.fzero": rule_fzero, "nonlinear.system.fsolve": rule_fsolve,
+         "optim.linear.linprog": rule_linprog, "optim.local.fmincon": rule_fmincon, "optim.local.fminsearch": rule_fminsearch}

@@ -1,0 +1,46 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "optim.local.fmincon",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.NUMERICAL.NO_CONVERGENCE",
+    "category": "numerical",
+    "retryable": true,
+    "message": "第 1 步的线性化约束不相容（放宽后仍无解），当前约束违反量 1.000e0：问题可能不可行。",
+    "agent_hint": "检查约束是否相互矛盾；换一个更接近可行域的初值。",
+    "details": {
+      "path": "/x0",
+      "best": {
+        "x": [
+          0.0,
+          0.0
+        ],
+        "fval": 0.0,
+        "constraint_violation": 1.0
+      }
+    },
+    "remediation": [
+      {
+        "id": "feasible_x0",
+        "kind": "ask_user",
+        "description": "能否给一个满足约束的初值，或说明哪些约束可以放宽？",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.11565500000000001
+  }
+}

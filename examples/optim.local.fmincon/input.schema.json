@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/optim.local.fmincon/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "unknowns",
+    "objective",
+    "x0"
+  ],
+  "properties": {
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "minItems": 1,
+      "maxItems": 100,
+      "uniqueItems": true,
+      "description": "未知量名"
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000,
+      "description": "目标 f(x)，3.15 表达式，求最小"
+    },
+    "params": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "number"
+      },
+      "x-aeoi-provenance": "user",
+      "description": "参数名 → 数值"
+    },
+    "x0": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "x-aeoi-provenance": "user",
+      "description": "初值（由用户给出；不同初值可能得到不同的局部最优）"
+    },
+    "nonlinear_ineq": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 10000,
+        "description": "AEOI 表达式（3.15）：+ − * / ^、括号、数字、已声明的名字、t、常数 pi，以及固定函数表"
+      },
+      "description": "非线性不等式约束 g_i(x) ≤ 0 的左端表达式"
+    },
+    "nonlinear_eq": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 10000,
+        "description": "AEOI 表达式（3.15）：+ − * / ^、括号、数字、已声明的名字、t、常数 pi，以及固定函数表"
+      },
+      "description": "非线性等式约束 h_j(x) = 0 的左端表达式"
+    },
+    "A": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        }
+      },
+      "x-aeoi-provenance": "user",
+      "description": "线性不等式 A·x ≤ b"
+    },
+    "b": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "x-aeoi-provenance": "user",
+      "description": "线性不等式右端"
+    },
+    "Aeq": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        }
+      },
+      "x-aeoi-provenance": "user",
+      "description": "线性等式 Aeq·x = beq"
+    },
+    "beq": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "x-aeoi-provenance": "user",
+      "description": "线性等式右端"
+    },
+    "lb": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "number"
+          },
+          {
+            "enum": [
+              "Inf",
+              "-Inf"
+            ]
+          }
+        ]
+      },
+      "x-aeoi-provenance": "user",
+      "description": "下界，无界写 \"-Inf\""
+    },
+    "ub": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "number"
+          },
+          {
+            "enum": [
+              "Inf",
+              "-Inf"
+            ]
+          }
+        ]
+      },
+      "x-aeoi-provenance": "user",
+      "description": "上界，无界写 \"Inf\""
+    },
+    "optimality_tolerance": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "default": 1e-08,
+      "x-aeoi-provenance": "convention",
+      "description": "相对 KKT 驻定与互补残差的容差（缺省 1e-8）"
+    },
+    "constraint_tolerance": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "default": 1e-08,
+      "x-aeoi-provenance": "convention",
+      "description": "约束违反的容差（缺省 1e-8）"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  }
+}

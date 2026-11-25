@@ -609,6 +609,9 @@ DESC={
  "control.lti.stepinfo":{"system":SYS_D,"time":"时间网格，与 step 相同：uniform（t_final、dt，单位 s）或 auto。指标相对这个网格定义","rise_time_limits":"上升时间的低/高阈值，默认 [0.1, 0.9]（10% 到 90%）。这是指标定义，不是对象的物理参数；省略即用默认，不必询问","settling_threshold":"调节带半宽，默认 0.02（2%）。定义默认值，省略即用默认"},
  "ode.ivp.solve":{"states":"状态名列表，如 [\"x\", \"v\"]。顺序决定 y 的行序；表达式里按名字引用，不用下标","rhs":"右端表达式列表，与 states 一一对应：第 i 个是 d(states[i])/dt，如 [\"v\", \"-k*x - c*v\"]。可用 t、状态名、参数名、常数 pi、+ − * / ^（右结合，-x^2 = -(x^2)）与函数 sin cos tan asin acos atan atan2 sinh cosh tanh exp log log10 sqrt abs min max hypot sign","params":"参数名到数值，如 {\"k\": 4, \"c\": 0.5}；名字不能与状态名重复","initial":"初值，键为状态名，如 {\"x\": 1, \"v\": 0}；每个状态都要给","t_span":"[t0, tf]；tf < t0 时反向积分","t_eval":"输出时刻（在区间内、沿积分方向单调）。不给时用 n_out 个等距点","n_out":"不给 t_eval 时的输出点数，默认 101（含两端）。与 t_eval 二选一","rtol":"相对容差，默认 1e-3（与 MATLAB ode45、scipy 相同）。要更准就调小，如 1e-8","atol":"绝对容差，默认 1e-6","max_step":"最大步长（可选）","first_step":"初始步长（可选；不给时自动选择）"},
  "linalg.system.solve":{"A":"系数矩阵 [m, n]，row-major（MATLAB 是 column-major，先转置再展平）；m ≥ n。大矩阵可用 b64 或 ref 编码","b":"右端项：[m]（一个）或 [m, k]（k 个，每列一个）","refinement":"auto（缺省：用补偿残差做至多 3 步迭代精化）或 none（只做一次 LU 求解，与 MATLAB 的 A\\b 相同）。只影响方阵"},
+ "optim.linear.linprog":{"c":"目标系数 [n]（求最小；求最大时取负）","A":"不等式约束矩阵，每行一个约束 A·x ≤ b","b":"不等式右端","Aeq":"等式约束矩阵","beq":"等式右端","lb":"下界 [n]，无界写 \"-Inf\"；缺省全部无下界（同 MATLAB，scipy 缺省是 0）","ub":"上界 [n]，无界写 \"Inf\""},
+ "optim.local.fmincon":{"unknowns":"未知量名","objective":"目标 f(x)，3.15 表达式，求最小","params":"参数名 → 数值","x0":"初值（由用户给出；不同初值可能得到不同的局部最优）","nonlinear_ineq":"非线性不等式约束 g_i(x) ≤ 0 的左端表达式","nonlinear_eq":"非线性等式约束 h_j(x) = 0 的左端表达式","A":"线性不等式 A·x ≤ b","b":"线性不等式右端","Aeq":"线性等式 Aeq·x = beq","beq":"线性等式右端","lb":"下界，无界写 \"-Inf\"","ub":"上界，无界写 \"Inf\"","optimality_tolerance":"相对 KKT 驻定与互补残差的容差（缺省 1e-8）","constraint_tolerance":"约束违反的容差（缺省 1e-8）"},
+ "optim.local.fminsearch":{"unknowns":"未知量名","objective":"目标 f(x)，3.15 表达式，可以不光滑","params":"参数名 → 数值","x0":"初值","tol_x":"单纯形直径容差（缺省 1e-4，同 MATLAB）","tol_fun":"函数值极差容差（缺省 1e-4，同 MATLAB）","max_iterations":"迭代上限（缺省 200·n，同 MATLAB）"},
  "nonlinear.root.fzero":{"expression":"f(x)，3.15 表达式语言；求 f = 0","variable":"自变量名（缺省 x）","params":"参数名 → 数值","bracket":"变号区间 [a, b]，a < b，f(a)·f(b) ≤ 0（推荐）","x0":"初值（没有区间时用；算子向外搜索变号区间，找到的根不一定是想要的那个）","xtol":"附加的绝对容差（缺省 0：算到区间半宽 ≤ 2ε|x|）"},
  "nonlinear.system.fsolve":{"unknowns":"未知量名列表","equations":"方程 F_i = 0 的左端表达式，个数等于未知量个数","params":"参数名 → 数值","x0":"初值，按 unknowns 的顺序（由用户给出；不同初值可能收敛到不同的解）"},
  "signal.design.butter":{"order":"阶数 n（由用户决定，不要代填）","type":"low、high、bandpass、bandstop；省略时一个截止频率为 low、两个为 bandpass","domain":"digital（缺省）或 analog","cutoff_hz":"截止频率（Hz）：一个数，或带通/带阻的 [下限, 上限]；数字滤波器必须同时给 sample_rate_hz","cutoff_normalized":"数字滤波器的归一化截止频率（= MATLAB 的 Wn）：0 < Wn < 1，1 = Nyquist（采样率的一半），不是 rad/sample，也不是相对采样率","cutoff_rad_s":"模拟滤波器的截止频率（rad/s）","sample_rate_hz":"采样率（Hz），与 cutoff_hz 一起用"},
@@ -743,6 +746,50 @@ fs_out=outs("nonlinear.system.fsolve",{"x":{"type":"array","description":"解，
  "residual":{"type":"array","description":"F(x)"},"iterations":{"type":"integer"},"evaluations":{"type":"integer"},"jacobian":{"const":"automatic_differentiation"}},
  ["x","solution","residual","iterations","evaluations","jacobian"],ver=V413)
 B3.update({"nonlinear.root.fzero":(fz,fz_in,fz_out),"nonlinear.system.fsolve":(fs,fs_in,fs_out)})
+# ---- v0.4.14: optim.linear.linprog, optim.local.fmincon, optim.local.fminsearch
+V414="0.4.0"
+BND={"type":"array","items":{"oneOf":[{"type":"number"},{"enum":["Inf","-Inf"]}]},"x-aeoi-provenance":"user"}
+ROWS={"type":"array","items":{"type":"array","items":{"type":"number"}},"x-aeoi-provenance":"user"}
+VEC={"type":"array","items":{"type":"number"},"x-aeoi-provenance":"user"}
+LAM_D="乘子（MATLAB 约定）：∇f + Σλ∇g + Σν∇h = 0；ineq*、lower、upper ≥ 0"
+lpm=man("optim.linear.linprog","Linear programming","线性规划（= MATLAB linprog）：min cᵀx，s.t. A·x ≤ b、Aeq·x = beq、lb ≤ x ≤ ub。两阶段单纯形（Bland 规则），给出最优顶点与全部乘子（ineqlin、eqlin、lower、upper，MATLAB 的符号约定），并用 KKT 残差验证。注意：与 MATLAB 一样，变量缺省没有界（scipy 缺省 x ≥ 0）；无解报 E.DOMAIN.INFEASIBLE，无界报 E.DOMAIN.UNBOUNDED。","design",["optimization","linear-programming","linprog","simplex"],
+ ["系数有限","变量个数 ≤ max_variables（稠密单纯形）"],["整数规划（intlinprog）","大规模稀疏问题（内点法，以后的方法）"],
+ "标准形转换（有限下界平移、只有上界的变量反射、自由变量拆成两个非负变量、上下界都有限时加边界行、不等式加松弛），右端非负化；两阶段稠密单纯形表，Bland 规则选入基与出基变量（不循环）；第一阶段剩余 > 1e-9·max(1, ‖rhs‖∞) 即不可行；入基列无正元即无界。最优基上用 LU 内核重算基解与对偶变量；乘子按 c + Aᵀλ_ineq + Aeqᵀλ_eq − λ_lower + λ_upper = 0 映射。后置条件 kkt：原始可行、对偶可行、互补、驻定残差都 ≤ 1e-9（相对数据尺度）",
+ [{"type":"textbook","cite":"V. Chvátal, Linear Programming, Freeman 1983, Ch. 2–3、8（两阶段单纯形与 Bland 规则）"}],
+ "lp::solve (two-phase simplex, Bland)","T1",{"max_variables":500,"max_iterations":100000},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.NON_FINITE","E.DOMAIN.INFEASIBLE","E.DOMAIN.UNBOUNDED","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ [],sparse={},ver=V414,backend=BACK_NUM("lp::solve"))
+lp_in=ins("optim.linear.linprog",{"c":VEC,"A":ROWS,"b":VEC,"Aeq":ROWS,"beq":VEC,"lb":BND,"ub":BND},["c"],ver=V414)
+lp_out=outs("optim.linear.linprog",{"x":{"type":"array"},"fval":{"type":["number","string"]},"lambda":{"type":"object","description":LAM_D},"iterations":{"type":"integer"},
+ "bounds_used":{"type":"object","description":"实际使用的 lb、ub（缺省为 ±Inf）"}},["x","fval","lambda","iterations","bounds_used"],ver=V414)
+fmc=man("optim.local.fmincon","Constrained nonlinear minimization","带约束的非线性最小化（= MATLAB fmincon）：目标与非线性约束用 3.15 的表达式语言写（g(x) ≤ 0、h(x) = 0），另可给线性约束与上下界。SQP：梯度由自动微分精确给出，子问题用共享的二次规划内核，阻尼 BFGS 近似 Hessian，ℓ1 价值函数线搜索。只保证局部最优；结果用 KKT 残差验证并给出全部乘子；不收敛时报错并附最好的点。","design",["optimization","nonlinear","constrained","fmincon","sqp"],
+ ["目标与约束在可行域附近光滑","x0 由调用方给出"],["全局最优（只给出 x0 附近的局部最优）","整数变量","非光滑问题"],
+ "SQP：子问题 min ½pᵀBp + ∇fᵀp，∇g·p ≤ −g、∇h·p = −h（线性约束与边界同样处理），用有效集 QP 内核（可行起点由 LP 内核第一阶段给出）；线性化不相容时把违反的非线性约束右端乘 θ = 1/2, 1/4, … 放宽；ℓ1 价值函数 f + μ(Σmax(0, g) + Σ|h|)，μ ≥ 1.1·max|λ|，Armijo 回溯；阻尼 BFGS（Powell）。收敛：相对 KKT 残差 ≤ optimality_tolerance（缺省 1e-8）且约束违反 ≤ constraint_tolerance（缺省 1e-8）。起点先投影到上下界内",
+ [{"type":"textbook","cite":"J. Nocedal, S. J. Wright, Numerical Optimization, 2nd ed., Springer 2006, §16.5（有效集 QP）、§18（SQP）"},
+  {"type":"paper","cite":"M. J. D. Powell, A fast algorithm for nonlinearly constrained optimization calculations, Numerical Analysis Dundee 1977, LNM 630","doi":"10.1007/BFb0067703"}],
+ "optim::fmincon (SQP + QP kernel + AD gradients)","T2",{"max_unknowns":100,"max_iterations":500,"max_expression_length":4096},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.NON_FINITE","E.VALIDATION.EXPRESSION","E.DOMAIN.INFEASIBLE","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ [],sparse={},ver=V414,backend=BACK_NUM("optim::fmincon"))
+fmc_in=ins("optim.local.fmincon",{"unknowns":{"type":"array","items":NAME,"minItems":1,"maxItems":100,"uniqueItems":True},"objective":EXPR,"params":PARAMS,
+ "x0":VEC,"nonlinear_ineq":{"type":"array","items":EXPR},"nonlinear_eq":{"type":"array","items":EXPR},"A":ROWS,"b":VEC,"Aeq":ROWS,"beq":VEC,"lb":BND,"ub":BND,
+ "optimality_tolerance":{"type":"number","exclusiveMinimum":0,"default":1e-8,"x-aeoi-provenance":"convention"},"constraint_tolerance":{"type":"number","exclusiveMinimum":0,"default":1e-8,"x-aeoi-provenance":"convention"}},
+ ["unknowns","objective","x0"],ver=V414)
+fmc_out=outs("optim.local.fmincon",{"x":{"type":"array"},"solution":{"type":"object"},"fval":{"type":["number","string"]},"lambda":{"type":"object","description":LAM_D},
+ "iterations":{"type":"integer"},"evaluations":{"type":"integer"},"first_order_optimality":{"type":["number","string"]},"constraint_violation":{"type":["number","string"]}},
+ ["x","solution","fval","lambda","iterations","evaluations","first_order_optimality","constraint_violation"],ver=V414)
+fms=man("optim.local.fminsearch","Derivative-free minimization (Nelder–Mead)","无约束最小化，不用导数（= MATLAB fminsearch，Nelder–Mead 单纯形，Lagarias 等人的参数）。目标用 3.15 的表达式语言写，可以不光滑。缺省容差同 MATLAB（tol_x = tol_fun = 1e-4），结果只在这个分辨率下是局部极小；收敛后在每个坐标方向 ±h 处探测，检查确实没有更小的值。不收敛时报错并附最好的点。","analysis",["optimization","nelder-mead","fminsearch","derivative-free"],
+ ["x0 由调用方给出"],["有约束的问题（fmincon）","高维问题（> 10 个变量时很慢）","需要高精度的光滑问题（fmincon 更准）"],
+ "Nelder–Mead（Lagarias, Reeds, Wright, Wright 1998；同 MATLAB）：反射 1、扩展 2、收缩 1/2、压缩 1/2；初始单纯形为 x0 各坐标加 5%（为 0 的坐标取 0.00025）；顶点按 f 排序，相等按原下标。停止：单纯形直径 ≤ tol_x 且函数值极差 ≤ tol_fun。后置条件 probe_local_minimum：f(x) ≤ f(x ± h·e_j) + tol_fun，h = tol_x·max(1, |x_j|)",
+ [{"type":"paper","cite":"J. C. Lagarias, J. A. Reeds, M. H. Wright, P. E. Wright, Convergence properties of the Nelder–Mead simplex method in low dimensions, SIAM J. Optim. 9(1), 1998","doi":"10.1137/S1052623496303470"}],
+ "optim::fminsearch (Nelder–Mead)","T3",{"max_unknowns":50,"max_expression_length":4096},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.NON_FINITE","E.VALIDATION.EXPRESSION","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ [],sparse={},ver=V414,backend=BACK_NUM("optim::fminsearch"))
+fms_in=ins("optim.local.fminsearch",{"unknowns":{"type":"array","items":NAME,"minItems":1,"maxItems":50,"uniqueItems":True},"objective":EXPR,"params":PARAMS,"x0":VEC,
+ "tol_x":{"type":"number","exclusiveMinimum":0,"default":1e-4,"x-aeoi-provenance":"convention"},"tol_fun":{"type":"number","exclusiveMinimum":0,"default":1e-4,"x-aeoi-provenance":"convention"},
+ "max_iterations":{"type":"integer","minimum":1,"x-aeoi-provenance":"convention"}},["unknowns","objective","x0"],ver=V414)
+fms_out=outs("optim.local.fminsearch",{"x":{"type":"array"},"solution":{"type":"object"},"fval":{"type":["number","string"]},"iterations":{"type":"integer"},"evaluations":{"type":"integer"},"tolerances":{"type":"object"}},
+ ["x","solution","fval","iterations","evaluations","tolerances"],ver=V414)
+B3.update({"optim.linear.linprog":(lpm,lp_in,lp_out),"optim.local.fmincon":(fmc,fmc_in,fmc_out),"optim.local.fminsearch":(fms,fms_in,fms_out)})
 ALL_OPS={"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2|B3
 for op,props in DESC.items():
     for (m_,i_,o_) in [ALL_OPS[op]]:
@@ -801,6 +848,12 @@ RECEIPT["signal.spectral.fft"]={"method_id":"aeoi:fft:rustfft-scalar","assumptio
    "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["parseval","dft_spot_check","all_finite"]}
 RECEIPT["linalg.system.solve"]={"method_id":"aeoi:linsolve:lu-refine-or-householder-qr","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("not_underdetermined","m ≥ n","error:E.DOMAIN.UNDERDETERMINED"),A("full_rank","A 列满秩（方阵非奇异）","error:E.NUMERICAL.SINGULAR"),A("conditioning","κ·u ≪ 1，否则解没有有效数字（前向误差 ≈ κ·η）","warning:W.NUMERICAL.ILL_CONDITIONED"),A("row_major","A 按 row-major 录入","caller")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["backward_stable","all_finite"]}
+RECEIPT["optim.linear.linprog"]={"method_id":"aeoi:linprog:two-phase-simplex-bland","assumptions":[A("finite","所有数据有限","error:E.VALIDATION.NON_FINITE"),A("feasible","约束有可行解","error:E.DOMAIN.INFEASIBLE"),A("bounded","目标在可行域上有下界","error:E.DOMAIN.UNBOUNDED"),A("default_bounds","变量缺省没有界（MATLAB 约定，与 scipy 不同）","validation"),A("unique","最优解可能不唯一；给出的是一个最优顶点","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["kkt","all_finite"]}
+RECEIPT["optim.local.fmincon"]={"method_id":"aeoi:fmincon:sqp-bfgs-ad","assumptions":[A("expression","目标与约束是合法的 3.15 表达式","error:E.VALIDATION.EXPRESSION"),A("converges","SQP 从 x0 收敛到 KKT 点","error:E.NUMERICAL.NO_CONVERGENCE"),A("local_only","结果只是局部最优（或满足一阶条件的点；二阶条件未检查），不一定是全局最优","caller"),A("smooth","目标与约束在解附近光滑","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["kkt","all_finite"]}
+RECEIPT["optim.local.fminsearch"]={"method_id":"aeoi:fminsearch:nelder-mead-lagarias","assumptions":[A("expression","目标是合法的 3.15 表达式","error:E.VALIDATION.EXPRESSION"),A("converges","单纯形在迭代上限内收缩到容差","error:E.NUMERICAL.NO_CONVERGENCE"),A("local_only","结果只是 tol_x 分辨率下的局部极小；Nelder–Mead 没有一般的收敛保证","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["probe_local_minimum","all_finite"]}
 RECEIPT["nonlinear.root.fzero"]={"method_id":"aeoi:fzero:brent-zeroin","assumptions":[A("expression","f 是合法的 3.15 表达式","error:E.VALIDATION.EXPRESSION"),A("sign_change","区间两端变号（给定或搜到）","error:E.DOMAIN.NO_SIGN_CHANGE"),A("continuous","f 在区间上连续（否则变号点可能是极点）","check:not_a_pole"),A("intended_root","求的是区间里的根；只给 x0 时搜到的区间不一定含想要的根","warning:W.DOMAIN.BRACKET_SEARCHED")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["sign_change","not_a_pole","all_finite"]}
 RECEIPT["nonlinear.system.fsolve"]={"method_id":"aeoi:fsolve:dogleg-ad-jacobian","assumptions":[A("expression","方程是合法的 3.15 表达式","error:E.VALIDATION.EXPRESSION"),A("square","方程个数 = 未知量个数","error:E.VALIDATION.SHAPE"),A("converges","从 x0 出发收敛到根","error:E.NUMERICAL.NO_CONVERGENCE"),A("isolated_simple_root","解处雅可比非奇异（单根）","warning:W.NUMERICAL.ILL_CONDITIONED"),A("which_root","x0 附近的那个解是用户要的（方程组可能有多个解）","caller")],
@@ -839,6 +892,7 @@ COVERAGE.update({"control.design.pid":{"formula_matches":"test_points"},"control
  "signal.design.butter":{"stable":"full","edge_gain":"full","sos_consistent":"test_points"},
  "signal.filter.filter":{"difference_equation":"full"},
  "nonlinear.root.fzero":{"sign_change":"full","not_a_pole":"full"},
+ "optim.linear.linprog":{"kkt":"full"},"optim.local.fmincon":{"kkt":"full"},"optim.local.fminsearch":{"probe_local_minimum":"test_points"},
  "nonlinear.system.fsolve":{"newton_step_small":"full"},
  "linalg.decomp.eig":{"residual_small":"full","orthonormal":"full"},
  "linalg.decomp.svd":{"reconstructs":"full","orthonormal_u":"full","orthonormal_v":"full"}})
@@ -852,6 +906,9 @@ GUARDS["ode.ivp.solve"]={"tolerance_consistent":["/y"]}
 GUARDS["linalg.system.solve"]={"backward_stable":["/x"]}
 GUARDS["interp.grid.interp1"]={"pieces_interpolate":["/yq"],"spline_c2":["/yq"],"local_bounds":["/yq"]}
 GUARDS["signal.design.butter"]={"stable":["/z","/p","/k","/sos","/b","/a","/system"],"edge_gain":["/z","/p","/k","/sos","/b","/a","/system"],"sos_consistent":["/sos"]}
+GUARDS["optim.linear.linprog"]={"kkt":["/x","/fval","/lambda"]}
+GUARDS["optim.local.fmincon"]={"kkt":["/x","/solution","/fval","/lambda"]}
+GUARDS["optim.local.fminsearch"]={"probe_local_minimum":["/x","/solution","/fval"]}
 GUARDS["nonlinear.root.fzero"]={"sign_change":["/x","/fx"],"not_a_pole":["/x","/fx"]}
 GUARDS["nonlinear.system.fsolve"]={"newton_step_small":["/x","/solution"]}
 GUARDS["signal.filter.filter"]={"difference_equation":["/y","/zf"]}

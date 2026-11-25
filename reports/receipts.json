@@ -1,7 +1,7 @@
 {
   "generated_by": "rust/aeoi-control/tests/receipt.rs",
-  "golden_successes": 949,
-  "golden_errors": 167,
+  "golden_successes": 970,
+  "golden_errors": 185,
   "claims_by_operator": {
     "control.analysis.ctrb_obsv": {
       "verified": 26
@@ -92,6 +92,15 @@
     "ode.ivp.solve": {
       "unverified": 3,
       "verified": 14
+    },
+    "optim.linear.linprog": {
+      "verified": 9
+    },
+    "optim.local.fmincon": {
+      "verified": 7
+    },
+    "optim.local.fminsearch": {
+      "verified": 5
     },
     "signal.design.butter": {
       "verified": 20

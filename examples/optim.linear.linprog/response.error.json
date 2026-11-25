@@ -1,0 +1,38 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "optim.linear.linprog",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.DOMAIN.UNBOUNDED",
+    "category": "domain",
+    "retryable": true,
+    "message": "目标函数在可行域上无下界：可以无限减小。",
+    "agent_hint": "通常是漏了约束或边界（注意：本算子与 MATLAB 一样，变量缺省没有下界，scipy 缺省是 x ≥ 0）。",
+    "details": {
+      "path": "/c"
+    },
+    "remediation": [
+      {
+        "id": "missing_bounds",
+        "kind": "ask_user",
+        "description": "是否漏了变量的上下界（例如 x ≥ 0）或某个约束？",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.112075
+  }
+}

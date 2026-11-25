@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.13-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.14-draft
 
-> 状态：Draft v0.4.13 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.14 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.14 新增线性规划 `optim.linear.linprog`（10.28）、带约束的非线性最小化 `optim.local.fmincon`（10.29）、无导数最小化 `optim.local.fminsearch`（10.30），以及共享的 LP 与 QP 内核。每个优化结果都声明只是局部最优，并用 KKT 残差验证。
 >
 > v0.4.13 新增单变量求根 `nonlinear.root.fzero`（10.26）与非线性方程组 `nonlinear.system.fsolve`（10.27）。表达式语言增加了自动微分（3.15 EX-8）。不收敛时报错，并给出目前最好的点。
 >
@@ -517,7 +519,7 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 | 类别 | 何时使用 | `retryable` 默认 | 已登记的码（v0.3 新增的加粗） |
 |---|---|---|---|
 | `VALIDATION` | 输入不符合 schema 或语义约束 | true（改输入） | `SCHEMA`、`SHAPE`、`DTYPE`、`RANGE`、`NON_FINITE`、`NOT_SYMMETRIC`、`NOT_CONJUGATE`、`ZERO_DENOMINATOR`、`GRID`、`SPARSE_STRUCTURE`、`DIGEST_MISMATCH`、`REF_UNSUPPORTED`、`REF_FORBIDDEN`、**`OPTION_CONFLICT`**、**`RANK_DEFICIENT`**、**`UNGROUNDED_INPUT`**（v0.3.1，绑定层）、**`METHOD_UNAVAILABLE`**（v0.4）、`EXPRESSION`（v0.4.8，3.15） |
-| `DOMAIN` | 输入合法，但数学问题本身无解/不适用 | 视情况 | `IMPROPER_SYSTEM`、`NOT_STABILIZABLE`、`R_NOT_POSITIVE_DEFINITE`、`WEIGHT_NOT_PSD`、`HAMILTONIAN_IMAG_AXIS_EIG`、`ABOVE_NYQUIST`、**`MIMO_NOT_SUPPORTED`**、**`DEGENERATE_SYSTEM`**、**`NOT_CONTINUOUS`**、**`NOT_CONTROLLABLE`**、**`POLE_MULTIPLICITY`**、**`LYAP_SINGULAR`**、**`SYMPLECTIC_UNIT_CIRCLE_EIG`**、`UNDERDETERMINED`（v0.4.10）、`EXTRAPOLATION_REQUIRED`（v0.4.10）、`NO_SIGN_CHANGE`（v0.4.13） |
+| `DOMAIN` | 输入合法，但数学问题本身无解/不适用 | 视情况 | `IMPROPER_SYSTEM`、`NOT_STABILIZABLE`、`R_NOT_POSITIVE_DEFINITE`、`WEIGHT_NOT_PSD`、`HAMILTONIAN_IMAG_AXIS_EIG`、`ABOVE_NYQUIST`、**`MIMO_NOT_SUPPORTED`**、**`DEGENERATE_SYSTEM`**、**`NOT_CONTINUOUS`**、**`NOT_CONTROLLABLE`**、**`POLE_MULTIPLICITY`**、**`LYAP_SINGULAR`**、**`SYMPLECTIC_UNIT_CIRCLE_EIG`**、`UNDERDETERMINED`（v0.4.10）、`EXTRAPOLATION_REQUIRED`（v0.4.10）、`NO_SIGN_CHANGE`（v0.4.13）、`INFEASIBLE`（v0.4.14）、`UNBOUNDED`（v0.4.14） |
 | `NUMERICAL` | 问题理论上可解，但数值上失败或不可信 | true（正则化/放宽/换算法） | `SINGULAR`、`NO_CONVERGENCE`、`POLE_ON_GRID`、`NON_FINITE_EVALUATION`（v0.4.8）、`STEP_SIZE_TOO_SMALL`（v0.4.8）、`LOCAL_MINIMUM`（v0.4.13） |
 | `RESOURCE` | 超时、超规模、被取消 | true | `TIMEOUT`、`INPUT_TOO_LARGE`、`COMPUTE_LIMIT`、`OUTPUT_TOO_LARGE` |
 | `INTERNAL` | 实现缺陷或后端异常 | false（可原样重试一次） | `PANIC`（`BACKEND`、`INVARIANT_VIOLATED` 为保留码，v0.2 算子未使用） |
@@ -528,7 +530,7 @@ v0.3.1 新增码：`UNGROUNDED_INPUT` 由 LLM 绑定层（不是算子）返回�
 
 v0.4.10 新增码：`UNDERDETERMINED` 方程个数少于未知数，解不唯一（LS-1）；`EXTRAPOLATION_REQUIRED` 查询点超出数据范围，而调用方没有说明怎么处理（IP-3）；警告 `W.ACCURACY.EXTRAPOLATED` 结果中有外推得到的值。
 
-v0.4.13 新增码：`NO_SIGN_CHANGE` 求根区间两端同号，或从 x0 搜不到变号区间（FZ-1）；`LOCAL_MINIMUM` 迭代停在残差的局部极小，不是根（FS-4）；警告 `W.DOMAIN.BRACKET_SEARCHED` 求根区间是从 x0 搜出来的，根不一定是想要的那个。
+v0.4.13 新增码：`NO_SIGN_CHANGE` 求根区间两端同号，或从 x0 搜不到变号区间（FZ-1）；`LOCAL_MINIMUM` 迭代停在残差的局部极小，不是根（FS-4）；警告 `W.DOMAIN.BRACKET_SEARCHED` 求根区间是从 x0 搜出来的，根不一定是想要的那个。v0.4.14 新增码：`INFEASIBLE` 约束没有可行解（线性规划或边界）；`UNBOUNDED` 目标在可行域上无下界。
 
 v0.4.8 新增码：`E.VALIDATION.EXPRESSION`（表达式的静态错误，3.15 EX-6）、`E.NUMERICAL.NON_FINITE_EVALUATION`（模型在某点算出 NaN/Inf）、`E.NUMERICAL.STEP_SIZE_TOO_SMALL`（自适应步长缩到下限）与 `W.NUMERICAL.STIFF_PROBLEM`，含义见 10.18 OD-6、OD-7。
 
@@ -13393,6 +13395,1101 @@ case_families:
 
 共 18 个 golden 用例，9 个成功、9 个错误。最坏的用例用掉了容差（相对 1e-14）的 3%。从经典起点 (−1.2, 1) 解 Rosenbrock 函数的梯度方程时，scipy 的 hybr 和 lm 也都失败；本算子如实报 `E.NUMERICAL.NO_CONVERGENCE`，并给出目前最好的点。结果见 `aeoi-numeric/tests/parity_roots.rs` 和 `reports/parity-fsolve.json`。
 
+## 10.28 `optim.linear.linprog`：线性规划（v0.4.14）
+
+对应 MATLAB 的 `linprog`。参考值来自 scipy（HiGHS），真值是手算的最优顶点，每个都在生成脚本里与 HiGHS 交叉核对过；都不是 MATLAB 的结果。这个算子逼出的规范问题是**缺省值的分歧**：MATLAB 的变量缺省没有界，scipy 的缺省是 x ≥ 0。同一个请求在两边可能一个有解、一个“无界”。
+
+**规范性条款**
+
+- LP-1 **问题**：min cᵀx，s.t. A·x ≤ b、Aeq·x = beq、lb ≤ x ≤ ub。边界里的无穷写作 "Inf" / "−Inf"（R-2）。
+  - **缺省没有界，同 MATLAB。** 结果的 `bounds_used` 回显实际用到的 lb、ub。
+  - 目标无下界时报 `E.DOMAIN.UNBOUNDED`（新码），提示可能漏了 x ≥ 0 之类的边界，并附 `ask_user`。
+- LP-2 **算法**（作者决定）：两阶段稠密单纯形，用 Bland 规则（不会循环，结果确定）。
+  - 第一阶段的剩余量 > 1e-9·max(1, ‖rhs‖∞) 时报 `E.DOMAIN.INFEASIBLE`（新码）；lb > ub 时直接报同一个码。
+  - 最优基确定后，用 LU 内核重算基解与对偶变量（11.5 RI-1）。
+  - 内核在 `aeoi-core::kernels::lp`，二次规划内核用它求可行起点。
+- LP-3 **乘子**（MATLAB 约定）：c + Aᵀλ_ineq + Aeqᵀλ_eq − λ_lower + λ_upper = 0，除 λ_eq 外都 ≥ 0。scipy 的 `marginals` 符号与此相反，所以调用方 MUST 按字段名取值，不能照搬 scipy 的符号。
+- LP-4 **后置条件 `kkt`**：原始可行性、对偶可行性、互补松弛、驻定条件，相对数据尺度都 ≤ 1e-9。另有 `all_finite`。最优解不唯一时，给出其中一个顶点。
+
+**Manifest** — `examples/optim.linear.linprog/manifest.json`
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "id": "optim.linear.linprog",
+  "version": "0.4.0",
+  "title": "Linear programming",
+  "description": "线性规划（= MATLAB linprog）：min cᵀx，s.t. A·x ≤ b、Aeq·x = beq、lb ≤ x ≤ ub。两阶段单纯形（Bland 规则），给出最优顶点与全部乘子（ineqlin、eqlin、lower、upper，MATLAB 的符号约定），并用 KKT 残差验证。注意：与 MATLAB 一样，变量缺省没有界（scipy 缺省 x ≥ 0）；无解报 E.DOMAIN.INFEASIBLE，无界报 E.DOMAIN.UNBOUNDED。",
+  "category": "design",
+  "tags": ["optimization", "linear-programming", "linprog", "simplex"],
+  "applicability": {
+    "preconditions": ["系数有限", "变量个数 ≤ max_variables（稠密单纯形）"],
+    "not_for": ["整数规划（intlinprog）", "大规模稀疏问题（内点法，以后的方法）"],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "标准形转换（有限下界平移、只有上界的变量反射、自由变量拆成两个非负变量、上下界都有限时加边界行、不等式加松弛），右端非负化；两阶段稠密单纯形表，Bland 规则选入基与出基变量（不循环）；第一阶段剩余 > 1e-9·max(1, ‖rhs‖∞) 即不可行；入基列无正元即无界。最优基上用 LU 内核重算基解与对偶变量；乘子按 c + Aᵀλ_ineq + Aeqᵀλ_eq − λ_lower + λ_upper = 0 映射。后置条件 kkt：原始可行、对偶可行、互补、驻定残差都 ≤ 1e-9（相对数据尺度）",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "V. Chvátal, Linear Programming, Freeman 1983, Ch. 2–3、8（两阶段单纯形与 Bland 规则）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "lp::solve",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {},
+  "encodings": {
+    "input": ["json", "b64", "ref"],
+    "output": ["json", "b64"]
+  },
+  "limits": {
+    "max_variables": 500,
+    "max_iterations": 100000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/optim.linear.linprog/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.DOMAIN.INFEASIBLE",
+    "E.DOMAIN.UNBOUNDED",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [],
+  "mcp": {
+    "tool_name": "optim_linear_linprog",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:linprog:two-phase-simplex-bland",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有数据有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "feasible",
+        "statement": "约束有可行解",
+        "enforced_by": "error:E.DOMAIN.INFEASIBLE"
+      },
+      {
+        "id": "bounded",
+        "statement": "目标在可行域上有下界",
+        "enforced_by": "error:E.DOMAIN.UNBOUNDED"
+      },
+      {
+        "id": "default_bounds",
+        "statement": "变量缺省没有界（MATLAB 约定，与 scipy 不同）",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "unique",
+        "statement": "最优解可能不唯一；给出的是一个最优顶点",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": ["kkt", "all_finite"],
+    "coverage": {
+      "kkt": "full"
+    },
+    "guards": {
+      "kkt": ["/x", "/fval", "/lambda"]
+    }
+  }
+}
+```
+
+**请求与响应**（max x + y，s.t. x + 2y ≤ 4、3x + y ≤ 6、x, y ≥ 0；最优顶点 (1.6, 1.2)，λ_ineq = (0.4, 0.2)）
+
+```json
+{
+  "c": [
+    -1.0,
+    -1.0
+  ],
+  "A": [
+    [
+      1.0,
+      2.0
+    ],
+    [
+      3.0,
+      1.0
+    ]
+  ],
+  "b": [
+    4.0,
+    6.0
+  ],
+  "lb": [
+    0.0,
+    0.0
+  ]
+}
+```
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "optim.linear.linprog",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "x": [1.6, 1.2],
+    "fval": -2.8,
+    "lambda": {
+      "ineqlin": [0.4, 0.2],
+      "eqlin": [],
+      "lower": [0.0, 0.0],
+      "upper": [0.0, 0.0]
+    },
+    "iterations": 2,
+    "bounds_used": {
+      "lb": [0.0, 0.0],
+      "ub": ["Inf", "Inf"]
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": true,
+      "converged": true,
+      "iterations": 2
+    },
+    "residual": {
+      "primal_infeasibility": 1.4802973661668753e-16,
+      "dual_infeasibility": 0.0,
+      "complementarity": 2.960594732333751e-17,
+      "stationarity": 0.0,
+      "threshold": 1e-09,
+      "definition": "相对数据尺度的 KKT 残差：c + Aᵀλ_ineq + Aeqᵀλ_eq − λ_lower + λ_upper = 0，λ ≥ 0，λ·松弛 = 0"
+    },
+    "condition": {
+      "applicable": false
+    },
+    "error_estimate": {
+      "applicable": false,
+      "note": "线性规划的最优解在顶点上；最优解不唯一时（目标与某个约束平行）给出的是其中一个顶点"
+    },
+    "checks": {
+      "kkt": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "method": "两阶段单纯形（Bland 规则）；基解与对偶变量用 LU 内核重算"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:linprog:two-phase-simplex-bland",
+      "routine": "lp::solve",
+      "provenance": "aeoi://operators/optim.linear.linprog/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有数据有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "feasible",
+        "statement": "约束有可行解",
+        "enforced_by": "error:E.DOMAIN.INFEASIBLE"
+      },
+      {
+        "id": "bounded",
+        "statement": "目标在可行域上有下界",
+        "enforced_by": "error:E.DOMAIN.UNBOUNDED"
+      },
+      {
+        "id": "default_bounds",
+        "statement": "变量缺省没有界（MATLAB 约定，与 scipy 不同）",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "unique",
+        "statement": "最优解可能不唯一；给出的是一个最优顶点",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": null
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "kkt": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": {
+        "converged": true,
+        "iterations": 2
+      },
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "kkt": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:85b01f0ecbe8e98a5a8963ce3028174077ae66d43418e10d2fd2af6449437589",
+      "result": "sha256:de30b7aedf9403391569f3b9e9c32ab8df7625635c25a03a1fa63ba93809afa4",
+      "output_hash": "sha256:58ab957de5bff15eee91417dad53823e8f0d6a8a606fa1f1921d12befa65f1cd",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of optim.linear.linprog@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:5787ff55691b6eb7f456414bfb6d731b4090c1c62b4905721ceb0abc958d0387",
+    "output_hash": "sha256:58ab957de5bff15eee91417dad53823e8f0d6a8a606fa1f1921d12befa65f1cd",
+    "platform": "x86_64-linux",
+    "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.161078
+  }
+}
+```
+
+**错误请求与响应**（min x，s.t. x ≤ 4，没给边界。按 MATLAB 约定 x 没有下界，目标无界；scipy 会给出 x = 0：LP-1）
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "optim.linear.linprog",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.DOMAIN.UNBOUNDED",
+    "category": "domain",
+    "retryable": true,
+    "message": "目标函数在可行域上无下界：可以无限减小。",
+    "agent_hint": "通常是漏了约束或边界（注意：本算子与 MATLAB 一样，变量缺省没有下界，scipy 缺省是 x ≥ 0）。",
+    "details": {
+      "path": "/c"
+    },
+    "remediation": [
+      {
+        "id": "missing_bounds",
+        "kind": "ask_user",
+        "description": "是否漏了变量的上下界（例如 x ≥ 0）或某个约束？",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.112075
+  }
+}
+```
+
+**Parity 测试规格** — `examples/optim.linear.linprog/parity.yaml`
+
+```yaml
+# Parity test spec — optim.linear.linprog 0.4.0 (AEOI v0.4.14-draft)
+operator: optim.linear.linprog
+references:
+  - {engine: scipy, version: "scipy.optimize (linprog, HiGHS)", role: dev_reference, status: active,
+     generator: gen_golden_optim.py, golden_store: "golden/python-control/optim.linear.linprog/0.4.0/*.json", note: "NOT MATLAB output"}
+  - {engine: analytic, role: high_precision_reference, status: active, note: "hand-derived optima, each cross-checked in the generator against an independent tight solve (AGENTS.md rule 6)"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_optim"
+tolerance_class: T1
+compare:
+  fval: "|Δ| ≤ 1e-9·max(1, |f*|) against HiGHS"
+  x: "≤ 1e-9 relative to the analytic vertex (or HiGHS) when the optimum is unique"
+  kkt: "post-condition true"
+
+
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py
+  recomputed: "the runner recomputes primal feasibility and the stationarity c + Aᵀλ_ineq + Aeqᵀλ_eq − λ_lower + λ_upper = 0 (with λ ≥ 0) from the request and the returned x, λ"
+```
+
+## 10.29 `optim.local.fmincon`：带约束的非线性最小化（v0.4.14）
+
+对应 MATLAB 的 `fmincon`。参考值来自 scipy SLSQP（ftol 1e-14）和解析最优解；都不是 MATLAB 的结果。这个算子逼出的规范问题是“最优”的含义：SQP 只能找到局部最优，而 MATLAB 的输出没有任何地方提醒这一点。
+
+**规范性条款**
+
+- FC-1 **问题**（作者决定）：目标、非线性不等式 g(x) ≤ 0 与等式 h(x) = 0 都用 3.15 的表达式写；另可给线性约束 A、b、Aeq、beq 与边界 lb、ub。`x0` 来源 `user`。
+- FC-2 **算法**：SQP。
+  - 梯度由自动微分精确给出（EX-8）。
+  - 子问题用 `aeoi-core::kernels::qp`（有效集法，可行起点由 LP 内核给出）。
+  - 线性化约束不相容时，把违反的非线性约束放宽 θ = 1/2, 1/4, …。
+  - ℓ1 价值函数加 Armijo 回溯；阻尼 BFGS（Powell）。
+  - 起点先投影到边界内。
+- FC-3 **局部最优**（作者决定）：receipt 的前提里 MUST 写明“结果只是局部最优（满足一阶条件，二阶条件未检查）”，`enforced_by: caller`；`derived.optimum` = `local`。
+- FC-4 **不收敛**：报 `E.NUMERICAL.NO_CONVERGENCE`，在 `details.best` 里给出最好的点、一阶最优性和约束违反量，与 FS-4 相同。约束本身矛盾（例如 x² + y² + 1 ≤ 0）也走这条路，提示“问题可能不可行”。非线性约束是否可行无法事先判定，所以不用 `E.DOMAIN.INFEASIBLE`；边界不相容时才用它。
+- FC-5 **后置条件 `kkt`**：相对驻定残差 ‖∇f + Σλ∇g + Σν∇h‖∞ / max(1, ‖∇f‖∞) ≤ optimality_tolerance（缺省 1e-8）；互补残差同样不超过这个容差；约束违反 ≤ constraint_tolerance（缺省 1e-8）。MATLAB 的缺省容差都是 1e-6，这里有精确梯度，所以取得更严。乘子按 MATLAB 的分组给出：`ineqnonlin`、`eqnonlin`、`ineqlin`、`eqlin`、`lower`、`upper`。
+
+**Manifest** — `examples/optim.local.fmincon/manifest.json`
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "id": "optim.local.fmincon",
+  "version": "0.4.0",
+  "title": "Constrained nonlinear minimization",
+  "description": "带约束的非线性最小化（= MATLAB fmincon）：目标与非线性约束用 3.15 的表达式语言写（g(x) ≤ 0、h(x) = 0），另可给线性约束与上下界。SQP：梯度由自动微分精确给出，子问题用共享的二次规划内核，阻尼 BFGS 近似 Hessian，ℓ1 价值函数线搜索。只保证局部最优；结果用 KKT 残差验证并给出全部乘子；不收敛时报错并附最好的点。",
+  "category": "design",
+  "tags": ["optimization", "nonlinear", "constrained", "fmincon", "sqp"],
+  "applicability": {
+    "preconditions": ["目标与约束在可行域附近光滑", "x0 由调用方给出"],
+    "not_for": ["全局最优（只给出 x0 附近的局部最优）", "整数变量", "非光滑问题"],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "SQP：子问题 min ½pᵀBp + ∇fᵀp，∇g·p ≤ −g、∇h·p = −h（线性约束与边界同样处理），用有效集 QP 内核（可行起点由 LP 内核第一阶段给出）；线性化不相容时把违反的非线性约束右端乘 θ = 1/2, 1/4, … 放宽；ℓ1 价值函数 f + μ(Σmax(0, g) + Σ|h|)，μ ≥ 1.1·max|λ|，Armijo 回溯；阻尼 BFGS（Powell）。收敛：相对 KKT 残差 ≤ optimality_tolerance（缺省 1e-8）且约束违反 ≤ constraint_tolerance（缺省 1e-8）。起点先投影到上下界内",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "J. Nocedal, S. J. Wright, Numerical Optimization, 2nd ed., Springer 2006, §16.5（有效集 QP）、§18（SQP）"
+      },
+      {
+        "type": "paper",
+        "cite": "M. J. D. Powell, A fast algorithm for nonlinearly constrained optimization calculations, Numerical Analysis Dundee 1977, LNM 630",
+        "doi": "10.1007/BFb0067703"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "optim::fmincon",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T2",
+  "sparse_support": {},
+  "encodings": {
+    "input": ["json", "b64", "ref"],
+    "output": ["json", "b64"]
+  },
+  "limits": {
+    "max_unknowns": 100,
+    "max_iterations": 500,
+    "max_expression_length": 4096
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/optim.local.fmincon/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.EXPRESSION",
+    "E.DOMAIN.INFEASIBLE",
+    "E.NUMERICAL.NON_FINITE_EVALUATION",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [],
+  "mcp": {
+    "tool_name": "optim_local_fmincon",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:fmincon:sqp-bfgs-ad",
+    "assumptions": [
+      {
+        "id": "expression",
+        "statement": "目标与约束是合法的 3.15 表达式",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "converges",
+        "statement": "SQP 从 x0 收敛到 KKT 点",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "local_only",
+        "statement": "结果只是局部最优（或满足一阶条件的点；二阶条件未检查），不一定是全局最优",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "smooth",
+        "statement": "目标与约束在解附近光滑",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": ["kkt", "all_finite"],
+    "coverage": {
+      "kkt": "full"
+    },
+    "guards": {
+      "kkt": ["/x", "/solution", "/fval", "/lambda"]
+    }
+  }
+}
+```
+
+**请求与响应**（Hock–Schittkowski 71。f* = 17.0140172891563，文献值 17.014017）
+
+```json
+{
+  "unknowns": [
+    "x1",
+    "x2",
+    "x3",
+    "x4"
+  ],
+  "objective": "x1*x4*(x1 + x2 + x3) + x3",
+  "nonlinear_ineq": [
+    "25 - x1*x2*x3*x4"
+  ],
+  "nonlinear_eq": [
+    "x1^2 + x2^2 + x3^2 + x4^2 - 40"
+  ],
+  "lb": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "ub": [
+    5.0,
+    5.0,
+    5.0,
+    5.0
+  ],
+  "x0": [
+    1.0,
+    5.0,
+    5.0,
+    1.0
+  ]
+}
+```
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "optim.local.fmincon",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "x": [0.9999999999999949, 4.742999637264415, 3.821149984184875, 1.3794082931726799],
+    "solution": {
+      "x1": 0.9999999999999949,
+      "x2": 4.742999637264415,
+      "x3": 3.821149984184875,
+      "x4": 1.3794082931726799
+    },
+    "fval": 17.0140172891563,
+    "lambda": {
+      "ineqnonlin": [0.5522936601203139],
+      "eqnonlin": [0.1614685667711215],
+      "ineqlin": [],
+      "eqlin": [],
+      "lower": [1.0878712286641286, 0.0, 0.0, 0.0],
+      "upper": [0.0, 0.0, 0.0, 0.0]
+    },
+    "iterations": 6,
+    "evaluations": 7,
+    "first_order_optimality": 9.853347743750468e-13,
+    "constraint_violation": 7.105427357601002e-15
+  },
+  "trust": {
+    "convergence": {
+      "applicable": true,
+      "converged": true,
+      "iterations": 6,
+      "criterion": "相对 KKT 残差 ≤ 1e-8，约束违反 ≤ 1e-8"
+    },
+    "residual": {
+      "stationarity": 9.853347743750468e-13,
+      "complementarity": 3.2654172501844826e-16,
+      "constraint_violation": 7.105427357601002e-15,
+      "definition": "stationarity = ‖∇f + Σλ∇g + Σν∇h‖∞ / max(1, ‖∇f‖∞)；complementarity = max|λ_i·g_i| / max(1, |f|)"
+    },
+    "condition": {
+      "applicable": false
+    },
+    "error_estimate": {
+      "applicable": false,
+      "note": "KKT 残差小只说明是一个局部最优（或鞍点，二阶条件未检查）"
+    },
+    "checks": {
+      "kkt": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "optimum": "local",
+      "method": "SQP：阻尼 BFGS + 有效集 QP（共享内核）+ ℓ1 价值函数线搜索；梯度由自动微分（3.15 EX-8）"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:fmincon:sqp-bfgs-ad",
+      "routine": "optim::fmincon",
+      "provenance": "aeoi://operators/optim.local.fmincon/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "expression",
+        "statement": "目标与约束是合法的 3.15 表达式",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "converges",
+        "statement": "SQP 从 x0 收敛到 KKT 点",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "local_only",
+        "statement": "结果只是局部最优（或满足一阶条件的点；二阶条件未检查），不一定是全局最优",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "smooth",
+        "statement": "目标与约束在解附近光滑",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": null
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "kkt": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": {
+        "converged": true,
+        "iterations": 6
+      },
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null,
+      "coverage": {
+        "kkt": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:af274215c991a9df64fb2b4ab8a8a2d51d7e2f227250dd66f5ea2bc0f013cc93",
+      "result": "sha256:2d8281459884a9847a9d79519a9b3e86e887ede88077fa437b4a5486da9bbbbf",
+      "output_hash": "sha256:57017a387a90e1ccca9d0356fc1d8cb44963b3e54a31873f67b02090a9769f54",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of optim.local.fmincon@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:2a68aed8f8218da3045d762ced4d514a62af0e1bb0471506e2c31ff183626802",
+    "output_hash": "sha256:57017a387a90e1ccca9d0356fc1d8cb44963b3e54a31873f67b02090a9769f54",
+    "platform": "x86_64-linux",
+    "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.27784400000000004
+  }
+}
+```
+
+**错误请求与响应**（x² + y² + 1 ≤ 0 不可行：FC-4）
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "optim.local.fmincon",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.NUMERICAL.NO_CONVERGENCE",
+    "category": "numerical",
+    "retryable": true,
+    "message": "第 1 步的线性化约束不相容（放宽后仍无解），当前约束违反量 1.000e0：问题可能不可行。",
+    "agent_hint": "检查约束是否相互矛盾；换一个更接近可行域的初值。",
+    "details": {
+      "path": "/x0",
+      "best": {
+        "x": [0.0, 0.0],
+        "fval": 0.0,
+        "constraint_violation": 1.0
+      }
+    },
+    "remediation": [
+      {
+        "id": "feasible_x0",
+        "kind": "ask_user",
+        "description": "能否给一个满足约束的初值，或说明哪些约束可以放宽？",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.11565500000000001
+  }
+}
+```
+
+**Parity 测试规格** — `examples/optim.local.fmincon/parity.yaml`
+
+```yaml
+# Parity test spec — optim.local.fmincon 0.4.0 (AEOI v0.4.14-draft)
+operator: optim.local.fmincon
+references:
+  - {engine: scipy, version: "scipy.optimize (minimize SLSQP, ftol 1e-14)", role: dev_reference, status: active,
+     generator: gen_golden_optim.py, golden_store: "golden/python-control/optim.local.fmincon/0.4.0/*.json", note: "NOT MATLAB output"}
+  - {engine: analytic, role: high_precision_reference, status: active, note: "hand-derived optima, each cross-checked in the generator against an independent tight solve (AGENTS.md rule 6)"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_optim"
+tolerance_class: T2
+compare:
+  x: "≤ 1e-6 relative to the analytic optimum, else SLSQP (HS071: f = 17.0140172891563, known 17.014017)"
+  kkt: "post-condition true"
+
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py
+  recomputed: "the runner evaluates the constraints at the returned x with its own expression evaluator and the stationarity of the Lagrangian with central differences (h = 1e-6), tolerance 1e-5"
+```
+
+## 10.30 `optim.local.fminsearch`：无导数最小化（v0.4.14）
+
+对应 MATLAB 的 `fminsearch`。参考值来自 scipy Nelder–Mead 与解析最优解；都不是 MATLAB 的结果。
+
+**规范性条款**
+
+- NM-1 **算法**：Nelder–Mead，参数同 Lagarias 等人与 MATLAB（反射 1、扩展 2、收缩 1/2、压缩 1/2）。初始单纯形在 x0 的每个坐标上加 5%，为 0 的坐标取 0.00025。顶点按 f 排序，相等时按原下标，所以结果确定。
+- NM-2 **容差**：缺省同 MATLAB，tol_x = tol_fun = 1e-4，迭代上限 200·n，三者都在结果里回显。结果只在这个分辨率下是局部极小。精度要求高、目标又光滑的问题 SHOULD 改用 `fmincon`。
+- NM-3 **不收敛**：报 `E.NUMERICAL.NO_CONVERGENCE`，附最好的点。
+- NM-4 **后置条件 `probe_local_minimum`**：在每个坐标方向上探测，f(x) ≤ f(x ± h·e_j) + tol_fun，h = tol_x·max(1, |x_j|)。这个检查不用导数，所以对不光滑的目标也成立。精度等级为 C。
+
+**Manifest** — `examples/optim.local.fminsearch/manifest.json`
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "id": "optim.local.fminsearch",
+  "version": "0.4.0",
+  "title": "Derivative-free minimization (Nelder–Mead)",
+  "description": "无约束最小化，不用导数（= MATLAB fminsearch，Nelder–Mead 单纯形，Lagarias 等人的参数）。目标用 3.15 的表达式语言写，可以不光滑。缺省容差同 MATLAB（tol_x = tol_fun = 1e-4），结果只在这个分辨率下是局部极小；收敛后在每个坐标方向 ±h 处探测，检查确实没有更小的值。不收敛时报错并附最好的点。",
+  "category": "analysis",
+  "tags": ["optimization", "nelder-mead", "fminsearch", "derivative-free"],
+  "applicability": {
+    "preconditions": ["x0 由调用方给出"],
+    "not_for": ["有约束的问题（fmincon）", "高维问题（> 10 个变量时很慢）", "需要高精度的光滑问题（fmincon 更准）"],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "Nelder–Mead（Lagarias, Reeds, Wright, Wright 1998；同 MATLAB）：反射 1、扩展 2、收缩 1/2、压缩 1/2；初始单纯形为 x0 各坐标加 5%（为 0 的坐标取 0.00025）；顶点按 f 排序，相等按原下标。停止：单纯形直径 ≤ tol_x 且函数值极差 ≤ tol_fun。后置条件 probe_local_minimum：f(x) ≤ f(x ± h·e_j) + tol_fun，h = tol_x·max(1, |x_j|)",
+    "references": [
+      {
+        "type": "paper",
+        "cite": "J. C. Lagarias, J. A. Reeds, M. H. Wright, P. E. Wright, Convergence properties of the Nelder–Mead simplex method in low dimensions, SIAM J. Optim. 9(1), 1998",
+        "doi": "10.1137/S1052623496303470"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "optim::fminsearch",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T3",
+  "sparse_support": {},
+  "encodings": {
+    "input": ["json", "b64", "ref"],
+    "output": ["json", "b64"]
+  },
+  "limits": {
+    "max_unknowns": 50,
+    "max_expression_length": 4096
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/optim.local.fminsearch/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.EXPRESSION",
+    "E.NUMERICAL.NON_FINITE_EVALUATION",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [],
+  "mcp": {
+    "tool_name": "optim_local_fminsearch",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:fminsearch:nelder-mead-lagarias",
+    "assumptions": [
+      {
+        "id": "expression",
+        "statement": "目标是合法的 3.15 表达式",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "converges",
+        "statement": "单纯形在迭代上限内收缩到容差",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "local_only",
+        "statement": "结果只是 tol_x 分辨率下的局部极小；Nelder–Mead 没有一般的收敛保证",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": ["probe_local_minimum", "all_finite"],
+    "coverage": {
+      "probe_local_minimum": "test_points"
+    },
+    "guards": {
+      "probe_local_minimum": ["/x", "/solution", "/fval"]
+    }
+  }
+}
+```
+
+**请求与响应**（不光滑的 |x − 1| + 2|y + 2|，解析最优解为 (1, −2)）
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "optim.local.fminsearch",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "x": [0.9999890612481707, -2.0000035472681557],
+    "solution": {
+      "x": 0.9999890612481707,
+      "y": -2.0000035472681557
+    },
+    "fval": 1.803328814065086e-05,
+    "iterations": 83,
+    "evaluations": 160,
+    "tolerances": {
+      "tol_x": 0.0001,
+      "tol_fun": 0.0001
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": true,
+      "converged": true,
+      "iterations": 83,
+      "criterion": "单纯形直径 ≤ tol_x 且函数值极差 ≤ tol_fun（同 MATLAB）"
+    },
+    "residual": {
+      "probe_decrease": 0.0,
+      "definition": "max_j,± [f(x) − f(x ± h·e_j)]，h = tol_x·max(1, |x_j|)"
+    },
+    "condition": {
+      "applicable": false
+    },
+    "error_estimate": {
+      "x_abs": 0.0001,
+      "basis": "单纯形直径（Nelder–Mead 没有收敛性保证；结果只是 tol_x 分辨率下的局部极小）"
+    },
+    "checks": {
+      "probe_local_minimum": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "C",
+    "credentials": null,
+    "derived": {
+      "optimum": "local"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:fminsearch:nelder-mead-lagarias",
+      "routine": "optim::fminsearch",
+      "provenance": "aeoi://operators/optim.local.fminsearch/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "expression",
+        "statement": "目标是合法的 3.15 表达式",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "converges",
+        "statement": "单纯形在迭代上限内收缩到容差",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "local_only",
+        "statement": "结果只是 tol_x 分辨率下的局部极小；Nelder–Mead 没有一般的收敛保证",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "x_abs": 0.0001
+      },
+      "basis": "单纯形直径（Nelder–Mead 没有收敛性保证；结果只是 tol_x 分辨率下的局部极小）"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "probe_local_minimum": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": {
+        "converged": true,
+        "iterations": 83
+      },
+      "accuracy_grade": "C",
+      "tolerance_class": "T3",
+      "credentials": null,
+      "coverage": {
+        "probe_local_minimum": "test_points",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:e34d464007aa0c9cb8fa0cfff3590f31f3f9f27b9be86205f68132404dd49bad",
+      "result": "sha256:4f683acaddd0b64bb57c55b9591053c6302728a189ac5ab939474a4ea268fef6",
+      "output_hash": "sha256:5be1fb28fec96438ca2431894123db3842cf611381bee3dcff652b79db5d713b",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of optim.local.fminsearch@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T3",
+    "input_hash": "sha256:fc2be65f6fb45007f1a1a6bb105ba66b80ddf4c5be3c9cd471494062aa813c3c",
+    "output_hash": "sha256:5be1fb28fec96438ca2431894123db3842cf611381bee3dcff652b79db5d713b",
+    "platform": "x86_64-linux",
+    "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.164924
+  }
+}
+```
+
+**Parity 测试规格** — `examples/optim.local.fminsearch/parity.yaml`
+
+```yaml
+# Parity test spec — optim.local.fminsearch 0.4.0 (AEOI v0.4.14-draft)
+operator: optim.local.fminsearch
+references:
+  - {engine: scipy, version: "scipy.optimize (minimize Nelder-Mead, MATLAB tolerances)", role: dev_reference, status: active,
+     generator: gen_golden_optim.py, golden_store: "golden/python-control/optim.local.fminsearch/0.4.0/*.json", note: "NOT MATLAB output"}
+  - {engine: analytic, role: high_precision_reference, status: active, note: "hand-derived optima, each cross-checked in the generator against an independent tight solve (AGENTS.md rule 6)"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_optim"
+tolerance_class: T3
+compare:
+  x: "≤ 10·tol_x relative to the analytic optimum (Nelder–Mead only resolves the optimum to tol_x)"
+  probe_local_minimum: "post-condition true"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py
+  recomputed: "the runner evaluates f at x ± h·e_j (h = tol_x·max(1, |x_j|)) and requires f(x) ≤ f(x ± h·e_j) + tol_fun"
+```
+
+三个算子共 39 个 golden 用例：`linprog` 16 个（9 个成功 / 7 个错误），`fmincon` 13 个（7 / 6），`fminsearch` 10 个（5 / 5）。最坏的用例分别用掉了容差的 7.8e-7、7.5e-3 和 4.2e-2。结果见 `aeoi-numeric/tests/parity_optim.rs` 和 `reports/parity-optim.json`。
+
 ## 11. Rust 参考实现（v0.3）
 
 ### 11.1 结构
@@ -13589,11 +14686,11 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 
 1. 在有授权的机器上运行 `matlab/gen_golden_bode.m`（并补 step/lqr 脚本），先核对 `memory_order_nonsymmetric` 用例与 python-control 一致，再跑通第一份 A 级凭证
 2. ~~修复 `lqr` 病态 R 的精度差距~~（v0.3.2 用补偿 Newton–Kleinman 完成）；剩余：平衡 + 有序 Schur（或广义特征值）作为符号函数不收敛时的后备路径，以及 `dlqr` 的同类精化
-3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；v0.4.10 加了 `linalg.system.solve`（10.19）与 `interp.grid.interp1`（10.20）；v0.4.11 加了 `fit.poly.polyfit`（10.21）、`linalg.decomp.eig`（10.22）、`linalg.decomp.svd`（10.23）；v0.4.12 加了 `signal.design.butter`（10.24）、`signal.filter.filter`（10.25）；v0.4.13 加了 `nonlinear.root.fzero`（10.26）、`nonlinear.system.fsolve`（10.27）；之后做 优化、`integral`，以及隐式/刚性方法（`ode15s`）与事件检测；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
+3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；v0.4.10 加了 `linalg.system.solve`（10.19）与 `interp.grid.interp1`（10.20）；v0.4.11 加了 `fit.poly.polyfit`（10.21）、`linalg.decomp.eig`（10.22）、`linalg.decomp.svd`（10.23）；v0.4.12 加了 `signal.design.butter`（10.24）、`signal.filter.filter`（10.25）；v0.4.13 加了 `nonlinear.root.fzero`（10.26）、`nonlinear.system.fsolve`（10.27）；v0.4.14 加了 `optim.linear.linprog`、`optim.local.fmincon`、`optim.local.fminsearch`（10.28–10.30）；之后做 优化、`integral`，以及隐式/刚性方法（`ode15s`）与事件检测；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
 5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；v0.3.4 另有 `aeoi-web design`。v0.3.5 实现了试点里排在前面的算子（串联、并联、反馈、PID 构造、stepinfo、Padé），v0.3.6 加了具名角色、`loopsens`（含带宽读数）和回合预算。下一步是按 A-4 写 `pidtune`（必须先声明对象类、指标和唯一性），以及控制器离散化和 MIMO 裕度；扩充问答题、加入"Agent + 裸 scipy"对照组。非线性吸引域仍不做。
 6. 分发：为 `aeoi-mcp` 发布各平台预编译二进制（GitHub Releases）、Claude Desktop 一键安装扩展、登记到 MCP 公开目录（v0.4.9：数学库、矩阵乘法内核与 FFT 旋转因子已统一，5 个平台的 golden 哈希完全相同；`v0.4.9` 是第一个正式发布）；之后做纯浏览器的结果查看器（`aeoi-wasm`：结果、信任信息、收据与本地重放）。不做独立的图形界面客户端或自带 LLM 的聊天客户端：AEOI 的客户端是 MCP 宿主
-7. 一致性套件（9.4）：v0.4.13 有 19 个算子的数值规则（19 / 32 = 59%；作者定的下限是 30%，以后提高），参考实现 1012 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 38 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
+7. 一致性套件（9.4）：v0.4.14 有 22 个算子的数值规则（22 / 35 = 63%；作者定的下限是 30%，以后提高），参考实现 1066 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 42 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
 8. 根据以上反馈修订，冻结 v1.0
 
 ### 12.3 目标算子清单（v0.4.11，作者决定 2026-11-25）
@@ -13607,9 +14704,9 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 | 信号 | fft/ifft、filter、filtfilt、butter、cheby1、freqz、conv、xcorr、pwelch、spectrogram、resample、decimate、hilbert、findpeaks | 14 | 4（v0.4.12 加了 butter、filter） |
 | 多项式、插值、拟合 | polyfit、polyval、roots、conv/deconv、interp1（含 spline、pchip）、interp2、griddata、lsqcurvefit | 11 | 4 |
 | 微积分与 ODE | ode45、ode23、ode15s、integral、integral2、trapz、cumtrapz、bvp4c、pdepe、gradient | 10 | 1 |
-| 非线性方程与优化 | fzero、fsolve、fminsearch、fminbnd、fminunc、fmincon、linprog、quadprog、lsqnonlin | 9 | 2（v0.4.13） |
+| 非线性方程与优化 | fzero、fsolve、fminsearch、fminbnd、fminunc、fmincon、linprog、quadprog、lsqnonlin | 9 | 5（v0.4.13、v0.4.14；quadprog 只差一层算子外壳，QP 内核已有） |
 | 统计 | regress/fitlm、corrcoef、histcounts、mean/std 的稳健版本等 | 8 | 0 |
-| 合计 | | 约 100 | 约 39（39%） |
+| 合计 | | 约 100 | 约 42（42%） |
 
 顺序：
 1. 剩下的四批：`butter` + `filter`、`fzero`/`fsolve`、`fminsearch`/`fmincon`/`linprog`、`integral`/`trapz`。
@@ -13618,6 +14715,34 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 4. 其余。
 
 ## 13. Changelog
+
+### v0.4.14-draft（2026-11-25）
+
+起因：四批中的第三批，优化。作者定了三件事：
+- fmincon 一次支持边界、线性与非线性约束；
+- 每个结果都声明只是局部最优，并以 KKT 残差作为后置条件；
+- linprog 用单纯形法，给出顶点与乘子。
+
+**规范改动**
+
+| # | 位置 | 改动 | 理由 |
+|---|---|---|---|
+| 1 | 10.28 LP-1 – LP-4 | 新算子 `optim.linear.linprog` 0.4.0 与 LP 内核 | 变量缺省无界（同 MATLAB）并回显；scipy 缺省 x ≥ 0，同一请求可能得到相反的结论 |
+| 2 | 10.29 FC-1 – FC-5 | 新算子 `optim.local.fmincon` 0.4.0：SQP + QP 内核 + 自动微分梯度；乘子按 MATLAB 的分组 | 只保证局部最优，写进 receipt 的前提 |
+| 3 | 10.30 NM-1 – NM-4 | 新算子 `optim.local.fminsearch` 0.4.0：Nelder–Mead；用不依赖导数的探测检查做后置条件 | — |
+| 4 | 11.5 | 新内核 `kernels::lp`、`kernels::qp`（QP 用 LP 求可行起点，用 LU、QR 内核） | RI-1；quadprog 以后只需加一层外壳 |
+| 5 | 5.1 | 新码 `E.DOMAIN.INFEASIBLE`、`E.DOMAIN.UNBOUNDED` | — |
+
+**开发中发现的问题**
+
+| # | 问题 | 处理 |
+|---|---|---|
+| 1 | `fminsearch` 用例 `quadratic_3d` 的解析最优解手算错了（写成 (16/7, −11/7)，应为 (12/7, −10/7)），parity 测试抓到了 | 生成脚本里给每个手算的最优解加了独立的紧容差求解来交叉核对（AGENTS.md 第 6 条） |
+
+**结果**
+
+- golden：`linprog` 16 个（9 个成功 / 7 个错误），`fmincon` 13 个（7 / 6），`fminsearch` 10 个（5 / 5）。HS071 的 f* = 17.0140172891563。
+- 一致性：22 / 35 = 63% 的算子有数值规则，参考实现 1066 / 0 / 291；新增 4 种代理改写，都被抓住，其中包括“乘子符号按 scipy 约定写反”。运行器从请求出发，自己重算 KKT 条件。
 
 ### v0.4.13-draft（2026-11-25）
 

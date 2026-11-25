@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/optim.local.fminsearch/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "unknowns",
+    "objective",
+    "x0"
+  ],
+  "properties": {
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "minItems": 1,
+      "maxItems": 50,
+      "uniqueItems": true,
+      "description": "未知量名"
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000,
+      "description": "目标 f(x)，3.15 表达式，可以不光滑"
+    },
+    "params": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "number"
+      },
+      "x-aeoi-provenance": "user",
+      "description": "参数名 → 数值"
+    },
+    "x0": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "x-aeoi-provenance": "user",
+      "description": "初值"
+    },
+    "tol_x": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "default": 0.0001,
+      "x-aeoi-provenance": "convention",
+      "description": "单纯形直径容差（缺省 1e-4，同 MATLAB）"
+    },
+    "tol_fun": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "default": 0.0001,
+      "x-aeoi-provenance": "convention",
+      "description": "函数值极差容差（缺省 1e-4，同 MATLAB）"
+    },
+    "max_iterations": {
+      "type": "integer",
+      "minimum": 1,
+      "x-aeoi-provenance": "convention",
+      "description": "迭代上限（缺省 200·n，同 MATLAB）"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  }
+}

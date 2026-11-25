@@ -1,0 +1,148 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "optim.linear.linprog",
+  "version": "0.4.0",
+  "title": "Linear programming",
+  "description": "线性规划（= MATLAB linprog）：min cᵀx，s.t. A·x ≤ b、Aeq·x = beq、lb ≤ x ≤ ub。两阶段单纯形（Bland 规则），给出最优顶点与全部乘子（ineqlin、eqlin、lower、upper，MATLAB 的符号约定），并用 KKT 残差验证。注意：与 MATLAB 一样，变量缺省没有界（scipy 缺省 x ≥ 0）；无解报 E.DOMAIN.INFEASIBLE，无界报 E.DOMAIN.UNBOUNDED。",
+  "category": "design",
+  "tags": [
+    "optimization",
+    "linear-programming",
+    "linprog",
+    "simplex"
+  ],
+  "applicability": {
+    "preconditions": [
+      "系数有限",
+      "变量个数 ≤ max_variables（稠密单纯形）"
+    ],
+    "not_for": [
+      "整数规划（intlinprog）",
+      "大规模稀疏问题（内点法，以后的方法）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "标准形转换（有限下界平移、只有上界的变量反射、自由变量拆成两个非负变量、上下界都有限时加边界行、不等式加松弛），右端非负化；两阶段稠密单纯形表，Bland 规则选入基与出基变量（不循环）；第一阶段剩余 > 1e-9·max(1, ‖rhs‖∞) 即不可行；入基列无正元即无界。最优基上用 LU 内核重算基解与对偶变量；乘子按 c + Aᵀλ_ineq + Aeqᵀλ_eq − λ_lower + λ_upper = 0 映射。后置条件 kkt：原始可行、对偶可行、互补、驻定残差都 ≤ 1e-9（相对数据尺度）",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "V. Chvátal, Linear Programming, Freeman 1983, Ch. 2–3、8（两阶段单纯形与 Bland 规则）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "lp::solve",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {},
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_variables": 500,
+    "max_iterations": 100000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/optim.linear.linprog/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.DOMAIN.INFEASIBLE",
+    "E.DOMAIN.UNBOUNDED",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [],
+  "mcp": {
+    "tool_name": "optim_linear_linprog",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:linprog:two-phase-simplex-bland",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有数据有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "feasible",
+        "statement": "约束有可行解",
+        "enforced_by": "error:E.DOMAIN.INFEASIBLE"
+      },
+      {
+        "id": "bounded",
+        "statement": "目标在可行域上有下界",
+        "enforced_by": "error:E.DOMAIN.UNBOUNDED"
+      },
+      {
+        "id": "default_bounds",
+        "statement": "变量缺省没有界（MATLAB 约定，与 scipy 不同）",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "unique",
+        "statement": "最优解可能不唯一；给出的是一个最优顶点",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "kkt",
+      "all_finite"
+    ],
+    "coverage": {
+      "kkt": "full"
+    },
+    "guards": {
+      "kkt": [
+        "/x",
+        "/fval",
+        "/lambda"
+      ]
+    }
+  }
+}

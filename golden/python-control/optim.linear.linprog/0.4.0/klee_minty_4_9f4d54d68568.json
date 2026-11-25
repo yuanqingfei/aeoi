@@ -1,0 +1,75 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "optim.linear.linprog",
+ "operator_version": "0.4.0",
+ "case_family": "klee_minty_4",
+ "request": {
+  "c": [
+   -8.0,
+   -4.0,
+   -2.0,
+   -1.0
+  ],
+  "A": [
+   [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    4.0,
+    1.0,
+    0.0,
+    0.0
+   ],
+   [
+    8.0,
+    4.0,
+    1.0,
+    0.0
+   ],
+   [
+    16.0,
+    8.0,
+    4.0,
+    1.0
+   ]
+  ],
+  "b": [
+   5.0,
+   25.0,
+   125.0,
+   625.0
+  ],
+  "lb": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ]
+ },
+ "reference_env": {
+  "engine": "scipy.optimize (linprog HiGHS / minimize SLSQP, Nelder-Mead)",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "fval": -625.0,
+  "x_highs": [
+   0.0,
+   0.0,
+   0.0,
+   625.0
+  ],
+  "x_exact": [
+   0.0,
+   0.0,
+   0.0,
+   625.0
+  ],
+  "unique": true
+ }
+}

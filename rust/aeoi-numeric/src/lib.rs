@@ -39,6 +39,7 @@ pub mod fft;
 pub mod interp1;
 pub mod linsolve;
 pub mod ode;
+pub mod optim;
 pub mod polyfit;
 pub mod roots;
 pub mod svd;
@@ -47,7 +48,7 @@ use aeoi_core::DynOperator;
 
 /// All operators in this crate.
 pub fn registry() -> Vec<Box<dyn DynOperator>> {
-    vec![Box::new(fft::Fft::new()), Box::new(ode::OdeIvp::new()), Box::new(linsolve::LinSolve::new()), Box::new(interp1::Interp1::new()), Box::new(polyfit::PolyFit::new()), Box::new(eig::Eig::new()), Box::new(svd::Svd::new()), Box::new(butter::Butter::new()), Box::new(filter::Filter::new()), Box::new(roots::Fzero::new()), Box::new(roots::Fsolve::new())]
+    vec![Box::new(fft::Fft::new()), Box::new(ode::OdeIvp::new()), Box::new(linsolve::LinSolve::new()), Box::new(interp1::Interp1::new()), Box::new(polyfit::PolyFit::new()), Box::new(eig::Eig::new()), Box::new(svd::Svd::new()), Box::new(butter::Butter::new()), Box::new(filter::Filter::new()), Box::new(roots::Fzero::new()), Box::new(roots::Fsolve::new()), Box::new(optim::Linprog::new()), Box::new(optim::Fmincon::new()), Box::new(optim::Fminsearch::new())]
 }
 
 /// Look up by operator id or MCP tool name.

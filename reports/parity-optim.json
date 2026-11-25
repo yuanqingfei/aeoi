@@ -1,0 +1,134 @@
+{
+  "reference": "scipy.optimize (linprog HiGHS, minimize SLSQP ftol 1e-14, Nelder-Mead) and analytic optima; not MATLAB",
+  "tolerance": {
+    "linprog": "fval ≤ 1e-9·max(1, |f*|); x ≤ 1e-9 (relative) when the optimum is unique",
+    "fmincon": "x ≤ 1e-6 relative (analytic optimum, else SLSQP)",
+    "fminsearch": "x ≤ 10·tol_x relative to the analytic optimum"
+  },
+  "linprog": {
+    "cases": 16,
+    "error_cases": 7,
+    "worst_error_over_tolerance": 7.771561172376096e-7,
+    "cases_detail": [
+      {
+        "family": "degenerate_vertex",
+        "error_over_tolerance": 0.0,
+        "iterations": 3
+      },
+      {
+        "family": "equality_and_bounds",
+        "error_over_tolerance": 0.0,
+        "iterations": 6
+      },
+      {
+        "family": "free_variables",
+        "error_over_tolerance": 0.0,
+        "iterations": 2
+      },
+      {
+        "family": "klee_minty_4",
+        "error_over_tolerance": 0.0,
+        "iterations": 9
+      },
+      {
+        "family": "production",
+        "error_over_tolerance": 1.5860328923216524e-7,
+        "iterations": 2
+      },
+      {
+        "family": "random_dense",
+        "error_over_tolerance": 7.771561172376096e-7,
+        "iterations": 25
+      },
+      {
+        "family": "redundant_equalities",
+        "error_over_tolerance": 0.0,
+        "iterations": 1
+      },
+      {
+        "family": "transportation",
+        "error_over_tolerance": 0.0,
+        "iterations": 12
+      },
+      {
+        "family": "upper_bound_only",
+        "error_over_tolerance": 0.0,
+        "iterations": 1
+      }
+    ]
+  },
+  "fmincon": {
+    "cases": 13,
+    "error_cases": 6,
+    "worst_error_over_tolerance": 0.007453196254614269,
+    "cases_detail": [
+      {
+        "family": "disk_linear_objective",
+        "error_over_tolerance": 5.801803482086143e-6,
+        "iterations": 8
+      },
+      {
+        "family": "hs071",
+        "error_over_tolerance": 0.005009742315002888,
+        "iterations": 6
+      },
+      {
+        "family": "params_equality",
+        "error_over_tolerance": 6.59472476627343e-8,
+        "iterations": 7
+      },
+      {
+        "family": "projection_with_bounds",
+        "error_over_tolerance": 0.0,
+        "iterations": 3
+      },
+      {
+        "family": "rosenbrock_bounded",
+        "error_over_tolerance": 0.007453196254614269,
+        "iterations": 23
+      },
+      {
+        "family": "sphere_on_plane",
+        "error_over_tolerance": 5.551115123125783e-11,
+        "iterations": 1
+      },
+      {
+        "family": "unconstrained_smooth",
+        "error_over_tolerance": 0.0029686741953582896,
+        "iterations": 6
+      }
+    ]
+  },
+  "fminsearch": {
+    "cases": 10,
+    "error_cases": 5,
+    "worst_error_over_tolerance": 0.04221975180662696,
+    "cases_detail": [
+      {
+        "family": "nonsmooth_abs",
+        "error_over_tolerance": 0.005469375914668451,
+        "iterations": 83
+      },
+      {
+        "family": "params_scalar",
+        "error_over_tolerance": 1.5543122344752192e-12,
+        "iterations": 17
+      },
+      {
+        "family": "quadratic_3d",
+        "error_over_tolerance": 0.03252317001071574,
+        "iterations": 149
+      },
+      {
+        "family": "rosenbrock",
+        "error_over_tolerance": 0.04221975180662696,
+        "iterations": 84
+      },
+      {
+        "family": "tight_tolerance",
+        "error_over_tolerance": 2.2204460492503128e-7,
+        "iterations": 46
+      }
+    ]
+  }
+}

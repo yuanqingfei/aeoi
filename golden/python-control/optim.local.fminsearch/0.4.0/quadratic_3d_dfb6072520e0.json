@@ -1,0 +1,39 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "optim.local.fminsearch",
+ "operator_version": "0.4.0",
+ "case_family": "quadratic_3d",
+ "request": {
+  "unknowns": [
+   "a",
+   "b",
+   "c"
+  ],
+  "objective": "(a - 1)^2 + 2*(b + 1)^2 + 3*(c - 0.5)^2 + a*b",
+  "x0": [
+   0.0,
+   0.0,
+   0.0
+  ]
+ },
+ "reference_env": {
+  "engine": "scipy.optimize (linprog HiGHS / minimize SLSQP, Nelder-Mead)",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "x_scipy": [
+   1.7142789596463643,
+   -1.4285156745623784,
+   0.499986786286433
+  ],
+  "x_exact": [
+   1.7142857142857142,
+   -1.4285714285714286,
+   0.5
+  ],
+  "tol_x": 0.0001
+ }
+}

@@ -309,3 +309,19 @@ fn fsolve_example() {
     assert_eq!(e["error"]["code"], "E.NUMERICAL.LOCAL_MINIMUM");
     assert!(e["error"]["details"]["best"]["x"].is_array());
 }
+
+/// v0.4.14: linprog (vertex (1.6, 1.2) with multipliers; no default bounds → UNBOUNDED), fmincon (HS071,
+/// f = 17.014017…; infeasible disk → NO_CONVERGENCE with the best point), fminsearch (non-smooth |x − 1| + 2|y + 2|;
+/// iteration limit → NO_CONVERGENCE).
+#[test]
+fn optim_examples() {
+    for (op, code) in [("optim.linear.linprog", "E.DOMAIN.UNBOUNDED"), ("optim.local.fmincon", "E.NUMERICAL.NO_CONVERGENCE"), ("optim.local.fminsearch", "E.NUMERICAL.NO_CONVERGENCE")] {
+        let dir = format!("examples/{op}");
+        let env = call(op, &read(&format!("{dir}/request.json")));
+        assert_eq!(env["status"], "ok", "{op}: {}", env["error"]);
+        assert_hash_on_same_platform(&env, &read(&format!("{dir}/response.success.json")), &format!("{op}: bitwise example"));
+        assert_eq!(call(op, &read(&format!("{dir}/request.error.json")))["error"]["code"], code, "{op}");
+    }
+    let f = call("optim.local.fmincon", &read("examples/optim.local.fmincon/request.json"))["result"]["fval"].as_f64().unwrap();
+    assert!((f - 17.0140172891563).abs() < 1e-9, "{f}");
+}

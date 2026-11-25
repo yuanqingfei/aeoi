@@ -56,6 +56,10 @@ PROXY_EXPECT = {
     "fzero_warning_dropped": ("nonlinear.root.fzero", "BRACKET_SEARCHED exactly"),
     "fsolve_x_wrong": ("nonlinear.system.fsolve", "x vs the exact root"),
     "fsolve_residual_zeroed": ("nonlinear.system.fsolve", "recomputed by the runner"),
+    "linprog_lambda_sign": ("optim.linear.linprog", "KKT recomputed"),
+    "fmincon_x_wrong": ("optim.local.fmincon", "x vs the analytic"),
+    "fmincon_lambda_dropped": ("optim.local.fmincon", "Lagrangian stationarity"),
+    "fminsearch_x_shifted": ("optim.local.fminsearch", "x vs the analytic"),
 }
 
 # mutant -> substring that must appear among the names of the failed checks

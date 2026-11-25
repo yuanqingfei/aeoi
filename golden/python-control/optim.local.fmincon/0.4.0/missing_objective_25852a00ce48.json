@@ -1,0 +1,22 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "optim.local.fmincon",
+ "operator_version": "0.4.0",
+ "case_family": "missing_objective",
+ "request": {
+  "unknowns": [
+   "x"
+  ],
+  "x0": [
+   0.0
+  ]
+ },
+ "reference_env": {
+  "engine": "scipy.optimize (linprog HiGHS / minimize SLSQP, Nelder-Mead)",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected_error": "E.VALIDATION.SCHEMA"
+}

@@ -1,0 +1,147 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "optim.local.fminsearch",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "x": [
+      0.9999890612481707,
+      -2.0000035472681557
+    ],
+    "solution": {
+      "x": 0.9999890612481707,
+      "y": -2.0000035472681557
+    },
+    "fval": 1.803328814065086e-05,
+    "iterations": 83,
+    "evaluations": 160,
+    "tolerances": {
+      "tol_x": 0.0001,
+      "tol_fun": 0.0001
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": true,
+      "converged": true,
+      "iterations": 83,
+      "criterion": "单纯形直径 ≤ tol_x 且函数值极差 ≤ tol_fun（同 MATLAB）"
+    },
+    "residual": {
+      "probe_decrease": 0.0,
+      "definition": "max_j,± [f(x) − f(x ± h·e_j)]，h = tol_x·max(1, |x_j|)"
+    },
+    "condition": {
+      "applicable": false
+    },
+    "error_estimate": {
+      "x_abs": 0.0001,
+      "basis": "单纯形直径（Nelder–Mead 没有收敛性保证；结果只是 tol_x 分辨率下的局部极小）"
+    },
+    "checks": {
+      "probe_local_minimum": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "C",
+    "credentials": null,
+    "derived": {
+      "optimum": "local"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:fminsearch:nelder-mead-lagarias",
+      "routine": "optim::fminsearch",
+      "provenance": "aeoi://operators/optim.local.fminsearch/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "expression",
+        "statement": "目标是合法的 3.15 表达式",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "converges",
+        "statement": "单纯形在迭代上限内收缩到容差",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "local_only",
+        "statement": "结果只是 tol_x 分辨率下的局部极小；Nelder–Mead 没有一般的收敛保证",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "x_abs": 0.0001
+      },
+      "basis": "单纯形直径（Nelder–Mead 没有收敛性保证；结果只是 tol_x 分辨率下的局部极小）"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "probe_local_minimum": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": {
+        "converged": true,
+        "iterations": 83
+      },
+      "accuracy_grade": "C",
+      "tolerance_class": "T3",
+      "credentials": null,
+      "coverage": {
+        "probe_local_minimum": "test_points",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:e34d464007aa0c9cb8fa0cfff3590f31f3f9f27b9be86205f68132404dd49bad",
+      "result": "sha256:4f683acaddd0b64bb57c55b9591053c6302728a189ac5ab939474a4ea268fef6",
+      "output_hash": "sha256:5be1fb28fec96438ca2431894123db3842cf611381bee3dcff652b79db5d713b",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of optim.local.fminsearch@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T3",
+    "input_hash": "sha256:fc2be65f6fb45007f1a1a6bb105ba66b80ddf4c5be3c9cd471494062aa813c3c",
+    "output_hash": "sha256:5be1fb28fec96438ca2431894123db3842cf611381bee3dcff652b79db5d713b",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.164924
+  }
+}

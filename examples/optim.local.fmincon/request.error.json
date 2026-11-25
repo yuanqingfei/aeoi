@@ -1,0 +1,14 @@
+{
+  "unknowns": [
+    "x",
+    "y"
+  ],
+  "objective": "x + y",
+  "nonlinear_ineq": [
+    "x^2 + y^2 + 1"
+  ],
+  "x0": [
+    0.0,
+    0.0
+  ]
+}

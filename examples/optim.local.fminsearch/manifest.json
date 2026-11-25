@@ -1,0 +1,138 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "optim.local.fminsearch",
+  "version": "0.4.0",
+  "title": "Derivative-free minimization (Nelder–Mead)",
+  "description": "无约束最小化，不用导数（= MATLAB fminsearch，Nelder–Mead 单纯形，Lagarias 等人的参数）。目标用 3.15 的表达式语言写，可以不光滑。缺省容差同 MATLAB（tol_x = tol_fun = 1e-4），结果只在这个分辨率下是局部极小；收敛后在每个坐标方向 ±h 处探测，检查确实没有更小的值。不收敛时报错并附最好的点。",
+  "category": "analysis",
+  "tags": [
+    "optimization",
+    "nelder-mead",
+    "fminsearch",
+    "derivative-free"
+  ],
+  "applicability": {
+    "preconditions": [
+      "x0 由调用方给出"
+    ],
+    "not_for": [
+      "有约束的问题（fmincon）",
+      "高维问题（> 10 个变量时很慢）",
+      "需要高精度的光滑问题（fmincon 更准）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "Nelder–Mead（Lagarias, Reeds, Wright, Wright 1998；同 MATLAB）：反射 1、扩展 2、收缩 1/2、压缩 1/2；初始单纯形为 x0 各坐标加 5%（为 0 的坐标取 0.00025）；顶点按 f 排序，相等按原下标。停止：单纯形直径 ≤ tol_x 且函数值极差 ≤ tol_fun。后置条件 probe_local_minimum：f(x) ≤ f(x ± h·e_j) + tol_fun，h = tol_x·max(1, |x_j|)",
+    "references": [
+      {
+        "type": "paper",
+        "cite": "J. C. Lagarias, J. A. Reeds, M. H. Wright, P. E. Wright, Convergence properties of the Nelder–Mead simplex method in low dimensions, SIAM J. Optim. 9(1), 1998",
+        "doi": "10.1137/S1052623496303470"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "optim::fminsearch",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T3",
+  "sparse_support": {},
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_unknowns": 50,
+    "max_expression_length": 4096
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/optim.local.fminsearch/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.EXPRESSION",
+    "E.NUMERICAL.NON_FINITE_EVALUATION",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [],
+  "mcp": {
+    "tool_name": "optim_local_fminsearch",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:fminsearch:nelder-mead-lagarias",
+    "assumptions": [
+      {
+        "id": "expression",
+        "statement": "目标是合法的 3.15 表达式",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "converges",
+        "statement": "单纯形在迭代上限内收缩到容差",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "local_only",
+        "statement": "结果只是 tol_x 分辨率下的局部极小；Nelder–Mead 没有一般的收敛保证",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "probe_local_minimum",
+      "all_finite"
+    ],
+    "coverage": {
+      "probe_local_minimum": "test_points"
+    },
+    "guards": {
+      "probe_local_minimum": [
+        "/x",
+        "/solution",
+        "/fval"
+      ]
+    }
+  }
+}

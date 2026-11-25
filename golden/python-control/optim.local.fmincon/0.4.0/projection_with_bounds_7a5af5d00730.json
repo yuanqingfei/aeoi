@@ -1,0 +1,48 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "optim.local.fmincon",
+ "operator_version": "0.4.0",
+ "case_family": "projection_with_bounds",
+ "request": {
+  "unknowns": [
+   "x",
+   "y"
+  ],
+  "objective": "(x - 3)^2 + (y - 2)^2",
+  "A": [
+   [
+    1.0,
+    1.0
+   ]
+  ],
+  "b": [
+   4.0
+  ],
+  "lb": [
+   0.0,
+   0.0
+  ],
+  "x0": [
+   0.0,
+   0.0
+  ]
+ },
+ "reference_env": {
+  "engine": "scipy.optimize (linprog HiGHS / minimize SLSQP, Nelder-Mead)",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "x_slsqp": [
+   2.4999999998758202,
+   1.5000000001241798
+  ],
+  "fval_slsqp": 0.5,
+  "x_exact": [
+   2.5,
+   1.5
+  ]
+ }
+}

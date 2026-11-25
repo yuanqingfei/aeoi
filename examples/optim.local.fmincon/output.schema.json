@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/optim.local.fmincon/0.4.0/output",
+  "type": "object",
+  "required": [
+    "x",
+    "solution",
+    "fval",
+    "lambda",
+    "iterations",
+    "evaluations",
+    "first_order_optimality",
+    "constraint_violation"
+  ],
+  "properties": {
+    "x": {
+      "type": "array"
+    },
+    "solution": {
+      "type": "object"
+    },
+    "fval": {
+      "type": [
+        "number",
+        "string"
+      ]
+    },
+    "lambda": {
+      "type": "object",
+      "description": "乘子（MATLAB 约定）：∇f + Σλ∇g + Σν∇h = 0；ineq*、lower、upper ≥ 0"
+    },
+    "iterations": {
+      "type": "integer"
+    },
+    "evaluations": {
+      "type": "integer"
+    },
+    "first_order_optimality": {
+      "type": [
+        "number",
+        "string"
+      ]
+    },
+    "constraint_violation": {
+      "type": [
+        "number",
+        "string"
+      ]
+    }
+  }
+}

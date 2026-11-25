@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.13-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.14-draft
 
-> 状态：Draft v0.4.13 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.14 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.14 新增线性规划 `optim.linear.linprog`（10.28）、带约束的非线性最小化 `optim.local.fmincon`（10.29）、无导数最小化 `optim.local.fminsearch`（10.30），以及共享的 LP 与 QP 内核。每个优化结果都声明只是局部最优，并用 KKT 残差验证。
 >
 > v0.4.13 新增单变量求根 `nonlinear.root.fzero`（10.26）与非线性方程组 `nonlinear.system.fsolve`（10.27）。表达式语言增加了自动微分（3.15 EX-8）。不收敛时报错，并给出目前最好的点。
 >
@@ -517,7 +519,7 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 | 类别 | 何时使用 | `retryable` 默认 | 已登记的码（v0.3 新增的加粗） |
 |---|---|---|---|
 | `VALIDATION` | 输入不符合 schema 或语义约束 | true（改输入） | `SCHEMA`、`SHAPE`、`DTYPE`、`RANGE`、`NON_FINITE`、`NOT_SYMMETRIC`、`NOT_CONJUGATE`、`ZERO_DENOMINATOR`、`GRID`、`SPARSE_STRUCTURE`、`DIGEST_MISMATCH`、`REF_UNSUPPORTED`、`REF_FORBIDDEN`、**`OPTION_CONFLICT`**、**`RANK_DEFICIENT`**、**`UNGROUNDED_INPUT`**（v0.3.1，绑定层）、**`METHOD_UNAVAILABLE`**（v0.4）、`EXPRESSION`（v0.4.8，3.15） |
-| `DOMAIN` | 输入合法，但数学问题本身无解/不适用 | 视情况 | `IMPROPER_SYSTEM`、`NOT_STABILIZABLE`、`R_NOT_POSITIVE_DEFINITE`、`WEIGHT_NOT_PSD`、`HAMILTONIAN_IMAG_AXIS_EIG`、`ABOVE_NYQUIST`、**`MIMO_NOT_SUPPORTED`**、**`DEGENERATE_SYSTEM`**、**`NOT_CONTINUOUS`**、**`NOT_CONTROLLABLE`**、**`POLE_MULTIPLICITY`**、**`LYAP_SINGULAR`**、**`SYMPLECTIC_UNIT_CIRCLE_EIG`**、`UNDERDETERMINED`（v0.4.10）、`EXTRAPOLATION_REQUIRED`（v0.4.10）、`NO_SIGN_CHANGE`（v0.4.13） |
+| `DOMAIN` | 输入合法，但数学问题本身无解/不适用 | 视情况 | `IMPROPER_SYSTEM`、`NOT_STABILIZABLE`、`R_NOT_POSITIVE_DEFINITE`、`WEIGHT_NOT_PSD`、`HAMILTONIAN_IMAG_AXIS_EIG`、`ABOVE_NYQUIST`、**`MIMO_NOT_SUPPORTED`**、**`DEGENERATE_SYSTEM`**、**`NOT_CONTINUOUS`**、**`NOT_CONTROLLABLE`**、**`POLE_MULTIPLICITY`**、**`LYAP_SINGULAR`**、**`SYMPLECTIC_UNIT_CIRCLE_EIG`**、`UNDERDETERMINED`（v0.4.10）、`EXTRAPOLATION_REQUIRED`（v0.4.10）、`NO_SIGN_CHANGE`（v0.4.13）、`INFEASIBLE`（v0.4.14）、`UNBOUNDED`（v0.4.14） |
 | `NUMERICAL` | 问题理论上可解，但数值上失败或不可信 | true（正则化/放宽/换算法） | `SINGULAR`、`NO_CONVERGENCE`、`POLE_ON_GRID`、`NON_FINITE_EVALUATION`（v0.4.8）、`STEP_SIZE_TOO_SMALL`（v0.4.8）、`LOCAL_MINIMUM`（v0.4.13） |
 | `RESOURCE` | 超时、超规模、被取消 | true | `TIMEOUT`、`INPUT_TOO_LARGE`、`COMPUTE_LIMIT`、`OUTPUT_TOO_LARGE` |
 | `INTERNAL` | 实现缺陷或后端异常 | false（可原样重试一次） | `PANIC`（`BACKEND`、`INVARIANT_VIOLATED` 为保留码，v0.2 算子未使用） |
@@ -528,7 +530,7 @@ v0.3.1 新增码：`UNGROUNDED_INPUT` 由 LLM 绑定层（不是算子）返回�
 
 v0.4.10 新增码：`UNDERDETERMINED` 方程个数少于未知数，解不唯一（LS-1）；`EXTRAPOLATION_REQUIRED` 查询点超出数据范围，而调用方没有说明怎么处理（IP-3）；警告 `W.ACCURACY.EXTRAPOLATED` 结果中有外推得到的值。
 
-v0.4.13 新增码：`NO_SIGN_CHANGE` 求根区间两端同号，或从 x0 搜不到变号区间（FZ-1）；`LOCAL_MINIMUM` 迭代停在残差的局部极小，不是根（FS-4）；警告 `W.DOMAIN.BRACKET_SEARCHED` 求根区间是从 x0 搜出来的，根不一定是想要的那个。
+v0.4.13 新增码：`NO_SIGN_CHANGE` 求根区间两端同号，或从 x0 搜不到变号区间（FZ-1）；`LOCAL_MINIMUM` 迭代停在残差的局部极小，不是根（FS-4）；警告 `W.DOMAIN.BRACKET_SEARCHED` 求根区间是从 x0 搜出来的，根不一定是想要的那个。v0.4.14 新增码：`INFEASIBLE` 约束没有可行解（线性规划或边界）；`UNBOUNDED` 目标在可行域上无下界。
 
 v0.4.8 新增码：`E.VALIDATION.EXPRESSION`（表达式的静态错误，3.15 EX-6）、`E.NUMERICAL.NON_FINITE_EVALUATION`（模型在某点算出 NaN/Inf）、`E.NUMERICAL.STEP_SIZE_TOO_SMALL`（自适应步长缩到下限）与 `W.NUMERICAL.STIFF_PROBLEM`，含义见 10.18 OD-6、OD-7。
 
@@ -2226,6 +2228,126 @@ A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与�
 
 共 18 个 golden 用例，9 个成功、9 个错误。最坏的用例用掉了容差（相对 1e-14）的 3%。从经典起点 (−1.2, 1) 解 Rosenbrock 函数的梯度方程时，scipy 的 hybr 和 lm 也都失败；本算子如实报 `E.NUMERICAL.NO_CONVERGENCE`，并给出目前最好的点。结果见 `aeoi-numeric/tests/parity_roots.rs` 和 `reports/parity-fsolve.json`。
 
+## 10.28 `optim.linear.linprog`：线性规划（v0.4.14）
+
+对应 MATLAB 的 `linprog`。参考值来自 scipy（HiGHS），真值是手算的最优顶点，每个都在生成脚本里与 HiGHS 交叉核对过；都不是 MATLAB 的结果。这个算子逼出的规范问题是**缺省值的分歧**：MATLAB 的变量缺省没有界，scipy 的缺省是 x ≥ 0。同一个请求在两边可能一个有解、一个“无界”。
+
+**规范性条款**
+
+- LP-1 **问题**：min cᵀx，s.t. A·x ≤ b、Aeq·x = beq、lb ≤ x ≤ ub。边界里的无穷写作 "Inf" / "−Inf"（R-2）。
+  - **缺省没有界，同 MATLAB。** 结果的 `bounds_used` 回显实际用到的 lb、ub。
+  - 目标无下界时报 `E.DOMAIN.UNBOUNDED`（新码），提示可能漏了 x ≥ 0 之类的边界，并附 `ask_user`。
+- LP-2 **算法**（作者决定）：两阶段稠密单纯形，用 Bland 规则（不会循环，结果确定）。
+  - 第一阶段的剩余量 > 1e-9·max(1, ‖rhs‖∞) 时报 `E.DOMAIN.INFEASIBLE`（新码）；lb > ub 时直接报同一个码。
+  - 最优基确定后，用 LU 内核重算基解与对偶变量（11.5 RI-1）。
+  - 内核在 `aeoi-core::kernels::lp`，二次规划内核用它求可行起点。
+- LP-3 **乘子**（MATLAB 约定）：c + Aᵀλ_ineq + Aeqᵀλ_eq − λ_lower + λ_upper = 0，除 λ_eq 外都 ≥ 0。scipy 的 `marginals` 符号与此相反，所以调用方 MUST 按字段名取值，不能照搬 scipy 的符号。
+- LP-4 **后置条件 `kkt`**：原始可行性、对偶可行性、互补松弛、驻定条件，相对数据尺度都 ≤ 1e-9。另有 `all_finite`。最优解不唯一时，给出其中一个顶点。
+
+**Manifest** — `examples/optim.linear.linprog/manifest.json`
+
+```json
+{{jsonc:examples/optim.linear.linprog/manifest.json}}
+```
+
+**请求与响应**（max x + y，s.t. x + 2y ≤ 4、3x + y ≤ 6、x, y ≥ 0；最优顶点 (1.6, 1.2)，λ_ineq = (0.4, 0.2)）
+
+```json
+{{file:examples/optim.linear.linprog/request.json}}
+```
+
+```json
+{{jsonc:examples/optim.linear.linprog/response.success.json}}
+```
+
+**错误请求与响应**（min x，s.t. x ≤ 4，没给边界。按 MATLAB 约定 x 没有下界，目标无界；scipy 会给出 x = 0：LP-1）
+
+```json
+{{jsonc:examples/optim.linear.linprog/response.error.json}}
+```
+
+**Parity 测试规格** — `examples/optim.linear.linprog/parity.yaml`
+
+```yaml
+{{file:examples/optim.linear.linprog/parity.yaml}}
+```
+
+## 10.29 `optim.local.fmincon`：带约束的非线性最小化（v0.4.14）
+
+对应 MATLAB 的 `fmincon`。参考值来自 scipy SLSQP（ftol 1e-14）和解析最优解；都不是 MATLAB 的结果。这个算子逼出的规范问题是“最优”的含义：SQP 只能找到局部最优，而 MATLAB 的输出没有任何地方提醒这一点。
+
+**规范性条款**
+
+- FC-1 **问题**（作者决定）：目标、非线性不等式 g(x) ≤ 0 与等式 h(x) = 0 都用 3.15 的表达式写；另可给线性约束 A、b、Aeq、beq 与边界 lb、ub。`x0` 来源 `user`。
+- FC-2 **算法**：SQP。
+  - 梯度由自动微分精确给出（EX-8）。
+  - 子问题用 `aeoi-core::kernels::qp`（有效集法，可行起点由 LP 内核给出）。
+  - 线性化约束不相容时，把违反的非线性约束放宽 θ = 1/2, 1/4, …。
+  - ℓ1 价值函数加 Armijo 回溯；阻尼 BFGS（Powell）。
+  - 起点先投影到边界内。
+- FC-3 **局部最优**（作者决定）：receipt 的前提里 MUST 写明“结果只是局部最优（满足一阶条件，二阶条件未检查）”，`enforced_by: caller`；`derived.optimum` = `local`。
+- FC-4 **不收敛**：报 `E.NUMERICAL.NO_CONVERGENCE`，在 `details.best` 里给出最好的点、一阶最优性和约束违反量，与 FS-4 相同。约束本身矛盾（例如 x² + y² + 1 ≤ 0）也走这条路，提示“问题可能不可行”。非线性约束是否可行无法事先判定，所以不用 `E.DOMAIN.INFEASIBLE`；边界不相容时才用它。
+- FC-5 **后置条件 `kkt`**：相对驻定残差 ‖∇f + Σλ∇g + Σν∇h‖∞ / max(1, ‖∇f‖∞) ≤ optimality_tolerance（缺省 1e-8）；互补残差同样不超过这个容差；约束违反 ≤ constraint_tolerance（缺省 1e-8）。MATLAB 的缺省容差都是 1e-6，这里有精确梯度，所以取得更严。乘子按 MATLAB 的分组给出：`ineqnonlin`、`eqnonlin`、`ineqlin`、`eqlin`、`lower`、`upper`。
+
+**Manifest** — `examples/optim.local.fmincon/manifest.json`
+
+```json
+{{jsonc:examples/optim.local.fmincon/manifest.json}}
+```
+
+**请求与响应**（Hock–Schittkowski 71。f* = 17.0140172891563，文献值 17.014017）
+
+```json
+{{file:examples/optim.local.fmincon/request.json}}
+```
+
+```json
+{{jsonc:examples/optim.local.fmincon/response.success.json}}
+```
+
+**错误请求与响应**（x² + y² + 1 ≤ 0 不可行：FC-4）
+
+```json
+{{jsonc:examples/optim.local.fmincon/response.error.json}}
+```
+
+**Parity 测试规格** — `examples/optim.local.fmincon/parity.yaml`
+
+```yaml
+{{file:examples/optim.local.fmincon/parity.yaml}}
+```
+
+## 10.30 `optim.local.fminsearch`：无导数最小化（v0.4.14）
+
+对应 MATLAB 的 `fminsearch`。参考值来自 scipy Nelder–Mead 与解析最优解；都不是 MATLAB 的结果。
+
+**规范性条款**
+
+- NM-1 **算法**：Nelder–Mead，参数同 Lagarias 等人与 MATLAB（反射 1、扩展 2、收缩 1/2、压缩 1/2）。初始单纯形在 x0 的每个坐标上加 5%，为 0 的坐标取 0.00025。顶点按 f 排序，相等时按原下标，所以结果确定。
+- NM-2 **容差**：缺省同 MATLAB，tol_x = tol_fun = 1e-4，迭代上限 200·n，三者都在结果里回显。结果只在这个分辨率下是局部极小。精度要求高、目标又光滑的问题 SHOULD 改用 `fmincon`。
+- NM-3 **不收敛**：报 `E.NUMERICAL.NO_CONVERGENCE`，附最好的点。
+- NM-4 **后置条件 `probe_local_minimum`**：在每个坐标方向上探测，f(x) ≤ f(x ± h·e_j) + tol_fun，h = tol_x·max(1, |x_j|)。这个检查不用导数，所以对不光滑的目标也成立。精度等级为 C。
+
+**Manifest** — `examples/optim.local.fminsearch/manifest.json`
+
+```json
+{{jsonc:examples/optim.local.fminsearch/manifest.json}}
+```
+
+**请求与响应**（不光滑的 |x − 1| + 2|y + 2|，解析最优解为 (1, −2)）
+
+```json
+{{jsonc:examples/optim.local.fminsearch/response.success.json}}
+```
+
+**Parity 测试规格** — `examples/optim.local.fminsearch/parity.yaml`
+
+```yaml
+{{file:examples/optim.local.fminsearch/parity.yaml}}
+```
+
+三个算子共 39 个 golden 用例：`linprog` 16 个（9 个成功 / 7 个错误），`fmincon` 13 个（7 / 6），`fminsearch` 10 个（5 / 5）。最坏的用例分别用掉了容差的 7.8e-7、7.5e-3 和 4.2e-2。结果见 `aeoi-numeric/tests/parity_optim.rs` 和 `reports/parity-optim.json`。
+
 ## 11. Rust 参考实现（v0.3）
 
 ### 11.1 结构
@@ -2422,11 +2544,11 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 
 1. 在有授权的机器上运行 `matlab/gen_golden_bode.m`（并补 step/lqr 脚本），先核对 `memory_order_nonsymmetric` 用例与 python-control 一致，再跑通第一份 A 级凭证
 2. ~~修复 `lqr` 病态 R 的精度差距~~（v0.3.2 用补偿 Newton–Kleinman 完成）；剩余：平衡 + 有序 Schur（或广义特征值）作为符号函数不收敛时的后备路径，以及 `dlqr` 的同类精化
-3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；v0.4.10 加了 `linalg.system.solve`（10.19）与 `interp.grid.interp1`（10.20）；v0.4.11 加了 `fit.poly.polyfit`（10.21）、`linalg.decomp.eig`（10.22）、`linalg.decomp.svd`（10.23）；v0.4.12 加了 `signal.design.butter`（10.24）、`signal.filter.filter`（10.25）；v0.4.13 加了 `nonlinear.root.fzero`（10.26）、`nonlinear.system.fsolve`（10.27）；之后做 优化、`integral`，以及隐式/刚性方法（`ode15s`）与事件检测；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
+3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；v0.4.10 加了 `linalg.system.solve`（10.19）与 `interp.grid.interp1`（10.20）；v0.4.11 加了 `fit.poly.polyfit`（10.21）、`linalg.decomp.eig`（10.22）、`linalg.decomp.svd`（10.23）；v0.4.12 加了 `signal.design.butter`（10.24）、`signal.filter.filter`（10.25）；v0.4.13 加了 `nonlinear.root.fzero`（10.26）、`nonlinear.system.fsolve`（10.27）；v0.4.14 加了 `optim.linear.linprog`、`optim.local.fmincon`、`optim.local.fminsearch`（10.28–10.30）；之后做 优化、`integral`，以及隐式/刚性方法（`ode15s`）与事件检测；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
 5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；v0.3.4 另有 `aeoi-web design`。v0.3.5 实现了试点里排在前面的算子（串联、并联、反馈、PID 构造、stepinfo、Padé），v0.3.6 加了具名角色、`loopsens`（含带宽读数）和回合预算。下一步是按 A-4 写 `pidtune`（必须先声明对象类、指标和唯一性），以及控制器离散化和 MIMO 裕度；扩充问答题、加入"Agent + 裸 scipy"对照组。非线性吸引域仍不做。
 6. 分发：为 `aeoi-mcp` 发布各平台预编译二进制（GitHub Releases）、Claude Desktop 一键安装扩展、登记到 MCP 公开目录（v0.4.9：数学库、矩阵乘法内核与 FFT 旋转因子已统一，5 个平台的 golden 哈希完全相同；`v0.4.9` 是第一个正式发布）；之后做纯浏览器的结果查看器（`aeoi-wasm`：结果、信任信息、收据与本地重放）。不做独立的图形界面客户端或自带 LLM 的聊天客户端：AEOI 的客户端是 MCP 宿主
-7. 一致性套件（9.4）：v0.4.13 有 19 个算子的数值规则（19 / 32 = 59%；作者定的下限是 30%，以后提高），参考实现 1012 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 38 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
+7. 一致性套件（9.4）：v0.4.14 有 22 个算子的数值规则（22 / 35 = 63%；作者定的下限是 30%，以后提高），参考实现 1066 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 42 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
 8. 根据以上反馈修订，冻结 v1.0
 
 ### 12.3 目标算子清单（v0.4.11，作者决定 2026-11-25）
@@ -2440,9 +2562,9 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 | 信号 | fft/ifft、filter、filtfilt、butter、cheby1、freqz、conv、xcorr、pwelch、spectrogram、resample、decimate、hilbert、findpeaks | 14 | 4（v0.4.12 加了 butter、filter） |
 | 多项式、插值、拟合 | polyfit、polyval、roots、conv/deconv、interp1（含 spline、pchip）、interp2、griddata、lsqcurvefit | 11 | 4 |
 | 微积分与 ODE | ode45、ode23、ode15s、integral、integral2、trapz、cumtrapz、bvp4c、pdepe、gradient | 10 | 1 |
-| 非线性方程与优化 | fzero、fsolve、fminsearch、fminbnd、fminunc、fmincon、linprog、quadprog、lsqnonlin | 9 | 2（v0.4.13） |
+| 非线性方程与优化 | fzero、fsolve、fminsearch、fminbnd、fminunc、fmincon、linprog、quadprog、lsqnonlin | 9 | 5（v0.4.13、v0.4.14；quadprog 只差一层算子外壳，QP 内核已有） |
 | 统计 | regress/fitlm、corrcoef、histcounts、mean/std 的稳健版本等 | 8 | 0 |
-| 合计 | | 约 100 | 约 39（39%） |
+| 合计 | | 约 100 | 约 42（42%） |
 
 顺序：
 1. 剩下的四批：`butter` + `filter`、`fzero`/`fsolve`、`fminsearch`/`fmincon`/`linprog`、`integral`/`trapz`。
@@ -2451,6 +2573,34 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 4. 其余。
 
 ## 13. Changelog
+
+### v0.4.14-draft（2026-11-25）
+
+起因：四批中的第三批，优化。作者定了三件事：
+- fmincon 一次支持边界、线性与非线性约束；
+- 每个结果都声明只是局部最优，并以 KKT 残差作为后置条件；
+- linprog 用单纯形法，给出顶点与乘子。
+
+**规范改动**
+
+| # | 位置 | 改动 | 理由 |
+|---|---|---|---|
+| 1 | 10.28 LP-1 – LP-4 | 新算子 `optim.linear.linprog` 0.4.0 与 LP 内核 | 变量缺省无界（同 MATLAB）并回显；scipy 缺省 x ≥ 0，同一请求可能得到相反的结论 |
+| 2 | 10.29 FC-1 – FC-5 | 新算子 `optim.local.fmincon` 0.4.0：SQP + QP 内核 + 自动微分梯度；乘子按 MATLAB 的分组 | 只保证局部最优，写进 receipt 的前提 |
+| 3 | 10.30 NM-1 – NM-4 | 新算子 `optim.local.fminsearch` 0.4.0：Nelder–Mead；用不依赖导数的探测检查做后置条件 | — |
+| 4 | 11.5 | 新内核 `kernels::lp`、`kernels::qp`（QP 用 LP 求可行起点，用 LU、QR 内核） | RI-1；quadprog 以后只需加一层外壳 |
+| 5 | 5.1 | 新码 `E.DOMAIN.INFEASIBLE`、`E.DOMAIN.UNBOUNDED` | — |
+
+**开发中发现的问题**
+
+| # | 问题 | 处理 |
+|---|---|---|
+| 1 | `fminsearch` 用例 `quadratic_3d` 的解析最优解手算错了（写成 (16/7, −11/7)，应为 (12/7, −10/7)），parity 测试抓到了 | 生成脚本里给每个手算的最优解加了独立的紧容差求解来交叉核对（AGENTS.md 第 6 条） |
+
+**结果**
+
+- golden：`linprog` 16 个（9 个成功 / 7 个错误），`fmincon` 13 个（7 / 6），`fminsearch` 10 个（5 / 5）。HS071 的 f* = 17.0140172891563。
+- 一致性：22 / 35 = 63% 的算子有数值规则，参考实现 1066 / 0 / 291；新增 4 种代理改写，都被抓住，其中包括“乘子符号按 scipy 约定写反”。运行器从请求出发，自己重算 KKT 条件。
 
 ### v0.4.13-draft（2026-11-25）
 

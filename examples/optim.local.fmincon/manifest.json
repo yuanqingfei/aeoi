@@ -1,0 +1,153 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "optim.local.fmincon",
+  "version": "0.4.0",
+  "title": "Constrained nonlinear minimization",
+  "description": "带约束的非线性最小化（= MATLAB fmincon）：目标与非线性约束用 3.15 的表达式语言写（g(x) ≤ 0、h(x) = 0），另可给线性约束与上下界。SQP：梯度由自动微分精确给出，子问题用共享的二次规划内核，阻尼 BFGS 近似 Hessian，ℓ1 价值函数线搜索。只保证局部最优；结果用 KKT 残差验证并给出全部乘子；不收敛时报错并附最好的点。",
+  "category": "design",
+  "tags": [
+    "optimization",
+    "nonlinear",
+    "constrained",
+    "fmincon",
+    "sqp"
+  ],
+  "applicability": {
+    "preconditions": [
+      "目标与约束在可行域附近光滑",
+      "x0 由调用方给出"
+    ],
+    "not_for": [
+      "全局最优（只给出 x0 附近的局部最优）",
+      "整数变量",
+      "非光滑问题"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "SQP：子问题 min ½pᵀBp + ∇fᵀp，∇g·p ≤ −g、∇h·p = −h（线性约束与边界同样处理），用有效集 QP 内核（可行起点由 LP 内核第一阶段给出）；线性化不相容时把违反的非线性约束右端乘 θ = 1/2, 1/4, … 放宽；ℓ1 价值函数 f + μ(Σmax(0, g) + Σ|h|)，μ ≥ 1.1·max|λ|，Armijo 回溯；阻尼 BFGS（Powell）。收敛：相对 KKT 残差 ≤ optimality_tolerance（缺省 1e-8）且约束违反 ≤ constraint_tolerance（缺省 1e-8）。起点先投影到上下界内",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "J. Nocedal, S. J. Wright, Numerical Optimization, 2nd ed., Springer 2006, §16.5（有效集 QP）、§18（SQP）"
+      },
+      {
+        "type": "paper",
+        "cite": "M. J. D. Powell, A fast algorithm for nonlinearly constrained optimization calculations, Numerical Analysis Dundee 1977, LNM 630",
+        "doi": "10.1007/BFb0067703"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "optim::fmincon",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T2",
+  "sparse_support": {},
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_unknowns": 100,
+    "max_iterations": 500,
+    "max_expression_length": 4096
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/optim.local.fmincon/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.EXPRESSION",
+    "E.DOMAIN.INFEASIBLE",
+    "E.NUMERICAL.NON_FINITE_EVALUATION",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [],
+  "mcp": {
+    "tool_name": "optim_local_fmincon",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:fmincon:sqp-bfgs-ad",
+    "assumptions": [
+      {
+        "id": "expression",
+        "statement": "目标与约束是合法的 3.15 表达式",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "converges",
+        "statement": "SQP 从 x0 收敛到 KKT 点",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "local_only",
+        "statement": "结果只是局部最优（或满足一阶条件的点；二阶条件未检查），不一定是全局最优",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "smooth",
+        "statement": "目标与约束在解附近光滑",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "kkt",
+      "all_finite"
+    ],
+    "coverage": {
+      "kkt": "full"
+    },
+    "guards": {
+      "kkt": [
+        "/x",
+        "/solution",
+        "/fval",
+        "/lambda"
+      ]
+    }
+  }
+}

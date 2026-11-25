@@ -1,0 +1,14 @@
+# Parity test spec — optim.local.fminsearch 0.4.0 (AEOI v0.4.14-draft)
+operator: optim.local.fminsearch
+references:
+  - {engine: scipy, version: "scipy.optimize (minimize Nelder-Mead, MATLAB tolerances)", role: dev_reference, status: active,
+     generator: gen_golden_optim.py, golden_store: "golden/python-control/optim.local.fminsearch/0.4.0/*.json", note: "NOT MATLAB output"}
+  - {engine: analytic, role: high_precision_reference, status: active, note: "hand-derived optima, each cross-checked in the generator against an independent tight solve (AGENTS.md rule 6)"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_optim"
+tolerance_class: T3
+compare:
+  x: "≤ 10·tol_x relative to the analytic optimum (Nelder–Mead only resolves the optimum to tol_x)"
+  probe_local_minimum: "post-condition true"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py
+  recomputed: "the runner evaluates f at x ± h·e_j (h = tol_x·max(1, |x_j|)) and requires f(x) ≤ f(x ± h·e_j) + tol_fun"

@@ -1,0 +1,15 @@
+# Parity test spec — optim.local.fmincon 0.4.0 (AEOI v0.4.14-draft)
+operator: optim.local.fmincon
+references:
+  - {engine: scipy, version: "scipy.optimize (minimize SLSQP, ftol 1e-14)", role: dev_reference, status: active,
+     generator: gen_golden_optim.py, golden_store: "golden/python-control/optim.local.fmincon/0.4.0/*.json", note: "NOT MATLAB output"}
+  - {engine: analytic, role: high_precision_reference, status: active, note: "hand-derived optima, each cross-checked in the generator against an independent tight solve (AGENTS.md rule 6)"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_optim"
+tolerance_class: T2
+compare:
+  x: "≤ 1e-6 relative to the analytic optimum, else SLSQP (HS071: f = 17.0140172891563, known 17.014017)"
+  kkt: "post-condition true"
+
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py
+  recomputed: "the runner evaluates the constraints at the returned x with its own expression evaluator and the stationarity of the Lagrangian with central differences (h = 1e-6), tolerance 1e-5"

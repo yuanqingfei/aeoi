@@ -1,0 +1,129 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "optim.linear.linprog",
+ "operator_version": "0.4.0",
+ "case_family": "transportation",
+ "request": {
+  "c": [
+   4,
+   6,
+   9,
+   5,
+   3,
+   8,
+   7,
+   4,
+   6
+  ],
+  "Aeq": [
+   [
+    1,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1
+   ],
+   [
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0
+   ],
+   [
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0
+   ],
+   [
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1
+   ]
+  ],
+  "beq": [
+   20,
+   30,
+   25,
+   25,
+   25,
+   25
+  ],
+  "lb": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ]
+ },
+ "reference_env": {
+  "engine": "scipy.optimize (linprog HiGHS / minimize SLSQP, Nelder-Mead)",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "fval": 330.0,
+  "x_highs": [
+   20.0,
+   0.0,
+   0.0,
+   5.0,
+   25.0,
+   0.0,
+   0.0,
+   -0.0,
+   25.0
+  ],
+  "x_exact": null,
+  "unique": false
+ }
+}

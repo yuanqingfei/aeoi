@@ -245,6 +245,24 @@ def m_fsolve_residual_zeroed(r):            # residual reported as exactly zero
     r["residual"] = [0.0 for _ in r["residual"]]
 
 
+
+def m_linprog_lambda_sign(r):               # inequality multipliers negated (MATLAB vs scipy sign convention mix-up)
+    r["lambda"]["ineqlin"] = [-v for v in r["lambda"]["ineqlin"]]
+
+
+def m_fmincon_x_wrong(r):                   # optimum moved by 1e-4 (relative)
+    r["x"] = [v * (1 + 1e-4) + 1e-6 for v in r["x"]]
+
+
+def m_fmincon_lambda_dropped(r):            # all multipliers reported as zero
+    for k in r["lambda"]:
+        r["lambda"][k] = [0.0 for _ in r["lambda"][k]]
+
+
+def m_fminsearch_x_shifted(r):              # optimum shifted by 100·tol_x
+    r["x"][0] = r["x"][0] + 1e-2
+
+
 # name -> (operator, transform)
 MUTANTS = {
     "pz_pole_wrong": ("control.lti.poles_zeros", m_pz_pole_wrong),
@@ -285,6 +303,10 @@ MUTANTS = {
     "fzero_warning_dropped": ("nonlinear.root.fzero", m_fzero_warning_dropped),
     "fsolve_x_wrong": ("nonlinear.system.fsolve", m_fsolve_x_wrong),
     "fsolve_residual_zeroed": ("nonlinear.system.fsolve", m_fsolve_residual_zeroed),
+    "linprog_lambda_sign": ("optim.linear.linprog", m_linprog_lambda_sign),
+    "fmincon_x_wrong": ("optim.local.fmincon", m_fmincon_x_wrong),
+    "fmincon_lambda_dropped": ("optim.local.fmincon", m_fmincon_lambda_dropped),
+    "fminsearch_x_shifted": ("optim.local.fminsearch", m_fminsearch_x_shifted),
 }
 
 

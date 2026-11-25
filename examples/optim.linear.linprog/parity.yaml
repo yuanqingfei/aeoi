@@ -1,0 +1,17 @@
+# Parity test spec — optim.linear.linprog 0.4.0 (AEOI v0.4.14-draft)
+operator: optim.linear.linprog
+references:
+  - {engine: scipy, version: "scipy.optimize (linprog, HiGHS)", role: dev_reference, status: active,
+     generator: gen_golden_optim.py, golden_store: "golden/python-control/optim.linear.linprog/0.4.0/*.json", note: "NOT MATLAB output"}
+  - {engine: analytic, role: high_precision_reference, status: active, note: "hand-derived optima, each cross-checked in the generator against an independent tight solve (AGENTS.md rule 6)"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_optim"
+tolerance_class: T1
+compare:
+  fval: "|Δ| ≤ 1e-9·max(1, |f*|) against HiGHS"
+  x: "≤ 1e-9 relative to the analytic vertex (or HiGHS) when the optimum is unique"
+  kkt: "post-condition true"
+
+
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py
+  recomputed: "the runner recomputes primal feasibility and the stationarity c + Aᵀλ_ineq + Aeqᵀλ_eq − λ_lower + λ_upper = 0 (with λ ≥ 0) from the request and the returned x, λ"

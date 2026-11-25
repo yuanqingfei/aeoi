@@ -3,4 +3,6 @@
 pub mod dense;
 pub mod eig;
 pub mod filter;
+pub mod lp;
+pub mod qp;
 pub mod svd;

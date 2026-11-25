@@ -1,0 +1,43 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "optim.local.fmincon",
+ "operator_version": "0.4.0",
+ "case_family": "params_equality",
+ "request": {
+  "unknowns": [
+   "x",
+   "y"
+  ],
+  "objective": "a*x^2 + b*y^2",
+  "nonlinear_eq": [
+   "x*y - c"
+  ],
+  "params": {
+   "a": 1.0,
+   "b": 4.0,
+   "c": 2.0
+  },
+  "x0": [
+   1.0,
+   1.0
+  ]
+ },
+ "reference_env": {
+  "engine": "scipy.optimize (linprog HiGHS / minimize SLSQP, Nelder-Mead)",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "x_slsqp": [
+   1.9999999865573814,
+   1.0000000067213093
+  ],
+  "fval_slsqp": 8.0,
+  "x_exact": [
+   2.0,
+   1.0
+  ]
+ }
+}

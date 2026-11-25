@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/optim.linear.linprog/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "c"
+  ],
+  "properties": {
+    "c": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "x-aeoi-provenance": "user",
+      "description": "目标系数 [n]（求最小；求最大时取负）"
+    },
+    "A": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        }
+      },
+      "x-aeoi-provenance": "user",
+      "description": "不等式约束矩阵，每行一个约束 A·x ≤ b"
+    },
+    "b": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "x-aeoi-provenance": "user",
+      "description": "不等式右端"
+    },
+    "Aeq": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        }
+      },
+      "x-aeoi-provenance": "user",
+      "description": "等式约束矩阵"
+    },
+    "beq": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "x-aeoi-provenance": "user",
+      "description": "等式右端"
+    },
+    "lb": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "number"
+          },
+          {
+            "enum": [
+              "Inf",
+              "-Inf"
+            ]
+          }
+        ]
+      },
+      "x-aeoi-provenance": "user",
+      "description": "下界 [n]，无界写 \"-Inf\"；缺省全部无下界（同 MATLAB，scipy 缺省是 0）"
+    },
+    "ub": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "number"
+          },
+          {
+            "enum": [
+              "Inf",
+              "-Inf"
+            ]
+          }
+        ]
+      },
+      "x-aeoi-provenance": "user",
+      "description": "上界 [n]，无界写 \"Inf\""
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  }
+}

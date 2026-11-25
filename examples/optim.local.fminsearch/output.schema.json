@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/optim.local.fminsearch/0.4.0/output",
+  "type": "object",
+  "required": [
+    "x",
+    "solution",
+    "fval",
+    "iterations",
+    "evaluations",
+    "tolerances"
+  ],
+  "properties": {
+    "x": {
+      "type": "array"
+    },
+    "solution": {
+      "type": "object"
+    },
+    "fval": {
+      "type": [
+        "number",
+        "string"
+      ]
+    },
+    "iterations": {
+      "type": "integer"
+    },
+    "evaluations": {
+      "type": "integer"
+    },
+    "tolerances": {
+      "type": "object"
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "optim.local.fmincon",
+ "operator_version": "0.4.0",
+ "case_family": "rosenbrock_bounded",
+ "request": {
+  "unknowns": [
+   "x",
+   "y"
+  ],
+  "objective": "100*(y - x^2)^2 + (1 - x)^2",
+  "ub": [
+   0.5,
+   "Inf"
+  ],
+  "x0": [
+   -1.2,
+   1.0
+  ]
+ },
+ "reference_env": {
+  "engine": "scipy.optimize (linprog HiGHS / minimize SLSQP, Nelder-Mead)",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "x_slsqp": [
+   0.5,
+   0.2499999925468038
+  ],
+  "fval_slsqp": 0.25000000000000555,
+  "x_exact": null
+ }
+}

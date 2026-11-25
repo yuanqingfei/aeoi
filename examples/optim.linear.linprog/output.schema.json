@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/optim.linear.linprog/0.4.0/output",
+  "type": "object",
+  "required": [
+    "x",
+    "fval",
+    "lambda",
+    "iterations",
+    "bounds_used"
+  ],
+  "properties": {
+    "x": {
+      "type": "array"
+    },
+    "fval": {
+      "type": [
+        "number",
+        "string"
+      ]
+    },
+    "lambda": {
+      "type": "object",
+      "description": "乘子（MATLAB 约定）：∇f + Σλ∇g + Σν∇h = 0；ineq*、lower、upper ≥ 0"
+    },
+    "iterations": {
+      "type": "integer"
+    },
+    "bounds_used": {
+      "type": "object",
+      "description": "实际使用的 lb、ub（缺省为 ±Inf）"
+    }
+  }
+}

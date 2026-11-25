@@ -1,0 +1,46 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "optim.local.fminsearch",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.NUMERICAL.NO_CONVERGENCE",
+    "category": "numerical",
+    "retryable": true,
+    "message": "10 次迭代后单纯形仍未收缩到容差以内（f = 4.012727e0）。",
+    "agent_hint": "增大 max_iterations、放宽容差，或换初值；变量多（> 10）时 Nelder–Mead 很慢，考虑 fmincon。",
+    "details": {
+      "path": "/x0",
+      "best": {
+        "x": [
+          -0.9994921875000009,
+          1.0111328125000003
+        ],
+        "fval": 4.0127268346972205,
+        "iterations": 10
+      }
+    },
+    "remediation": [
+      {
+        "id": "better_x0",
+        "kind": "ask_user",
+        "description": "能否给一个更好的初值，或放宽容差？",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.107447
+  }
+}

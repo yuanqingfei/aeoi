@@ -1,0 +1,177 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "optim.local.fmincon",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "x": [
+      0.9999999999999949,
+      4.742999637264415,
+      3.821149984184875,
+      1.3794082931726799
+    ],
+    "solution": {
+      "x1": 0.9999999999999949,
+      "x2": 4.742999637264415,
+      "x3": 3.821149984184875,
+      "x4": 1.3794082931726799
+    },
+    "fval": 17.0140172891563,
+    "lambda": {
+      "ineqnonlin": [
+        0.5522936601203139
+      ],
+      "eqnonlin": [
+        0.1614685667711215
+      ],
+      "ineqlin": [],
+      "eqlin": [],
+      "lower": [
+        1.0878712286641286,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "upper": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "iterations": 6,
+    "evaluations": 7,
+    "first_order_optimality": 9.853347743750468e-13,
+    "constraint_violation": 7.105427357601002e-15
+  },
+  "trust": {
+    "convergence": {
+      "applicable": true,
+      "converged": true,
+      "iterations": 6,
+      "criterion": "相对 KKT 残差 ≤ 1e-8，约束违反 ≤ 1e-8"
+    },
+    "residual": {
+      "stationarity": 9.853347743750468e-13,
+      "complementarity": 3.2654172501844826e-16,
+      "constraint_violation": 7.105427357601002e-15,
+      "definition": "stationarity = ‖∇f + Σλ∇g + Σν∇h‖∞ / max(1, ‖∇f‖∞)；complementarity = max|λ_i·g_i| / max(1, |f|)"
+    },
+    "condition": {
+      "applicable": false
+    },
+    "error_estimate": {
+      "applicable": false,
+      "note": "KKT 残差小只说明是一个局部最优（或鞍点，二阶条件未检查）"
+    },
+    "checks": {
+      "kkt": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "optimum": "local",
+      "method": "SQP：阻尼 BFGS + 有效集 QP（共享内核）+ ℓ1 价值函数线搜索；梯度由自动微分（3.15 EX-8）"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:fmincon:sqp-bfgs-ad",
+      "routine": "optim::fmincon",
+      "provenance": "aeoi://operators/optim.local.fmincon/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "expression",
+        "statement": "目标与约束是合法的 3.15 表达式",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "converges",
+        "statement": "SQP 从 x0 收敛到 KKT 点",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "local_only",
+        "statement": "结果只是局部最优（或满足一阶条件的点；二阶条件未检查），不一定是全局最优",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "smooth",
+        "statement": "目标与约束在解附近光滑",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": null
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "kkt": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": {
+        "converged": true,
+        "iterations": 6
+      },
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null,
+      "coverage": {
+        "kkt": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:af274215c991a9df64fb2b4ab8a8a2d51d7e2f227250dd66f5ea2bc0f013cc93",
+      "result": "sha256:2d8281459884a9847a9d79519a9b3e86e887ede88077fa437b4a5486da9bbbbf",
+      "output_hash": "sha256:57017a387a90e1ccca9d0356fc1d8cb44963b3e54a31873f67b02090a9769f54",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of optim.local.fmincon@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:2a68aed8f8218da3045d762ced4d514a62af0e1bb0471506e2c31ff183626802",
+    "output_hash": "sha256:57017a387a90e1ccca9d0356fc1d8cb44963b3e54a31873f67b02090a9769f54",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.27784400000000004
+  }
+}

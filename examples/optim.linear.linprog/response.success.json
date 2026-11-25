@@ -1,0 +1,174 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "optim.linear.linprog",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "x": [
+      1.6,
+      1.2
+    ],
+    "fval": -2.8,
+    "lambda": {
+      "ineqlin": [
+        0.4,
+        0.2
+      ],
+      "eqlin": [],
+      "lower": [
+        0.0,
+        0.0
+      ],
+      "upper": [
+        0.0,
+        0.0
+      ]
+    },
+    "iterations": 2,
+    "bounds_used": {
+      "lb": [
+        0.0,
+        0.0
+      ],
+      "ub": [
+        "Inf",
+        "Inf"
+      ]
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": true,
+      "converged": true,
+      "iterations": 2
+    },
+    "residual": {
+      "primal_infeasibility": 1.4802973661668753e-16,
+      "dual_infeasibility": 0.0,
+      "complementarity": 2.960594732333751e-17,
+      "stationarity": 0.0,
+      "threshold": 1e-09,
+      "definition": "相对数据尺度的 KKT 残差：c + Aᵀλ_ineq + Aeqᵀλ_eq − λ_lower + λ_upper = 0，λ ≥ 0，λ·松弛 = 0"
+    },
+    "condition": {
+      "applicable": false
+    },
+    "error_estimate": {
+      "applicable": false,
+      "note": "线性规划的最优解在顶点上；最优解不唯一时（目标与某个约束平行）给出的是其中一个顶点"
+    },
+    "checks": {
+      "kkt": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "method": "两阶段单纯形（Bland 规则）；基解与对偶变量用 LU 内核重算"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:linprog:two-phase-simplex-bland",
+      "routine": "lp::solve",
+      "provenance": "aeoi://operators/optim.linear.linprog/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有数据有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "feasible",
+        "statement": "约束有可行解",
+        "enforced_by": "error:E.DOMAIN.INFEASIBLE"
+      },
+      {
+        "id": "bounded",
+        "statement": "目标在可行域上有下界",
+        "enforced_by": "error:E.DOMAIN.UNBOUNDED"
+      },
+      {
+        "id": "default_bounds",
+        "statement": "变量缺省没有界（MATLAB 约定，与 scipy 不同）",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "unique",
+        "statement": "最优解可能不唯一；给出的是一个最优顶点",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": null
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "kkt": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": {
+        "converged": true,
+        "iterations": 2
+      },
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "kkt": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:85b01f0ecbe8e98a5a8963ce3028174077ae66d43418e10d2fd2af6449437589",
+      "result": "sha256:de30b7aedf9403391569f3b9e9c32ab8df7625635c25a03a1fa63ba93809afa4",
+      "output_hash": "sha256:58ab957de5bff15eee91417dad53823e8f0d6a8a606fa1f1921d12befa65f1cd",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of optim.linear.linprog@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:5787ff55691b6eb7f456414bfb6d731b4090c1c62b4905721ceb0abc958d0387",
+    "output_hash": "sha256:58ab957de5bff15eee91417dad53823e8f0d6a8a606fa1f1921d12befa65f1cd",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.161078
+  }
+}

@@ -1,0 +1,49 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "optim.local.fmincon",
+ "operator_version": "0.4.0",
+ "case_family": "sphere_on_plane",
+ "request": {
+  "unknowns": [
+   "x",
+   "y",
+   "z"
+  ],
+  "objective": "x^2 + y^2 + z^2",
+  "Aeq": [
+   [
+    1.0,
+    1.0,
+    1.0
+   ]
+  ],
+  "beq": [
+   1.0
+  ],
+  "x0": [
+   1.0,
+   0.0,
+   0.0
+  ]
+ },
+ "reference_env": {
+  "engine": "scipy.optimize (linprog HiGHS / minimize SLSQP, Nelder-Mead)",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "x_slsqp": [
+   0.33333333333333337,
+   0.3333333333333333,
+   0.33333333333333337
+  ],
+  "fval_slsqp": 0.33333333333333337,
+  "x_exact": [
+   0.3333333333333333,
+   0.3333333333333333,
+   0.3333333333333333
+  ]
+ }
+}
