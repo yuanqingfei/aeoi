@@ -38,12 +38,12 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           targets: ${{ matrix.target }}
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
       - run: pip install numpy jsonschema referencing
@@ -89,7 +89,7 @@ jobs:
           cp rust/target/${{ matrix.target }}/release/aeoi-mcp${{ matrix.exe }} rust/target/${{ matrix.target }}/release/aeoi-call${{ matrix.exe }} "$d"/
           cp LICENSE-MIT LICENSE-APACHE THIRD_PARTY_NOTICES.md "$d"/
           if [ "${{ matrix.exe }}" = ".exe" ]; then 7z a "$d.zip" "$d" >/dev/null; else tar czf "$d.tar.gz" "$d"; fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: build-${{ matrix.name }}
           path: |
@@ -103,7 +103,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: build-*
           merge-multiple: true
@@ -129,12 +129,12 @@ jobs:
     needs: build
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v7
         with:
           pattern: build-*
           merge-multiple: true
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
       - name: assemble bundle (universal macOS binary + Windows exe)
@@ -148,7 +148,7 @@ jobs:
           python3 tools/write_mcpb_manifest.py "${GITHUB_REF_NAME}" aeoi-macos-arm64/aeoi-mcp > bundle/manifest.json
           npx -y "$MCPB_CLI" validate bundle/manifest.json
           npx -y "$MCPB_CLI" pack bundle aeoi.mcpb
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: mcpb
           path: aeoi.mcpb
@@ -162,15 +162,15 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v7
         with:
           path: dist
           merge-multiple: true
       - name: checksums
         working-directory: dist
         run: sha256sum aeoi-*.tar.gz aeoi-*.zip aeoi.mcpb > SHA256SUMS && cat SHA256SUMS
-      - uses: actions/attest-build-provenance@v2
+      - uses: actions/attest-build-provenance@v3
         with:
           subject-path: |
             dist/aeoi-*.tar.gz
