@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/nonlinear.system.fsolve/0.4.0/output",
+  "type": "object",
+  "required": [
+    "x",
+    "solution",
+    "residual",
+    "iterations",
+    "evaluations",
+    "jacobian"
+  ],
+  "properties": {
+    "x": {
+      "type": "array",
+      "description": "解，按 unknowns 的顺序"
+    },
+    "solution": {
+      "type": "object",
+      "description": "未知量名 → 值"
+    },
+    "residual": {
+      "type": "array",
+      "description": "F(x)"
+    },
+    "iterations": {
+      "type": "integer"
+    },
+    "evaluations": {
+      "type": "integer"
+    },
+    "jacobian": {
+      "const": "automatic_differentiation"
+    }
+  }
+}

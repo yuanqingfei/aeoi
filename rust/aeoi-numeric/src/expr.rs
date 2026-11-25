@@ -13,6 +13,7 @@
 //! number  = digits [ "." digits ] [ ("e" | "E") [ "+" | "-" ] digits ]  |  "." digits [ exponent ]
 //! name    = ( letter | "_" ) { letter | digit | "_" }    ASCII only
 //! ```
+use aeoi_core::error::OpError;
 use serde_json::{json, Value};
 
 pub const MAX_LEN: usize = 10_000;
@@ -382,4 +383,126 @@ mod tests {
         assert_eq!(ev("a + b + c", &["a", "b", "c"], &[a, b, c]), 1.0);
         assert_eq!(ev("a + (b + c)", &["a", "b", "c"], &[a, b, c]), 0.0);
     }
+}
+
+/// E.VALIDATION.EXPRESSION for a static error, with a caret under the offending character (shared by every
+/// operator that takes expressions).
+pub fn expr_err(path: &str, src: &str, e: crate::expr::ExprError) -> OpError {
+    let caret = format!("{}\n{}^", src, " ".repeat(e.position.min(src.chars().count())));
+    OpError::new("E.VALIDATION.EXPRESSION", format!("{path} 的表达式在第 {} 个字符处有误：{}\n{caret}", e.position, e.message), "按 3.15 的语法改写：只用已声明的状态名、参数名、t、pi、+ − * / ^ 与函数表里的函数。")
+        .path(path)
+        .detail("expression", json!(src))
+        .detail("position", json!(e.position))
+        .detail("kind", json!(e.kind))
+}
+
+
+/// Value and gradient of the AST by forward-mode automatic differentiation (spec 3.15 EX-8, v0.4.13).
+/// `seed[k]` = Some(j): variable k is the j-th independent variable; `nd` = number of independents. The value
+/// part is computed with exactly the operations of `eval` (bit-identical). Derivative conventions at
+/// non-differentiable points: abs'(0) = 0, sign' = 0, min/max take the derivative of the chosen argument
+/// (the first one on ties), x^y with a constant exponent uses y·x^(y−1).
+pub fn eval_grad(n: &Node, vars: &[f64], seed: &[Option<usize>], nd: usize) -> (f64, Vec<f64>) {
+    let zero = || vec![0.0; nd];
+    let lin = |g: &[f64], s: f64| -> Vec<f64> { g.iter().map(|v| v * s).collect() };
+    match n {
+        Node::Num(v) => (*v, zero()),
+        Node::Var(k) => {
+            let mut g = zero();
+            if let Some(j) = seed[*k] {
+                g[j] = 1.0;
+            }
+            (vars[*k], g)
+        }
+        Node::Neg(a) => {
+            let (v, g) = eval_grad(a, vars, seed, nd);
+            (-v, lin(&g, -1.0))
+        }
+        Node::Add(a, b) | Node::Sub(a, b) => {
+            let (va, ga) = eval_grad(a, vars, seed, nd);
+            let (vb, gb) = eval_grad(b, vars, seed, nd);
+            let sgn = if matches!(n, Node::Add(..)) { 1.0 } else { -1.0 };
+            (if sgn > 0.0 { va + vb } else { va - vb }, ga.iter().zip(&gb).map(|(x, y)| x + sgn * y).collect())
+        }
+        Node::Mul(a, b) => {
+            let (va, ga) = eval_grad(a, vars, seed, nd);
+            let (vb, gb) = eval_grad(b, vars, seed, nd);
+            (va * vb, ga.iter().zip(&gb).map(|(x, y)| x * vb + va * y).collect())
+        }
+        Node::Div(a, b) => {
+            let (va, ga) = eval_grad(a, vars, seed, nd);
+            let (vb, gb) = eval_grad(b, vars, seed, nd);
+            let v = va / vb;
+            (v, ga.iter().zip(&gb).map(|(x, y)| (x - v * y) / vb).collect())
+        }
+        Node::Pow(a, b) => {
+            let (va, ga) = eval_grad(a, vars, seed, nd);
+            let (vb, gb) = eval_grad(b, vars, seed, nd);
+            let v = va.powf(vb);
+            if gb.iter().all(|x| *x == 0.0) {
+                let d = if vb == 0.0 { 0.0 } else { vb * va.powf(vb - 1.0) };
+                (v, lin(&ga, d))
+            } else {
+                let la = va.ln();
+                (v, ga.iter().zip(&gb).map(|(x, y)| v * (y * la + vb * x / va)).collect())
+            }
+        }
+        Node::Call(f, args) => {
+            let (x, gx) = eval_grad(&args[0], vars, seed, nd);
+            let two = |args: &Vec<Node>| eval_grad(&args[1], vars, seed, nd);
+            match *f {
+                "sin" => (x.sin(), lin(&gx, x.cos())),
+                "cos" => (x.cos(), lin(&gx, -x.sin())),
+                "tan" => { let t = x.tan(); (t, lin(&gx, 1.0 + t * t)) }
+                "asin" => (x.asin(), lin(&gx, 1.0 / (1.0 - x * x).sqrt())),
+                "acos" => (x.acos(), lin(&gx, -1.0 / (1.0 - x * x).sqrt())),
+                "atan" => (x.atan(), lin(&gx, 1.0 / (1.0 + x * x))),
+                "atan2" => {
+                    let (y, gy) = two(args);
+                    let r2 = x * x + y * y;
+                    (x.atan2(y), gx.iter().zip(&gy).map(|(dx, dy)| (y * dx - x * dy) / r2).collect())
+                }
+                "sinh" => (x.sinh(), lin(&gx, x.cosh())),
+                "cosh" => (x.cosh(), lin(&gx, x.sinh())),
+                "tanh" => { let t = x.tanh(); (t, lin(&gx, 1.0 - t * t)) }
+                "exp" => { let e = x.exp(); (e, lin(&gx, e)) }
+                "log" => (x.ln(), lin(&gx, 1.0 / x)),
+                "log10" => (x.log10(), lin(&gx, 1.0 / (x * std::f64::consts::LN_10))),
+                "sqrt" => { let r = x.sqrt(); (r, lin(&gx, 0.5 / r)) }
+                "abs" => (x.abs(), lin(&gx, if x > 0.0 { 1.0 } else if x < 0.0 { -1.0 } else { 0.0 })),
+                "min" | "max" => {
+                    let (y, gy) = two(args);
+                    if x.is_nan() || y.is_nan() {
+                        return (f64::NAN, vec![f64::NAN; nd]);
+                    }
+                    let pick_x = if *f == "min" { x <= y } else { x >= y };
+                    if pick_x { (if *f == "min" { x.min(y) } else { x.max(y) }, gx) } else { (if *f == "min" { x.min(y) } else { x.max(y) }, gy) }
+                }
+                "hypot" => {
+                    let (y, gy) = two(args);
+                    let h = x.hypot(y);
+                    (h, gx.iter().zip(&gy).map(|(dx, dy)| if h == 0.0 { 0.0 } else { (x * dx + y * dy) / h }).collect())
+                }
+                "sign" => (if x > 0.0 { 1.0 } else if x < 0.0 { -1.0 } else if x == 0.0 { 0.0 } else { f64::NAN }, zero()),
+                _ => unreachable!(),
+            }
+        }
+    }
+}
+
+/// Declared parameters {name: number}: names checked (3.15) and kept distinct from `taken`.
+pub fn parse_params(v: &Value, taken: &[String]) -> Result<(Vec<String>, Vec<f64>), aeoi_core::error::OpError> {
+    let mut names = Vec::new();
+    let mut vals = Vec::new();
+    if let Some(o) = v.as_object() {
+        for (k, val) in o {
+            check_name(k).map_err(|m| aeoi_core::error::OpError::new("E.VALIDATION.EXPRESSION", m, "换一个名字。").path(&format!("/params/{k}")).detail("kind", json!("bad_name")))?;
+            if taken.contains(k) {
+                return Err(aeoi_core::error::OpError::new("E.VALIDATION.EXPRESSION", format!("'{k}' 已经是未知量（或自变量）的名字，表达式里无法区分。"), "给参数换一个名字。").path(&format!("/params/{k}")).detail("kind", json!("duplicate_name")));
+            }
+            names.push(k.clone());
+            vals.push(val.as_f64().unwrap_or(f64::NAN));
+        }
+    }
+    Ok((names, vals))
 }

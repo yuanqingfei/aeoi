@@ -1,0 +1,33 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "nonlinear.root.fzero",
+ "operator_version": "0.4.0",
+ "case_family": "several_roots_in_bracket",
+ "request": {
+  "expression": "sin(x)",
+  "bracket": [
+   0.5,
+   10.0
+  ]
+ },
+ "reference_env": {
+  "engine": "scipy.optimize (brentq / fsolve) / mpmath.findroot",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "roots_true": [
+   3.141592653589793,
+   6.283185307179586,
+   9.42477796076938
+  ],
+  "x_brentq": 3.141592653589793,
+  "bracket_used": [
+   0.5,
+   10.0
+  ]
+ }
+}

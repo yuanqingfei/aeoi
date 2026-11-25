@@ -1,0 +1,34 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "nonlinear.system.fsolve",
+ "operator_version": "0.4.0",
+ "case_family": "scalar_cubic",
+ "request": {
+  "unknowns": [
+   "x"
+  ],
+  "equations": [
+   "x^3 - 2*x - 5"
+  ],
+  "x0": [
+   2.0
+  ]
+ },
+ "reference_env": {
+  "engine": "scipy.optimize (brentq / fsolve) / mpmath.findroot",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "x_true": [
+   2.0945514815423265
+  ],
+  "x_scipy": [
+   2.0945514815423265
+  ],
+  "scipy_residual_inf": 8.881784197001252e-16
+ }
+}

@@ -1,0 +1,39 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "nonlinear.system.fsolve",
+ "operator_version": "0.4.0",
+ "case_family": "exp_system",
+ "request": {
+  "unknowns": [
+   "u",
+   "v"
+  ],
+  "equations": [
+   "exp(u) + v - 3",
+   "u - sin(v)"
+  ],
+  "x0": [
+   0.5,
+   1.0
+  ]
+ },
+ "reference_env": {
+  "engine": "scipy.optimize (brentq / fsolve) / mpmath.findroot",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "x_true": [
+   0.7595676289032569,
+   0.8626481084968071
+  ],
+  "x_scipy": [
+   0.7595676289032569,
+   0.8626481084968071
+  ],
+  "scipy_residual_inf": 0.0
+ }
+}

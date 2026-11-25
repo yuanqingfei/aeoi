@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.12-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.13-draft
 
-> 状态：Draft v0.4.12 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.13 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.13 新增单变量求根 `nonlinear.root.fzero`（10.26）与非线性方程组 `nonlinear.system.fsolve`（10.27）。表达式语言增加了自动微分（3.15 EX-8）。不收敛时报错，并给出目前最好的点。
 >
 > v0.4.12 新增滤波器设计 `signal.design.butter`（10.24）与滤波 `signal.filter.filter`（10.25）；截止频率必须显式写明单位。同时定下两条：目标是约 100 个常用工程计算函数（12.3）；算子之间的复用必须调用同一内核（11.5）。
 >
@@ -409,6 +411,11 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 - EX-5 **规模上限**：每个表达式最多 10 000 个字符、10 000 个语法树节点，嵌套深度不超过 200。超出时分别报 `too_long`、`too_many_nodes`、`too_deep`。深度有上限，所以递归下降解析器不会因栈溢出而崩溃（X-3）。
 - EX-6 **错误**。静态错误一律报 `E.VALIDATION.EXPRESSION`（新码）。`details` 包含：`path`（指向出错表达式的 JSON Pointer，如 `/rhs/1`）、`expression`（原文）、`position`（从 0 起算的字符偏移）、`kind`（取值为 `syntax`、`unknown_name`、`arity`、`non_ascii`、`too_long`、`too_many_nodes`、`too_deep`、`not_finite`、`bad_name`、`duplicate_name`）。`message` 的最后一行是原文加一个指向错误位置的 `^`。所有表达式都先通过检查，然后才开始求值，不会出现算到一半才发现第三个表达式写错的情况。remediation 是 `modify_input`（改写该表达式）和 `ask_user`。
 - EX-7 实现 MUST NOT 借用宿主语言的 `eval` 或任何能执行代码的机制，也 MUST NOT 接受本节以外的语法或函数（不提供“方便的扩展”）。两个实现只要都遵守本节，对同一个表达式就有相同的语义；golden 里的右端由 Python 实现求值，参考实现与它的差别只来自 libm。
+- EX-8 **自动微分**（v0.4.13，作者决定）：需要导数的算子（`fsolve`，以后的 `fmincon`、`ode15s`）MUST 对表达式做前向自动微分，得到精确到舍入误差的导数，MUST NOT 用有限差分。
+  - 值部分与 EX-4 的求值逐位相同。
+  - 不可导点的约定：abs′(0) = 0，sign′ = 0；min、max 取被选中那个参数的导数，相等时取第一个；指数为常数的幂 x^c 用 c·x^(c−1)。
+  - 参考实现在 `aeoi-numeric::expr::eval_grad`，所有需要导数的算子共用它（11.5 RI-1）。
+  - 一致性运行器（测试工具）对套件自带的表达式用 Python 求值，这不受 EX-7 约束：被测的是实现，不是运行器。
 
 ## 4. 结果信封与可信度元数据
 
@@ -510,16 +517,18 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 | 类别 | 何时使用 | `retryable` 默认 | 已登记的码（v0.3 新增的加粗） |
 |---|---|---|---|
 | `VALIDATION` | 输入不符合 schema 或语义约束 | true（改输入） | `SCHEMA`、`SHAPE`、`DTYPE`、`RANGE`、`NON_FINITE`、`NOT_SYMMETRIC`、`NOT_CONJUGATE`、`ZERO_DENOMINATOR`、`GRID`、`SPARSE_STRUCTURE`、`DIGEST_MISMATCH`、`REF_UNSUPPORTED`、`REF_FORBIDDEN`、**`OPTION_CONFLICT`**、**`RANK_DEFICIENT`**、**`UNGROUNDED_INPUT`**（v0.3.1，绑定层）、**`METHOD_UNAVAILABLE`**（v0.4）、`EXPRESSION`（v0.4.8，3.15） |
-| `DOMAIN` | 输入合法，但数学问题本身无解/不适用 | 视情况 | `IMPROPER_SYSTEM`、`NOT_STABILIZABLE`、`R_NOT_POSITIVE_DEFINITE`、`WEIGHT_NOT_PSD`、`HAMILTONIAN_IMAG_AXIS_EIG`、`ABOVE_NYQUIST`、**`MIMO_NOT_SUPPORTED`**、**`DEGENERATE_SYSTEM`**、**`NOT_CONTINUOUS`**、**`NOT_CONTROLLABLE`**、**`POLE_MULTIPLICITY`**、**`LYAP_SINGULAR`**、**`SYMPLECTIC_UNIT_CIRCLE_EIG`**、`UNDERDETERMINED`（v0.4.10）、`EXTRAPOLATION_REQUIRED`（v0.4.10） |
-| `NUMERICAL` | 问题理论上可解，但数值上失败或不可信 | true（正则化/放宽/换算法） | `SINGULAR`、`NO_CONVERGENCE`、`POLE_ON_GRID`、`NON_FINITE_EVALUATION`（v0.4.8）、`STEP_SIZE_TOO_SMALL`（v0.4.8） |
+| `DOMAIN` | 输入合法，但数学问题本身无解/不适用 | 视情况 | `IMPROPER_SYSTEM`、`NOT_STABILIZABLE`、`R_NOT_POSITIVE_DEFINITE`、`WEIGHT_NOT_PSD`、`HAMILTONIAN_IMAG_AXIS_EIG`、`ABOVE_NYQUIST`、**`MIMO_NOT_SUPPORTED`**、**`DEGENERATE_SYSTEM`**、**`NOT_CONTINUOUS`**、**`NOT_CONTROLLABLE`**、**`POLE_MULTIPLICITY`**、**`LYAP_SINGULAR`**、**`SYMPLECTIC_UNIT_CIRCLE_EIG`**、`UNDERDETERMINED`（v0.4.10）、`EXTRAPOLATION_REQUIRED`（v0.4.10）、`NO_SIGN_CHANGE`（v0.4.13） |
+| `NUMERICAL` | 问题理论上可解，但数值上失败或不可信 | true（正则化/放宽/换算法） | `SINGULAR`、`NO_CONVERGENCE`、`POLE_ON_GRID`、`NON_FINITE_EVALUATION`（v0.4.8）、`STEP_SIZE_TOO_SMALL`（v0.4.8）、`LOCAL_MINIMUM`（v0.4.13） |
 | `RESOURCE` | 超时、超规模、被取消 | true | `TIMEOUT`、`INPUT_TOO_LARGE`、`COMPUTE_LIMIT`、`OUTPUT_TOO_LARGE` |
 | `INTERNAL` | 实现缺陷或后端异常 | false（可原样重试一次） | `PANIC`（`BACKEND`、`INVARIANT_VIOLATED` 为保留码，v0.2 算子未使用） |
 
-已登记的 warning（v0.3.3 新增框架级 `W.EVIDENCE.POSTCONDITION_FAILED`，见 E-7a、E-11）：`W.NUMERICAL.{NEAR_POLE, ZERO_ON_GRID, ILL_CONDITIONED, LARGE_RESIDUAL, NEAR_UNCONTROLLABLE, **RANK_AMBIGUOUS, CROSSING_RECOVERED, PLACEMENT_INACCURATE, CONVERSION_DISCREPANCY**, STIFF_PROBLEM（v0.4.8）}`、`W.DOMAIN.{UNSTABLE_SYSTEM, NOT_SETTLED, INFINITE_DC_GAIN, ZERO_DC_GAIN, **UNDEFINED_DC_GAIN, NONMINIMAL_REALIZATION, REALIZATION_DEPENDENT, GRAMIAN_UNDEFINED, CLOSED_LOOP_UNSTABLE, DIRECT_FEEDTHROUGH_IGNORED**}`、`W.ACCURACY.{GRID_TOO_COARSE, AUTO_GRID, **ALIASING**, EXTRAPOLATED（v0.4.10）}`、`W.VALIDATION.{LEADING_ZEROS_STRIPPED, SYMMETRIZED}`、`W.PERFORMANCE.SPARSE_DENSIFIED`（加粗为 v0.3 新增）。
+已登记的 warning（v0.3.3 新增框架级 `W.EVIDENCE.POSTCONDITION_FAILED`，见 E-7a、E-11）：`W.NUMERICAL.{NEAR_POLE, ZERO_ON_GRID, ILL_CONDITIONED, LARGE_RESIDUAL, NEAR_UNCONTROLLABLE, **RANK_AMBIGUOUS, CROSSING_RECOVERED, PLACEMENT_INACCURATE, CONVERSION_DISCREPANCY**, STIFF_PROBLEM（v0.4.8）}`、`W.DOMAIN.{BRACKET_SEARCHED（v0.4.13）, UNSTABLE_SYSTEM, NOT_SETTLED, INFINITE_DC_GAIN, ZERO_DC_GAIN, **UNDEFINED_DC_GAIN, NONMINIMAL_REALIZATION, REALIZATION_DEPENDENT, GRAMIAN_UNDEFINED, CLOSED_LOOP_UNSTABLE, DIRECT_FEEDTHROUGH_IGNORED**}`、`W.ACCURACY.{GRID_TOO_COARSE, AUTO_GRID, **ALIASING**, EXTRAPOLATED（v0.4.10）}`、`W.VALIDATION.{LEADING_ZEROS_STRIPPED, SYMMETRIZED}`、`W.PERFORMANCE.SPARSE_DENSIFIED`（加粗为 v0.3 新增）。
 
 v0.3.1 新增码：`UNGROUNDED_INPUT` 由 LLM 绑定层（不是算子）返回，表示 `x-aeoi-provenance: "user"` 的输入没有用户原话作为来源（F-5(c)），`retryable: true` 但只能在问过用户之后重试。v0.3 新增码的含义：`OPTION_CONFLICT` 选项组合矛盾（O-2）；`RANK_DEFICIENT` 输入矩阵列不满秩（`place` 的 B）；`MIMO_NOT_SUPPORTED` 该算子/表示只支持 SISO（R-8、`margin`）；`DEGENERATE_SYSTEM` 系统矩阵非满法秩，零点无定义（R-9）；`NOT_CONTINUOUS` 需要连续系统却给了离散系统（`c2d`）；`NOT_CONTROLLABLE` 有不可控模态，无法任意配置极点（`place`；与 `NOT_STABILIZABLE` 区分：后者只关心不稳定模态）；`POLE_MULTIPLICITY` 期望极点重数超过输入数 m；`LYAP_SINGULAR` Lyapunov 方程奇异（连续 λᵢ + λ̄ⱼ ≈ 0，离散 λᵢλ̄ⱼ ≈ 1）；`SYMPLECTIC_UNIT_CIRCLE_EIG` DARE 的辛矩阵束在单位圆上有特征值（单位圆上的模态不被 Q 观测）。这些都是 `DOMAIN`/`VALIDATION`：调数值参数无效（X-1）。
 
 v0.4.10 新增码：`UNDERDETERMINED` 方程个数少于未知数，解不唯一（LS-1）；`EXTRAPOLATION_REQUIRED` 查询点超出数据范围，而调用方没有说明怎么处理（IP-3）；警告 `W.ACCURACY.EXTRAPOLATED` 结果中有外推得到的值。
+
+v0.4.13 新增码：`NO_SIGN_CHANGE` 求根区间两端同号，或从 x0 搜不到变号区间（FZ-1）；`LOCAL_MINIMUM` 迭代停在残差的局部极小，不是根（FS-4）；警告 `W.DOMAIN.BRACKET_SEARCHED` 求根区间是从 x0 搜出来的，根不一定是想要的那个。
 
 v0.4.8 新增码：`E.VALIDATION.EXPRESSION`（表达式的静态错误，3.15 EX-6）、`E.NUMERICAL.NON_FINITE_EVALUATION`（模型在某点算出 NaN/Inf）、`E.NUMERICAL.STEP_SIZE_TOO_SMALL`（自适应步长缩到下限）与 `W.NUMERICAL.STIFF_PROBLEM`，含义见 10.18 OD-6、OD-7。
 
@@ -2108,6 +2117,115 @@ A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与�
 
 共 24 个 golden 用例，15 个成功、9 个错误。最坏用例只用掉了容差的 3.1%；15 个成功用例中，13 个的误差不超过 scipy。结果见 `aeoi-numeric/tests/parity_filter.rs` 和 `reports/parity-filter.json`。
 
+## 10.26 `nonlinear.root.fzero`：单变量求根（v0.4.13）
+
+对应 MATLAB 的 `fzero`。真值是 mpmath `findroot` 以 50 位精度、从参考根出发求得的，scipy `brentq` 只作记录；都不是 MATLAB 的结果。f 用 3.15 的表达式语言写。这个算子逼出的规范问题是：“根”指的是哪一个。MATLAB 只给 x0 时会自己向外找变号区间，找到的根可能离 x0 很远，也可能不是用户想要的那个。另外，在变号的“根”处，f 也可能根本不是 0，而是一个极点。
+
+**规范性条款**
+
+- FZ-1 **搜索范围**（作者决定，2026-11-25）：`bracket` = [a, b] 与 `x0` 恰好给出一种，否则报 `E.VALIDATION.OPTION_CONFLICT`。
+  - 优先用 bracket。f(a)·f(b) > 0 时报 `E.DOMAIN.NO_SIGN_CHANGE`（新码），附 `ask_user`。
+  - 只给 x0 时按 MATLAB 的方式向外搜索：dx = |x0|/50（x0 = 0 时取 1/50），交替试 x0 − dx 和 x0 + dx，每轮 dx 乘 √2，直到变号；搜不到时报 `E.DOMAIN.NO_SIGN_CHANGE`。
+  - 搜到区间后，在 `bracket.initial` 里回显它，`bracket.source` = `searched_from_x0`，并发 `W.DOMAIN.BRACKET_SEARCHED`（新码），说明找到的根不一定是想要的那个。
+- FZ-2 **算法**：Brent 方法（zeroin，也是 MATLAB fzero 的算法）。区间半宽 ≤ 2ε|x| + xtol/2 时停止。
+- FZ-3 **输出**：`x`、`fx`、`bracket`（`initial`、`source`、`final`；`final` 夹住根，就是误差界）、`iterations`、`evaluations`。
+- FZ-4 **后置条件**：
+  - `sign_change`：最终区间两端变号。
+  - `not_a_pole`：|f(x)| ≤ max(|f(a₀)|, |f(b₀)|)，a₀、b₀ 为初始区间两端。tan(x) 在 [1, 2] 上的变号点 π/2 是极点，这一条就会不成立，结果被标为不可依赖。
+  - `all_finite`。
+  - 求值遇到非有限值报 `E.NUMERICAL.NON_FINITE_EVALUATION`。
+- FZ-5 **确定性**：`platform_bitwise`（经数学库，见 EX-4）。
+
+**Manifest** — `examples/nonlinear.root.fzero/manifest.json`
+
+```json
+{{jsonc:examples/nonlinear.root.fzero/manifest.json}}
+```
+
+**请求与响应**（开普勒方程 E − e·sin E = M，e = 0.9，M = 0.3）
+
+```json
+{{file:examples/nonlinear.root.fzero/request.json}}
+```
+
+```json
+{{jsonc:examples/nonlinear.root.fzero/response.success.json}}
+```
+
+**其他例子**：
+- `request.x0.json`：cos(x) = x，只给 x0 = 1。响应带 `W.DOMAIN.BRACKET_SEARCHED`。
+- `request.pole.json`：tan(x) 在 [1, 2] 上。`not_a_pole` 不成立，状态为 `ok_with_warnings`，x 被标为不可依赖。
+
+**错误请求与响应**（x² + 1 在 [−1, 1] 上不变号：FZ-1）
+
+```json
+{{jsonc:examples/nonlinear.root.fzero/response.error.json}}
+```
+
+**Parity 测试规格** — `examples/nonlinear.root.fzero/parity.yaml`
+
+```yaml
+{{file:examples/nonlinear.root.fzero/parity.yaml}}
+```
+
+共 24 个 golden 用例，15 个成功、9 个错误。未标记的用例中，最坏的一个只用掉了 4ε|x*| 这个容差的 18%。结果见 `aeoi-numeric/tests/parity_roots.rs` 和 `reports/parity-fzero.json`。
+
+## 10.27 `nonlinear.system.fsolve`：非线性方程组（v0.4.13）
+
+对应 MATLAB 的 `fsolve`。真值是 mpmath `findroot` 求得的，scipy `fsolve`（MINPACK hybrd）只作记录；都不是 MATLAB 的结果。这个算子逼出的规范问题有两个：
+
+- **导数从哪里来。** MATLAB 缺省用有限差分，精度取决于步长。
+- **不收敛怎么报。** MATLAB 返回最后一个点和一个 exitflag，常被调用方忽略。
+
+**规范性条款**
+
+- FS-1 **输入**：`unknowns`（名字）、`equations`（F_i 的表达式，个数等于未知量个数；否则报 `E.VALIDATION.SHAPE`）、`params`、`x0`（来源 `user`）。超定或欠定的问题留给以后的 lsqnonlin。
+- FS-2 **雅可比**（作者决定）：由表达式自动微分得到（EX-8），是精确的，不用有限差分。结果里回显 `jacobian` = `automatic_differentiation`。
+- FS-3 **算法**：Powell dogleg 信赖域（MATLAB fsolve 的缺省算法）。
+  - 牛顿步用共享 LU 内核求解（11.5 RI-1）。
+  - 收敛判据：完整牛顿步 ‖p‖∞ ≤ 4u‖x‖∞，或 F = 0。
+- FS-4 **不收敛**（作者决定）：报错，并在 `details.best` 里给出目前最好的点、‖F‖∞ 和迭代次数。
+  - 信赖域缩到无法再下降，或连续 10 个接受步 ½‖F‖² 的下降不到 0.1%：报 `E.NUMERICAL.LOCAL_MINIMUM`（新码）。这是残差的局部极小，不是根，应换初值。
+  - 到迭代上限：报 `E.NUMERICAL.NO_CONVERGENCE`。
+  - 两种情况都附 `ask_user`，请用户给出更好的初值。
+- FS-5 **收敛后的检查**：
+  - 在解处再算一步牛顿修正，作为误差估计；后置条件 `newton_step_small` 要求这一步 ≤ 1e3·u·‖x‖∞。
+  - 用 Hager–Higham 估计 κ₁(J)。κ₁(J) > 1e8，或最后几步牛顿迭代只线性收敛（相邻步长之比 ≥ 1/4，连续三次）时，发 `W.NUMERICAL.ILL_CONDITIONED`：可能是重根。一维时 κ(J) 恒为 1，只能靠收敛速度判断。
+- FS-6 **输出**：`x`（按 unknowns 的顺序）、`solution`（名字 → 值）、`residual` = F(x)、`iterations`、`evaluations`。
+- FS-7 **确定性**：`platform_bitwise`。
+
+**Manifest** — `examples/nonlinear.system.fsolve/manifest.json`
+
+```json
+{{jsonc:examples/nonlinear.system.fsolve/manifest.json}}
+```
+
+**请求与响应**（捕食者–猎物模型的平衡点，精确解 (3, 2)）
+
+```json
+{{file:examples/nonlinear.system.fsolve/request.json}}
+```
+
+```json
+{{jsonc:examples/nonlinear.system.fsolve/response.success.json}}
+```
+
+**其他例子**：`request.double_root.json` 解 (x − 1)² = 0。牛顿法只线性收敛，响应带 `W.NUMERICAL.ILL_CONDITIONED`。
+
+**错误请求与响应**（x² + 1 = 0 没有实根：FS-4）
+
+```json
+{{jsonc:examples/nonlinear.system.fsolve/response.error.json}}
+```
+
+**Parity 测试规格** — `examples/nonlinear.system.fsolve/parity.yaml`
+
+```yaml
+{{file:examples/nonlinear.system.fsolve/parity.yaml}}
+```
+
+共 18 个 golden 用例，9 个成功、9 个错误。最坏的用例用掉了容差（相对 1e-14）的 3%。从经典起点 (−1.2, 1) 解 Rosenbrock 函数的梯度方程时，scipy 的 hybr 和 lm 也都失败；本算子如实报 `E.NUMERICAL.NO_CONVERGENCE`，并给出目前最好的点。结果见 `aeoi-numeric/tests/parity_roots.rs` 和 `reports/parity-fsolve.json`。
+
 ## 11. Rust 参考实现（v0.3）
 
 ### 11.1 结构
@@ -2304,11 +2422,11 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 
 1. 在有授权的机器上运行 `matlab/gen_golden_bode.m`（并补 step/lqr 脚本），先核对 `memory_order_nonsymmetric` 用例与 python-control 一致，再跑通第一份 A 级凭证
 2. ~~修复 `lqr` 病态 R 的精度差距~~（v0.3.2 用补偿 Newton–Kleinman 完成）；剩余：平衡 + 有序 Schur（或广义特征值）作为符号函数不收敛时的后备路径，以及 `dlqr` 的同类精化
-3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；v0.4.10 加了 `linalg.system.solve`（10.19）与 `interp.grid.interp1`（10.20）；v0.4.11 加了 `fit.poly.polyfit`（10.21）、`linalg.decomp.eig`（10.22）、`linalg.decomp.svd`（10.23）；v0.4.12 加了 `signal.design.butter`（10.24）、`signal.filter.filter`（10.25）；之后做 `fzero`/`fsolve`（复用 3.15）、优化、`integral`，以及隐式/刚性方法（`ode15s`）与事件检测；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
+3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；v0.4.10 加了 `linalg.system.solve`（10.19）与 `interp.grid.interp1`（10.20）；v0.4.11 加了 `fit.poly.polyfit`（10.21）、`linalg.decomp.eig`（10.22）、`linalg.decomp.svd`（10.23）；v0.4.12 加了 `signal.design.butter`（10.24）、`signal.filter.filter`（10.25）；v0.4.13 加了 `nonlinear.root.fzero`（10.26）、`nonlinear.system.fsolve`（10.27）；之后做 优化、`integral`，以及隐式/刚性方法（`ode15s`）与事件检测；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
 5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；v0.3.4 另有 `aeoi-web design`。v0.3.5 实现了试点里排在前面的算子（串联、并联、反馈、PID 构造、stepinfo、Padé），v0.3.6 加了具名角色、`loopsens`（含带宽读数）和回合预算。下一步是按 A-4 写 `pidtune`（必须先声明对象类、指标和唯一性），以及控制器离散化和 MIMO 裕度；扩充问答题、加入"Agent + 裸 scipy"对照组。非线性吸引域仍不做。
 6. 分发：为 `aeoi-mcp` 发布各平台预编译二进制（GitHub Releases）、Claude Desktop 一键安装扩展、登记到 MCP 公开目录（v0.4.9：数学库、矩阵乘法内核与 FFT 旋转因子已统一，5 个平台的 golden 哈希完全相同；`v0.4.9` 是第一个正式发布）；之后做纯浏览器的结果查看器（`aeoi-wasm`：结果、信任信息、收据与本地重放）。不做独立的图形界面客户端或自带 LLM 的聊天客户端：AEOI 的客户端是 MCP 宿主
-7. 一致性套件（9.4）：v0.4.12 有 17 个算子的数值规则（17 / 30 = 57%；作者定的下限是 30%，以后提高），参考实现 962 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 34 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
+7. 一致性套件（9.4）：v0.4.13 有 19 个算子的数值规则（19 / 32 = 59%；作者定的下限是 30%，以后提高），参考实现 1012 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 38 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
 8. 根据以上反馈修订，冻结 v1.0
 
 ### 12.3 目标算子清单（v0.4.11，作者决定 2026-11-25）
@@ -2322,9 +2440,9 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 | 信号 | fft/ifft、filter、filtfilt、butter、cheby1、freqz、conv、xcorr、pwelch、spectrogram、resample、decimate、hilbert、findpeaks | 14 | 4（v0.4.12 加了 butter、filter） |
 | 多项式、插值、拟合 | polyfit、polyval、roots、conv/deconv、interp1（含 spline、pchip）、interp2、griddata、lsqcurvefit | 11 | 4 |
 | 微积分与 ODE | ode45、ode23、ode15s、integral、integral2、trapz、cumtrapz、bvp4c、pdepe、gradient | 10 | 1 |
-| 非线性方程与优化 | fzero、fsolve、fminsearch、fminbnd、fminunc、fmincon、linprog、quadprog、lsqnonlin | 9 | 0 |
+| 非线性方程与优化 | fzero、fsolve、fminsearch、fminbnd、fminunc、fmincon、linprog、quadprog、lsqnonlin | 9 | 2（v0.4.13） |
 | 统计 | regress/fitlm、corrcoef、histcounts、mean/std 的稳健版本等 | 8 | 0 |
-| 合计 | | 约 100 | 约 37（37%） |
+| 合计 | | 约 100 | 约 39（39%） |
 
 顺序：
 1. 剩下的四批：`butter` + `filter`、`fzero`/`fsolve`、`fminsearch`/`fmincon`/`linprog`、`integral`/`trapz`。
@@ -2333,6 +2451,34 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 4. 其余。
 
 ## 13. Changelog
+
+### v0.4.13-draft（2026-11-25）
+
+起因：四批中的第二批，`fzero` + `fsolve`。作者为这一批定了三件事：
+- fzero 优先用区间；也接受 x0，但回显搜到的区间并警告；
+- fsolve 的雅可比用表达式自动微分；
+- 不收敛时报错，并附上目前最好的点。
+
+**规范改动**
+
+| # | 位置 | 改动 | 理由 |
+|---|---|---|---|
+| 1 | 3.15 EX-8 | 表达式语言的前向自动微分；不可导点的约定 | 精确导数；以后 fmincon、ode15s 共用 |
+| 2 | 10.26 FZ-1 – FZ-5 | 新算子 `nonlinear.root.fzero` 0.4.0：Brent 方法；用后置条件 `not_a_pole` 区分根与极点 | 变号点不一定是根 |
+| 3 | 10.27 FS-1 – FS-7 | 新算子 `nonlinear.system.fsolve` 0.4.0：dogleg 信赖域 + 自动微分雅可比 + 共享 LU；用线性收敛判断重根 | 一维时 κ(J) 恒为 1，只能靠收敛速度 |
+| 4 | 5.1 | 新码 `E.DOMAIN.NO_SIGN_CHANGE`、`E.NUMERICAL.LOCAL_MINIMUM`、`W.DOMAIN.BRACKET_SEARCHED` | — |
+
+**开发中发现的问题**
+
+| # | 问题 | 处理 |
+|---|---|---|
+| 1 | 3.15 把 `t` 保留给 ODE 的时间，所以 fzero 不能用 t 作变量名 | 维持保留（语言要简单），golden 改用 w；以后如果用户反映不便，再考虑按算子放开 |
+| 2 | 从 (−1.2, 1) 出发解 Rosenbrock 梯度方程会失败，scipy 的 hybr 和 lm 也一样 | 作为错误用例收入 golden（`E.NUMERICAL.NO_CONVERGENCE`，附最好的点）；另从 (0.5, 0.2) 出发的用例能收敛 |
+
+**结果**
+
+- golden：`fzero` 24 个（15 个成功 / 9 个错误），`fsolve` 18 个（9 / 9），真值来自 mpmath。
+- 一致性：19 / 32 = 59% 的算子有数值规则，参考实现 1012 / 0 / 291；新增 4 种代理改写，都被抓住。运行器用自己的求值器（Python）重算区间两端的 f 和 F(x)。
 
 ### v0.4.12-draft（2026-11-25）
 

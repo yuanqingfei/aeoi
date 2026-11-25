@@ -1,6 +1,6 @@
 """Numeric comparison rules (spec 9.4 CF-6) for operators outside control: signal.spectral.fft (v0.4.7),
 ode.ivp.solve (v0.4.8), linalg.system.solve and interp.grid.interp1 (v0.4.10), fit.poly.polyfit,
-linalg.decomp.eig and linalg.decomp.svd (v0.4.11), signal.design.butter and signal.filter.filter (v0.4.12).
+linalg.decomp.eig and linalg.decomp.svd (v0.4.11), signal.design.butter and signal.filter.filter (v0.4.12), nonlinear.root.fzero and nonlinear.system.fsolve (v0.4.13).
 
 Same ground rules as rules_control.py: tolerances from the suite (parity.yaml), every scale computed here from
 the reference request or values, nothing the implementation reports is used.
@@ -351,6 +351,49 @@ def rule_filter(case, env, manifest, req=None, expected=None):
     return out
 
 
+# ---------------------------------------------------------------- nonlinear.root.fzero / nonlinear.system.fsolve (T1)
+_PYNS = {"sin": math.sin, "cos": math.cos, "tan": math.tan, "asin": math.asin, "acos": math.acos, "atan": math.atan, "atan2": math.atan2,
+         "sinh": math.sinh, "cosh": math.cosh, "tanh": math.tanh, "exp": math.exp, "log": math.log, "log10": math.log10, "sqrt": math.sqrt,
+         "abs": abs, "min": min, "max": max, "hypot": math.hypot, "sign": lambda v: (v > 0) - (v < 0), "pi": math.pi, "__builtins__": {}}
+
+
+def _expr(src, names, params):
+    """The runner's own evaluator for 3.15 expressions (independent of the implementation): Python floats."""
+    code = compile(src.replace("^", "**"), "<aeoi-expr>", "eval")
+    return lambda *xs: eval(code, dict(_PYNS), {**params, **dict(zip(names, xs))})
+
+
+def rule_fzero(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = expected or case["expected"]; r = env["result"]
+    x = float(num(r["x"])); roots = e["roots_true"]
+    err = min(abs(x - t) / (4 * np.finfo(float).eps * abs(t) + 1e-300) for t in roots)
+    f = _expr(req["expression"], [req.get("variable", "x")], req.get("params", {}))
+    lo, hi = (float(num(v)) for v in r["bracket"]["final"])
+    flo, fhi = f(lo), f(hi)
+    flagged = bool(case.get("expect_postcondition_failed"))
+    searched = any(w.get("code") == "W.DOMAIN.BRACKET_SEARCHED" for w in env.get("warnings") or [])
+    out = [("W.DOMAIN.BRACKET_SEARCHED exactly when only x0 was given  [10.26 FZ-1]", searched == ("x0" in req), None, None, f"warned {searched}"),
+           ("final bracket encloses x and f changes sign across it, recomputed by the runner  [10.26 FZ-4]", lo <= x <= hi and (flo == 0 or fhi == 0 or (flo > 0) != (fhi > 0)), None, None, f"[{lo}, {hi}], f = {flo:.3e}, {fhi:.3e}")]
+    if not flagged:
+        out.append(check("x vs the nearest exact root: |Δ| ≤ 4ε|x*|  [T1]", err, 1.0))
+    return out
+
+
+def rule_fsolve(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = expected or case["expected"]; r = env["result"]
+    x = [float(num(v)) for v in r["x"]]
+    alts = e.get("x_true_alternatives") or [e["x_true"]]
+    err = min(max(abs(a - b) for a, b in zip(x, t)) / max(max(abs(v) for v in t), 1e-300) for t in alts)
+    warned = any(w.get("code") == "W.NUMERICAL.ILL_CONDITIONED" for w in env.get("warnings") or [])
+    F = [_expr(s_, req["unknowns"], req.get("params", {}))(*x) for s_ in req["equations"]]
+    fr = [float(num(v)) for v in r["residual"]]
+    fn = max(abs(v) for v in F)
+    return [check("x vs the exact root: ‖Δ‖∞/‖x*‖∞ ≤ 1e-14 (1e-7 when flagged as a possibly multiple root)  [T1]", err, 1e-7 if warned else 1e-14),
+            ("solution names echo unknowns  [O-1]", list(r.get("solution", {}).keys()) == req["unknowns"], None, None, ""),
+            check("‖F(x)‖∞ recomputed by the runner ≤ 1e-10·(1 + ‖x‖∞) and equal to the returned residual  [10.27 FS-5]", max(fn / (1 + max(abs(v) for v in x)), max(abs(a - b) for a, b in zip(F, fr)) * 1e6), 1e-10)]
+
+
 RULES = {"signal.spectral.fft": rule_fft, "ode.ivp.solve": rule_ode, "linalg.system.solve": rule_linsolve, "interp.grid.interp1": rule_interp1,
          "fit.poly.polyfit": rule_polyfit, "linalg.decomp.eig": rule_eig, "linalg.decomp.svd": rule_svd,
-         "signal.design.butter": rule_butter, "signal.filter.filter": rule_filter}
+         "signal.design.butter": rule_butter, "signal.filter.filter": rule_filter,
+         "nonlinear.root.fzero": rule_fzero, "nonlinear.system.fsolve": rule_fsolve}

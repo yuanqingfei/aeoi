@@ -1,0 +1,166 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok_with_warnings",
+  "dry_run": false,
+  "operator": {
+    "id": "nonlinear.system.fsolve",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "x": [
+      1.0000000000000009
+    ],
+    "solution": {
+      "x": 1.0000000000000009
+    },
+    "residual": [
+      7.888609052210118e-31
+    ],
+    "iterations": 52,
+    "evaluations": 52,
+    "jacobian": "automatic_differentiation"
+  },
+  "trust": {
+    "convergence": {
+      "applicable": true,
+      "converged": true,
+      "iterations": 52,
+      "criterion": "完整牛顿步 ‖p‖∞ ≤ 4u‖x‖∞，或 F = 0"
+    },
+    "residual": {
+      "residual_inf": 7.888609052210118e-31,
+      "next_newton_correction_inf": 4.440892098500626e-16
+    },
+    "condition": {
+      "jacobian_kappa1": 1.0,
+      "estimator": "Hager–Higham 1-范数估计（共享内核）"
+    },
+    "error_estimate": {
+      "x_abs_inf": 4.440892098500626e-16,
+      "basis": "解处再做一步牛顿修正的大小（单根时与真实误差同阶；重根时偏小）"
+    },
+    "checks": {
+      "newton_step_small": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "method": "Powell dogleg 信赖域 + 自动微分雅可比 + LU（共享内核）"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:fsolve:dogleg-ad-jacobian",
+      "routine": "roots::fsolve",
+      "provenance": "aeoi://operators/nonlinear.system.fsolve/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "expression",
+        "statement": "方程是合法的 3.15 表达式",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "square",
+        "statement": "方程个数 = 未知量个数",
+        "enforced_by": "error:E.VALIDATION.SHAPE"
+      },
+      {
+        "id": "converges",
+        "statement": "从 x0 出发收敛到根",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "isolated_simple_root",
+        "statement": "解处雅可比非奇异（单根）",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      },
+      {
+        "id": "which_root",
+        "statement": "x0 附近的那个解是用户要的（方程组可能有多个解）",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "x_abs_inf": 4.440892098500626e-16
+      },
+      "basis": "解处再做一步牛顿修正的大小（单根时与真实误差同阶；重根时偏小）"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "newton_step_small": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": {
+        "converged": true,
+        "iterations": 52
+      },
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "newton_step_small": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:53f7875ffc8ff10a8df0c8e80bbbdc471283ffb02cca2858c89d951fea242a9b",
+      "result": "sha256:609fb3a8d021e1b41a5c6a84d86443cd0d18441f088a6c7f03fe66cd9560d6ad",
+      "output_hash": "sha256:f0ab1a653cc2c8a2e79e97ef796f232af9c0cf1384329d3977f9ffd863250e30",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of nonlinear.system.fsolve@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [
+    {
+      "code": "W.NUMERICAL.ILL_CONDITIONED",
+      "message": "解处雅可比矩阵接近奇异（κ₁ ≈ 1.000e0，最后几步牛顿迭代只线性收敛）：可能是重根或非孤立解。牛顿法在这里只线性收敛，解可能只有约一半有效数字。",
+      "path": "/equations",
+      "details": {
+        "jacobian_kappa1": 1.0,
+        "threshold": 100000000.0,
+        "linear_convergence": true
+      }
+    }
+  ],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:af302d6a1634b82f370f200384745ed0e93d618675373f3249014b0daad644c6",
+    "output_hash": "sha256:f0ab1a653cc2c8a2e79e97ef796f232af9c0cf1384329d3977f9ffd863250e30",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.196513
+  }
+}

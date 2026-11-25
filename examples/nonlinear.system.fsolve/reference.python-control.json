@@ -1,0 +1,9 @@
+{
+ "note": "exact: x = c/d = 3, y = a/b = 2; NOT MATLAB output",
+ "request.json": {
+  "x_true": [
+   3.0,
+   2.0
+  ]
+ }
+}

@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/nonlinear.system.fsolve/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "unknowns",
+    "equations",
+    "x0"
+  ],
+  "properties": {
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "minItems": 1,
+      "maxItems": 200,
+      "uniqueItems": true,
+      "description": "未知量名列表"
+    },
+    "equations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 10000,
+        "description": "AEOI 表达式（3.15）：+ − * / ^、括号、数字、已声明的名字、t、常数 pi，以及固定函数表"
+      },
+      "minItems": 1,
+      "maxItems": 200,
+      "description": "方程 F_i = 0 的左端表达式，个数等于未知量个数"
+    },
+    "params": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "number"
+      },
+      "x-aeoi-provenance": "user",
+      "description": "参数名 → 数值"
+    },
+    "x0": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 1,
+      "maxItems": 200,
+      "x-aeoi-provenance": "user",
+      "description": "初值，按 unknowns 的顺序（由用户给出；不同初值可能收敛到不同的解）"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  }
+}

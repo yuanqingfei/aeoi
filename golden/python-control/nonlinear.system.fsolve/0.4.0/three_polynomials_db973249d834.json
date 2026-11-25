@@ -1,0 +1,44 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "nonlinear.system.fsolve",
+ "operator_version": "0.4.0",
+ "case_family": "three_polynomials",
+ "request": {
+  "unknowns": [
+   "x",
+   "y",
+   "z"
+  ],
+  "equations": [
+   "x + y + z - 6",
+   "x*y + y*z + z*x - 11",
+   "x*y*z - 6"
+  ],
+  "x0": [
+   0.5,
+   1.8,
+   3.5
+  ]
+ },
+ "reference_env": {
+  "engine": "scipy.optimize (brentq / fsolve) / mpmath.findroot",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "x_true": [
+   1.0,
+   2.0,
+   3.0
+  ],
+  "x_scipy": [
+   1.0000000000000002,
+   1.9999999999999996,
+   3.0
+  ],
+  "scipy_residual_inf": 0.0
+ }
+}

@@ -5,7 +5,7 @@
 //! step-size factors 0.9 / 0.2 / 10, Hairer's initial step, Shampine's 4th-order dense output, output points
 //! in (t_old, t] evaluated by that step's interpolant), so an independent implementation can follow the same
 //! step sequence up to rounding. Global error is estimated by re-solving with rtol/10, atol/10.
-use crate::expr::{check_name, eval, parse, Node};
+use crate::expr::{check_name, eval, expr_err, parse, Node};
 use aeoi_core::error::{modify_input, OpError, Warning};
 use aeoi_core::{num, ExecCtx, HostCtx, Operator, Output};
 use serde_json::{json, Map, Value};
@@ -280,15 +280,6 @@ fn next_toward(t: f64, dir: f64) -> f64 {
     }
     let next = if (t > 0.0) == up { bits + 1 } else { bits - 1 };
     f64::from_bits(next)
-}
-
-fn expr_err(path: &str, src: &str, e: crate::expr::ExprError) -> OpError {
-    let caret = format!("{}\n{}^", src, " ".repeat(e.position.min(src.chars().count())));
-    OpError::new("E.VALIDATION.EXPRESSION", format!("{path} 的表达式在第 {} 个字符处有误：{}\n{caret}", e.position, e.message), "按 3.15 的语法改写：只用已声明的状态名、参数名、t、pi、+ − * / ^ 与函数表里的函数。")
-        .path(path)
-        .detail("expression", json!(src))
-        .detail("position", json!(e.position))
-        .detail("kind", json!(e.kind))
 }
 
 fn obj_keys(v: &Value) -> Map<String, Value> {

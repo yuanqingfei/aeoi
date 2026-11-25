@@ -228,6 +228,23 @@ def m_filter_state_dropped(r):              # final state reported as zero
     r["zf"]["data"] = [0.0 for _ in r["zf"]["data"]]
 
 
+
+def m_fzero_x_wrong(r):                     # root moved by 1e-12 (relative)
+    r["x"] = r["x"] * (1 + 1e-12) + 1e-300 if isinstance(r["x"], float) else r["x"]
+
+
+def m_fzero_warning_dropped(r, env):        # the searched-bracket warning removed
+    env["warnings"] = [w for w in env.get("warnings", []) if w.get("code") != "W.DOMAIN.BRACKET_SEARCHED"]
+
+
+def m_fsolve_x_wrong(r):                    # first unknown off by 1e-10 (relative)
+    r["x"][0] = r["x"][0] * (1 + 1e-10) + 1e-12
+
+
+def m_fsolve_residual_zeroed(r):            # residual reported as exactly zero
+    r["residual"] = [0.0 for _ in r["residual"]]
+
+
 # name -> (operator, transform)
 MUTANTS = {
     "pz_pole_wrong": ("control.lti.poles_zeros", m_pz_pole_wrong),
@@ -264,6 +281,10 @@ MUTANTS = {
     "butter_warning_dropped": ("signal.design.butter", m_butter_warning_dropped),
     "filter_y_wrong": ("signal.filter.filter", m_filter_y_wrong),
     "filter_state_dropped": ("signal.filter.filter", m_filter_state_dropped),
+    "fzero_x_wrong": ("nonlinear.root.fzero", m_fzero_x_wrong),
+    "fzero_warning_dropped": ("nonlinear.root.fzero", m_fzero_warning_dropped),
+    "fsolve_x_wrong": ("nonlinear.system.fsolve", m_fsolve_x_wrong),
+    "fsolve_residual_zeroed": ("nonlinear.system.fsolve", m_fsolve_residual_zeroed),
 }
 
 

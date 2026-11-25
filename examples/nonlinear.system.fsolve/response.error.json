@@ -1,0 +1,45 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "nonlinear.system.fsolve",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.NUMERICAL.LOCAL_MINIMUM",
+    "category": "numerical",
+    "retryable": true,
+    "message": "迭代停在 ‖F‖∞ = 1.000e0 的点上，无法再下降：这是残差 ½‖F‖² 的局部极小（或雅可比奇异），不是方程组的根。",
+    "agent_hint": "换一个初值 x0（details.best 是目前最好的点）；或检查方程组是否真的有实根。",
+    "details": {
+      "path": "/x0",
+      "best": {
+        "x": [
+          0.0
+        ],
+        "residual_inf": 1.0,
+        "iterations": 15
+      }
+    },
+    "remediation": [
+      {
+        "id": "better_x0",
+        "kind": "ask_user",
+        "description": "能否给一个更接近解的初值，或说明解大概在什么范围？",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.106275
+  }
+}

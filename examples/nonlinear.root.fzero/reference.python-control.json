@@ -1,0 +1,6 @@
+{
+ "note": "mpmath.findroot 50 digits; NOT MATLAB output",
+ "request.json": {
+  "x_true": 1.103517720303087
+ }
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/nonlinear.root.fzero/0.4.0/output",
+  "type": "object",
+  "required": [
+    "x",
+    "fx",
+    "bracket",
+    "iterations",
+    "evaluations"
+  ],
+  "properties": {
+    "x": {
+      "type": [
+        "number",
+        "string"
+      ]
+    },
+    "fx": {
+      "type": [
+        "number",
+        "string"
+      ]
+    },
+    "bracket": {
+      "type": "object",
+      "description": "initial（给定或搜到的区间）、source（given / searched_from_x0）、final（夹住根的最终区间）"
+    },
+    "iterations": {
+      "type": "integer"
+    },
+    "evaluations": {
+      "type": "integer"
+    }
+  }
+}

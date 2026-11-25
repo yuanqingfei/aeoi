@@ -1,0 +1,40 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "nonlinear.root.fzero",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.DOMAIN.NO_SIGN_CHANGE",
+    "category": "domain",
+    "retryable": true,
+    "message": "f 在区间两端同号：f(-1) = 2e0，f(1) = 2e0。区间里可能没有根，也可能有偶数个根。",
+    "agent_hint": "换一个 f 在两端异号的区间；不确定根在哪时先画出 f 或问用户。",
+    "details": {
+      "path": "/bracket",
+      "f_a": 2.0,
+      "f_b": 2.0
+    },
+    "remediation": [
+      {
+        "id": "bracket",
+        "kind": "ask_user",
+        "description": "根大概在哪个区间？",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.09378800000000001
+  }
+}

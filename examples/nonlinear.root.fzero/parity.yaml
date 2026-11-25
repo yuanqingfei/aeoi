@@ -1,0 +1,21 @@
+# Parity test spec — nonlinear.root.fzero 0.4.0 (AEOI v0.4.13-draft)
+operator: nonlinear.root.fzero
+references:
+  - {engine: scipy, version: "scipy.optimize.brentq", role: dev_reference, status: active, generator: gen_golden_roots.py,
+     golden_store: "golden/python-control/nonlinear.root.fzero/0.4.0/*.json", note: "NOT MATLAB output. MATLAB fzero is Brent's zeroin too"}
+  - {engine: mpmath, role: high_precision_reference, status: active, note: "findroot at 50 digits started from the reference root; expression translated from 3.15"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_roots parity_fzero"
+tolerance_class: T1
+compare:
+  x: {against: "the nearest exact root (several_roots_in_bracket lists all three)", bound: "|x − x*| ≤ 4ε|x*|"}
+  bracket: "initial = the given bracket or the reproduced outward search from x0 (exact); final encloses x"
+  flagged: "pole_not_root (tan on [1, 2]): not_a_pole = false is asserted, accuracy is not"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py (rule_fzero)
+  x: "as above"
+  recomputed: "the runner evaluates f at both ends of the returned final bracket (translated expression, Python floats) and requires a sign change unless the case is flagged; W.DOMAIN.BRACKET_SEARCHED exactly when x0 was given"
+case_families:
+  - {name: "sqrt2 / dottie / root_at_zero / root_at_endpoint / tiny_root / large_root / steep_exp / params_cubic / named_variable / kepler / several_roots_in_bracket", n: 11}
+  - {name: "x0_search / x0_search_far / x0_zero_start", n: 3, note: "W.DOMAIN.BRACKET_SEARCHED"}
+  - {name: pole_not_root, n: 1, note: "tan(x) on [1, 2]: Brent converges to the pole π/2; post-condition not_a_pole fails"}
+  - {name: errors, n: 9, expect: "NO_SIGN_CHANGE ×2, OPTION_CONFLICT ×2, RANGE, EXPRESSION ×2, NON_FINITE_EVALUATION, SCHEMA"}

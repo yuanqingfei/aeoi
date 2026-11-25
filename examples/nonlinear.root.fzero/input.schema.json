@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/nonlinear.root.fzero/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "expression"
+  ],
+  "properties": {
+    "expression": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000,
+      "description": "f(x)，3.15 表达式语言；求 f = 0"
+    },
+    "variable": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+      "default": "x",
+      "x-aeoi-provenance": "user",
+      "description": "自变量名（缺省 x）"
+    },
+    "params": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "number"
+      },
+      "x-aeoi-provenance": "user",
+      "description": "参数名 → 数值"
+    },
+    "bracket": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "x-aeoi-provenance": "user",
+      "description": "变号区间 [a, b]，a < b，f(a)·f(b) ≤ 0（推荐）"
+    },
+    "x0": {
+      "type": "number",
+      "x-aeoi-provenance": "user",
+      "description": "初值（没有区间时用；算子向外搜索变号区间，找到的根不一定是想要的那个）"
+    },
+    "xtol": {
+      "type": "number",
+      "minimum": 0,
+      "default": 0,
+      "x-aeoi-provenance": "convention",
+      "description": "附加的绝对容差（缺省 0：算到区间半宽 ≤ 2ε|x|）"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  }
+}

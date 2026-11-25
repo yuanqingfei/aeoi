@@ -1,0 +1,99 @@
+{
+  "reference": "mpmath.findroot 50 digits started from scipy brentq; not MATLAB",
+  "cases": 24,
+  "error_cases": 9,
+  "worst_error_over_tolerance": 0.17677669529663687,
+  "tolerance": "|x − x*| ≤ 4ε|x*| (nearest exact root in the bracket)",
+  "cases_detail": [
+    {
+      "family": "dottie",
+      "x": 0.7390851332151606,
+      "error": 1.1102230246251565e-16,
+      "evaluations": 12
+    },
+    {
+      "family": "kepler",
+      "x": 1.103517720303087,
+      "error": 0.0,
+      "evaluations": 16
+    },
+    {
+      "family": "large_root",
+      "x": 10000000000.0,
+      "error": 0.0,
+      "evaluations": 6
+    },
+    {
+      "family": "named_variable",
+      "x": 0.5671432904097838,
+      "error": 0.0,
+      "evaluations": 12
+    },
+    {
+      "family": "params_cubic",
+      "x": 3.0,
+      "error": 0.0,
+      "evaluations": 15
+    },
+    {
+      "family": "pole_not_root",
+      "x": 1.5707963267948974,
+      "error": 1.5707963267948957,
+      "evaluations": 70
+    },
+    {
+      "family": "root_at_endpoint",
+      "x": 1.0,
+      "error": 0.0,
+      "evaluations": 5
+    },
+    {
+      "family": "root_at_zero",
+      "x": 0.0,
+      "error": 0.0,
+      "evaluations": 12
+    },
+    {
+      "family": "several_roots_in_bracket",
+      "x": 3.141592653589793,
+      "error": 0.0,
+      "evaluations": 14
+    },
+    {
+      "family": "sqrt2",
+      "x": 1.414213562373095,
+      "error": 2.220446049250313e-16,
+      "evaluations": 13
+    },
+    {
+      "family": "steep_exp",
+      "x": 23.025850929940457,
+      "error": 0.0,
+      "evaluations": 20
+    },
+    {
+      "family": "tiny_root",
+      "x": 1e-20,
+      "error": 0.0,
+      "evaluations": 7
+    },
+    {
+      "family": "x0_search",
+      "x": 0.7390851332151607,
+      "error": 0.0,
+      "evaluations": 24
+    },
+    {
+      "family": "x0_search_far",
+      "x": 10.0,
+      "error": 0.0,
+      "evaluations": 47
+    },
+    {
+      "family": "x0_zero_start",
+      "x": 0.3,
+      "error": 0.0,
+      "evaluations": 21
+    }
+  ]
+}

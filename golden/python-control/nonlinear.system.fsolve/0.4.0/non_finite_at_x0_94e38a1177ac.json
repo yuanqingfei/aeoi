@@ -1,0 +1,26 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "nonlinear.system.fsolve",
+ "operator_version": "0.4.0",
+ "case_family": "non_finite_at_x0",
+ "request": {
+  "unknowns": [
+   "x"
+  ],
+  "equations": [
+   "log(x) - 1"
+  ],
+  "x0": [
+   -1.0
+  ]
+ },
+ "reference_env": {
+  "engine": "scipy.optimize (brentq / fsolve) / mpmath.findroot",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected_error": "E.NUMERICAL.NON_FINITE_EVALUATION"
+}

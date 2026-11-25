@@ -1,0 +1,157 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "nonlinear.system.fsolve",
+  "version": "0.4.0",
+  "title": "Solve a system of nonlinear equations",
+  "description": "解 n 个方程 n 个未知量的非线性方程组 F(x) = 0（= MATLAB fsolve）：方程用 3.15 的表达式语言写，雅可比矩阵由表达式自动微分得到（精确，不是有限差分）。Powell dogleg 信赖域，牛顿步用共享的 LU 内核。不收敛时报错并给出目前最好的点；收敛后报告下一步牛顿修正（误差估计）与雅可比条件数，接近奇异（可能是重根）时警告。",
+  "category": "analysis",
+  "tags": [
+    "nonlinear",
+    "system",
+    "fsolve",
+    "newton",
+    "equations"
+  ],
+  "applicability": {
+    "preconditions": [
+      "方程个数 = 未知量个数",
+      "x0（初值）由调用方给出",
+      "方程在解附近可微"
+    ],
+    "not_for": [
+      "超定/欠定（最小二乘：lsqnonlin，以后的算子）",
+      "求全部解（只给出 x0 附近的一个）",
+      "不可微的方程（abs、min、max 的折点处导数按约定取值）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "Powell dogleg 信赖域（MATLAB fsolve 的缺省算法）：牛顿步 −J⁻¹F（共享 LU 内核），Cauchy 步 −(‖g‖²/‖Jg‖²)·g，g = JᵀF；ρ < 1/4 收缩、ρ > 3/4 且步长到边界时扩大。雅可比由表达式前向自动微分（3.15 EX-8）。收敛：完整牛顿步 ‖p‖∞ ≤ 4u‖x‖∞ 或 F = 0；信赖域缩到不能再下降而 F ≠ 0 时报 E.NUMERICAL.LOCAL_MINIMUM；迭代上限报 E.NUMERICAL.NO_CONVERGENCE。之后再算一步牛顿修正作误差估计，κ₁(J) 用 Hager–Higham 估计",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "J. Nocedal, S. J. Wright, Numerical Optimization, 2nd ed., Springer 2006, §4.1（dogleg）、§11（非线性方程组）"
+      },
+      {
+        "type": "textbook",
+        "cite": "A. Griewank, A. Walther, Evaluating Derivatives, 2nd ed., SIAM 2008, Ch. 3（前向自动微分）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "roots::fsolve",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {},
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_unknowns": 200,
+    "max_iterations": 400,
+    "max_expression_length": 4096
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/nonlinear.system.fsolve/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.EXPRESSION",
+    "E.NUMERICAL.NON_FINITE_EVALUATION",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.NUMERICAL.LOCAL_MINIMUM",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.NUMERICAL.ILL_CONDITIONED"
+  ],
+  "mcp": {
+    "tool_name": "nonlinear_system_fsolve",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:fsolve:dogleg-ad-jacobian",
+    "assumptions": [
+      {
+        "id": "expression",
+        "statement": "方程是合法的 3.15 表达式",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "square",
+        "statement": "方程个数 = 未知量个数",
+        "enforced_by": "error:E.VALIDATION.SHAPE"
+      },
+      {
+        "id": "converges",
+        "statement": "从 x0 出发收敛到根",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "isolated_simple_root",
+        "statement": "解处雅可比非奇异（单根）",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      },
+      {
+        "id": "which_root",
+        "statement": "x0 附近的那个解是用户要的（方程组可能有多个解）",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "newton_step_small",
+      "all_finite"
+    ],
+    "coverage": {
+      "newton_step_small": "full"
+    },
+    "guards": {
+      "newton_step_small": [
+        "/x",
+        "/solution"
+      ]
+    }
+  }
+}

@@ -52,6 +52,10 @@ PROXY_EXPECT = {
     "butter_warning_dropped": ("signal.design.butter", "exactly when the b/a"),
     "filter_y_wrong": ("signal.filter.filter", "y, zf vs the exact"),
     "filter_state_dropped": ("signal.filter.filter", "y, zf vs the exact"),
+    "fzero_x_wrong": ("nonlinear.root.fzero", "nearest exact root"),
+    "fzero_warning_dropped": ("nonlinear.root.fzero", "BRACKET_SEARCHED exactly"),
+    "fsolve_x_wrong": ("nonlinear.system.fsolve", "x vs the exact root"),
+    "fsolve_residual_zeroed": ("nonlinear.system.fsolve", "recomputed by the runner"),
 }
 
 # mutant -> substring that must appear among the names of the failed checks

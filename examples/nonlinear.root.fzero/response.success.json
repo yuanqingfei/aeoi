@@ -1,0 +1,158 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "nonlinear.root.fzero",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "x": 1.103517720303087,
+    "fx": 5.551115123125783e-17,
+    "bracket": {
+      "initial": [
+        0.0,
+        3.2
+      ],
+      "source": "given",
+      "final": [
+        1.1035177203030866,
+        1.103517720303087
+      ]
+    },
+    "iterations": 11,
+    "evaluations": 16
+  },
+  "trust": {
+    "convergence": {
+      "applicable": true,
+      "converged": true,
+      "iterations": 11,
+      "criterion": "区间半宽 ≤ 2ε|x| + xtol/2（Brent/zeroin）"
+    },
+    "residual": {
+      "fx": 5.551115123125783e-17,
+      "f_at_initial_bracket": [
+        -0.3,
+        2.9525367290848226
+      ]
+    },
+    "condition": {
+      "applicable": false
+    },
+    "error_estimate": {
+      "x_abs": 2.220446049250313e-16,
+      "basis": "根被夹在最终区间 [lo, hi] 内（f 连续时严格成立）"
+    },
+    "checks": {
+      "sign_change": true,
+      "not_a_pole": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "not_a_pole_definition": "|f(x)| ≤ max(|f(a₀)|, |f(b₀)|)：变号点若是极点（如 1/x 在 0 处），|f| 在那里很大"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:fzero:brent-zeroin",
+      "routine": "roots::fzero",
+      "provenance": "aeoi://operators/nonlinear.root.fzero/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "expression",
+        "statement": "f 是合法的 3.15 表达式",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "sign_change",
+        "statement": "区间两端变号（给定或搜到）",
+        "enforced_by": "error:E.DOMAIN.NO_SIGN_CHANGE"
+      },
+      {
+        "id": "continuous",
+        "statement": "f 在区间上连续（否则变号点可能是极点）",
+        "enforced_by": "check:not_a_pole"
+      },
+      {
+        "id": "intended_root",
+        "statement": "求的是区间里的根；只给 x0 时搜到的区间不一定含想要的根",
+        "enforced_by": "warning:W.DOMAIN.BRACKET_SEARCHED"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "x_abs": 2.220446049250313e-16
+      },
+      "basis": "根被夹在最终区间 [lo, hi] 内（f 连续时严格成立）"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "sign_change": true,
+        "not_a_pole": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": {
+        "converged": true,
+        "iterations": 11
+      },
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "sign_change": "full",
+        "not_a_pole": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:e414e034e5f5b986bcdc0f9a940cda931dbec3fa10cda4807aadfdfd6a2c8b34",
+      "result": "sha256:610144b7b41fbf452d9bcf8b425e84bf4fbd4471dfea63a98a423bd07781e930",
+      "output_hash": "sha256:a3056c9ee828ae039ae79296478ba3762c2dd137a61971fd6831d579d2c88ad7",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of nonlinear.root.fzero@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:1a09cd0a2de632b2951f9de850e60824096389f42eedf1e410b8cdf2954e3156",
+    "output_hash": "sha256:a3056c9ee828ae039ae79296478ba3762c2dd137a61971fd6831d579d2c88ad7",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.165814
+  }
+}

@@ -609,6 +609,8 @@ DESC={
  "control.lti.stepinfo":{"system":SYS_D,"time":"时间网格，与 step 相同：uniform（t_final、dt，单位 s）或 auto。指标相对这个网格定义","rise_time_limits":"上升时间的低/高阈值，默认 [0.1, 0.9]（10% 到 90%）。这是指标定义，不是对象的物理参数；省略即用默认，不必询问","settling_threshold":"调节带半宽，默认 0.02（2%）。定义默认值，省略即用默认"},
  "ode.ivp.solve":{"states":"状态名列表，如 [\"x\", \"v\"]。顺序决定 y 的行序；表达式里按名字引用，不用下标","rhs":"右端表达式列表，与 states 一一对应：第 i 个是 d(states[i])/dt，如 [\"v\", \"-k*x - c*v\"]。可用 t、状态名、参数名、常数 pi、+ − * / ^（右结合，-x^2 = -(x^2)）与函数 sin cos tan asin acos atan atan2 sinh cosh tanh exp log log10 sqrt abs min max hypot sign","params":"参数名到数值，如 {\"k\": 4, \"c\": 0.5}；名字不能与状态名重复","initial":"初值，键为状态名，如 {\"x\": 1, \"v\": 0}；每个状态都要给","t_span":"[t0, tf]；tf < t0 时反向积分","t_eval":"输出时刻（在区间内、沿积分方向单调）。不给时用 n_out 个等距点","n_out":"不给 t_eval 时的输出点数，默认 101（含两端）。与 t_eval 二选一","rtol":"相对容差，默认 1e-3（与 MATLAB ode45、scipy 相同）。要更准就调小，如 1e-8","atol":"绝对容差，默认 1e-6","max_step":"最大步长（可选）","first_step":"初始步长（可选；不给时自动选择）"},
  "linalg.system.solve":{"A":"系数矩阵 [m, n]，row-major（MATLAB 是 column-major，先转置再展平）；m ≥ n。大矩阵可用 b64 或 ref 编码","b":"右端项：[m]（一个）或 [m, k]（k 个，每列一个）","refinement":"auto（缺省：用补偿残差做至多 3 步迭代精化）或 none（只做一次 LU 求解，与 MATLAB 的 A\\b 相同）。只影响方阵"},
+ "nonlinear.root.fzero":{"expression":"f(x)，3.15 表达式语言；求 f = 0","variable":"自变量名（缺省 x）","params":"参数名 → 数值","bracket":"变号区间 [a, b]，a < b，f(a)·f(b) ≤ 0（推荐）","x0":"初值（没有区间时用；算子向外搜索变号区间，找到的根不一定是想要的那个）","xtol":"附加的绝对容差（缺省 0：算到区间半宽 ≤ 2ε|x|）"},
+ "nonlinear.system.fsolve":{"unknowns":"未知量名列表","equations":"方程 F_i = 0 的左端表达式，个数等于未知量个数","params":"参数名 → 数值","x0":"初值，按 unknowns 的顺序（由用户给出；不同初值可能收敛到不同的解）"},
  "signal.design.butter":{"order":"阶数 n（由用户决定，不要代填）","type":"low、high、bandpass、bandstop；省略时一个截止频率为 low、两个为 bandpass","domain":"digital（缺省）或 analog","cutoff_hz":"截止频率（Hz）：一个数，或带通/带阻的 [下限, 上限]；数字滤波器必须同时给 sample_rate_hz","cutoff_normalized":"数字滤波器的归一化截止频率（= MATLAB 的 Wn）：0 < Wn < 1，1 = Nyquist（采样率的一半），不是 rad/sample，也不是相对采样率","cutoff_rad_s":"模拟滤波器的截止频率（rad/s）","sample_rate_hz":"采样率（Hz），与 cutoff_hz 一起用"},
  "signal.filter.filter":{"x":"输入信号 [n]，或 [k, n]（每行一个通道）","b":"分子系数，z⁻¹ 升幂（同 MATLAB filter）","a":"分母系数，z⁻¹ 升幂，a[0] ≠ 0","sos":"二阶节 [L, 6]，每行 [b0 b1 b2 a0 a1 a2]（高阶滤波器优先用它）","zi":"初始状态（可选）：b/a 为 max(len(a), len(b)) − 1 个数；sos 为 [L, 2]；多通道可给 [k, …]"},
  "fit.poly.polyfit":{"x":"自变量 [n]","y":"观测值 [n]，与 x 一一对应","degree":"多项式次数 d（模型选择，由用户决定；不要代填）","scaling":"none（缺省：对 x 本身拟合）或 center_scale（对 (x − mean)/std 拟合，mu 随结果返回；x 远离 0 或跨度大时可显著改善条件数，但系数含义改变，须用户确认）"},
@@ -709,6 +711,38 @@ flt_in=ins("signal.filter.filter",{"x":M,"b":{"type":"array","items":{"type":"nu
  {"x-aeoi-shape-constraints":["x: [n] 或 [k, n]","sos: [L, 6]","zi: b/a 为 [max(len) − 1]（或每通道 [k, …]）；sos 为 [L, 2]（或 [k, L, 2]）"]},ver=V412)
 flt_out=outs("signal.filter.filter",{"y":dict(M,description="输出，形状同 x"),"zf":dict(M,description="末状态（形状同 zi 的约定），可作为下一段的 zi"),"form":{"enum":["ba","sos"]}},["y","zf","form"],ver=V412)
 B3.update({"signal.design.butter":(bw_,bw_in,bw_out),"signal.filter.filter":(flt,flt_in,flt_out)})
+# ---- v0.4.13: nonlinear.root.fzero, nonlinear.system.fsolve
+V413="0.4.0"
+PARAMS={"type":"object","propertyNames":{"pattern":"^[A-Za-z_][A-Za-z0-9_]*$"},"additionalProperties":{"type":"number"},"x-aeoi-provenance":"user"}
+fz=man("nonlinear.root.fzero","Scalar root finding","求单变量方程 f(x) = 0 的根（= MATLAB fzero）：f 用 3.15 的表达式语言写。优先给变号区间 bracket = [a, b]（根被夹在区间内）；只给初值 x0 时按 MATLAB 的方式向外搜索变号区间，结果回显搜到的区间并警告它不一定是想要的根。Brent 方法（zeroin），结果带最终区间作为误差界，并检查变号点不是极点。","analysis",["root","fzero","nonlinear","equation","brent"],
+ ["f 在区间上连续","bracket 两端 f 异号，或给出 x0"],["多项式全部根（roots）","方程组（nonlinear.system.fsolve）","不变号的偶重根"],
+ "Brent 方法（Brent 1973 zeroin，MATLAB fzero 的算法）：逆二次插值 / 割线 / 二分，区间半宽 ≤ 2ε|x| + xtol/2 停止。只给 x0 时：dx = |x0|/50（x0 = 0 时 1/50），交替试 x0 − dx、x0 + dx，dx ×√2，直到变号（同 MATLAB）。后置条件：最终区间两端变号；|f(x)| ≤ max(|f(a₀)|, |f(b₀)|)（变号点不是极点）",
+ [{"type":"textbook","cite":"R. P. Brent, Algorithms for Minimization without Derivatives, Prentice-Hall 1973, Ch. 4"},
+  {"type":"textbook","cite":"G. E. Forsythe, M. A. Malcolm, C. B. Moler, Computer Methods for Mathematical Computations, Prentice-Hall 1977, §7.2（zeroin）"}],
+ "roots::fzero (Brent zeroin)","T1",{"max_evaluations":5000,"max_expression_length":4096},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.RANGE","E.VALIDATION.OPTION_CONFLICT","E.VALIDATION.EXPRESSION","E.DOMAIN.NO_SIGN_CHANGE","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["W.DOMAIN.BRACKET_SEARCHED"],sparse={},ver=V413,backend=BACK_NUM("roots::fzero"))
+fz_in=ins("nonlinear.root.fzero",{"expression":EXPR,"variable":dict(NAME,default="x",**{"x-aeoi-provenance":"user"}),"params":PARAMS,
+ "bracket":{"type":"array","items":{"type":"number"},"minItems":2,"maxItems":2,"x-aeoi-provenance":"user"},
+ "x0":{"type":"number","x-aeoi-provenance":"user"},"xtol":{"type":"number","minimum":0,"default":0,"x-aeoi-provenance":"convention"}},["expression"],ver=V413)
+fz_out=outs("nonlinear.root.fzero",{"x":{"type":["number","string"]},"fx":{"type":["number","string"]},
+ "bracket":{"type":"object","description":"initial（给定或搜到的区间）、source（given / searched_from_x0）、final（夹住根的最终区间）"},
+ "iterations":{"type":"integer"},"evaluations":{"type":"integer"}},["x","fx","bracket","iterations","evaluations"],ver=V413)
+fs=man("nonlinear.system.fsolve","Solve a system of nonlinear equations","解 n 个方程 n 个未知量的非线性方程组 F(x) = 0（= MATLAB fsolve）：方程用 3.15 的表达式语言写，雅可比矩阵由表达式自动微分得到（精确，不是有限差分）。Powell dogleg 信赖域，牛顿步用共享的 LU 内核。不收敛时报错并给出目前最好的点；收敛后报告下一步牛顿修正（误差估计）与雅可比条件数，接近奇异（可能是重根）时警告。","analysis",["nonlinear","system","fsolve","newton","equations"],
+ ["方程个数 = 未知量个数","x0（初值）由调用方给出","方程在解附近可微"],["超定/欠定（最小二乘：lsqnonlin，以后的算子）","求全部解（只给出 x0 附近的一个）","不可微的方程（abs、min、max 的折点处导数按约定取值）"],
+ "Powell dogleg 信赖域（MATLAB fsolve 的缺省算法）：牛顿步 −J⁻¹F（共享 LU 内核），Cauchy 步 −(‖g‖²/‖Jg‖²)·g，g = JᵀF；ρ < 1/4 收缩、ρ > 3/4 且步长到边界时扩大。雅可比由表达式前向自动微分（3.15 EX-8）。收敛：完整牛顿步 ‖p‖∞ ≤ 4u‖x‖∞ 或 F = 0；信赖域缩到不能再下降而 F ≠ 0 时报 E.NUMERICAL.LOCAL_MINIMUM；迭代上限报 E.NUMERICAL.NO_CONVERGENCE。之后再算一步牛顿修正作误差估计，κ₁(J) 用 Hager–Higham 估计",
+ [{"type":"textbook","cite":"J. Nocedal, S. J. Wright, Numerical Optimization, 2nd ed., Springer 2006, §4.1（dogleg）、§11（非线性方程组）"},
+  {"type":"textbook","cite":"A. Griewank, A. Walther, Evaluating Derivatives, 2nd ed., SIAM 2008, Ch. 3（前向自动微分）"}],
+ "roots::fsolve (dogleg + AD Jacobian + LU kernel)","T1",{"max_unknowns":200,"max_iterations":400,"max_expression_length":4096},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.EXPRESSION","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.NO_CONVERGENCE","E.NUMERICAL.LOCAL_MINIMUM","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["W.NUMERICAL.ILL_CONDITIONED"],sparse={},ver=V413,backend=BACK_NUM("roots::fsolve"))
+fs_in=ins("nonlinear.system.fsolve",{"unknowns":{"type":"array","items":NAME,"minItems":1,"maxItems":200,"uniqueItems":True},
+ "equations":{"type":"array","items":EXPR,"minItems":1,"maxItems":200},"params":PARAMS,
+ "x0":{"type":"array","items":{"type":"number"},"minItems":1,"maxItems":200,"x-aeoi-provenance":"user"}},["unknowns","equations","x0"],ver=V413)
+fs_out=outs("nonlinear.system.fsolve",{"x":{"type":"array","description":"解，按 unknowns 的顺序"},"solution":{"type":"object","description":"未知量名 → 值"},
+ "residual":{"type":"array","description":"F(x)"},"iterations":{"type":"integer"},"evaluations":{"type":"integer"},"jacobian":{"const":"automatic_differentiation"}},
+ ["x","solution","residual","iterations","evaluations","jacobian"],ver=V413)
+B3.update({"nonlinear.root.fzero":(fz,fz_in,fz_out),"nonlinear.system.fsolve":(fs,fs_in,fs_out)})
 ALL_OPS={"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2|B3
 for op,props in DESC.items():
     for (m_,i_,o_) in [ALL_OPS[op]]:
@@ -767,6 +801,10 @@ RECEIPT["signal.spectral.fft"]={"method_id":"aeoi:fft:rustfft-scalar","assumptio
    "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["parseval","dft_spot_check","all_finite"]}
 RECEIPT["linalg.system.solve"]={"method_id":"aeoi:linsolve:lu-refine-or-householder-qr","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("not_underdetermined","m ≥ n","error:E.DOMAIN.UNDERDETERMINED"),A("full_rank","A 列满秩（方阵非奇异）","error:E.NUMERICAL.SINGULAR"),A("conditioning","κ·u ≪ 1，否则解没有有效数字（前向误差 ≈ κ·η）","warning:W.NUMERICAL.ILL_CONDITIONED"),A("row_major","A 按 row-major 录入","caller")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["backward_stable","all_finite"]}
+RECEIPT["nonlinear.root.fzero"]={"method_id":"aeoi:fzero:brent-zeroin","assumptions":[A("expression","f 是合法的 3.15 表达式","error:E.VALIDATION.EXPRESSION"),A("sign_change","区间两端变号（给定或搜到）","error:E.DOMAIN.NO_SIGN_CHANGE"),A("continuous","f 在区间上连续（否则变号点可能是极点）","check:not_a_pole"),A("intended_root","求的是区间里的根；只给 x0 时搜到的区间不一定含想要的根","warning:W.DOMAIN.BRACKET_SEARCHED")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["sign_change","not_a_pole","all_finite"]}
+RECEIPT["nonlinear.system.fsolve"]={"method_id":"aeoi:fsolve:dogleg-ad-jacobian","assumptions":[A("expression","方程是合法的 3.15 表达式","error:E.VALIDATION.EXPRESSION"),A("square","方程个数 = 未知量个数","error:E.VALIDATION.SHAPE"),A("converges","从 x0 出发收敛到根","error:E.NUMERICAL.NO_CONVERGENCE"),A("isolated_simple_root","解处雅可比非奇异（单根）","warning:W.NUMERICAL.ILL_CONDITIONED"),A("which_root","x0 附近的那个解是用户要的（方程组可能有多个解）","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["newton_step_small","all_finite"]}
 RECEIPT["signal.design.butter"]={"method_id":"aeoi:butter:prototype-zpk-bilinear","assumptions":[A("spec_from_user","阶数、类型与截止频率来自用户（含单位）","validation"),A("below_nyquist","数字：截止频率低于 Nyquist","error:E.DOMAIN.ABOVE_NYQUIST"),A("ba_accuracy","b/a 多项式形式未失去精度（否则用 sos 或 zpk）","warning:W.NUMERICAL.ILL_CONDITIONED")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["stable","edge_gain","sos_consistent","all_finite"]}
 RECEIPT["signal.filter.filter"]={"method_id":"aeoi:filter:transposed-direct-form-ii","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("one_form","b/a 与 sos 恰好给出一种","error:E.VALIDATION.OPTION_CONFLICT"),A("nonzero_a0","a0 ≠ 0","error:E.VALIDATION.ZERO_DENOMINATOR"),A("stable","滤波器稳定（否则输出可能无界）","warning:W.DOMAIN.UNSTABLE_SYSTEM"),A("channels","x 每行一个通道","caller"),A("coefficient_order","b、a 是 z⁻¹ 的升幂（MATLAB 约定）","caller")],
@@ -800,6 +838,8 @@ COVERAGE.update({"control.design.pid":{"formula_matches":"test_points"},"control
  "fit.poly.polyfit":{"backward_stable":"full"},
  "signal.design.butter":{"stable":"full","edge_gain":"full","sos_consistent":"test_points"},
  "signal.filter.filter":{"difference_equation":"full"},
+ "nonlinear.root.fzero":{"sign_change":"full","not_a_pole":"full"},
+ "nonlinear.system.fsolve":{"newton_step_small":"full"},
  "linalg.decomp.eig":{"residual_small":"full","orthonormal":"full"},
  "linalg.decomp.svd":{"reconstructs":"full","orthonormal_u":"full","orthonormal_v":"full"}})
 # v0.3.6 E-13: result fields that are not usable when a post-condition fails (listed in receipt.evidence.unreliable).
@@ -812,6 +852,8 @@ GUARDS["ode.ivp.solve"]={"tolerance_consistent":["/y"]}
 GUARDS["linalg.system.solve"]={"backward_stable":["/x"]}
 GUARDS["interp.grid.interp1"]={"pieces_interpolate":["/yq"],"spline_c2":["/yq"],"local_bounds":["/yq"]}
 GUARDS["signal.design.butter"]={"stable":["/z","/p","/k","/sos","/b","/a","/system"],"edge_gain":["/z","/p","/k","/sos","/b","/a","/system"],"sos_consistent":["/sos"]}
+GUARDS["nonlinear.root.fzero"]={"sign_change":["/x","/fx"],"not_a_pole":["/x","/fx"]}
+GUARDS["nonlinear.system.fsolve"]={"newton_step_small":["/x","/solution"]}
 GUARDS["signal.filter.filter"]={"difference_equation":["/y","/zf"]}
 GUARDS["fit.poly.polyfit"]={"backward_stable":["/p","/std_errors"]}
 GUARDS["linalg.decomp.eig"]={"residual_small":["/values","/vectors"],"orthonormal":["/vectors"]}

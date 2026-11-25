@@ -273,3 +273,39 @@ fn filter_example() {
     let e = call(op, &read(&format!("{dir}/request.error.json")));
     assert_eq!(e["error"]["code"], "E.VALIDATION.ZERO_DENOMINATOR");
 }
+
+/// v0.4.13: fzero — Kepler's equation on a bracket, cos(x) = x from x0 alone (bracket searched: warns), tan(x)
+/// on [1, 2] (the sign change is a pole: post-condition not_a_pole fails); no sign change → error.
+#[test]
+fn fzero_example() {
+    let op = "nonlinear.root.fzero";
+    let dir = format!("examples/{op}");
+    let rf = read(&format!("{dir}/reference.python-control.json"));
+    for (rq, rs) in [("request.json", "response.success.json"), ("request.x0.json", "response.x0.json"), ("request.pole.json", "response.pole.json")] {
+        let env = call(op, &read(&format!("{dir}/{rq}")));
+        assert_hash_on_same_platform(&env, &read(&format!("{dir}/{rs}")), &format!("{op} {rq}: bitwise example"));
+        match rq {
+            "request.json" => assert!((env["result"]["x"].as_f64().unwrap() - rf[rq]["x_true"].as_f64().unwrap()).abs() <= 4.0 * f64::EPSILON),
+            "request.x0.json" => assert_eq!(env["warnings"][0]["code"], "W.DOMAIN.BRACKET_SEARCHED"),
+            _ => assert_eq!(env["trust"]["checks"]["not_a_pole"], false),
+        }
+    }
+    assert_eq!(call(op, &read(&format!("{dir}/request.error.json")))["error"]["code"], "E.DOMAIN.NO_SIGN_CHANGE");
+}
+
+/// v0.4.13: fsolve — predator–prey equilibrium (exact (3, 2)), a double root (warns), x² + 1 = 0 (no real
+/// root: LOCAL_MINIMUM with the best point).
+#[test]
+fn fsolve_example() {
+    let op = "nonlinear.system.fsolve";
+    let dir = format!("examples/{op}");
+    for (rq, rs) in [("request.json", "response.success.json"), ("request.double_root.json", "response.double_root.json")] {
+        let env = call(op, &read(&format!("{dir}/{rq}")));
+        assert_hash_on_same_platform(&env, &read(&format!("{dir}/{rs}")), &format!("{op} {rq}: bitwise example"));
+    }
+    let env = call(op, &read(&format!("{dir}/request.json")));
+    assert!((env["result"]["x"][0].as_f64().unwrap() - 3.0).abs() <= 1e-15 && (env["result"]["x"][1].as_f64().unwrap() - 2.0).abs() <= 1e-15);
+    let e = call(op, &read(&format!("{dir}/request.error.json")));
+    assert_eq!(e["error"]["code"], "E.NUMERICAL.LOCAL_MINIMUM");
+    assert!(e["error"]["details"]["best"]["x"].is_array());
+}

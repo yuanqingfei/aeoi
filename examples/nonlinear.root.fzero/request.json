@@ -1,0 +1,12 @@
+{
+  "expression": "E - e*sin(E) - M",
+  "variable": "E",
+  "params": {
+    "e": 0.9,
+    "M": 0.3
+  },
+  "bracket": [
+    0.0,
+    3.2
+  ]
+}
