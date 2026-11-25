@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.8-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.9-draft
 
-> 状态：Draft v0.4.8 · 2026-11-24 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.9 · 2026-11-24 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.9 为分发做准备：参考实现把纯 Rust 数学库编入二进制，并让矩阵乘法固定使用通用内核，结果不再依赖操作系统的数学库和 CPU 特性（2.1，新条款 M-7a）。9 个示例的末几位变了，都在容差类内。之后是多平台发布流水线、Claude Desktop 一键安装包（MCPB）和 MCP 公开目录登记（12.2 第 6 项）。
 >
 > v0.4.8 新增第 23 个算子 `ode.ivp.solve`（10.18，对应 `ode45`），并为它定下表达式语言（3.15）：右端 f(t, y) 作为数据传递，语法、优先级、函数表、求值顺序与上限都写进规范，算子只解析和求值，不执行代码。状态和参数按名字给出。方法照抄 scipy RK45 的步长决策；rtol/atol 只约束局部误差，所以算子用 tol/10 重解来估计全局误差，超出 100 倍容差时把 `y` 标为不可依赖。一致性规则对照精确解而不是参考求解器的步长序列，并由运行器检查 `tolerance_consistent` 的声明是否属实。一致性规则覆盖 10 / 23 = 43% 的算子。
 >
@@ -89,6 +91,8 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
   "平台" = 目标三元组（`reproducibility.platform`）+ 运行时检测到的 CPU 特性集合（`reproducibility.cpu_features`）+ 超越函数所用的 C 数学库及版本（`reproducibility.libm`，v0.4 起，例如 `glibc 2.39`；见下段）。WebAssembly 构建（`wasm32-unknown-unknown`，目标三元组里没有 OS）的 `platform` 记为 `wasm32-unknown`；它与原生构建是不同的"平台"：超越函数走 Rust `libm` 而不是 glibc，矩阵乘法没有 AVX/FMA 内核，所以 `platform_bitwise` 不延伸到 wasm ↔ 原生（实测见 8.5）。v0.3 参考实现的 12 个算子都声明 `platform_bitwise`：nalgebra 的稠密乘法走 `matrixmultiply`，后者在运行时按 AVX/FMA 等特性选择内核。
 
   v0.4 把 libm 加进"平台"的依据：同一份源码、同一组 CPU 特性（x86_64-linux，avx/avx2/fma/avx512f），glibc 2.31（Ubuntu 20.04，WSL）与生成示例的环境（推断为 glibc 2.39）相比，`control.lti.pade` 的 `approximation.certificate.value` 差 1 ulp，`control.analysis.ctrb_obsv` 非对称示例的两个奇异值差 1–2 ulp，其余示例逐位相同。glibc 会动态链接，换系统而不重新编译也会改变它，所以 `libm` 在运行时读取。`build` 也要如实：参考实现的 `build` 曾在没有设置环境变量时写死 `rustc-1.85`，v0.4 改为由构建脚本记录实际编译器版本。v0.4 之前发布的示例没有 `libm`，与它们只能做容差比较，重新生成示例后恢复逐位比较。
+  v0.4.9 参考实现去掉了跨平台差异的两个来源。第一，**数学库**：原生构建在二进制内部定义 `sin`、`exp`、`pow`、`hypot`、`sincos` 等 C 符号，转给编入二进制的纯 Rust `libm`（crate `aeoi-libm`，`libm` 0.2.16，musl libm 的移植）。可执行文件里的定义优先于系统库（ELF、Mach-O、PE 都是这样），所以 nalgebra（SVD、矩阵指数、复数模长）和 rustfft（旋转因子）内部的调用也一起换掉了。`reproducibility.libm` 记为 `rust-libm 0.2.16`，不再随操作系统变化。实测 glibc 2.39 与 `libm` 0.2.16 在随机自变量上的不同率：`sin` 3%、`exp` 10%、`pow` 9%、`atan2` 26%、`log` 5%。第二，**矩阵乘法内核**：`matrixmultiply` 换成打过补丁的副本，固定用通用内核，即普通乘加、固定次序、不融合（`rust/vendor/matrixmultiply/AEOI-PATCH.md`）。此后参考实现的结果不再依赖 CPU 特性和操作系统，`cpu_features` 只作记录。43 个示例中有 9 个的 `output_hash` 变了，数值差都在各自的容差类内（最大是 `bode` 非对称状态空间示例，相对差 8.9e-12，T2），按 G-3 处理，算子版本不变。在 CI 证实 Linux（x86_64、aarch64）、macOS、Windows 上全部 golden 用例的 `output_hash` 相同之前，manifest 仍声明 `platform_bitwise`；证实之后改为 `bitwise`。wasm 构建的数学函数来自 `compiler-builtins` 内置的 `libm`，与 0.2.16 是否逐位相同由 CI 的 wasm 重放来测。
+- M-7a **（v0.4.9）声明 `bitwise` 的前提**：超越函数 MUST 来自编入 build 的数学库（库名与版本记入 `reproducibility.libm` 和 `build`），MUST NOT 来自运行时的系统库；任何运算路径 MUST NOT 按运行时检测到的 CPU 特性分派。理由：系统数学库各家舍入不同，而且会随系统升级改变（v0.4 实测 glibc 2.31 与 2.39 相差 1–2 ulp）。
 - M-8 `tolerance_class` MUST 取 7.2 表中的一个值。
 - M-9 **稀疏支持声明（v0.2 新增）**：manifest MUST 含 `sparse_support`，以输入字段的 JSON Pointer 为键，值为 `{"policy": "native" | "densify" | "reject", "max_dense_elements": <int>}`。未列出的矩阵字段视为 `reject`。`densify` 时算子 MUST 返回 `W.PERFORMANCE.SPARSE_DENSIFIED`；稠密化后元素数超过 `max_dense_elements` MUST 返回 `E.RESOURCE.INPUT_TOO_LARGE`。
 - M-10 **编码与上限（v0.2 新增）**：manifest MUST 含 `encodings {input: [...], output: [...]}`（取值 `json`、`b64`、`ref`），以及 `limits`（算子特有的规模上限，如 `max_grid_points`、`max_states`）。上限检查 MUST 在主计算前完成。
@@ -395,7 +399,7 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
   | `a ^ b` | — | IEEE `pow`：`0^0 = 1`，负底数的非整数次幂为 NaN（`(-8)^(1/3)` 不是 −2） |
 
   定义域外的值（如 `log(-1)`、`sqrt(-1)`）按 IEEE 给 NaN 或 ±Inf，解析时不报错。表达式不知道这些值会用在哪里，是否出错由算子决定（ODE 见 OD-6）。
-- EX-4 **求值顺序**。值等于把语法树按 binary64 逐节点计算的结果：从左到右，MUST NOT 重结合（`a + b + c` 就是 `(a + b) + c`），MUST NOT 合并为 FMA，MUST NOT 做会改变结果位的代数化简。常量子表达式可以预先算好，因为位相同。数字字面量按最近舍入转成 binary64；超出范围的字面量（`1e999`）报 `not_finite`。`+ − * /` 和 `sqrt` 是正确舍入的；其余初等函数取自平台的 libm，libm 属于 P-1 平台描述的一部分。所以 `platform_bitwise` 的范围是同平台、同 libm，跨平台时只在容差内一致。
+- EX-4 **求值顺序**。值等于把语法树按 binary64 逐节点计算的结果：从左到右，MUST NOT 重结合（`a + b + c` 就是 `(a + b) + c`），MUST NOT 合并为 FMA，MUST NOT 做会改变结果位的代数化简。常量子表达式可以预先算好，因为位相同。数字字面量按最近舍入转成 binary64；超出范围的字面量（`1e999`）报 `not_finite`。`+ − * /` 和 `sqrt` 是正确舍入的；其余初等函数取自实现所用的数学库，它属于 2.1 的“平台”描述。参考实现自 v0.4.9 起把纯 Rust `libm` 编入二进制（M-7a），各平台用同一套函数。
 - EX-5 **规模上限**：每个表达式最多 10 000 个字符、10 000 个语法树节点，嵌套深度不超过 200。超出时分别报 `too_long`、`too_many_nodes`、`too_deep`。深度有上限，所以递归下降解析器不会因栈溢出而崩溃（X-3）。
 - EX-6 **错误**。静态错误一律报 `E.VALIDATION.EXPRESSION`（新码）。`details` 包含：`path`（指向出错表达式的 JSON Pointer，如 `/rhs/1`）、`expression`（原文）、`position`（从 0 起算的字符偏移）、`kind`（取值为 `syntax`、`unknown_name`、`arity`、`non_ascii`、`too_long`、`too_many_nodes`、`too_deep`、`not_finite`、`bad_name`、`duplicate_name`）。`message` 的最后一行是原文加一个指向错误位置的 `^`。所有表达式都先通过检查，然后才开始求值，不会出现算到一半才发现第三个表达式写错的情况。remediation 是 `modify_input`（改写该表达式）和 `ask_user`。
 - EX-7 实现 MUST NOT 借用宿主语言的 `eval` 或任何能执行代码的机制，也 MUST NOT 接受本节以外的语法或函数（不提供“方便的扩展”）。两个实现只要都遵守本节，对同一个表达式就有相同的语义；golden 里的右端由 Python 实现求值，参考实现与它的差别只来自 libm。
@@ -1182,7 +1186,7 @@ pub trait Operator: Send + Sync + 'static {
   "operator": {
     "id": "control.lti.bode",
     "version": "0.2.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-bode-001",
   "result": {
@@ -1215,8 +1219,8 @@ pub trait Operator: Send + Sync + 'static {
         "data": [
           0.017815421224700548,
           0.4507943502574479,
-          1.8541948398968155,
-          4.436974992327127,
+          1.8541948398968158,
+          4.436974992327128,
           -14.743983963841893,
           -27.671558660821805
         ]
@@ -1345,15 +1349,15 @@ pub trait Operator: Send + Sync + 'static {
     },
     "fingerprint": {
       "request": "sha256:23113923f7eb93fa849b481c1ca5e75f602632ea2d1152659ab9cac96edf148e",
-      "result": "sha256:06e4f640fdc1f30acc0af36ccf7c96cd1f1dedd974efe7fc586aa3e4476d1c72",
-      "output_hash": "sha256:05bbe7b5711a1fbcf66af8712e3672c8c7c5440965ac9c47450bdaed88856048",
+      "result": "sha256:8f7d71ede4d11feae7a22212b4301e6cca815b1d475c7034cc2681d1f51a2311",
+      "output_hash": "sha256:73de46268073a86ec357d95be56dc4466a3048fa041ab57dff1f7057a2378902",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.lti.bode@0.2.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -1367,7 +1371,7 @@ pub trait Operator: Send + Sync + 'static {
     "determinism": "platform_bitwise",
     "tolerance_class": "T3",
     "input_hash": "sha256:bfdce579308b4a1bd5ca4e277eb79481fbcd93ea4817cc11fd590eefe4761d28",
-    "output_hash": "sha256:05bbe7b5711a1fbcf66af8712e3672c8c7c5440965ac9c47450bdaed88856048",
+    "output_hash": "sha256:73de46268073a86ec357d95be56dc4466a3048fa041ab57dff1f7057a2378902",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -1375,13 +1379,13 @@ pub trait Operator: Send + Sync + 'static {
       "fma",
       "avx512f"
     ],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.165242
+    "wall_ms": 0.199469
   }
 }
 ```
@@ -1425,7 +1429,7 @@ pub trait Operator: Send + Sync + 'static {
   "operator": {
     "id": "control.lti.bode",
     "version": "0.2.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-bode-002",
   "result": null,
@@ -2029,7 +2033,7 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. No trust.e
   "operator": {
     "id": "control.lti.step",
     "version": "0.2.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-step-001",
   "result": {
@@ -2239,9 +2243,9 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. No trust.e
       "stable_across": "request: all platforms and builds of control.lti.step@0.2.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -2263,8 +2267,8 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. No trust.e
       "fma",
       "avx512f"
     ],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
@@ -2311,7 +2315,7 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. No trust.e
   "operator": {
     "id": "control.lti.step",
     "version": "0.2.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-step-002",
   "result": null,
@@ -2754,7 +2758,7 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. dt from th
   "operator": {
     "id": "control.design.lqr",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-lqr-001",
   "result": {
@@ -2910,9 +2914,9 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. dt from th
       "stable_across": "request: all platforms and builds of control.design.lqr@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -2934,8 +2938,8 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. dt from th
       "fma",
       "avx512f"
     ],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
@@ -3010,7 +3014,7 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. dt from th
   "operator": {
     "id": "control.design.lqr",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-lqr-002",
   "result": null,
@@ -3321,7 +3325,7 @@ tf ↔ ss ↔ zpk 互转。
   "operator": {
     "id": "control.lti.convert",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-convert-001",
   "result": {
@@ -3358,7 +3362,7 @@ tf ↔ ss ↔ zpk 互转。
       "applicable": false
     },
     "residual": {
-      "response_max_rel_discrepancy": 2.5727768029146797e-16,
+      "response_max_rel_discrepancy": 2.57277680291468e-16,
       "definition": "在 9 个测试点（连续：jω，ω = 10^[-2..2]×max(1,max|p|)；离散：单位圆上 e^{jθ}）比较转换前后 G 的最大逐元素相对差（以 max|G| 归一），跳过离极点过近的点"
     },
     "condition": {
@@ -3367,7 +3371,7 @@ tf ↔ ss ↔ zpk 互转。
       "output_states": 2
     },
     "error_estimate": {
-      "response_rel": 2.5727768029146797e-16,
+      "response_rel": 2.57277680291468e-16,
       "basis": "后验：等于上述响应残差（非严格上界；对根与系数本身的误差不作保证）"
     },
     "checks": {
@@ -3409,7 +3413,7 @@ tf ↔ ss ↔ zpk 互转。
       "class": "approximate",
       "bound_kind": "a_posteriori_heuristic",
       "bound": {
-        "response_rel": 2.5727768029146797e-16
+        "response_rel": 2.57277680291468e-16
       },
       "basis": "后验：等于上述响应残差（非严格上界；对根与系数本身的误差不作保证）"
     },
@@ -3435,9 +3439,9 @@ tf ↔ ss ↔ zpk 互转。
       "stable_across": "request: all platforms and builds of control.lti.convert@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -3454,8 +3458,8 @@ tf ↔ ss ↔ zpk 互转。
     "output_hash": "sha256:84dd5712391abb4cee44a4f7fbe27e6924baec2df209a064a071aa08b1c382d7",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
@@ -3509,7 +3513,7 @@ tf ↔ ss ↔ zpk 互转。
   "operator": {
     "id": "control.lti.convert",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-convert-002",
   "result": null,
@@ -3793,7 +3797,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.lti.poles_zeros",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-pz-001",
   "result": {
@@ -3903,9 +3907,9 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
       "stable_across": "request: all platforms and builds of control.lti.poles_zeros@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -3922,8 +3926,8 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     "output_hash": "sha256:22d247d0c6422a9995702e229b144a26ed08811a4de6bdcf8cfd4f17b27081eb",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
@@ -3976,7 +3980,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.lti.poles_zeros",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-pz-002",
   "result": null,
@@ -4276,7 +4280,7 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. kappa from
   "operator": {
     "id": "control.analysis.ctrb_obsv",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-co-001",
   "result": {
@@ -4338,7 +4342,7 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. kappa from
       "ctrb_sv_gap_at_rank": null,
       "obsv_sv_gap_at_rank": null,
       "pbh_ctrb_min_rel_sv": 0.2442208482397884,
-      "pbh_obsv_min_rel_sv": 0.0998330718720949,
+      "pbh_obsv_min_rel_sv": 0.09983307187209489,
       "pbh_threshold": 1e-10,
       "ctrb_condition": 3.119428454762873,
       "realization": "given ss"
@@ -4409,9 +4413,9 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. kappa from
       "stable_across": "request: all platforms and builds of control.analysis.ctrb_obsv@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -4428,8 +4432,8 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. kappa from
     "output_hash": "sha256:4b88f480e4dff3988e44cce0b2f28f372d9420e371da7be0103ae969bdd37258",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
@@ -4482,7 +4486,7 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. kappa from
   "operator": {
     "id": "control.analysis.ctrb_obsv",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-co-002",
   "result": null,
@@ -4749,7 +4753,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.analysis.margin",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-margin-001",
   "result": {
@@ -4759,7 +4763,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     },
     "gain_margin_db": {
       "unit": "dB",
-      "value": 3.521825181113623
+      "value": 3.5218251811136234
     },
     "phase_margin": {
       "unit": "deg",
@@ -4786,7 +4790,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
         {
           "w_rad_s": 1.414213562373095,
           "gain_margin": 1.4999999999999998,
-          "gain_margin_db": 3.521825181113623
+          "gain_margin_db": 3.5218251811136234
         }
       ],
       "gain": [
@@ -4809,7 +4813,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
       "applicable": false
     },
     "residual": {
-      "gain_crossing_max_abs_ln_mag": 2.2204460492503128e-16,
+      "gain_crossing_max_abs_ln_mag": 0.0,
       "phase_crossing_max_abs_sin_arg": 1.0467283057891834e-16,
       "definition": "增益交越处 |ln|G(jω)||、相位交越处 |Im G|/|G| 的最大值（理想为 0）"
     },
@@ -4892,15 +4896,15 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     },
     "fingerprint": {
       "request": "sha256:99eef92fb181f407d8bebfd819935594a3678bd607c576e7e4ad6ec9fbba3792",
-      "result": "sha256:75d6522ed81bcae2614a8040f1b009713bc8dbfacce5a88be09b85cac2fbb48e",
-      "output_hash": "sha256:6cb2fc3c7c0667751b2821236fc15af6715c6049ba2739e24b6a41ae58840c1b",
+      "result": "sha256:ca68b492485cbc6efff8e13e3623d76f71863ebf019592ffb3e5a6f9d4a5f629",
+      "output_hash": "sha256:6bddea2e93e8c68cff8e3debec4055bc4cb8f9ef1d6e36c5860e88d85362417e",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.analysis.margin@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -4914,16 +4918,16 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     "determinism": "platform_bitwise",
     "tolerance_class": "T3",
     "input_hash": "sha256:ee06efb23272488856dcdb3d7a1c46976cf73839392c5a606da3d599a5cb88de",
-    "output_hash": "sha256:6cb2fc3c7c0667751b2821236fc15af6715c6049ba2739e24b6a41ae58840c1b",
+    "output_hash": "sha256:6bddea2e93e8c68cff8e3debec4055bc4cb8f9ef1d6e36c5860e88d85362417e",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.340081
+    "wall_ms": 0.465118
   }
 }
 ```
@@ -4971,7 +4975,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.analysis.margin",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-margin-002",
   "result": null,
@@ -5244,7 +5248,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.lti.c2d",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-c2d-001",
   "result": {
@@ -5348,9 +5352,9 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
       "stable_across": "request: all platforms and builds of control.lti.c2d@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -5367,8 +5371,8 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     "output_hash": "sha256:dba22c18d22875927dfe4ecdf33bf0c537a4081e6b61c91bf9e64936e92a9935",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
@@ -5406,7 +5410,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.lti.c2d",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-c2d-002",
   "result": null,
@@ -5677,7 +5681,7 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. κ from th
   "operator": {
     "id": "control.lti.impulse",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-impulse-001",
   "result": {
@@ -5803,9 +5807,9 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. κ from th
       "stable_across": "request: all platforms and builds of control.lti.impulse@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -5822,8 +5826,8 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. κ from th
     "output_hash": "sha256:4e5809cdfc1b534de7c183757528866f09ccf54c47e93b312d73eb3fb7ae7b75",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
@@ -5864,7 +5868,7 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. κ from th
   "operator": {
     "id": "control.lti.impulse",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-impulse-002",
   "result": null,
@@ -6127,7 +6131,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.math.lyap",
     "version": "0.4.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-lyap-001",
   "result": {
@@ -6212,9 +6216,9 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
       "stable_across": "request: all platforms and builds of control.math.lyap@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -6231,8 +6235,8 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     "output_hash": "sha256:9d4ad79f58f7e2b4020863e3410d440ad79dfc587df3347b4da5439babe82214",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
@@ -6271,7 +6275,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.math.lyap",
     "version": "0.4.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-lyap-002",
   "result": null,
@@ -6525,7 +6529,7 @@ conformance_compare:   # spec 9.4 CF-6; rule_lyap in conformance/aeoi_conformanc
   "operator": {
     "id": "control.design.place",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-place-001",
   "result": {
@@ -6622,9 +6626,9 @@ conformance_compare:   # spec 9.4 CF-6; rule_lyap in conformance/aeoi_conformanc
       "stable_across": "request: all platforms and builds of control.design.place@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -6641,8 +6645,8 @@ conformance_compare:   # spec 9.4 CF-6; rule_lyap in conformance/aeoi_conformanc
     "output_hash": "sha256:8353eccf88599846e3653216dd6efce8df922a38183be90044a3afab0a59a59c",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
@@ -6681,7 +6685,7 @@ conformance_compare:   # spec 9.4 CF-6; rule_lyap in conformance/aeoi_conformanc
   "operator": {
     "id": "control.design.place",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-place-002",
   "result": null,
@@ -6957,7 +6961,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.design.dlqr",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-dlqr-001",
   "result": {
@@ -7075,9 +7079,9 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
       "stable_across": "request: all platforms and builds of control.design.dlqr@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -7094,8 +7098,8 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     "output_hash": "sha256:2ba88e6c6340c1954eba51085c802ae5b720418c9edb3f5af707dd573a2aade3",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
@@ -7143,7 +7147,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.design.dlqr",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-dlqr-002",
   "result": null,
@@ -7689,7 +7693,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.lti.lsim",
     "version": "0.4.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": null,
   "result": {
@@ -7827,9 +7831,9 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
       "stable_across": "request: all platforms and builds of control.lti.lsim@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -7846,8 +7850,8 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     "output_hash": "sha256:68db5417d1fef762ec48361d624fea690242bde4b09bc97be6a8ceca0f0d14ff",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
@@ -7892,7 +7896,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
   "operator": {
     "id": "control.lti.lsim",
     "version": "0.4.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": null,
   "result": null,
@@ -8177,7 +8181,7 @@ A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与�
   "operator": {
     "id": "control.design.pidtune",
     "version": "0.4.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": null,
   "result": {
@@ -8208,7 +8212,7 @@ A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与�
     },
     "achieved": {
       "closed_loop_stable": true,
-      "gain_crossover_rad_s": 0.9999999999999998,
+      "gain_crossover_rad_s": 0.9999999999999997,
       "phase_margin_deg": 60.0,
       "gain_margin": 14.046342966305138
     },
@@ -8237,7 +8241,7 @@ A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与�
         "bisection_iterations": 44,
         "bracket_rel_width": 0.0,
         "x": 0.6608004490940967,
-        "achievable_phase_range_deg": [-89.99977081688195, 55.67267142284173],
+        "achievable_phase_range_deg": [-89.99977081688195, 55.672671422841724],
         "rule": "smallest root on the scan"
       },
       "lineage": null
@@ -8355,15 +8359,15 @@ A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与�
     },
     "fingerprint": {
       "request": "sha256:39a98124a4cb673ab377f84530911e53aa82c97372224b2978fbb1f93016871e",
-      "result": "sha256:f8e22e7ebb6d2cb8626426634d46693220a44936e83d4965ce7e547dd8bbe6a7",
-      "output_hash": "sha256:e72fcbd6d97661899d2e5ebce922806c5ea394d2b2cf7be4d9e75f922419e85b",
+      "result": "sha256:be9fc14bcb206a349f82f62b75e4e72f9f64f3afa920e4384bbf784b60c83958",
+      "output_hash": "sha256:5ccbb0f7bf8d87ecd1b098511bc2616b1896ae3545c9efca4154840cba90ec4a",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.design.pidtune@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -8377,16 +8381,16 @@ A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与�
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:3c9e2fed8c66d0d90b66092c29189647ea03d3b29555af3790d7a016ac989e40",
-    "output_hash": "sha256:e72fcbd6d97661899d2e5ebce922806c5ea394d2b2cf7be4d9e75f922419e85b",
+    "output_hash": "sha256:5ccbb0f7bf8d87ecd1b098511bc2616b1896ae3545c9efca4154840cba90ec4a",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
   "timing": {
-    "wall_ms": 60.256510999999996
+    "wall_ms": 56.353704
   }
 }
 ```
@@ -8416,7 +8420,7 @@ A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与�
   "operator": {
     "id": "control.design.pidtune",
     "version": "0.4.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": null,
   "result": null,
@@ -8770,14 +8774,14 @@ case_families:
   "operator": {
     "id": "signal.spectral.fft",
     "version": "0.4.0",
-    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": null,
   "result": {
     "X": {
       "dtype": "c128",
       "shape": [51],
-      "data": [[3.091971123581061e-14, 0.0], [7.735827995380404e-15, 8.96590016479734e-15], [1.723099388513925e-15, 2.3736907687814027e-14], [-8.645759934959145e-15, 3.9552922969366874e-15], [-4.761404154601001e-15, -5.874032909248751e-15], [-2.2373742683544112e-15, -50.000000000000014], "…(+43)…", [-1.942257000487916e-15, 2.3152189965588898e-14], [-2.503552920529728e-14, 0.0]]
+      "data": [[3.091971123581061e-14, 0.0], [7.735827995380404e-15, 8.96590016479734e-15], [1.7230993885139242e-15, 2.3736907687814027e-14], [-8.645759934959147e-15, 3.9552922969366874e-15], [-4.761404154601001e-15, -5.874032909248751e-15], [-2.2373742683544112e-15, -50.000000000000014], "…(+43)…", [-1.942257000487916e-15, 2.3152189965588898e-14], [-2.503552920529728e-14, 0.0]]
     },
     "frequency": {
       "unit": "Hz",
@@ -8889,15 +8893,15 @@ case_families:
     },
     "fingerprint": {
       "request": "sha256:2835386cddebdadc7ea80184708a4956cd434c037ade3bce1568972002d4d1a1",
-      "result": "sha256:091e4bd3b48ecbedd11a25596b85a4029df8c7addce1ad8fa9425b147bb9785c",
-      "output_hash": "sha256:345e7eb7b81e1993b700a680db4e5a648730079698734d5a2bda985efc914718",
+      "result": "sha256:aad58d46bc58387f98d51aacdaa7b534fd0b53e1c0530582c2d2858ccd624fb2",
+      "output_hash": "sha256:e452b4e20ff87d18599792035db0adb1fae3a967e4b700ba8279b7c1e4c27c81",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of signal.spectral.fft@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -8911,16 +8915,16 @@ case_families:
     "determinism": "platform_bitwise",
     "tolerance_class": "T1",
     "input_hash": "sha256:46926d1dba512d42ad0915662fc8eacdc902878b56685ed5f19e56c67720a289",
-    "output_hash": "sha256:345e7eb7b81e1993b700a680db4e5a648730079698734d5a2bda985efc914718",
+    "output_hash": "sha256:e452b4e20ff87d18599792035db0adb1fae3a967e4b700ba8279b7c1e4c27c81",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.218415
+    "wall_ms": 0.215849
   }
 }
 ```
@@ -8948,7 +8952,7 @@ case_families:
   "operator": {
     "id": "signal.spectral.fft",
     "version": "0.4.0",
-    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": null,
   "result": null,
@@ -9044,7 +9048,7 @@ case_families:
 - OD-5 **全局误差的后验估计**。算子用同一方法、以 rtol/10 和 atol/10 再解一次，在输出点上比较两次的结果，给出 `global_error.max_abs`（每个状态一项）和 `max_scaled` = max |y − y_fine| / (atol + rtol·|y|)。后置条件 `tolerance_consistent` 成立当且仅当 `max_scaled` ≤ 100（manifest 中的 `limits.tolerance_consistency_factor`），它覆盖全部 `y`（`full`），守护 `/y`。不成立时按 E-7a 发出 `W.EVIDENCE.POSTCONDITION_FAILED`，`/y` 列为不可依赖。`bound_kind` 为 `a_posteriori_heuristic`：误差 ∝ tol^(4/5) 时，更严的那次解的误差约小 6 倍，所以这个差值近似等于本次解的全局误差，但不是严格上界。代价是 rhs 求值次数约为单解的 2.6 倍。在 golden 上，估计值与实际误差之比的中位数是 0.92，最大是 1.03。示例 `request.vdp.json`（μ = 1，缺省容差）的估计值是 0.17（实际误差 0.23），`max_scaled` = 2422，结果被标记为不可依赖。
 - OD-6 **失败**。初始点的右端不是有限值时，报 `E.NUMERICAL.NON_FINITE_EVALUATION`（新码）。积分过程中，某次试探步的任一阶段出现非有限值，就把这一步当作被拒绝，缩小步长重试。步长缩到最小步长以下时：如果最后一次试探是非有限值（解爆破或碰到奇点，例如 y′ = y²、y(0) = 1 在 t = 1 处），报 `NON_FINITE_EVALUATION`；否则报 `E.NUMERICAL.STEP_SIZE_TOO_SMALL`（新码）。两种情况的 `details` 都给出出事的 t 和 h。接受步与拒绝步合计超过 `limits.max_steps`（10⁶）时，报 `E.RESOURCE.COMPUTE_LIMIT`，remediation 指出问题可能是刚性的。失败时不返回部分结果。
 - OD-7 **刚性**。按 Hairer DOPRI5 的检测方法：每 1000 个接受步检查一次，处于可疑状态时每步都检查；用 h·ρ̂ 估计 h·|λ|，其中 ρ̂ = ‖k7 − k6‖ / ‖y_new − y_stage6‖。h·ρ̂ > 3.25 累计 15 次（中间连续 6 次不可疑就清零）时，发出一次 `W.NUMERICAL.STIFF_PROBLEM`（新码），`details` 给出开始出现刚性的 t。这时结果仍然返回，因为它是准确的，只是代价高。本算子还没有隐式方法（对应 `ode15s`），所以 remediation 是告诉调用方这一点并 `ask_user`。
-- OD-8 **确定性**：`platform_bitwise`。右端通过 libm 求值（EX-4），所以只在同一平台、同一 libm 上逐位相同。
+- OD-8 **确定性**：`platform_bitwise`。右端通过数学库求值（EX-4），所以只在同一平台、同一数学库上逐位相同；参考实现自 v0.4.9 起各平台用同一个数学库（2.1 M-7a）。
 
 新码：`E.VALIDATION.EXPRESSION`（3.15 EX-6）、`E.NUMERICAL.NON_FINITE_EVALUATION`、`E.NUMERICAL.STEP_SIZE_TOO_SMALL`、`W.NUMERICAL.STIFF_PROBLEM`。前两个 NUMERICAL 码的意思是：问题本身可能有解，换容差、换输出区间或换方法也许能成功（X-1）。解在有限时间内爆破属于问题本身的性质，可数值上无法把它和步长失败区分开，所以仍归 NUMERICAL，由 message 给出“可能爆破”的判断。
 
@@ -9235,7 +9239,7 @@ case_families:
   "operator": {
     "id": "ode.ivp.solve",
     "version": "0.4.0",
-    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": null,
   "result": {
@@ -9362,9 +9366,9 @@ case_families:
       "stable_across": "request: all platforms and builds of ode.ivp.solve@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -9381,8 +9385,8 @@ case_families:
     "output_hash": "sha256:dd0679d25cc95709691eb6b75cb2d2359683a2c1028c4a2b4ed4d2ea623ebe30",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
@@ -9420,7 +9424,7 @@ case_families:
   "operator": {
     "id": "ode.ivp.solve",
     "version": "0.4.0",
-    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": null,
   "result": null,
@@ -9680,11 +9684,41 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；ODE 之后可做隐式/刚性方法（`ode15s`）、事件检测、`interp1`、`polyfit`、线性方程组与 `fzero`/`fsolve`（复用 3.15）；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
 5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；v0.3.4 另有 `aeoi-web design`。v0.3.5 实现了试点里排在前面的算子（串联、并联、反馈、PID 构造、stepinfo、Padé），v0.3.6 加了具名角色、`loopsens`（含带宽读数）和回合预算。下一步是按 A-4 写 `pidtune`（必须先声明对象类、指标和唯一性），以及控制器离散化和 MIMO 裕度；扩充问答题、加入"Agent + 裸 scipy"对照组。非线性吸引域仍不做。
-6. 分发：为 `aeoi-mcp` 发布各平台预编译二进制（GitHub Releases）、Claude Desktop 一键安装扩展、登记到 MCP 公开目录；之后做纯浏览器的结果查看器（`aeoi-wasm`：结果、信任信息、收据与本地重放）。不做独立的图形界面客户端或自带 LLM 的聊天客户端：AEOI 的客户端是 MCP 宿主
+6. 分发：为 `aeoi-mcp` 发布各平台预编译二进制（GitHub Releases）、Claude Desktop 一键安装扩展、登记到 MCP 公开目录（v0.4.9：数学库与矩阵乘法内核已统一，`release.yml` 已写好，待首次运行）；之后做纯浏览器的结果查看器（`aeoi-wasm`：结果、信任信息、收据与本地重放）。不做独立的图形界面客户端或自带 LLM 的聊天客户端：AEOI 的客户端是 MCP 宿主
 7. 一致性套件（9.4）：v0.4.8 有 10 个算子的数值规则（10 / 23 = 43%；作者定的下限是 30%，以后提高），参考实现 715 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 19 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
 8. 根据以上反馈修订，冻结 v1.0
 
 ## 13. Changelog
+
+### v0.4.9-draft（2026-11-24）
+
+起因：作者决定先做分发（12.2 第 6 项），并选定“全平台用同一个纯 Rust 数学库”。审计时发现，跨平台差异除了系统数学库，还有 `matrixmultiply` 按 CPU 选内核这第二个来源（2.1 早就记着，作者问起时我漏说了）。线协议标识、核心 schema、算子版本都不变。
+
+**规范改动**
+
+| # | 条款 | 改动 | 原因 |
+|---|---|---|---|
+| 1 | 2.1 | 记录参考实现消除了跨平台差异的两个来源：编入二进制的 Rust `libm`，以及固定使用通用内核的 `matrixmultiply`；`reproducibility.libm` 记为 `rust-libm 0.2.16` | 让同一请求在各平台上逐位相同；系统数学库还会随系统升级改变 |
+| 2 | 2.1 M-7a（新） | 声明 `bitwise` 的前提：超越函数来自编入 build 的数学库，任何运算路径都不按运行时 CPU 特性分派 | 把上面的做法变成对所有实现的要求 |
+| 3 | 3.15 EX-4、10.18 OD-8 | “平台的 libm”改为“实现所用的数学库” | 与 M-7a 一致 |
+| 4 | 12.2 第 6 项 | 分发：多平台发布、Claude Desktop 一键安装包、MCP 公开目录；不做独立 GUI 和聊天客户端 | 作者决定 |
+
+**已做的改动**
+
+| 位置 | 改动 |
+|---|---|
+| `rust/aeoi-libm`（新 crate） | 在二进制内定义 `sin`、`cos`、`tan`、反三角、双曲、`exp`/`exp2`/`expm1`、`log` 系列、`cbrt`、`atan2`、`pow`、`hypot`、`sincos`、`__sincos_stret`（Apple）、`_hypot`（MSVC），转给 `libm` 0.2.16。`tests/override.rs` 在每个平台上检查 `f64` 方法与 `libm` 逐位相同（6 万个自变量）。在本机，同一组函数下 glibc 2.39 与 `libm` 的不同率是 3%–26%，所以这个测试确实能区分两者 |
+| `rust/vendor/matrixmultiply` | 0.3.11 的补丁副本，经 `[patch.crates-io]` 使用：`detect()` 固定选通用内核（`AEOI-PATCH.md`） |
+| `aeoi-core::operator` | `libm()` 报告 `rust-libm 0.2.16`；`build` 字符串加上 `matrixmultiply-0.3.11-portable libm-0.2.16`；`blas` 写明是通用内核 |
+| Linux 二进制 | 不再从 glibc 导入任何数学函数（`nm -D` 已核对） |
+| `examples/*/response*.json` | 重新生成：9 / 43 个成功示例的 `output_hash` 变了（数值差在容差类内，最大为 `bode` 非对称 ss 示例的相对差 8.9e-12；fft 示例 3.7e-17·max|X|），其余逐位不变 |
+| `aeoi-call hashes <golden-dir>`（新） | 输出每个 golden 请求的 `output_hash`（错误用例输出错误码），供发布流水线做跨平台比较 |
+| `.github/workflows/release.yml`（新） | 5 个平台（Linux x86_64/aarch64 musl 静态、macOS arm64/x86_64、Windows x86_64）上分别跑测试、一致性套件和 `hashes`；`compare` 任务要求各平台的结果完全相同；生成 `aeoi.mcpb`（macOS 通用二进制 + Windows exe）；打 tag 时发布 Release（SHA256SUMS、构建来源证明），并用 GitHub OIDC 登记到 MCP 公开目录 |
+| `tools/write_mcpb_manifest.py`、`tools/write_server_json.py`、`release/NOTES.md`（新） | MCPB manifest（工具清单从二进制的 `tools/list` 读取，已用 `mcpb validate` 和 `mcpb pack` 试过）；registry 的 server.json；发布说明 |
+| `.github/workflows/pages.yml` | 修复冒烟测试：它把工具数写死为 19，所以从 v0.4.5（`b19feab`）起的 5 次推送 Pages 构建都失败了，一直没人发现。现在改为从 `examples/` 的目录数推出 |
+| `README.md`、`THIRD_PARTY_NOTICES.md` | 安装说明；登记 `libm` 与 `matrixmultiply` 补丁副本 |
+
+**结果**：`cargo test` 181 / 0；一致性 715 / 0 / 291；变异 28 / 28；`validate_examples.py` 退出码 0。跨平台逐位相同还没有验证：要等发布流水线在 5 个平台上跑完，在那之前 manifest 仍声明 `platform_bitwise`。
 
 ### v0.4.8-draft（2026-11-24）
 

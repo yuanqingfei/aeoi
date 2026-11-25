@@ -16,6 +16,8 @@ AEOI（AI Engineering Operator Interface Spec）是叠加在 MCP 之上的工程
 4. 验证一律看**退出码**，不要只看输出的最后一行。
 5. `write_manifests.py` 是 manifest 与 I/O schema 的唯一来源；不要手改 `examples/*/manifest.json`、`*.schema.json`。
 6. 手写的解析解（golden 的真值）要用独立的高精度方法交叉核对。
+7. 推送后查看 CI 结果（`gh api repos/yuanqingfei/aeoi/actions/runs`）。Pages 的冒烟测试曾连续失败 5 次没人发现。
+8. 不要引入依赖系统数学库或按 CPU 分派内核的计算路径（规范 2.1 M-7a）：超越函数经 `aeoi-libm` 走编入的 Rust `libm`，矩阵乘法用 `rust/vendor/matrixmultiply` 的通用内核。
 
 ## 验证
 ```bash

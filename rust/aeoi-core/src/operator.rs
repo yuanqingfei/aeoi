@@ -92,7 +92,7 @@ pub fn build_string() -> String {
 /// `<crate> <version>+<git> nalgebra-0.33 rustc-<version>` for the crate that implements the operator.
 pub fn build_string_for(crate_name: &str) -> String {
     format!(
-        "{crate_name} {}+{} nalgebra-0.33 rustc-{}",
+        "{crate_name} {}+{} nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-{}",
         env!("CARGO_PKG_VERSION"),
         option_env!("AEOI_GIT_SHA").unwrap_or("nogit"),
         option_env!("AEOI_RUSTC_VERSION").unwrap_or("unknown")
@@ -106,25 +106,16 @@ pub fn platform() -> String {
     format!("{}-{}", std::env::consts::ARCH, os)
 }
 
-/// The C math library that `f64::exp`, `sin`, `cos`, `powf`, `hypot`, … resolve to. Part of the "platform"
-/// of `platform_bitwise` (spec 2.1, v0.4): glibc 2.31 and 2.39 differ by 1–2 ulp on the same CPU features.
-/// `glibc <version>` on linux-gnu (read at run time, since the library is linked dynamically), `rust-libm`
-/// on wasm32, `<os>-system` elsewhere.
+/// The math library that `f64::exp`, `sin`, `cos`, `powf`, `hypot`, … resolve to (spec 2.1). Since v0.4.9
+/// native builds define those C symbols themselves and forward them to the pure-Rust `libm` crate
+/// (`aeoi-libm`), so the value no longer depends on the system: `rust-libm 0.2.16` on every native platform.
+/// wasm32 gets the same functions from compiler-builtins (`rust-libm compiler-builtins`).
 pub fn libm() -> String {
-    #[cfg(all(target_os = "linux", target_env = "gnu"))]
-    let s = {
-        unsafe extern "C" {
-            fn gnu_get_libc_version() -> *const std::os::raw::c_char;
-        }
-        // SAFETY: glibc returns a pointer to a static NUL-terminated string.
-        let v = unsafe { std::ffi::CStr::from_ptr(gnu_get_libc_version()) };
-        format!("glibc {}", v.to_string_lossy())
-    };
-    #[cfg(target_arch = "wasm32")]
-    let s = String::from("rust-libm");
-    #[cfg(not(any(all(target_os = "linux", target_env = "gnu"), target_arch = "wasm32")))]
-    let s = format!("{}-system", std::env::consts::OS);
-    s
+    if aeoi_libm::linked() {
+        format!("rust-libm {}", aeoi_libm::LIBM_VERSION)
+    } else {
+        String::from("rust-libm compiler-builtins")
+    }
 }
 
 pub fn cpu_features() -> Vec<&'static str> {
@@ -254,7 +245,7 @@ impl<T: Operator> DynOperator for T {
                 "platform": platform(),
                 "cpu_features": cpu_features(),
                 "libm": libm(),
-                "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+                "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
                 "threads": 1, "seed": ctx.seed
             },
             "timing": {"wall_ms": t0.elapsed().as_secs_f64() * 1e3}

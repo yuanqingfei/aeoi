@@ -1,14 +1,25 @@
 # AEOI — AI Engineering Operator Interface
 
-面向 AI Agent 的工程计算算子接口规范（v0.4-draft）及其 Rust 参考实现。v0.4-draft 新增的方法登记与选择（3.14）、跨实现一致性（9.4）目前只有规范文本，参考实现尚未实现。
+面向 AI Agent 的工程计算算子接口规范（v0.4.9-draft）及其 Rust 参考实现：23 个算子（控制 21 个、`signal.spectral.fft`、`ode.ivp.solve`），一个 MCP stdio 服务器。每个结果带容差类、后置条件检查、不可依赖字段的标注、带修复补丁的结构化错误，以及可重放的收据。当前状态与改动历史见规范第 13 章 Changelog；给 AI agent 的入口见 `AGENTS.md`。
 
 - `spec-v0.4.md` — 规范全文（源稿 `spec-src.md`，`python3 build_spec.py` 生成；`spec-v0.3.md`、`spec-v0.2.md`、`spec-v0.1.md` 为历史版本）
 - `schemas/` — JSON Schema（common / manifest / envelope / error）
-- `examples/` — 19 个示例算子：v0.2 的 `control.lti.bode`、`control.lti.step`、`control.design.lqr`；v0.3 的 `control.lti.convert`、`control.lti.poles_zeros`、`control.analysis.ctrb_obsv`、`control.analysis.margin`、`control.lti.c2d`、`control.lti.impulse`、`control.math.lyap`、`control.design.place`、`control.design.dlqr`；v0.3.5 的 `control.lti.series`、`control.lti.parallel`、`control.lti.feedback`、`control.design.pid`、`control.lti.stepinfo`、`control.lti.pade`；v0.3.6 的 `control.analysis.loopsens`（对象 + 控制器的一次性开环/闭环分析）
+- `examples/` — 23 个算子的 manifest、schema、示例与 parity 规格（v0.4.5 起另有 `control.lti.lsim`、`control.design.pidtune`、`signal.spectral.fft`、`ode.ivp.solve`）。早期的：v0.2 的 `control.lti.bode`、`control.lti.step`、`control.design.lqr`；v0.3 的 `control.lti.convert`、`control.lti.poles_zeros`、`control.analysis.ctrb_obsv`、`control.analysis.margin`、`control.lti.c2d`、`control.lti.impulse`、`control.math.lyap`、`control.design.place`、`control.design.dlqr`；v0.3.5 的 `control.lti.series`、`control.lti.parallel`、`control.lti.feedback`、`control.design.pid`、`control.lti.stepinfo`、`control.lti.pade`；v0.3.6 的 `control.analysis.loopsens`（对象 + 控制器的一次性开环/闭环分析）
 - `golden/python-control/` — 对照参考用例（参考值来自 python-control/scipy，**非 MATLAB**）
 - `matlab/` — MATLAB golden 生成脚本（尚未在 MATLAB 中运行）
-- `rust/` — cargo workspace：`aeoi-core`、`aeoi-control`、`aeoi-mcp`（stdio MCP server）、`aeoi-web`（LLM 端到端测试台 + 评测）
+- `rust/` — cargo workspace：`aeoi-core`、`aeoi-libm`（编入二进制的数学库）、`aeoi-control`、`aeoi-numeric`（fft、表达式语言、ode）、`aeoi-ops`（跨领域注册表、`aeoi-call`）、`aeoi-mcp`（stdio MCP server）、`aeoi-web`（LLM 端到端测试台 + 评测）、`aeoi-wasm`（浏览器版）；`rust/vendor/matrixmultiply` 是固定通用内核的补丁副本
+- `conformance/` — 跨实现一致性套件（规范 9.4）
 - `eval/` — LLM 评测题库（`questions.zh.json`，由 `gen_questions.py` 生成）；报告写入 `reports/eval-<model>.json`
+
+## 安装
+
+从 [Releases](https://github.com/yuanqingfei/aeoi/releases) 下载，不需要 Rust：
+
+- **Claude Desktop（macOS、Windows）**：下载 `aeoi.mcpb`，双击安装（或 设置 → 扩展 → 高级设置 → 安装扩展）。它只是给 Claude 多加一组工具，随时可以停用或卸载。
+- **任何 MCP 客户端**（Claude Code、Cursor、VS Code 等）：下载对应平台的压缩包，把 `aeoi-mcp` 登记为 stdio 服务器，例如 `claude mcp add aeoi -- /path/to/aeoi-mcp`。Cursor、VS Code 在各自的 MCP 配置里写 `{"command": "/path/to/aeoi-mcp"}`。
+- **不经过 LLM**：`aeoi-call <算子 id> request.json` 输出结果信封，`aeoi-call verify …` 重放收据。
+
+同一请求在各平台上的结果逐位相同（规范 2.1 M-7a）：发布流水线会比较各平台上全部 golden 用例的 `output_hash`。
 
 ## 运行
 

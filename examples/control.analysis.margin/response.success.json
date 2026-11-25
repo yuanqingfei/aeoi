@@ -5,7 +5,7 @@
   "operator": {
     "id": "control.analysis.margin",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-margin-001",
   "result": {
@@ -15,7 +15,7 @@
     },
     "gain_margin_db": {
       "unit": "dB",
-      "value": 3.521825181113623
+      "value": 3.5218251811136234
     },
     "phase_margin": {
       "unit": "deg",
@@ -42,7 +42,7 @@
         {
           "w_rad_s": 1.414213562373095,
           "gain_margin": 1.4999999999999998,
-          "gain_margin_db": 3.521825181113623
+          "gain_margin_db": 3.5218251811136234
         }
       ],
       "gain": [
@@ -65,7 +65,7 @@
       "applicable": false
     },
     "residual": {
-      "gain_crossing_max_abs_ln_mag": 2.2204460492503128e-16,
+      "gain_crossing_max_abs_ln_mag": 0.0,
       "phase_crossing_max_abs_sin_arg": 1.0467283057891834e-16,
       "definition": "增益交越处 |ln|G(jω)||、相位交越处 |Im G|/|G| 的最大值（理想为 0）"
     },
@@ -163,15 +163,15 @@
     },
     "fingerprint": {
       "request": "sha256:99eef92fb181f407d8bebfd819935594a3678bd607c576e7e4ad6ec9fbba3792",
-      "result": "sha256:75d6522ed81bcae2614a8040f1b009713bc8dbfacce5a88be09b85cac2fbb48e",
-      "output_hash": "sha256:6cb2fc3c7c0667751b2821236fc15af6715c6049ba2739e24b6a41ae58840c1b",
+      "result": "sha256:ca68b492485cbc6efff8e13e3623d76f71863ebf019592ffb3e5a6f9d4a5f629",
+      "output_hash": "sha256:6bddea2e93e8c68cff8e3debec4055bc4cb8f9ef1d6e36c5860e88d85362417e",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.analysis.margin@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -185,7 +185,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T3",
     "input_hash": "sha256:ee06efb23272488856dcdb3d7a1c46976cf73839392c5a606da3d599a5cb88de",
-    "output_hash": "sha256:6cb2fc3c7c0667751b2821236fc15af6715c6049ba2739e24b6a41ae58840c1b",
+    "output_hash": "sha256:6bddea2e93e8c68cff8e3debec4055bc4cb8f9ef1d6e36c5860e88d85362417e",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -193,12 +193,12 @@
       "fma",
       "avx512f"
     ],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.340081
+    "wall_ms": 0.465118
   }
 }

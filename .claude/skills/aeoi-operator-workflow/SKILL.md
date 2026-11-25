@@ -25,7 +25,7 @@ AEOI（AI Engineering Operator Interface Spec）是叠加在 MCP 之上的工程
 - `gen_golden_<op>.py`：生成 `golden/<engine>/<op>/<ver>/*.json` 和示例请求、`reference.python-control.json`。参考值来自 python-control / numpy / scipy / mpmath，**不是 MATLAB**，到处都要这样标注。
 - `regen_examples.py`：用 Rust `aeoi-call` 重写 `examples/*/response*.json`。
 - `validate_examples.py`：schema 校验全部示例与 golden 请求。
-- Rust（`rust/`）：`aeoi-core`；`aeoi-control`（控制算子）；`aeoi-numeric`（控制以外：fft、expr、ode）；`aeoi-ops`（跨领域 `registry()`/`find()`、`aeoi-call` bin、遍历全部 golden 的 `tests/receipt.rs`）；前端 `aeoi-mcp`、bridge、web、wasm 都用 `aeoi_ops::registry()`。
+- Rust（`rust/`）：`aeoi-core`；`aeoi-libm`（数学符号覆盖）；`aeoi-control`（控制算子）；`aeoi-numeric`（控制以外：fft、expr、ode）；`aeoi-ops`（跨领域 `registry()`/`find()`、`aeoi-call` bin、遍历全部 golden 的 `tests/receipt.rs`）；前端 `aeoi-mcp`、bridge、web、wasm 都用 `aeoi_ops::registry()`。
 - `conformance/`：`aeoi_conformance.py`（运行器，只经 MCP stdio 驱动实现）、`rules_control.py`、`rules_numeric.py`、`tests/proxy_mutant.py`、`tests/test_runner_catches_mutants.py`、`README.md`。
 
 ## 加一个新算子的清单
@@ -62,6 +62,8 @@ git checkout reports/parity-python-control*.json   # 测试会改写它们；rec
 ```
 
 ## 积累的经验
+- **推送后要看 CI。** `gh api repos/yuanqingfei/aeoi/actions/runs --jq '.workflow_runs[:5][] | {name, conclusion, head_sha}'`。Pages 冒烟测试把工具数写死为 19，从 v0.4.5 起连续 5 次推送都失败，没人发现。
+- **跨平台逐位相同（M-7a）。** 不要直接引入会调用系统数学库或在运行时按 CPU 分派内核的依赖。`aeoi-libm` 把 C 数学符号转给编入的 Rust `libm`；`rust/vendor/matrixmultiply` 固定用通用内核。改了数值路径要重新生成示例（`regen_examples.py`）。
 - **比较对象要选对。** 与参考求解器逐点比较只适用于结果唯一确定的算子。自适应算法（ODE）在折点、混沌、长区间上，两个正确实现会因一次接受/拒绝决策不同而分岔：对照真值，与参考之差只记录。
 - **容差界不能把错掉的参考盖住。** 含“参考自身误差 × 2”的界会掩盖真值写错，所以真值要独立核对。
 - **局部容差 ≠ 全局精度。** 让结果报告实际达到的精度（后验估计 + 后置条件），比报告成功更有用；golden 要包含如实失败的用例。

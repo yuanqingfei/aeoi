@@ -71,7 +71,8 @@ jobs:
           node -e '
             const w = require("/tmp/pkg-node/aeoi_wasm.js");
             const info = JSON.parse(w.info()); console.log(info);
-            if (info.tools !== 19 || info.platform !== "wasm32-unknown") process.exit(1);
+            const nOps = require("fs").readdirSync("examples", {withFileTypes: true}).filter(d => d.isDirectory()).length;  // one per operator
+            if (info.tools !== nOps || info.platform !== "wasm32-unknown") { console.error(`tools ${info.tools}, expected ${nOps}`); process.exit(1); }
             const r = JSON.parse(w.call_tool("control_lti_poles_zeros", JSON.stringify({system:{kind:"tf",num:[1],den:[1,3,2],ts:0}}), null, 120));
             console.log(r.envelope.status, JSON.stringify(r.envelope.result.poles));
             if (r.is_error) process.exit(1);'

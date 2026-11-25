@@ -5,7 +5,7 @@
   "operator": {
     "id": "control.design.pidtune",
     "version": "0.4.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": null,
   "result": {
@@ -44,7 +44,7 @@
     },
     "achieved": {
       "closed_loop_stable": true,
-      "gain_crossover_rad_s": 0.9999999999999998,
+      "gain_crossover_rad_s": 0.9999999999999997,
       "phase_margin_deg": 60.0,
       "gain_margin": 14.046342966305138
     },
@@ -101,7 +101,7 @@
         "x": 0.6608004490940967,
         "achievable_phase_range_deg": [
           -89.99977081688195,
-          55.67267142284173
+          55.672671422841724
         ],
         "rule": "smallest root on the scan"
       },
@@ -223,15 +223,15 @@
     },
     "fingerprint": {
       "request": "sha256:39a98124a4cb673ab377f84530911e53aa82c97372224b2978fbb1f93016871e",
-      "result": "sha256:f8e22e7ebb6d2cb8626426634d46693220a44936e83d4965ce7e547dd8bbe6a7",
-      "output_hash": "sha256:e72fcbd6d97661899d2e5ebce922806c5ea394d2b2cf7be4d9e75f922419e85b",
+      "result": "sha256:be9fc14bcb206a349f82f62b75e4e72f9f64f3afa920e4384bbf784b60c83958",
+      "output_hash": "sha256:5ccbb0f7bf8d87ecd1b098511bc2616b1896ae3545c9efca4154840cba90ec4a",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.design.pidtune@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -245,7 +245,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:3c9e2fed8c66d0d90b66092c29189647ea03d3b29555af3790d7a016ac989e40",
-    "output_hash": "sha256:e72fcbd6d97661899d2e5ebce922806c5ea394d2b2cf7be4d9e75f922419e85b",
+    "output_hash": "sha256:5ccbb0f7bf8d87ecd1b098511bc2616b1896ae3545c9efca4154840cba90ec4a",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -253,12 +253,12 @@
       "fma",
       "avx512f"
     ],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
   "timing": {
-    "wall_ms": 60.256510999999996
+    "wall_ms": 56.353704
   }
 }

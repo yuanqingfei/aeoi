@@ -5,7 +5,7 @@
   "operator": {
     "id": "signal.spectral.fft",
     "version": "0.4.0",
-    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": null,
   "result": {
@@ -24,11 +24,11 @@
           8.96590016479734e-15
         ],
         [
-          1.723099388513925e-15,
+          1.7230993885139242e-15,
           2.3736907687814027e-14
         ],
         [
-          -8.645759934959145e-15,
+          -8.645759934959147e-15,
           3.9552922969366874e-15
         ],
         [
@@ -68,8 +68,8 @@
           -24.99999999999999
         ],
         [
-          -5.025631713904998e-15,
-          -3.68594044175552e-14
+          -4.137453294204873e-15,
+          -3.6415315207705135e-14
         ],
         [
           1.0675525697201406e-14,
@@ -125,10 +125,10 @@
         ],
         [
           -1.5576729534940467e-14,
-          -1.3738042224222126e-14
+          -1.3738042224222128e-14
         ],
         [
-          5.220938265177934e-15,
+          5.220938265177936e-15,
           -1.2426412408365442e-15
         ],
         [
@@ -140,8 +140,8 @@
           -1.865174681370263e-14
         ],
         [
-          2.4490974949612527e-15,
-          1.9566984284313137e-15
+          2.449097494961252e-15,
+          1.956698428431317e-15
         ],
         [
           -6.466995640568172e-15,
@@ -168,8 +168,8 @@
           -1.1102230246251565e-14
         ],
         [
-          2.3507100018961525e-14,
-          3.552713678800501e-15
+          2.3951189228811588e-14,
+          1.7763568394002505e-15
         ],
         [
           -3.5425091180089808e-15,
@@ -391,15 +391,15 @@
     },
     "fingerprint": {
       "request": "sha256:2835386cddebdadc7ea80184708a4956cd434c037ade3bce1568972002d4d1a1",
-      "result": "sha256:091e4bd3b48ecbedd11a25596b85a4029df8c7addce1ad8fa9425b147bb9785c",
-      "output_hash": "sha256:345e7eb7b81e1993b700a680db4e5a648730079698734d5a2bda985efc914718",
+      "result": "sha256:aad58d46bc58387f98d51aacdaa7b534fd0b53e1c0530582c2d2858ccd624fb2",
+      "output_hash": "sha256:e452b4e20ff87d18599792035db0adb1fae3a967e4b700ba8279b7c1e4c27c81",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of signal.spectral.fft@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -413,7 +413,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T1",
     "input_hash": "sha256:46926d1dba512d42ad0915662fc8eacdc902878b56685ed5f19e56c67720a289",
-    "output_hash": "sha256:345e7eb7b81e1993b700a680db4e5a648730079698734d5a2bda985efc914718",
+    "output_hash": "sha256:e452b4e20ff87d18599792035db0adb1fae3a967e4b700ba8279b7c1e4c27c81",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -421,12 +421,12 @@
       "fma",
       "avx512f"
     ],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.218415
+    "wall_ms": 0.215849
   }
 }

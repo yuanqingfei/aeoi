@@ -5,7 +5,7 @@
   "operator": {
     "id": "control.analysis.ctrb_obsv",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-ctrb_obsv-003-nonsym",
   "result": {
@@ -68,8 +68,8 @@
           3
         ],
         "data": [
-          6.222882140270602,
-          0.7804113359320448,
+          6.222882140270601,
+          0.780411335932045,
           0.04118270328628747
         ]
       },
@@ -196,15 +196,15 @@
     },
     "fingerprint": {
       "request": "sha256:4336a9324825408cde8f8d422524ce4aa3cc702a4c82bf5e3701bd696b0a725d",
-      "result": "sha256:4fc073579a2487fd0859ebd4208ca0d55b0810e91204fad3e55b4d569eb9d37e",
-      "output_hash": "sha256:d1fcd80dd14c9bae027555cd5604daa7f5dec128834eef5d8e3cbb24764c701c",
+      "result": "sha256:c500a09aa53a2820b2971447218cb0d97ca845dd9d47513ea821a58eb0597980",
+      "output_hash": "sha256:63328e0f4805bd081d065ec1ef02213c88b2c547244f18711020cd0ab825c1fe",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.analysis.ctrb_obsv@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -218,7 +218,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:d00e1360a61133b97b0e831a1549821e5941f191a9ea8787072c90eeab66ce7e",
-    "output_hash": "sha256:d1fcd80dd14c9bae027555cd5604daa7f5dec128834eef5d8e3cbb24764c701c",
+    "output_hash": "sha256:63328e0f4805bd081d065ec1ef02213c88b2c547244f18711020cd0ab825c1fe",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -226,12 +226,12 @@
       "fma",
       "avx512f"
     ],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.274102
+    "wall_ms": 0.385486
   }
 }

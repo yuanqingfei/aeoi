@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["aeoi-core", "aeoi-control", "aeoi-numeric", "aeoi-ops", "aeoi-mcp", "aeoi-bridge", "aeoi-web", "aeoi-wasm"]
+members = ["aeoi-libm", "aeoi-core", "aeoi-control", "aeoi-numeric", "aeoi-ops", "aeoi-mcp", "aeoi-bridge", "aeoi-web", "aeoi-wasm"]
 
 [workspace.package]
 version = "0.3.0"
@@ -29,3 +29,8 @@ opt-level = "s"
 lto = true
 codegen-units = 1
 panic = "abort"
+
+# AEOI spec 2.1 (v0.4.9): nalgebra's dense products go through matrixmultiply, whose upstream version picks an
+# AVX/FMA/NEON kernel at run time. The patched copy always uses the portable kernel (vendor/matrixmultiply/AEOI-PATCH.md).
+[patch.crates-io]
+matrixmultiply = { path = "vendor/matrixmultiply" }

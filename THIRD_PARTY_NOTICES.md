@@ -8,15 +8,14 @@ into the binaries we build. Regenerate the crate table with `python3 tools/gen_t
 
 | Asset | Where | License | Notice |
 |---|---|---|---|
+| matrixmultiply 0.3.11, patched copy (© bluss and contributors) | `rust/vendor/matrixmultiply` (linked into every binary through `[patch.crates-io]`; only change: the portable kernel is always used, see `AEOI-PATCH.md`) | MIT OR Apache-2.0 | `rust/vendor/matrixmultiply/LICENSE-MIT`, `LICENSE-APACHE` |
 | Plotly.js basic 2.35.2 (© 2021 Plotly, Inc) | `rust/aeoi-web/static/vendor/plotly-basic-2.35.2.min.js`, copied to the Pages site `vendor/` | MIT | `rust/aeoi-web/static/vendor/plotly-LICENSE.txt` (shipped next to the file on the site) |
 
 ## Reference data and dev-only tools (not linked into any aeoi binary)
 
-All reference data in this repository comes from the open-source tools below; none of it was generated with MATLAB. Operator names follow MATLAB's public function names (and its toolbox grouping) only so that engineers can find them; definitions are written out in the spec.
-
 | Item | Use | License |
 |---|---|---|
-| python-control 0.10.2, scipy, numpy | generate `golden/python-control/` reference values (`gen_golden_pycontrol*.py`, `gen_golden_b3.py`, `gen_golden_loopsens.py`); values only, no code copied | BSD-3-Clause |
+| python-control 0.10.2, scipy, numpy | generate `golden/python-control/` reference values (`gen_golden_pycontrol*.py`); values only, no code copied | BSD-3-Clause |
 | mpmath | 50-digit reference values in `golden/mpmath/` (`gen_golden_mpmath.py`) | BSD-3-Clause |
 | tpt-control (rev 10e4320, © TPT Solutions) | `tools/xcheck-tpt/` cross-check harness, referenced by git rev; no source copied | MIT OR Apache-2.0 |
 | EngDesign (commit c8ec338, © 2025 EngDesign Benchmark Team) | 10 control/DSP task prompts, rubrics and reference solutions vendored verbatim in `eval/design/engdesign.json` (`tools/vendor_engdesign.py`); scoring re-implemented, no evaluator code copied | MIT — `eval/design/LICENSE-EngDesign` |
@@ -27,32 +26,32 @@ Ideas borrowed, no code copied: result receipts and verify-by-replay (spec 4.3) 
 
 ## Rust crates
 
-195 crates across the workspace (122 of them in the browser build `aeoi-wasm`). All are permissively licensed; where a crate offers a choice we use it under MIT or Apache-2.0.
+200 crates across the workspace (127 of them in the browser build `aeoi-wasm`). All are permissively licensed; where a crate offers a choice we use it under MIT or Apache-2.0.
 
 | License expression | Crates |
 |---|---|
-| MIT OR Apache-2.0 | 103 |
-| MIT | 28 |
+| MIT OR Apache-2.0 | 107 |
+| MIT | 29 |
 | Unicode-3.0 | 18 |
 | Apache-2.0 OR MIT | 10 |
 | MIT/Apache-2.0 | 6 |
-| Zlib OR Apache-2.0 OR MIT | 4 |
 | Apache-2.0 | 4 |
+| Zlib OR Apache-2.0 OR MIT | 4 |
 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | 3 |
 | ISC | 2 |
-| BSD-2-Clause OR Apache-2.0 OR MIT | 2 |
-| Apache-2.0 OR ISC OR MIT | 2 |
-| Unlicense OR MIT | 2 |
 | MIT OR Apache-2.0 OR LGPL-2.1-or-later | 2 |
-| Apache-2.0/MIT | 1 |
-| BSD-3-Clause | 1 |
-| MIT AND BSD-3-Clause | 1 |
-| Zlib | 1 |
+| BSD-2-Clause OR Apache-2.0 OR MIT | 2 |
+| Unlicense OR MIT | 2 |
+| Apache-2.0 OR ISC OR MIT | 2 |
 | Apache-2.0 AND ISC | 1 |
-| MIT OR Apache-2.0 OR Zlib | 1 |
 | (MIT OR Apache-2.0) AND Unicode-3.0 | 1 |
-| Apache-2.0 OR BSL-1.0 | 1 |
+| Zlib | 1 |
+| MIT OR Apache-2.0 OR Zlib | 1 |
+| MIT AND BSD-3-Clause | 1 |
+| BSD-3-Clause | 1 |
 | CDLA-Permissive-2.0 | 1 |
+| Apache-2.0/MIT | 1 |
+| Apache-2.0 OR BSL-1.0 | 1 |
 
 | Crate | Version | License | In browser build |
 |---|---|---|---|
@@ -120,6 +119,7 @@ Ideas borrowed, no code copied: result receipts and verify-by-replay (spec 4.3) 
 | jsonschema | 0.18.3 | MIT | yes |
 | lazy_static | 1.5.1 | MIT OR Apache-2.0 | yes |
 | libc | 0.2.191 | MIT OR Apache-2.0 | yes |
+| libm | 0.2.16 | MIT | yes |
 | litemap | 0.8.3 | Unicode-3.0 | yes |
 | lock_api | 0.4.14 | MIT OR Apache-2.0 | yes |
 | log | 0.4.35 | MIT OR Apache-2.0 |  |
@@ -148,6 +148,7 @@ Ideas borrowed, no code copied: result receipts and verify-by-replay (spec 4.3) 
 | pin-project-lite | 0.2.18 | Apache-2.0 OR MIT | yes |
 | potential_utf | 0.1.6 | Unicode-3.0 | yes |
 | powerfmt | 0.2.1 | MIT OR Apache-2.0 | yes |
+| primal-check | 0.3.4 | MIT OR Apache-2.0 | yes |
 | proc-macro2 | 1.0.107 | MIT OR Apache-2.0 | yes |
 | quinn | 0.11.12 | MIT OR Apache-2.0 |  |
 | quinn-proto | 0.11.19 | MIT OR Apache-2.0 |  |
@@ -166,6 +167,7 @@ Ideas borrowed, no code copied: result receipts and verify-by-replay (spec 4.3) 
 | reqwest | 0.12.28 | MIT OR Apache-2.0 |  |
 | ring | 0.17.14 | Apache-2.0 AND ISC |  |
 | rustc-hash | 2.1.3 | Apache-2.0 OR MIT |  |
+| rustfft | 6.4.1 | MIT OR Apache-2.0 | yes |
 | rustls | 0.23.46 | Apache-2.0 OR ISC OR MIT |  |
 | rustls-pki-types | 1.16.0 | MIT OR Apache-2.0 |  |
 | rustls-webpki | 0.103.17 | ISC |  |
@@ -184,6 +186,7 @@ Ideas borrowed, no code copied: result receipts and verify-by-replay (spec 4.3) 
 | smallvec | 1.16.6 | MIT OR Apache-2.0 | yes |
 | socket2 | 0.6.5 | MIT OR Apache-2.0 |  |
 | stable_deref_trait | 1.2.1 | MIT OR Apache-2.0 | yes |
+| strength_reduce | 0.2.4 | MIT OR Apache-2.0 | yes |
 | subtle | 2.6.1 | BSD-3-Clause |  |
 | syn | 2.0.119 | MIT OR Apache-2.0 | yes |
 | syn | 3.0.10 | MIT OR Apache-2.0 | yes |
@@ -206,6 +209,7 @@ Ideas borrowed, no code copied: result receipts and verify-by-replay (spec 4.3) 
 | tower-service | 0.3.3 | MIT |  |
 | tracing | 0.1.44 | MIT |  |
 | tracing-core | 0.1.36 | MIT |  |
+| transpose | 0.2.3 | MIT OR Apache-2.0 | yes |
 | try-lock | 0.2.5 | MIT |  |
 | typenum | 1.20.1 | MIT OR Apache-2.0 | yes |
 | unicode-ident | 1.0.27 | (MIT OR Apache-2.0) AND Unicode-3.0 | yes |

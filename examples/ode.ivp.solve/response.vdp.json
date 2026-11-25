@@ -5,7 +5,7 @@
   "operator": {
     "id": "ode.ivp.solve",
     "version": "0.4.0",
-    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": null,
   "result": {
@@ -105,9 +105,9 @@
     "global_error": {
       "max_abs": [
         0.12009923907527509,
-        0.17310711592828532
+        0.17310711592828198
       ],
-      "max_scaled": 2422.0010569388132,
+      "max_scaled": 2422.0010569388205,
       "method": "同一方法以 rtol/10、atol/10 重解，在输出点上比较"
     }
   },
@@ -116,14 +116,14 @@
       "applicable": false
     },
     "residual": {
-      "global_error_max_scaled": 2422.0010569388132,
+      "global_error_max_scaled": 2422.0010569388205,
       "definition": "max_{i,k} |y − y_fine| / (atol + rtol·|y|)，y_fine 以 rtol/10、atol/10 重解；≤ 100 记为 tolerance_consistent"
     },
     "condition": {
       "stiffness_detected_at": null
     },
     "error_estimate": {
-      "y_abs_max": 0.17310711592828532,
+      "y_abs_max": 0.17310711592828198,
       "basis": "后验估计：与 10 倍更严容差的解之差，近似当前解的全局误差（更严的解本身误差约小 10^(4/5) 倍以上）。非严格上界；rtol/atol 只控制每步的局部误差"
     },
     "checks": {
@@ -180,7 +180,7 @@
       "class": "approximate",
       "bound_kind": "a_posteriori_heuristic",
       "bound": {
-        "y_abs_max": 0.17310711592828532
+        "y_abs_max": 0.17310711592828198
       },
       "basis": "后验估计：与 10 倍更严容差的解之差，近似当前解的全局误差（更严的解本身误差约小 10^(4/5) 倍以上）。非严格上界；rtol/atol 只控制每步的局部误差"
     },
@@ -207,15 +207,15 @@
     },
     "fingerprint": {
       "request": "sha256:b72b278ca5da5c6fb7608cdf9ff11883429828f0966defbcdf700dc2686eac3c",
-      "result": "sha256:02cdada523f9ae2d7ed92acfe9abc2395fb20bd51622300200cae6f3372ee413",
-      "output_hash": "sha256:4695c611d3e60f00c1550dfd258a05593bbabb782dfe70319d007b4246949563",
+      "result": "sha256:d68e63946405cbd911f893aa18354d61e2107f08ed325a77f0355a09245f349d",
+      "output_hash": "sha256:dda24a1e56cd018771f898a1c5bd49e4e82ce108a829a8251e8cb8a48c5c7016",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of ode.ivp.solve@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -246,7 +246,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T4",
     "input_hash": "sha256:436766aeec1141b0da488077430f5536e31888b6b0cec36478a9048a626af3c6",
-    "output_hash": "sha256:4695c611d3e60f00c1550dfd258a05593bbabb782dfe70319d007b4246949563",
+    "output_hash": "sha256:dda24a1e56cd018771f898a1c5bd49e4e82ce108a829a8251e8cb8a48c5c7016",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -254,12 +254,12 @@
       "fma",
       "avx512f"
     ],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.283719
+    "wall_ms": 0.24745700000000004
   }
 }

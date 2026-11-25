@@ -5,7 +5,7 @@
   "operator": {
     "id": "control.design.place",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-place-003-nonsym",
   "result": {
@@ -16,12 +16,12 @@
         3
       ],
       "data": [
-        -0.806793948155088,
-        -1.0693025731287862,
-        0.10507066652752864,
-        0.7790583951788946,
-        0.07824222447371919,
-        -0.9198971551051671
+        -0.8067939481550865,
+        -1.0693025731287822,
+        0.10507066652753062,
+        0.7790583951788912,
+        0.07824222447371468,
+        -0.9198971551051685
       ]
     },
     "achieved_poles": {
@@ -31,15 +31,15 @@
       ],
       "data": [
         [
-          -2.0,
-          1.000000000000004
+          -2.000000000000003,
+          0.9999999999999913
         ],
         [
-          -2.0,
-          -1.000000000000004
+          -2.000000000000003,
+          -0.9999999999999913
         ],
         [
-          -1.0000000000000022,
+          -1.0000000000000016,
           0.0
         ]
       ]
@@ -51,21 +51,21 @@
       "converged": true,
       "iterations": 20,
       "criterion": "一次扫描后 ln|det X̂|（列归一化）变化 < 1e-6",
-      "final_value": -1.7547031894836451
+      "final_value": -1.7547031894836458
     },
     "residual": {
-      "pole_placement_max_rel": 2.220446049250313e-15,
-      "M_imag_rel": 6.269642809725373e-17,
+      "pole_placement_max_rel": 4.11472078983568e-15,
+      "M_imag_rel": 1.634971082619345e-16,
       "definition": "eig(A−BK) 与期望极点最近匹配的最大相对差（以 max(1,|p|) 归一）；M_imag_rel = max|Im(XΛX⁻¹)|/‖·‖_F"
     },
     "condition": {
-      "cond_X_eigvec": 11.476326490397055,
+      "cond_X_eigvec": 11.47632649039708,
       "pbh_min_rel_sv": 0.08207988223636604,
-      "K_norm_fro": 1.8068284139352988,
+      "K_norm_fro": 1.806828413935295,
       "inputs": 2
     },
     "error_estimate": {
-      "poles_rel": 2.548256381550885e-15,
+      "poles_rel": 4.11472078983568e-15,
       "basis": "max(后验极点偏差, u·cond(X))；闭环极点的一阶扰动界 ∝ cond(X)·‖ΔA‖（Bauer–Fike）"
     },
     "checks": {
@@ -103,7 +103,7 @@
       "class": "approximate",
       "bound_kind": "a_posteriori_heuristic",
       "bound": {
-        "poles_rel": 2.548256381550885e-15
+        "poles_rel": 4.11472078983568e-15
       },
       "basis": "max(后验极点偏差, u·cond(X))；闭环极点的一阶扰动界 ∝ cond(X)·‖ΔA‖（Bauer–Fike）"
     },
@@ -124,15 +124,15 @@
     },
     "fingerprint": {
       "request": "sha256:942f4ca0cbe88eca08fdc5a29e43a4eabf932b14240b99d55cc1927c90b37ab6",
-      "result": "sha256:9933905139590fd68ad3e17bf27b93933a7be6d98cbd5f01fef0a08519b6960c",
-      "output_hash": "sha256:8ed5d6df235968d64ce3bfeac3ceaba925ab8df0bdcb0cdf6a2a981eb35d06eb",
+      "result": "sha256:036f056bd266da03fd89d4e75018586d4c1d2d91bd4c59cff2c033fb729a06f8",
+      "output_hash": "sha256:4e8c102df5df22df061f85ab5ff4bafc2c45179d5a8117c537cb7f30576f5bd0",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.design.place@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -146,7 +146,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:63ffd869cac998b596905733ceabcde35a2d03fcd31b257911a9650c57910fda",
-    "output_hash": "sha256:8ed5d6df235968d64ce3bfeac3ceaba925ab8df0bdcb0cdf6a2a981eb35d06eb",
+    "output_hash": "sha256:4e8c102df5df22df061f85ab5ff4bafc2c45179d5a8117c537cb7f30576f5bd0",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -154,12 +154,12 @@
       "fma",
       "avx512f"
     ],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.233671
+    "wall_ms": 0.34374
   }
 }

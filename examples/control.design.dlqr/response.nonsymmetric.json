@@ -5,7 +5,7 @@
   "operator": {
     "id": "control.design.dlqr",
     "version": "0.3.0",
-    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0"
+    "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
   },
   "request_id": "req-dlqr-003-nonsym",
   "result": {
@@ -81,7 +81,7 @@
     },
     "condition": {
       "cond_R": 1.0,
-      "cond_S": 7.527957510570749,
+      "cond_S": 7.5279575105707455,
       "pbh_min_sv_rel_unstable_modes": null,
       "closed_loop_spectral_radius": 0.45114271392879,
       "unit_circle_unobservable_pbh_min": "Inf",
@@ -161,9 +161,9 @@
       "stable_across": "request: all platforms and builds of control.design.dlqr@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
     "replay": {
-      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 rustc-1.97.0",
+      "build": "aeoi-control 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
       "platform": "x86_64-linux",
-      "libm": "glibc 2.39",
+      "libm": "rust-libm 0.2.16",
       "verify": {
         "mcp_tool": "aeoi_verify",
         "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
@@ -185,8 +185,8 @@
       "fma",
       "avx512f"
     ],
-    "libm": "glibc 2.39",
-    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply, single-threaded)",
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
     "threads": 1,
     "seed": null
   },

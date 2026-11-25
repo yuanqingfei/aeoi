@@ -1,0 +1,10 @@
+[package]
+name = "aeoi-libm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Routes the C math symbols (sin, exp, pow, hypot, ...) of a native AEOI binary to the pure-Rust libm crate, so every platform computes the same bits (AEOI spec 2.1, v0.4.9)."
+
+[dependencies]
+libm = "=0.2.16"

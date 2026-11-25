@@ -162,7 +162,7 @@ impl Server {
                 ok(&id, json!({
                     "protocolVersion": v,
                     "capabilities": {"tools": {"listChanged": false}, "resources": {"listChanged": false, "subscribe": false}},
-                    "serverInfo": {"name": "aeoi-mcp", "title": "AEOI engineering operators (control)", "version": env!("CARGO_PKG_VERSION")},
+                    "serverInfo": {"name": "aeoi-mcp", "title": "AEOI engineering operators", "version": env!("CARGO_PKG_VERSION")},
                     "instructions": "Tools return AEOI envelopes (spec aeoi/0.4) in structuredContent. Matrices are row-major. \
                                      On status=error, read error.remediation (RFC 6902 patches) before retrying; \
                                      check trust.accuracy_grade and warnings before relying on a result.",

@@ -1,0 +1,179 @@
+# Multi-platform release of the AEOI MCP server (spec 12.2 step 6, v0.4.9).
+#
+#   workflow_dispatch  → dry run: build, test and compare on every platform; nothing is published.
+#   push of a tag v*   → the same, then a GitHub Release (archives, aeoi.mcpb, SHA256SUMS, build provenance)
+#                        and the MCP registry entry (server.json, GitHub OIDC; no stored secrets).
+#
+# Every platform runs the whole test suite and the conformance suite on its own binary, then prints the
+# output_hash of every golden request (`aeoi-call hashes golden`). The `compare` job fails unless all
+# platforms produced the same map: that is the evidence for spec 2.1 M-7a (one math library, no CPU dispatch).
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  RUST_TOOLCHAIN: "1.85.1"
+  MCPB_CLI: "@anthropic-ai/mcpb@2.1.2"
+
+jobs:
+  build:
+    name: build ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-x86_64,   os: ubuntu-latest,    target: x86_64-unknown-linux-musl,  exe: "" }
+          - { name: linux-aarch64,  os: ubuntu-24.04-arm, target: aarch64-unknown-linux-musl, exe: "" }
+          - { name: macos-arm64,    os: macos-latest,     target: aarch64-apple-darwin,       exe: "" }
+          - { name: macos-x86_64,   os: macos-latest,     target: x86_64-apple-darwin,        exe: "", cross: true }
+          - { name: windows-x86_64, os: windows-latest,   target: x86_64-pc-windows-msvc,     exe: ".exe" }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: ${{ matrix.target }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install numpy jsonschema referencing
+      - name: musl tools
+        if: contains(matrix.target, 'musl')
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - name: test (native platforms)
+        if: ${{ !matrix.cross }}
+        working-directory: rust
+        run: cargo test --workspace --release --target ${{ matrix.target }} --exclude aeoi-wasm --exclude aeoi-web
+      - name: build
+        working-directory: rust
+        env:
+          AEOI_GIT_SHA: ${{ github.sha }}
+        run: cargo build --release --target ${{ matrix.target }} -p aeoi-mcp -p aeoi-ops
+      - name: conformance (own binary)
+        if: ${{ !matrix.cross }}
+        run: |
+          python3 -I conformance/aeoi_conformance.py run --impl rust/target/${{ matrix.target }}/release/aeoi-mcp${{ matrix.exe }} \
+            --report conformance-${{ matrix.name }}.json
+      - name: output hashes of all golden requests
+        # macos-x86_64 runs under Rosetta 2 on the arm64 runner; if Rosetta is missing it is left out of the comparison
+        continue-on-error: ${{ matrix.cross == true }}
+        run: |
+          rust/target/${{ matrix.target }}/release/aeoi-call${{ matrix.exe }} hashes golden > /tmp/h.json
+          mv /tmp/h.json hashes-${{ matrix.name }}.json
+      - name: package
+        run: |
+          d=aeoi-${{ matrix.name }}
+          mkdir -p "$d"
+          cp rust/target/${{ matrix.target }}/release/aeoi-mcp${{ matrix.exe }} rust/target/${{ matrix.target }}/release/aeoi-call${{ matrix.exe }} "$d"/
+          cp LICENSE-MIT LICENSE-APACHE THIRD_PARTY_NOTICES.md "$d"/
+          if [ "${{ matrix.exe }}" = ".exe" ]; then 7z a "$d.zip" "$d" >/dev/null; else tar czf "$d.tar.gz" "$d"; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.name }}
+          path: |
+            aeoi-${{ matrix.name }}.tar.gz
+            aeoi-${{ matrix.name }}.zip
+            hashes-${{ matrix.name }}.json
+            conformance-${{ matrix.name }}.json
+          if-no-files-found: ignore
+
+  compare:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: build-*
+          merge-multiple: true
+      - name: same output_hash on every platform (spec 2.1 M-7a)
+        run: |
+          python3 - <<'EOF'
+          import glob, json, sys
+          maps = {f[len("hashes-"):-len(".json")]: json.load(open(f)) for f in sorted(glob.glob("hashes-*.json"))}
+          names = list(maps)
+          base = maps[names[0]]
+          bad = 0
+          for n in names[1:]:
+              diff = sorted(k for k in set(base) | set(maps[n]) if base.get(k) != maps[n].get(k))
+              print(f"{names[0]} vs {n}: {len(base)} cases, {len(diff)} differ")
+              for k in diff[:20]:
+                  print("   ", k, base.get(k), maps[n].get(k))
+              bad += len(diff)
+          print(f"platforms: {names}")
+          sys.exit(1 if bad else 0)
+          EOF
+
+  mcpb:
+    needs: build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: build-*
+          merge-multiple: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: assemble bundle (universal macOS binary + Windows exe)
+        run: |
+          for n in macos-arm64 macos-x86_64; do tar xzf aeoi-$n.tar.gz; done
+          unzip -q aeoi-windows-x86_64.zip
+          mkdir -p bundle/server
+          lipo -create -output bundle/server/aeoi-mcp aeoi-macos-arm64/aeoi-mcp aeoi-macos-x86_64/aeoi-mcp
+          cp aeoi-windows-x86_64/aeoi-mcp.exe bundle/server/
+          cp LICENSE-MIT LICENSE-APACHE THIRD_PARTY_NOTICES.md bundle/
+          python3 tools/write_mcpb_manifest.py "${GITHUB_REF_NAME}" aeoi-macos-arm64/aeoi-mcp > bundle/manifest.json
+          npx -y "$MCPB_CLI" validate bundle/manifest.json
+          npx -y "$MCPB_CLI" pack bundle aeoi.mcpb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcpb
+          path: aeoi.mcpb
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, compare, mcpb]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: checksums
+        working-directory: dist
+        run: sha256sum aeoi-*.tar.gz aeoi-*.zip aeoi.mcpb > SHA256SUMS && cat SHA256SUMS
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/aeoi-*.tar.gz
+            dist/aeoi-*.zip
+            dist/aeoi.mcpb
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --title "AEOI $GITHUB_REF_NAME" --notes-file release/NOTES.md --generate-notes \
+            dist/aeoi-*.tar.gz dist/aeoi-*.zip dist/aeoi.mcpb dist/SHA256SUMS dist/conformance-*.json
+      - name: MCP registry
+        run: |
+          python3 tools/write_server_json.py "$GITHUB_REF_NAME" "$(sha256sum dist/aeoi.mcpb | cut -d' ' -f1)" > server.json
+          cat server.json
+          curl -sSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish

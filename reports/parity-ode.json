@@ -3,12 +3,12 @@
   "summary": {
     "cases": 34,
     "error_cases": 17,
-    "worst_vs_scipy_scaled_recorded": 20.90411146633744,
-    "worst_error_over_T4_bound": 0.5042739123520651,
+    "worst_vs_scipy_scaled_recorded": 20.954670783082012,
+    "worst_error_over_T4_bound": 0.5042669759951307,
     "estimate_over_actual": {
       "min": 0.3874154425447142,
-      "median": 0.9332300369441321,
-      "max": 1.0257756305814354
+      "median": 0.9415418263200829,
+      "max": 1.0257756307442902
     }
   },
   "cases": [
@@ -17,7 +17,7 @@
       "vs_scipy_scaled": 2.6919044910520703e-7,
       "global_error": 5.115587953241629e-10,
       "scipy_global_error": 5.115583512349531e-10,
-      "estimate_over_actual": 0.8981351265009618,
+      "estimate_over_actual": 0.8981359946107743,
       "tolerance_consistent": true,
       "max_scaled_vs_fine": 0.23459542070961298,
       "n_steps": 18
@@ -57,9 +57,9 @@
       "vs_scipy_scaled": 4.5327259650113635e-8,
       "global_error": 3.5409060128444025e-9,
       "scipy_global_error": 3.5409060128444025e-9,
-      "estimate_over_actual": 0.9570316294349037,
+      "estimate_over_actual": 0.9570316921433191,
       "tolerance_consistent": true,
-      "max_scaled_vs_fine": 0.6544528104749237,
+      "max_scaled_vs_fine": 0.6544527913452878,
       "n_steps": 39
     },
     {
@@ -74,12 +74,12 @@
     },
     {
       "family": "explicit_t_eval",
-      "vs_scipy_scaled": 0.0010197468001988822,
+      "vs_scipy_scaled": 0.0009434392165105303,
       "global_error": 2.9729774198017367e-10,
       "scipy_global_error": 2.9731672679389476e-10,
-      "estimate_over_actual": 0.9631368053117835,
+      "estimate_over_actual": 0.9631379256260689,
       "tolerance_consistent": true,
-      "max_scaled_vs_fine": 39.94776579405228,
+      "max_scaled_vs_fine": 39.94709636843204,
       "n_steps": 72
     },
     {
@@ -94,22 +94,22 @@
     },
     {
       "family": "forced_first_order",
-      "vs_scipy_scaled": 4.531349130148726e-8,
+      "vs_scipy_scaled": 3.964930488880135e-8,
       "global_error": 3.155700323276278e-8,
       "scipy_global_error": 3.155700312174048e-8,
-      "estimate_over_actual": 0.948834699731582,
+      "estimate_over_actual": 0.948834703249733,
       "tolerance_consistent": true,
-      "max_scaled_vs_fine": 4.143418358727436,
+      "max_scaled_vs_fine": 4.1434183347570395,
       "n_steps": 70
     },
     {
       "family": "functions",
-      "vs_scipy_scaled": 20.90411146633744,
-      "global_error": 1.5961869337388634e-7,
+      "vs_scipy_scaled": 20.954670783082012,
+      "global_error": 1.5961649779683285e-7,
       "scipy_global_error": 1.582654762799507e-7,
-      "estimate_over_actual": 0.8462898621877684,
+      "estimate_over_actual": 0.9415418263200829,
       "tolerance_consistent": true,
-      "max_scaled_vs_fine": 25.25832817728807,
+      "max_scaled_vs_fine": 33.50422138188476,
       "n_steps": 36
     },
     {
@@ -124,52 +124,52 @@
     },
     {
       "family": "lorenz_short",
-      "vs_scipy_scaled": 0.00005733818971070918,
-      "global_error": 4.235136685792895e-9,
+      "vs_scipy_scaled": 0.00007908715822166783,
+      "global_error": 4.235101158656107e-9,
       "scipy_global_error": 4.235154449361289e-9,
-      "estimate_over_actual": 0.90516951391889,
+      "estimate_over_actual": 0.9051687184111737,
       "tolerance_consistent": true,
-      "max_scaled_vs_fine": 4.472327949750676,
+      "max_scaled_vs_fine": 4.4723812431182095,
       "n_steps": 484
     },
     {
       "family": "lotka_volterra",
-      "vs_scipy_scaled": 1.905040608669291e-7,
-      "global_error": 4.798406187944693e-7,
+      "vs_scipy_scaled": 3.247310240766098e-7,
+      "global_error": 4.798406294526103e-7,
       "scipy_global_error": 4.798406187944693e-7,
-      "estimate_over_actual": 0.9332300369441321,
+      "estimate_over_actual": 0.9332300384272155,
       "tolerance_consistent": true,
-      "max_scaled_vs_fine": 8.118846462150485,
+      "max_scaled_vs_fine": 8.118846692414971,
       "n_steps": 114
     },
     {
       "family": "pendulum",
-      "vs_scipy_scaled": 0.0011436918311029335,
-      "global_error": 2.0151793744815905e-7,
+      "vs_scipy_scaled": 0.003426491558113999,
+      "global_error": 2.015176958636289e-7,
       "scipy_global_error": 2.0151805868451333e-7,
-      "estimate_over_actual": 0.9042171880793513,
+      "estimate_over_actual": 0.9042181244284231,
       "tolerance_consistent": false,
-      "max_scaled_vs_fine": 1766.2869458616665,
+      "max_scaled_vs_fine": 1766.286466462476,
       "n_steps": 528
     },
     {
       "family": "stiff_van_der_pol_mu100",
-      "vs_scipy_scaled": 3.0955501065476584e-10,
-      "global_error": 0.000012376695991602599,
+      "vs_scipy_scaled": 1.7545701898795733e-10,
+      "global_error": 0.000012376695992011993,
       "scipy_global_error": 0.000012376695991835052,
-      "estimate_over_actual": 1.0257756305814354,
+      "estimate_over_actual": 1.0257756307442902,
       "tolerance_consistent": true,
-      "max_scaled_vs_fine": 1.1756889719631392,
+      "max_scaled_vs_fine": 1.1756889719019326,
       "n_steps": 3895
     },
     {
       "family": "van_der_pol_mu1",
-      "vs_scipy_scaled": 0.00011124541468479075,
-      "global_error": 1.603172008479703e-7,
+      "vs_scipy_scaled": 0.00011248941527726878,
+      "global_error": 1.6031720262432714e-7,
       "scipy_global_error": 1.6031714089592697e-7,
-      "estimate_over_actual": 0.9224386010255343,
+      "estimate_over_actual": 0.9224386351257254,
       "tolerance_consistent": false,
-      "max_scaled_vs_fine": 120.22930465507066,
+      "max_scaled_vs_fine": 120.22931172205425,
       "n_steps": 419
     },
     {
@@ -179,7 +179,7 @@
       "scipy_global_error": 0.2265313766479391,
       "estimate_over_actual": 1.0022380841290308,
       "tolerance_consistent": false,
-      "max_scaled_vs_fine": 6054.59387626712,
+      "max_scaled_vs_fine": 6054.593876267026,
       "n_steps": 52
     }
   ],
