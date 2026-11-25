@@ -1,0 +1,45 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "calculus.quadrature.trapz",
+ "operator_version": "0.4.0",
+ "case_family": "uniform_dx",
+ "request": {
+  "y": {
+   "dtype": "f64",
+   "shape": [
+    4
+   ],
+   "data": [
+    1.0,
+    4.0,
+    9.0,
+    16.0
+   ]
+  },
+  "dx": 0.5
+ },
+ "reference_env": {
+  "engine": "scipy.integrate.quad / numpy.trapezoid / mpmath.quad",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "value_true": [
+   10.75
+  ],
+  "cumulative_true": [
+   [
+    0.0,
+    1.25,
+    4.5,
+    10.75
+   ]
+  ],
+  "value_numpy": [
+   10.75
+  ]
+ }
+}

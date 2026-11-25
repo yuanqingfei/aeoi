@@ -1,0 +1,7 @@
+{
+  "expression": "exp(-x^2)",
+  "limits": [
+    "-Inf",
+    "Inf"
+  ]
+}

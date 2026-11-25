@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/calculus.quadrature.trapz/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "y"
+  ],
+  "properties": {
+    "y": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "数据 [n]，或 [k, n]（每行一个通道）"
+    },
+    "x": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "每个数据点的位置 [n]（与 dx 二选一）"
+    },
+    "dx": {
+      "type": "number",
+      "x-aeoi-provenance": "user",
+      "description": "等间距步长（与 x 二选一；带单位意义，不要猜 1）"
+    },
+    "cumulative": {
+      "type": "boolean",
+      "default": false,
+      "x-aeoi-provenance": "convention",
+      "description": "true 时同时返回部分和（= cumtrapz）"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  }
+}

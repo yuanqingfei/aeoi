@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/calculus.quadrature.integral/0.4.0/output",
+  "type": "object",
+  "required": [
+    "value",
+    "error_estimate",
+    "tolerances",
+    "limits",
+    "intervals",
+    "evaluations"
+  ],
+  "properties": {
+    "value": {
+      "type": [
+        "number",
+        "string"
+      ]
+    },
+    "error_estimate": {
+      "type": [
+        "number",
+        "string"
+      ]
+    },
+    "tolerances": {
+      "type": "object"
+    },
+    "limits": {
+      "type": "array"
+    },
+    "intervals": {
+      "type": "integer"
+    },
+    "evaluations": {
+      "type": "integer"
+    }
+  }
+}

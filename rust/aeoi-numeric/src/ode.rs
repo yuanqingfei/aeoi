@@ -5,7 +5,7 @@
 //! step-size factors 0.9 / 0.2 / 10, Hairer's initial step, Shampine's 4th-order dense output, output points
 //! in (t_old, t] evaluated by that step's interpolant), so an independent implementation can follow the same
 //! step sequence up to rounding. Global error is estimated by re-solving with rtol/10, atol/10.
-use crate::expr::{check_name, eval, expr_err, parse, Node};
+use crate::expr::{check_ode_name as check_name, eval, expr_err, parse, Node};
 use aeoi_core::error::{modify_input, OpError, Warning};
 use aeoi_core::{num, ExecCtx, HostCtx, Operator, Output};
 use serde_json::{json, Map, Value};

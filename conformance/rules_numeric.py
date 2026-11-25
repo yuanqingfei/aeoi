@@ -1,7 +1,7 @@
 """Numeric comparison rules (spec 9.4 CF-6) for operators outside control: signal.spectral.fft (v0.4.7),
 ode.ivp.solve (v0.4.8), linalg.system.solve and interp.grid.interp1 (v0.4.10), fit.poly.polyfit,
 linalg.decomp.eig and linalg.decomp.svd (v0.4.11), signal.design.butter and signal.filter.filter (v0.4.12), nonlinear.root.fzero and nonlinear.system.fsolve (v0.4.13), optim.linear.linprog, optim.local.fmincon and
-optim.local.fminsearch (v0.4.14).
+optim.local.fminsearch (v0.4.14), calculus.quadrature.integral and calculus.quadrature.trapz (v0.4.15).
 
 Same ground rules as rules_control.py: tolerances from the suite (parity.yaml), every scale computed here from
 the reference request or values, nothing the implementation reports is used.
@@ -466,8 +466,35 @@ def rule_fminsearch(case, env, manifest, req=None, expected=None):
             check("probe recomputed by the runner: f(x) ≤ f(x ± h·e_j) + tol_fun  [10.30 NM-4]", worst, tf)]
 
 
+# ---------------------------------------------------------------- calculus.quadrature.* (v0.4.15, T1)
+def rule_integral(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = expected or case["expected"]; r = env["result"]
+    v = float(num(r["value"])); t = e["value_true"]; est = float(num(r["error_estimate"]))
+    tol = max(e["abs_tol"], e["rel_tol"] * abs(t), 4 * np.finfo(float).eps * abs(t))
+    tl = r.get("tolerances", {})
+    return [check("value vs the 50-digit truth: |Δ| ≤ max(abs_tol, rel_tol·|I*|)  [T1]", abs(v - t) / tol, 1.0),
+            ("tolerances echo the request or the defaults (1e-10, 1e-12)  [10.31 IN-2]", tl.get("rel_tol") == req.get("rel_tol", 1e-10) and tl.get("abs_tol") == req.get("abs_tol", 1e-12), None, None, str(tl)),
+            check("the reported error estimate covers the actual error (within ×10)  [10.31 IN-4]", abs(v - t) / max(10 * est, 4 * np.finfo(float).eps * abs(t), 1e-300), 1.0)]
+
+
+def rule_trapz(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; r = env["result"]
+    y = arr(req["y"]); Y = np.atleast_2d(y); n = Y.shape[1]
+    xs = [Fraction(float(v)) for v in arr(req["x"]).ravel()] if "x" in req else [Fraction(float(req["dx"])) * k for k in range(n)]
+    want = []
+    for row in Y:
+        acc = Fraction(0)
+        for k in range(n - 1):
+            acc += (xs[k + 1] - xs[k]) * (Fraction(float(row[k])) + Fraction(float(row[k + 1]))) / 2
+        want.append(float(acc))
+    got = np.atleast_1d(arr(r["value"]) if isinstance(r["value"], dict) else np.array([float(num(r["value"]))]))
+    err = max(abs(g - w) / max(abs(w) * np.finfo(float).eps, np.finfo(float).tiny) for g, w in zip(got, want))
+    return [check("value vs the exact rational trapezoidal sum, recomputed by the runner: ≤ 2 roundings  [10.32 TZ-3]", err, 2.0)]
+
+
 RULES = {"signal.spectral.fft": rule_fft, "ode.ivp.solve": rule_ode, "linalg.system.solve": rule_linsolve, "interp.grid.interp1": rule_interp1,
          "fit.poly.polyfit": rule_polyfit, "linalg.decomp.eig": rule_eig, "linalg.decomp.svd": rule_svd,
          "signal.design.butter": rule_butter, "signal.filter.filter": rule_filter,
          "nonlinear.root.fzero": rule_fzero, "nonlinear.system.fsolve": rule_fsolve,
-         "optim.linear.linprog": rule_linprog, "optim.local.fmincon": rule_fmincon, "optim.local.fminsearch": rule_fminsearch}
+         "optim.linear.linprog": rule_linprog, "optim.local.fmincon": rule_fmincon, "optim.local.fminsearch": rule_fminsearch,
+         "calculus.quadrature.integral": rule_integral, "calculus.quadrature.trapz": rule_trapz}

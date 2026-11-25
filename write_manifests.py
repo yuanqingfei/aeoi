@@ -609,6 +609,8 @@ DESC={
  "control.lti.stepinfo":{"system":SYS_D,"time":"时间网格，与 step 相同：uniform（t_final、dt，单位 s）或 auto。指标相对这个网格定义","rise_time_limits":"上升时间的低/高阈值，默认 [0.1, 0.9]（10% 到 90%）。这是指标定义，不是对象的物理参数；省略即用默认，不必询问","settling_threshold":"调节带半宽，默认 0.02（2%）。定义默认值，省略即用默认"},
  "ode.ivp.solve":{"states":"状态名列表，如 [\"x\", \"v\"]。顺序决定 y 的行序；表达式里按名字引用，不用下标","rhs":"右端表达式列表，与 states 一一对应：第 i 个是 d(states[i])/dt，如 [\"v\", \"-k*x - c*v\"]。可用 t、状态名、参数名、常数 pi、+ − * / ^（右结合，-x^2 = -(x^2)）与函数 sin cos tan asin acos atan atan2 sinh cosh tanh exp log log10 sqrt abs min max hypot sign","params":"参数名到数值，如 {\"k\": 4, \"c\": 0.5}；名字不能与状态名重复","initial":"初值，键为状态名，如 {\"x\": 1, \"v\": 0}；每个状态都要给","t_span":"[t0, tf]；tf < t0 时反向积分","t_eval":"输出时刻（在区间内、沿积分方向单调）。不给时用 n_out 个等距点","n_out":"不给 t_eval 时的输出点数，默认 101（含两端）。与 t_eval 二选一","rtol":"相对容差，默认 1e-3（与 MATLAB ode45、scipy 相同）。要更准就调小，如 1e-8","atol":"绝对容差，默认 1e-6","max_step":"最大步长（可选）","first_step":"初始步长（可选；不给时自动选择）"},
  "linalg.system.solve":{"A":"系数矩阵 [m, n]，row-major（MATLAB 是 column-major，先转置再展平）；m ≥ n。大矩阵可用 b64 或 ref 编码","b":"右端项：[m]（一个）或 [m, k]（k 个，每列一个）","refinement":"auto（缺省：用补偿残差做至多 3 步迭代精化）或 none（只做一次 LU 求解，与 MATLAB 的 A\\b 相同）。只影响方阵"},
+ "calculus.quadrature.integral":{"expression":"被积函数 f(x)，3.15 表达式","variable":"积分变量名（缺省 x）","params":"参数名 → 数值","limits":"[a, b]，可以是 \"Inf\" / \"-Inf\"；a > b 时结果取负","rel_tol":"相对容差（缺省 1e-10；MATLAB 是 1e-6）","abs_tol":"绝对容差（缺省 1e-12）"},
+ "calculus.quadrature.trapz":{"y":"数据 [n]，或 [k, n]（每行一个通道）","x":"每个数据点的位置 [n]（与 dx 二选一）","dx":"等间距步长（与 x 二选一；带单位意义，不要猜 1）","cumulative":"true 时同时返回部分和（= cumtrapz）"},
  "optim.linear.linprog":{"c":"目标系数 [n]（求最小；求最大时取负）","A":"不等式约束矩阵，每行一个约束 A·x ≤ b","b":"不等式右端","Aeq":"等式约束矩阵","beq":"等式右端","lb":"下界 [n]，无界写 \"-Inf\"；缺省全部无下界（同 MATLAB，scipy 缺省是 0）","ub":"上界 [n]，无界写 \"Inf\""},
  "optim.local.fmincon":{"unknowns":"未知量名","objective":"目标 f(x)，3.15 表达式，求最小","params":"参数名 → 数值","x0":"初值（由用户给出；不同初值可能得到不同的局部最优）","nonlinear_ineq":"非线性不等式约束 g_i(x) ≤ 0 的左端表达式","nonlinear_eq":"非线性等式约束 h_j(x) = 0 的左端表达式","A":"线性不等式 A·x ≤ b","b":"线性不等式右端","Aeq":"线性等式 Aeq·x = beq","beq":"线性等式右端","lb":"下界，无界写 \"-Inf\"","ub":"上界，无界写 \"Inf\"","optimality_tolerance":"相对 KKT 驻定与互补残差的容差（缺省 1e-8）","constraint_tolerance":"约束违反的容差（缺省 1e-8）"},
  "optim.local.fminsearch":{"unknowns":"未知量名","objective":"目标 f(x)，3.15 表达式，可以不光滑","params":"参数名 → 数值","x0":"初值","tol_x":"单纯形直径容差（缺省 1e-4，同 MATLAB）","tol_fun":"函数值极差容差（缺省 1e-4，同 MATLAB）","max_iterations":"迭代上限（缺省 200·n，同 MATLAB）"},
@@ -790,6 +792,32 @@ fms_in=ins("optim.local.fminsearch",{"unknowns":{"type":"array","items":NAME,"mi
 fms_out=outs("optim.local.fminsearch",{"x":{"type":"array"},"solution":{"type":"object"},"fval":{"type":["number","string"]},"iterations":{"type":"integer"},"evaluations":{"type":"integer"},"tolerances":{"type":"object"}},
  ["x","solution","fval","iterations","evaluations","tolerances"],ver=V414)
 B3.update({"optim.linear.linprog":(lpm,lp_in,lp_out),"optim.local.fmincon":(fmc,fmc_in,fmc_out),"optim.local.fminsearch":(fms,fms_in,fms_out)})
+# ---- v0.4.15: calculus.quadrature.integral, calculus.quadrature.trapz
+V415="0.4.0"
+LIM={"oneOf":[{"type":"number"},{"enum":["Inf","-Inf"]}]}
+intg=man("calculus.quadrature.integral","Adaptive numerical integration","数值积分 ∫ₐᵇ f(x) dx（= MATLAB integral）：f 用 3.15 的表达式语言写，积分限可以是 ±Inf。全局自适应 Gauss–Kronrod (7, 15)，用 MATLAB integral 的变量替换（有限区间端点奇异被减弱、无穷区间映到有限区间）。缺省 rel_tol = 1e-10、abs_tol = 1e-12（比 MATLAB 的 1e-6 / 1e-10 严），结果带误差估计；达不到容差时报错并给出当前估计值。","analysis",["integral","quadrature","gauss-kronrod","calculus"],
+ ["f 在积分区间上可积","积分限为数或 ±Inf"],["多重积分（integral2，以后的算子）","离散数据的积分（trapz）","区间内部有奇点时需要分段"],
+ "有限 [a, b]：x = (a+b)/2 + (b−a)/4·t(3 − t²)，t ∈ [−1, 1]；(−∞, ∞)：x = t/(1 − t²)；[a, ∞)：x = a + t/(1 − t)；(−∞, b]：x = b − t/(1 − t)（均同 MATLAB integral）。初始 10 段，每次二分误差估计最大的子区间（QUADPACK qk15 与误差公式 resasc·min(1, (200|K−G|/resasc)^1.5)），子区间和用补偿求和；Σ误差 ≤ max(abs_tol, rel_tol·|I|) 停止，子区间上限 650（同 MATLAB）。后置条件：每个子区间再二分一次的积分值与返回值之差 ≤ 容差",
+ [{"type":"textbook","cite":"R. Piessens, E. de Doncker-Kapenga, C. W. Überhuber, D. K. Kahaner, QUADPACK, Springer 1983（qk15、qag）"},
+  {"type":"paper","cite":"L. F. Shampine, Vectorized adaptive quadrature in MATLAB, J. Comput. Appl. Math. 211(2), 2008","doi":"10.1016/j.cam.2006.11.021"}],
+ "quad::integral (adaptive Gauss–Kronrod 7–15)","T1",{"max_intervals":650,"max_expression_length":4096},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.RANGE","E.VALIDATION.EXPRESSION","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ [],sparse={},ver=V415,backend=BACK_NUM("quad::integral"))
+intg_in=ins("calculus.quadrature.integral",{"expression":EXPR,"variable":dict(NAME,default="x",**{"x-aeoi-provenance":"user"}),"params":PARAMS,
+ "limits":{"type":"array","items":LIM,"minItems":2,"maxItems":2,"x-aeoi-provenance":"user"},
+ "rel_tol":{"type":"number","minimum":0,"default":1e-10,"x-aeoi-provenance":"convention"},"abs_tol":{"type":"number","minimum":0,"default":1e-12,"x-aeoi-provenance":"convention"}},["expression","limits"],ver=V415)
+intg_out=outs("calculus.quadrature.integral",{"value":{"type":["number","string"]},"error_estimate":{"type":["number","string"]},"tolerances":{"type":"object"},"limits":{"type":"array"},
+ "intervals":{"type":"integer"},"evaluations":{"type":"integer"}},["value","error_estimate","tolerances","limits","intervals","evaluations"],ver=V415)
+trz=man("calculus.quadrature.trapz","Trapezoidal integration of data","对离散数据做梯形积分（= MATLAB trapz；cumulative = true 时 = cumtrapz）。y 每行一个通道；采样位置必须显式给出：x（每个点的位置）或 dx（等间距步长）——MATLAB 的 trapz(y) 缺省步长 1，常被误用。补偿求和，对给定数据精确到一次舍入。","analysis",["integral","trapz","cumtrapz","data"],
+ ["y 为 [n] 或 [k, n]","x（[n]）或 dx 恰好给出一种"],["由函数求积分（integral）","高阶求积（Simpson 等）"],
+ "Σ (x_{k+1} − x_k)·(y_k + y_{k+1})/2，每项拆成两个乘积用补偿算术（Dot2）累加；cumulative 时给出部分和",
+ [{"type":"paper","cite":"T. Ogita, S. M. Rump, S. Oishi, Accurate sum and dot product, SIAM J. Sci. Comput. 26(6), 2005","doi":"10.1137/030601818"}],
+ "quad::trapz (compensated trapezoidal sum)","T1",{"max_points":10000000},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.ENCODING","E.VALIDATION.OPTION_CONFLICT","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ [],sparse={},ver=V415,backend=BACK_NUM("quad::trapz"))
+trz_in=ins("calculus.quadrature.trapz",{"y":M,"x":M,"dx":{"type":"number","x-aeoi-provenance":"user"},"cumulative":{"type":"boolean","default":False,"x-aeoi-provenance":"convention"}},["y"],ver=V415)
+trz_out=outs("calculus.quadrature.trapz",{"value":{"description":"积分值（y 为 [k, n] 时 [k]）"},"cumulative":{"description":"部分和（cumulative = true 时），形状同 y；否则 null"},"spacing":{"description":"回显：\"x\" 或 {dx}"}},["value","cumulative","spacing"],ver=V415)
+B3.update({"calculus.quadrature.integral":(intg,intg_in,intg_out),"calculus.quadrature.trapz":(trz,trz_in,trz_out)})
 ALL_OPS={"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2|B3
 for op,props in DESC.items():
     for (m_,i_,o_) in [ALL_OPS[op]]:
@@ -848,6 +876,10 @@ RECEIPT["signal.spectral.fft"]={"method_id":"aeoi:fft:rustfft-scalar","assumptio
    "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["parseval","dft_spot_check","all_finite"]}
 RECEIPT["linalg.system.solve"]={"method_id":"aeoi:linsolve:lu-refine-or-householder-qr","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("not_underdetermined","m ≥ n","error:E.DOMAIN.UNDERDETERMINED"),A("full_rank","A 列满秩（方阵非奇异）","error:E.NUMERICAL.SINGULAR"),A("conditioning","κ·u ≪ 1，否则解没有有效数字（前向误差 ≈ κ·η）","warning:W.NUMERICAL.ILL_CONDITIONED"),A("row_major","A 按 row-major 录入","caller")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["backward_stable","all_finite"]}
+RECEIPT["calculus.quadrature.integral"]={"method_id":"aeoi:integral:adaptive-gauss-kronrod-7-15","assumptions":[A("expression","被积函数是合法的 3.15 表达式","error:E.VALIDATION.EXPRESSION"),A("integrable","积分收敛（可积，无内部不可积奇点）","error:E.NUMERICAL.NO_CONVERGENCE"),A("finite_values","被积函数在求值点上有限","error:E.NUMERICAL.NON_FINITE_EVALUATION"),A("error_estimate_heuristic","误差估计是启发式的；可能漏掉区间里窄的尖峰","check:refinement_consistent")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["tolerance_met","refinement_consistent","all_finite"]}
+RECEIPT["calculus.quadrature.trapz"]={"method_id":"aeoi:trapz:compensated","assumptions":[A("spacing","采样位置（x 或 dx）由调用方显式给出","error:E.VALIDATION.OPTION_CONFLICT"),A("sampling","数据采样足以描述被积函数（梯形公式对数据精确，对真实函数的误差算子无法估计）","caller"),A("channels","y 每行一个通道","caller")],
+   "exactness":{"class":"approximate","bound_kind":"none"},"postconditions":["all_finite"]}
 RECEIPT["optim.linear.linprog"]={"method_id":"aeoi:linprog:two-phase-simplex-bland","assumptions":[A("finite","所有数据有限","error:E.VALIDATION.NON_FINITE"),A("feasible","约束有可行解","error:E.DOMAIN.INFEASIBLE"),A("bounded","目标在可行域上有下界","error:E.DOMAIN.UNBOUNDED"),A("default_bounds","变量缺省没有界（MATLAB 约定，与 scipy 不同）","validation"),A("unique","最优解可能不唯一；给出的是一个最优顶点","caller")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["kkt","all_finite"]}
 RECEIPT["optim.local.fmincon"]={"method_id":"aeoi:fmincon:sqp-bfgs-ad","assumptions":[A("expression","目标与约束是合法的 3.15 表达式","error:E.VALIDATION.EXPRESSION"),A("converges","SQP 从 x0 收敛到 KKT 点","error:E.NUMERICAL.NO_CONVERGENCE"),A("local_only","结果只是局部最优（或满足一阶条件的点；二阶条件未检查），不一定是全局最优","caller"),A("smooth","目标与约束在解附近光滑","caller")],
@@ -892,7 +924,7 @@ COVERAGE.update({"control.design.pid":{"formula_matches":"test_points"},"control
  "signal.design.butter":{"stable":"full","edge_gain":"full","sos_consistent":"test_points"},
  "signal.filter.filter":{"difference_equation":"full"},
  "nonlinear.root.fzero":{"sign_change":"full","not_a_pole":"full"},
- "optim.linear.linprog":{"kkt":"full"},"optim.local.fmincon":{"kkt":"full"},"optim.local.fminsearch":{"probe_local_minimum":"test_points"},
+ "optim.linear.linprog":{"kkt":"full"},"calculus.quadrature.integral":{"tolerance_met":"full","refinement_consistent":"full"},"optim.local.fmincon":{"kkt":"full"},"optim.local.fminsearch":{"probe_local_minimum":"test_points"},
  "nonlinear.system.fsolve":{"newton_step_small":"full"},
  "linalg.decomp.eig":{"residual_small":"full","orthonormal":"full"},
  "linalg.decomp.svd":{"reconstructs":"full","orthonormal_u":"full","orthonormal_v":"full"}})
@@ -906,6 +938,7 @@ GUARDS["ode.ivp.solve"]={"tolerance_consistent":["/y"]}
 GUARDS["linalg.system.solve"]={"backward_stable":["/x"]}
 GUARDS["interp.grid.interp1"]={"pieces_interpolate":["/yq"],"spline_c2":["/yq"],"local_bounds":["/yq"]}
 GUARDS["signal.design.butter"]={"stable":["/z","/p","/k","/sos","/b","/a","/system"],"edge_gain":["/z","/p","/k","/sos","/b","/a","/system"],"sos_consistent":["/sos"]}
+GUARDS["calculus.quadrature.integral"]={"tolerance_met":["/value","/error_estimate"],"refinement_consistent":["/value","/error_estimate"]}
 GUARDS["optim.linear.linprog"]={"kkt":["/x","/fval","/lambda"]}
 GUARDS["optim.local.fmincon"]={"kkt":["/x","/solution","/fval","/lambda"]}
 GUARDS["optim.local.fminsearch"]={"probe_local_minimum":["/x","/solution","/fval"]}

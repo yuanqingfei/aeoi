@@ -1,8 +1,14 @@
 {
   "generated_by": "rust/aeoi-control/tests/receipt.rs",
-  "golden_successes": 970,
-  "golden_errors": 185,
+  "golden_successes": 990,
+  "golden_errors": 196,
   "claims_by_operator": {
+    "calculus.quadrature.integral": {
+      "verified": 13
+    },
+    "calculus.quadrature.trapz": {
+      "verified": 7
+    },
     "control.analysis.ctrb_obsv": {
       "verified": 26
     },

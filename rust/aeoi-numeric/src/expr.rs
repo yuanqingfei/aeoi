@@ -324,10 +324,18 @@ pub fn check_name(n: &str) -> Result<(), String> {
     if !ok {
         return Err(format!("'{n}' 不是合法名字（字母或 _ 开头，只含 ASCII 字母、数字、_）"));
     }
-    if n == "t" || FUNCS.iter().any(|f| f.0 == n) || CONSTANTS.iter().any(|c| c.0 == n) {
-        return Err(format!("'{n}' 是保留名（t、常数 pi、函数名），不能用作状态或参数名"));
+    if FUNCS.iter().any(|f| f.0 == n) || CONSTANTS.iter().any(|c| c.0 == n) {
+        return Err(format!("'{n}' 是保留名（常数 pi、函数名），不能用作变量或参数名"));
     }
     Ok(())
+}
+
+/// ODE names: as `check_name`, and `t` is taken by the independent variable (EX-2, 10.18 OD-1).
+pub fn check_ode_name(n: &str) -> Result<(), String> {
+    if n == "t" {
+        return Err("'t' 在 ODE 里是自变量（时间），不能用作状态或参数名".to_string());
+    }
+    check_name(n)
 }
 
 #[cfg(test)]
@@ -374,7 +382,7 @@ mod tests {
         let deep = "(".repeat(300) + "1" + &")".repeat(300);
         assert_eq!(parse(&deep, &[]).unwrap_err().kind, "too_deep");
         assert_eq!(parse("1e999", &[]).unwrap_err().kind, "not_finite");
-        assert!(check_name("t").is_err() && check_name("sin").is_err() && check_name("2x").is_err() && check_name("x_1").is_ok());
+        assert!(check_ode_name("t").is_err() && check_name("t").is_ok() && check_name("sin").is_err() && check_name("2x").is_err() && check_name("x_1").is_ok());
     }
 
     /// Left-to-right, no reassociation: (a + b) + c ≠ a + (b + c) in binary64, and the AST decides.

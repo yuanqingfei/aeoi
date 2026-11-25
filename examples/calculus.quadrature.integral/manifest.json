@@ -1,0 +1,152 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "calculus.quadrature.integral",
+  "version": "0.4.0",
+  "title": "Adaptive numerical integration",
+  "description": "数值积分 ∫ₐᵇ f(x) dx（= MATLAB integral）：f 用 3.15 的表达式语言写，积分限可以是 ±Inf。全局自适应 Gauss–Kronrod (7, 15)，用 MATLAB integral 的变量替换（有限区间端点奇异被减弱、无穷区间映到有限区间）。缺省 rel_tol = 1e-10、abs_tol = 1e-12（比 MATLAB 的 1e-6 / 1e-10 严），结果带误差估计；达不到容差时报错并给出当前估计值。",
+  "category": "analysis",
+  "tags": [
+    "integral",
+    "quadrature",
+    "gauss-kronrod",
+    "calculus"
+  ],
+  "applicability": {
+    "preconditions": [
+      "f 在积分区间上可积",
+      "积分限为数或 ±Inf"
+    ],
+    "not_for": [
+      "多重积分（integral2，以后的算子）",
+      "离散数据的积分（trapz）",
+      "区间内部有奇点时需要分段"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "有限 [a, b]：x = (a+b)/2 + (b−a)/4·t(3 − t²)，t ∈ [−1, 1]；(−∞, ∞)：x = t/(1 − t²)；[a, ∞)：x = a + t/(1 − t)；(−∞, b]：x = b − t/(1 − t)（均同 MATLAB integral）。初始 10 段，每次二分误差估计最大的子区间（QUADPACK qk15 与误差公式 resasc·min(1, (200|K−G|/resasc)^1.5)），子区间和用补偿求和；Σ误差 ≤ max(abs_tol, rel_tol·|I|) 停止，子区间上限 650（同 MATLAB）。后置条件：每个子区间再二分一次的积分值与返回值之差 ≤ 容差",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "R. Piessens, E. de Doncker-Kapenga, C. W. Überhuber, D. K. Kahaner, QUADPACK, Springer 1983（qk15、qag）"
+      },
+      {
+        "type": "paper",
+        "cite": "L. F. Shampine, Vectorized adaptive quadrature in MATLAB, J. Comput. Appl. Math. 211(2), 2008",
+        "doi": "10.1016/j.cam.2006.11.021"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "quad::integral",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {},
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_intervals": 650,
+    "max_expression_length": 4096
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/calculus.quadrature.integral/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.RANGE",
+    "E.VALIDATION.EXPRESSION",
+    "E.NUMERICAL.NON_FINITE_EVALUATION",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [],
+  "mcp": {
+    "tool_name": "calculus_quadrature_integral",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:integral:adaptive-gauss-kronrod-7-15",
+    "assumptions": [
+      {
+        "id": "expression",
+        "statement": "被积函数是合法的 3.15 表达式",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "integrable",
+        "statement": "积分收敛（可积，无内部不可积奇点）",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "finite_values",
+        "statement": "被积函数在求值点上有限",
+        "enforced_by": "error:E.NUMERICAL.NON_FINITE_EVALUATION"
+      },
+      {
+        "id": "error_estimate_heuristic",
+        "statement": "误差估计是启发式的；可能漏掉区间里窄的尖峰",
+        "enforced_by": "check:refinement_consistent"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "tolerance_met",
+      "refinement_consistent",
+      "all_finite"
+    ],
+    "coverage": {
+      "tolerance_met": "full",
+      "refinement_consistent": "full"
+    },
+    "guards": {
+      "tolerance_met": [
+        "/value",
+        "/error_estimate"
+      ],
+      "refinement_consistent": [
+        "/value",
+        "/error_estimate"
+      ]
+    }
+  }
+}

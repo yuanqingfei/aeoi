@@ -60,6 +60,9 @@ PROXY_EXPECT = {
     "fmincon_x_wrong": ("optim.local.fmincon", "x vs the analytic"),
     "fmincon_lambda_dropped": ("optim.local.fmincon", "Lagrangian stationarity"),
     "fminsearch_x_shifted": ("optim.local.fminsearch", "x vs the analytic"),
+    "integral_value_wrong": ("calculus.quadrature.integral", "value vs the 50-digit truth"),
+    "integral_error_understated": ("calculus.quadrature.integral", "error estimate covers"),
+    "trapz_value_ulps": ("calculus.quadrature.trapz", "exact rational trapezoidal"),
 }
 
 # mutant -> substring that must appear among the names of the failed checks

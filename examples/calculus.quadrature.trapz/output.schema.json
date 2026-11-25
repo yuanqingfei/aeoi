@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/calculus.quadrature.trapz/0.4.0/output",
+  "type": "object",
+  "required": [
+    "value",
+    "cumulative",
+    "spacing"
+  ],
+  "properties": {
+    "value": {
+      "description": "积分值（y 为 [k, n] 时 [k]）"
+    },
+    "cumulative": {
+      "description": "部分和（cumulative = true 时），形状同 y；否则 null"
+    },
+    "spacing": {
+      "description": "回显：\"x\" 或 {dx}"
+    }
+  }
+}

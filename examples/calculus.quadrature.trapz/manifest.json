@@ -1,0 +1,127 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "calculus.quadrature.trapz",
+  "version": "0.4.0",
+  "title": "Trapezoidal integration of data",
+  "description": "对离散数据做梯形积分（= MATLAB trapz；cumulative = true 时 = cumtrapz）。y 每行一个通道；采样位置必须显式给出：x（每个点的位置）或 dx（等间距步长）——MATLAB 的 trapz(y) 缺省步长 1，常被误用。补偿求和，对给定数据精确到一次舍入。",
+  "category": "analysis",
+  "tags": [
+    "integral",
+    "trapz",
+    "cumtrapz",
+    "data"
+  ],
+  "applicability": {
+    "preconditions": [
+      "y 为 [n] 或 [k, n]",
+      "x（[n]）或 dx 恰好给出一种"
+    ],
+    "not_for": [
+      "由函数求积分（integral）",
+      "高阶求积（Simpson 等）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "Σ (x_{k+1} − x_k)·(y_k + y_{k+1})/2，每项拆成两个乘积用补偿算术（Dot2）累加；cumulative 时给出部分和",
+    "references": [
+      {
+        "type": "paper",
+        "cite": "T. Ogita, S. M. Rump, S. Oishi, Accurate sum and dot product, SIAM J. Sci. Comput. 26(6), 2005",
+        "doi": "10.1137/030601818"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "quad::trapz",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {},
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_points": 10000000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/calculus.quadrature.trapz/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ENCODING",
+    "E.VALIDATION.OPTION_CONFLICT",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [],
+  "mcp": {
+    "tool_name": "calculus_quadrature_trapz",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:trapz:compensated",
+    "assumptions": [
+      {
+        "id": "spacing",
+        "statement": "采样位置（x 或 dx）由调用方显式给出",
+        "enforced_by": "error:E.VALIDATION.OPTION_CONFLICT"
+      },
+      {
+        "id": "sampling",
+        "statement": "数据采样足以描述被积函数（梯形公式对数据精确，对真实函数的误差算子无法估计）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "channels",
+        "statement": "y 每行一个通道",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none"
+    },
+    "postconditions": [
+      "all_finite"
+    ]
+  }
+}

@@ -1,0 +1,154 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "calculus.quadrature.integral",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "value": 1.9999999999997633,
+    "error_estimate": 1.2256862191861728e-13,
+    "tolerances": {
+      "rel_tol": 1e-10,
+      "abs_tol": 1e-12
+    },
+    "limits": [
+      0.0,
+      1.0
+    ],
+    "intervals": 10,
+    "evaluations": 450
+  },
+  "trust": {
+    "convergence": {
+      "applicable": true,
+      "converged": true,
+      "criterion": "Σ 子区间误差估计 ≤ max(abs_tol, rel_tol·|I|)"
+    },
+    "residual": {
+      "refined_value": 1.9999999999996407,
+      "refined_difference": 1.2256862191861728e-13,
+      "definition": "每个子区间再二分一次后的积分值与返回值之差"
+    },
+    "condition": {
+      "applicable": false
+    },
+    "error_estimate": {
+      "value_abs": 1.2256862191861728e-13,
+      "kronrod_sum": 2.32610815049148e-14,
+      "basis": "max(Σ Gauss–Kronrod (7, 15) 误差估计, |全部子区间再二分一次后的变化|)（启发式；前者在端点奇异处会偏小）"
+    },
+    "checks": {
+      "tolerance_met": true,
+      "refinement_consistent": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "transform": "x = (a+b)/2 + (b−a)/4·t(3 − t²)"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:integral:adaptive-gauss-kronrod-7-15",
+      "routine": "quad::integral",
+      "provenance": "aeoi://operators/calculus.quadrature.integral/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "expression",
+        "statement": "被积函数是合法的 3.15 表达式",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "integrable",
+        "statement": "积分收敛（可积，无内部不可积奇点）",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "finite_values",
+        "statement": "被积函数在求值点上有限",
+        "enforced_by": "error:E.NUMERICAL.NON_FINITE_EVALUATION"
+      },
+      {
+        "id": "error_estimate_heuristic",
+        "statement": "误差估计是启发式的；可能漏掉区间里窄的尖峰",
+        "enforced_by": "check:refinement_consistent"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "value_abs": 1.2256862191861728e-13,
+        "kronrod_sum": 2.32610815049148e-14
+      },
+      "basis": "max(Σ Gauss–Kronrod (7, 15) 误差估计, |全部子区间再二分一次后的变化|)（启发式；前者在端点奇异处会偏小）"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "tolerance_met": true,
+        "refinement_consistent": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": {
+        "converged": true,
+        "iterations": null
+      },
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "tolerance_met": "full",
+        "refinement_consistent": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:a6e93d354f0e67f8cbc3373f5019efade050f13143873c16131c26d8ec0692b6",
+      "result": "sha256:2402f8a4eef1469e6dfccf0239747229b1faadf753a1c4203fdcf517527c7fec",
+      "output_hash": "sha256:8b3b58ff3a42d17e8815196a514085589a6617e42b7d9b94aaee17ed3a04218b",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of calculus.quadrature.integral@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:7d9499678f50de882384ad7966a0f4152a8d1e5761270d27d4fef605ff43b333",
+    "output_hash": "sha256:8b3b58ff3a42d17e8815196a514085589a6617e42b7d9b94aaee17ed3a04218b",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.168117
+  }
+}

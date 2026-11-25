@@ -263,6 +263,25 @@ def m_fminsearch_x_shifted(r):              # optimum shifted by 100·tol_x
     r["x"][0] = r["x"][0] + 1e-2
 
 
+
+def m_integral_value_wrong(r):              # value off by 1e-8 (relative)
+    r["value"] = r["value"] * (1 + 1e-8) if isinstance(r["value"], float) else r["value"]
+
+
+def m_integral_error_understated(r):        # error estimate reported a million times too small
+    r["value"] = r["value"] * (1 + 1e-12) if isinstance(r["value"], float) else r["value"]
+    r["error_estimate"] = r["error_estimate"] / 1e6 if isinstance(r["error_estimate"], float) else r["error_estimate"]
+
+
+def m_trapz_value_ulps(r):                  # value 8 ulps off (a naive sum would do this on large inputs)
+    import math
+    v = r["value"]
+    if isinstance(v, float):
+        for _ in range(8):
+            v = math.nextafter(v, math.inf)
+        r["value"] = v
+
+
 # name -> (operator, transform)
 MUTANTS = {
     "pz_pole_wrong": ("control.lti.poles_zeros", m_pz_pole_wrong),
@@ -307,6 +326,9 @@ MUTANTS = {
     "fmincon_x_wrong": ("optim.local.fmincon", m_fmincon_x_wrong),
     "fmincon_lambda_dropped": ("optim.local.fmincon", m_fmincon_lambda_dropped),
     "fminsearch_x_shifted": ("optim.local.fminsearch", m_fminsearch_x_shifted),
+    "integral_value_wrong": ("calculus.quadrature.integral", m_integral_value_wrong),
+    "integral_error_understated": ("calculus.quadrature.integral", m_integral_error_understated),
+    "trapz_value_ulps": ("calculus.quadrature.trapz", m_trapz_value_ulps),
 }
 
 

@@ -1,0 +1,101 @@
+{
+  "calculus.quadrature.integral": {
+    "cases": 19,
+    "error_cases": 6,
+    "worst_error_over_tolerance": 0.0011834977442504169,
+    "cases_detail": [
+      {
+        "family": "cubic",
+        "error_over_tolerance": 0.0
+      },
+      {
+        "family": "endpoint_singularity",
+        "error_over_tolerance": 0.0011834977442504169
+      },
+      {
+        "family": "exp_half_line",
+        "error_over_tolerance": 0.0
+      },
+      {
+        "family": "gaussian_whole_line",
+        "error_over_tolerance": 0.0
+      },
+      {
+        "family": "log_singularity",
+        "error_over_tolerance": 0.00041966430330830917
+      },
+      {
+        "family": "lorentzian",
+        "error_over_tolerance": 1.4135798584282295e-6
+      },
+      {
+        "family": "lower_half_line",
+        "error_over_tolerance": 0.0
+      },
+      {
+        "family": "oscillatory",
+        "error_over_tolerance": 0.000038163916471489756
+      },
+      {
+        "family": "params_rate",
+        "error_over_tolerance": 0.0
+      },
+      {
+        "family": "reversed_limits",
+        "error_over_tolerance": 0.0
+      },
+      {
+        "family": "sinc",
+        "error_over_tolerance": 0.0
+      },
+      {
+        "family": "tiny_value_abs_tol",
+        "error_over_tolerance": 0.0
+      },
+      {
+        "family": "tiny_value_tight_abs_tol",
+        "error_over_tolerance": 0.0
+      }
+    ]
+  },
+  "calculus.quadrature.trapz": {
+    "cases": 12,
+    "error_cases": 5,
+    "worst_error_over_tolerance": 0.0,
+    "cases_detail": [
+      {
+        "family": "cancellation_large_n",
+        "error_over_tolerance": 0.0
+      },
+      {
+        "family": "cumulative",
+        "error_over_tolerance": 0.0
+      },
+      {
+        "family": "decreasing_x",
+        "error_over_tolerance": 0.0
+      },
+      {
+        "family": "multichannel",
+        "error_over_tolerance": 0.0
+      },
+      {
+        "family": "nonuniform_x",
+        "error_over_tolerance": 0.0
+      },
+      {
+        "family": "single_point",
+        "error_over_tolerance": 0.0
+      },
+      {
+        "family": "uniform_dx",
+        "error_over_tolerance": 0.0
+      }
+    ]
+  },
+  "reference": "integral: mpmath.quad 50 digits (cross-checked against closed forms); trapz: exact rational sums of the stored data. Not MATLAB.",
+  "tolerance": {
+    "integral": "|I − I*| ≤ max(abs_tol, rel_tol·|I*|), and the reported error estimate ≥ the actual error / 10",
+    "trapz": "≤ one rounding (ε·|I*|), compensated summation"
+  }
+}

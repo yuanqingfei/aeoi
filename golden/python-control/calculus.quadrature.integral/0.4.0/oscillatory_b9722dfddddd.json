@@ -1,0 +1,27 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "calculus.quadrature.integral",
+ "operator_version": "0.4.0",
+ "case_family": "oscillatory",
+ "request": {
+  "expression": "cos(50*x)",
+  "limits": [
+   0.0,
+   1.0
+  ]
+ },
+ "reference_env": {
+  "engine": "scipy.integrate.quad / numpy.trapezoid / mpmath.quad",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "value_true": -0.005247497074078576,
+  "value_scipy": -0.0052474970740782455,
+  "rel_tol": 1e-10,
+  "abs_tol": 1e-12
+ }
+}

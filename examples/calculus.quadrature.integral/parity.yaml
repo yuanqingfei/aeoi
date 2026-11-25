@@ -1,0 +1,15 @@
+# Parity test spec — calculus.quadrature.integral 0.4.0 (AEOI v0.4.15-draft)
+operator: calculus.quadrature.integral
+references:
+  - {engine: scipy, version: "scipy.integrate.quad (QUADPACK)", role: dev_reference, status: active, generator: gen_golden_quad.py,
+     golden_store: "golden/python-control/calculus.quadrature.integral/0.4.0/*.json", note: "NOT MATLAB output"}
+  - {engine: mpmath, role: high_precision_reference, status: active, note: "mpmath.quad at 50 digits"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_quad"
+tolerance_class: T1
+compare:
+  value: "|I − I*| ≤ max(abs_tol, rel_tol·|I*|) against mpmath.quad (50 digits; closed forms where they exist, cross-checked)"
+  error_estimate: "≥ the actual error / 10 (Kronrod sum, or the change under one more bisection if larger)"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py
+  echoed: "tolerances equal the request or the defaults rel_tol 1e-10, abs_tol 1e-12"
+  honesty: "the reported error_estimate must cover the actual error against the truth within a factor 10"

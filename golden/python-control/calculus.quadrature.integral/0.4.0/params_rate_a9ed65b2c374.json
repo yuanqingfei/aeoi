@@ -1,0 +1,31 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "calculus.quadrature.integral",
+ "operator_version": "0.4.0",
+ "case_family": "params_rate",
+ "request": {
+  "expression": "exp(-a*t)",
+  "variable": "t",
+  "params": {
+   "a": 4.0
+  },
+  "limits": [
+   0.0,
+   "Inf"
+  ]
+ },
+ "reference_env": {
+  "engine": "scipy.integrate.quad / numpy.trapezoid / mpmath.quad",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "value_true": 0.25,
+  "value_scipy": 0.25000000000000006,
+  "rel_tol": 1e-10,
+  "abs_tol": 1e-12
+ }
+}

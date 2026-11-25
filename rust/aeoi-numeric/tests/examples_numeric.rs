@@ -325,3 +325,21 @@ fn optim_examples() {
     let f = call("optim.local.fmincon", &read("examples/optim.local.fmincon/request.json"))["result"]["fval"].as_f64().unwrap();
     assert!((f - 17.0140172891563).abs() < 1e-9, "{f}");
 }
+
+/// v0.4.15: integral (∫ exp(−x²) over ℝ = √π; 1/√x on [0, 1] = 2; 1/x² across 0 → NON_FINITE_EVALUATION),
+/// trapz (sin on 11 points of [0, π] with cumulative sums; no spacing → OPTION_CONFLICT).
+#[test]
+fn quad_examples() {
+    let op = "calculus.quadrature.integral";
+    for (rq, rs, want) in [("request.json", "response.success.json", std::f64::consts::PI.sqrt()), ("request.singular.json", "response.singular.json", 2.0)] {
+        let env = call(op, &read(&format!("examples/{op}/{rq}")));
+        assert_hash_on_same_platform(&env, &read(&format!("examples/{op}/{rs}")), &format!("{op} {rq}"));
+        assert!((env["result"]["value"].as_f64().unwrap() - want).abs() <= 1e-10 * want, "{rq}");
+    }
+    assert_eq!(call(op, &read(&format!("examples/{op}/request.error.json")))["error"]["code"], "E.NUMERICAL.NON_FINITE_EVALUATION");
+    let op = "calculus.quadrature.trapz";
+    let env = call(op, &read(&format!("examples/{op}/request.json")));
+    assert_hash_on_same_platform(&env, &read(&format!("examples/{op}/response.success.json")), op);
+    assert_eq!(env["result"]["cumulative"]["shape"], serde_json::json!([11]));
+    assert_eq!(call(op, &read(&format!("examples/{op}/request.error.json")))["error"]["code"], "E.VALIDATION.OPTION_CONFLICT");
+}

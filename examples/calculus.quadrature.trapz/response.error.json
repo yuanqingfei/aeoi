@@ -1,0 +1,38 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "calculus.quadrature.trapz",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.VALIDATION.OPTION_CONFLICT",
+    "category": "validation",
+    "retryable": true,
+    "message": "没有给出采样位置：要 x（每个点的位置）或 dx（等间距的步长）。MATLAB 的 trapz(y) 默认步长为 1，常被误用。",
+    "agent_hint": "给出 x，或给出带单位意义的 dx。",
+    "details": {
+      "path": "/"
+    },
+    "remediation": [
+      {
+        "id": "spacing",
+        "kind": "ask_user",
+        "description": "数据点之间的间距是多少（单位）？或者给出每个点的位置。",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.062008999999999995
+  }
+}

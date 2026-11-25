@@ -1,0 +1,39 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "calculus.quadrature.integral",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.NUMERICAL.NON_FINITE_EVALUATION",
+    "category": "numerical",
+    "retryable": true,
+    "message": "被积函数在 x = -4.894368276682204e-155 处不是有限值（NaN 或 Inf）。",
+    "agent_hint": "积分区间内有奇点或定义域问题：把区间在奇点处分开，或检查表达式。",
+    "details": {
+      "path": "/expression",
+      "at": -4.894368276682204e-155
+    },
+    "remediation": [
+      {
+        "id": "ask",
+        "kind": "ask_user",
+        "description": "向用户确认输入与建模假设",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.905641
+  }
+}

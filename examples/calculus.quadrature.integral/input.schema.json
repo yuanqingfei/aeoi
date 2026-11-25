@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/calculus.quadrature.integral/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "expression",
+    "limits"
+  ],
+  "properties": {
+    "expression": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000,
+      "description": "被积函数 f(x)，3.15 表达式"
+    },
+    "variable": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+      "default": "x",
+      "x-aeoi-provenance": "user",
+      "description": "积分变量名（缺省 x）"
+    },
+    "params": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "number"
+      },
+      "x-aeoi-provenance": "user",
+      "description": "参数名 → 数值"
+    },
+    "limits": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "number"
+          },
+          {
+            "enum": [
+              "Inf",
+              "-Inf"
+            ]
+          }
+        ]
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "x-aeoi-provenance": "user",
+      "description": "[a, b]，可以是 \"Inf\" / \"-Inf\"；a > b 时结果取负"
+    },
+    "rel_tol": {
+      "type": "number",
+      "minimum": 0,
+      "default": 1e-10,
+      "x-aeoi-provenance": "convention",
+      "description": "相对容差（缺省 1e-10；MATLAB 是 1e-6）"
+    },
+    "abs_tol": {
+      "type": "number",
+      "minimum": 0,
+      "default": 1e-12,
+      "x-aeoi-provenance": "convention",
+      "description": "绝对容差（缺省 1e-12）"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  }
+}

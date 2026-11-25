@@ -1,0 +1,138 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "calculus.quadrature.trapz",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "value": 1.9835235375094544,
+    "cumulative": {
+      "dtype": "f64",
+      "shape": [
+        11
+      ],
+      "data": [
+        0.0,
+        0.048540275968136655,
+        0.18940964346079614,
+        0.40881882729320046,
+        0.6852905278381598,
+        0.9917617687547272,
+        1.2982330096712946,
+        1.574704710216254,
+        1.7941138940486583,
+        1.9349832615413178,
+        1.9835235375094544
+      ]
+    },
+    "spacing": "x"
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "applicable": false
+    },
+    "condition": {
+      "applicable": false
+    },
+    "error_estimate": {
+      "applicable": false,
+      "note": "梯形公式对给定数据是精确的求和（补偿算术，至多一次舍入）；它与数据背后真实函数的积分之差取决于采样，算子无法估计"
+    },
+    "checks": {
+      "all_finite": true
+    },
+    "accuracy_grade": "A",
+    "credentials": null,
+    "derived": {
+      "rule": "Σ (x_{k+1} − x_k)·(y_k + y_{k+1})/2，补偿求和"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:trapz:compensated",
+      "routine": "quad::trapz",
+      "provenance": "aeoi://operators/calculus.quadrature.trapz/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "spacing",
+        "statement": "采样位置（x 或 dx）由调用方显式给出",
+        "enforced_by": "error:E.VALIDATION.OPTION_CONFLICT"
+      },
+      {
+        "id": "sampling",
+        "statement": "数据采样足以描述被积函数（梯形公式对数据精确，对真实函数的误差算子无法估计）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "channels",
+        "statement": "y 每行一个通道",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none",
+      "bound": null,
+      "basis": null
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "A",
+      "tolerance_class": "T1",
+      "credentials": null
+    },
+    "fingerprint": {
+      "request": "sha256:eefb039bc8f826d908d7569f45b043b85f58fd87f8f2dad00e2c7271a3c9bed8",
+      "result": "sha256:3301ca8f5ae7a3472a344fab3aaf2f0ef122d368a4d08676f5781393dacbac54",
+      "output_hash": "sha256:863532252eb3998979546b0fcad6a9a3454605c81eb4c0aed818d3c322e800da",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of calculus.quadrature.trapz@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:4d0f32cd9571778eb7db594c9c772e61b95a4ede4429a820031834af9a993868",
+    "output_hash": "sha256:863532252eb3998979546b0fcad6a9a3454605c81eb4c0aed818d3c322e800da",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.16610999999999998
+  }
+}

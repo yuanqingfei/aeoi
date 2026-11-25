@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.14-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.15-draft
 
-> 状态：Draft v0.4.14 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.15 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.15 新增数值积分 `calculus.quadrature.integral`（10.31，缺省 rel_tol 1e-10）与数据积分 `calculus.quadrature.trapz`（10.32，采样位置必须显式给出）。至此，作者定下的四批算子全部完成。
 >
 > v0.4.14 新增线性规划 `optim.linear.linprog`（10.28）、带约束的非线性最小化 `optim.local.fmincon`（10.29）、无导数最小化 `optim.local.fminsearch`（10.30），以及共享的 LP 与 QP 内核。每个优化结果都声明只是局部最优，并用 KKT 残差验证。
 >
@@ -14490,6 +14492,646 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py
 
 三个算子共 39 个 golden 用例：`linprog` 16 个（9 个成功 / 7 个错误），`fmincon` 13 个（7 / 6），`fminsearch` 10 个（5 / 5）。最坏的用例分别用掉了容差的 7.8e-7、7.5e-3 和 4.2e-2。结果见 `aeoi-numeric/tests/parity_optim.rs` 和 `reports/parity-optim.json`。
 
+## 10.31 `calculus.quadrature.integral`：数值积分（v0.4.15）
+
+对应 MATLAB 的 `integral`。真值来自 mpmath `quad`（50 位精度；有闭式的用例另外与闭式交叉核对过），scipy `quad` 只作记录；都不是 MATLAB 的结果。这个算子逼出的规范问题是：**缺省精度是一个约定**。MATLAB 的缺省 RelTol = 1e-6，很多人以为得到的是机器精度。
+
+**规范性条款**
+
+- IN-1 **输入**：f 用 3.15 的表达式写（变量名缺省为 x）；`limits` = [a, b]，可以是 "Inf" / "−Inf"；a > b 时结果取负。
+- IN-2 **容差**（作者决定，2026-11-25）：缺省 rel_tol = 1e-10、abs_tol = 1e-12，比 MATLAB 的 1e-6 / 1e-10 严。两个容差都在结果里回显。停止条件是 Σ误差 ≤ max(abs_tol, rel_tol·|I|)。所以积分值很小时，精度由 abs_tol 决定，golden 用例 `tiny_value_abs_tol` 演示了这一点。
+- IN-3 **算法**：全局自适应 Gauss–Kronrod (7, 15)，误差公式同 QUADPACK。
+  - 变量替换同 MATLAB integral：有限区间用 x = (a+b)/2 + (b−a)/4·t(3 − t²)，可以减弱端点奇异；无穷区间用 t/(1 − t²) 或 a ± t/(1 − t)。
+  - 初始 10 段，子区间上限 650（同 MATLAB）；子区间的和用补偿求和。
+  - 区间端点因舍入映到 ±∞ 时，该点的贡献记为 0：积分要存在，尾部必须趋于 0。
+- IN-4 **误差估计**：报告 max(Σ Kronrod 误差估计, 全部子区间再二分一次后积分值的变化)。端点奇异时，前者会偏小：golden 用例 `endpoint_singularity` 上偏小了 10 倍，所以加上后者。后置条件 `refinement_consistent` 要求再二分一次的变化 ≤ 容差。
+- IN-5 **达不到容差**（作者决定）：报 `E.NUMERICAL.NO_CONVERGENCE`，`details` 给出当前估计值、误差估计和最难的子区间。附两个 remediation：一个把 rel_tol 放宽到 1e-6 的补丁（须用户确认），一个 `ask_user`（在奇点处分段）。被积函数出现非有限值时报 `E.NUMERICAL.NON_FINITE_EVALUATION`，并给出出问题的 x。
+- IN-6 **确定性**：`platform_bitwise`（经数学库，EX-4）。
+
+**Manifest** — `examples/calculus.quadrature.integral/manifest.json`
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "id": "calculus.quadrature.integral",
+  "version": "0.4.0",
+  "title": "Adaptive numerical integration",
+  "description": "数值积分 ∫ₐᵇ f(x) dx（= MATLAB integral）：f 用 3.15 的表达式语言写，积分限可以是 ±Inf。全局自适应 Gauss–Kronrod (7, 15)，用 MATLAB integral 的变量替换（有限区间端点奇异被减弱、无穷区间映到有限区间）。缺省 rel_tol = 1e-10、abs_tol = 1e-12（比 MATLAB 的 1e-6 / 1e-10 严），结果带误差估计；达不到容差时报错并给出当前估计值。",
+  "category": "analysis",
+  "tags": ["integral", "quadrature", "gauss-kronrod", "calculus"],
+  "applicability": {
+    "preconditions": ["f 在积分区间上可积", "积分限为数或 ±Inf"],
+    "not_for": ["多重积分（integral2，以后的算子）", "离散数据的积分（trapz）", "区间内部有奇点时需要分段"],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "有限 [a, b]：x = (a+b)/2 + (b−a)/4·t(3 − t²)，t ∈ [−1, 1]；(−∞, ∞)：x = t/(1 − t²)；[a, ∞)：x = a + t/(1 − t)；(−∞, b]：x = b − t/(1 − t)（均同 MATLAB integral）。初始 10 段，每次二分误差估计最大的子区间（QUADPACK qk15 与误差公式 resasc·min(1, (200|K−G|/resasc)^1.5)），子区间和用补偿求和；Σ误差 ≤ max(abs_tol, rel_tol·|I|) 停止，子区间上限 650（同 MATLAB）。后置条件：每个子区间再二分一次的积分值与返回值之差 ≤ 容差",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "R. Piessens, E. de Doncker-Kapenga, C. W. Überhuber, D. K. Kahaner, QUADPACK, Springer 1983（qk15、qag）"
+      },
+      {
+        "type": "paper",
+        "cite": "L. F. Shampine, Vectorized adaptive quadrature in MATLAB, J. Comput. Appl. Math. 211(2), 2008",
+        "doi": "10.1016/j.cam.2006.11.021"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "quad::integral",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {},
+  "encodings": {
+    "input": ["json", "b64", "ref"],
+    "output": ["json", "b64"]
+  },
+  "limits": {
+    "max_intervals": 650,
+    "max_expression_length": 4096
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/calculus.quadrature.integral/0.4.0/credentials",
+  "errors": ["E.VALIDATION.SCHEMA", "E.VALIDATION.RANGE", "E.VALIDATION.EXPRESSION", "E.NUMERICAL.NON_FINITE_EVALUATION", "E.NUMERICAL.NO_CONVERGENCE", "E.RESOURCE.TIMEOUT", "E.RESOURCE.CANCELLED", "E.INTERNAL.PANIC", "E.VALIDATION.METHOD_UNAVAILABLE"],
+  "warnings": [],
+  "mcp": {
+    "tool_name": "calculus_quadrature_integral",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:integral:adaptive-gauss-kronrod-7-15",
+    "assumptions": [
+      {
+        "id": "expression",
+        "statement": "被积函数是合法的 3.15 表达式",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "integrable",
+        "statement": "积分收敛（可积，无内部不可积奇点）",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "finite_values",
+        "statement": "被积函数在求值点上有限",
+        "enforced_by": "error:E.NUMERICAL.NON_FINITE_EVALUATION"
+      },
+      {
+        "id": "error_estimate_heuristic",
+        "statement": "误差估计是启发式的；可能漏掉区间里窄的尖峰",
+        "enforced_by": "check:refinement_consistent"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": ["tolerance_met", "refinement_consistent", "all_finite"],
+    "coverage": {
+      "tolerance_met": "full",
+      "refinement_consistent": "full"
+    },
+    "guards": {
+      "tolerance_met": ["/value", "/error_estimate"],
+      "refinement_consistent": ["/value", "/error_estimate"]
+    }
+  }
+}
+```
+
+**请求与响应**（∫ exp(−x²) dx 在 (−∞, ∞) 上 = √π）
+
+```json
+{
+  "expression": "exp(-x^2)",
+  "limits": [
+    "-Inf",
+    "Inf"
+  ]
+}
+```
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "calculus.quadrature.integral",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "value": 1.772453850905516,
+    "error_estimate": 6.721988358981248e-11,
+    "tolerances": {
+      "rel_tol": 1e-10,
+      "abs_tol": 1e-12
+    },
+    "limits": ["-Inf", "Inf"],
+    "intervals": 16,
+    "evaluations": 810
+  },
+  "trust": {
+    "convergence": {
+      "applicable": true,
+      "converged": true,
+      "criterion": "Σ 子区间误差估计 ≤ max(abs_tol, rel_tol·|I|)"
+    },
+    "residual": {
+      "refined_value": 1.7724538509055159,
+      "refined_difference": 2.220446049250313e-16,
+      "definition": "每个子区间再二分一次后的积分值与返回值之差"
+    },
+    "condition": {
+      "applicable": false
+    },
+    "error_estimate": {
+      "value_abs": 6.721988358981248e-11,
+      "kronrod_sum": 6.721988358981248e-11,
+      "basis": "max(Σ Gauss–Kronrod (7, 15) 误差估计, |全部子区间再二分一次后的变化|)（启发式；前者在端点奇异处会偏小）"
+    },
+    "checks": {
+      "tolerance_met": true,
+      "refinement_consistent": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "transform": "x = t/(1 − t²)"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:integral:adaptive-gauss-kronrod-7-15",
+      "routine": "quad::integral",
+      "provenance": "aeoi://operators/calculus.quadrature.integral/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "expression",
+        "statement": "被积函数是合法的 3.15 表达式",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "integrable",
+        "statement": "积分收敛（可积，无内部不可积奇点）",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "finite_values",
+        "statement": "被积函数在求值点上有限",
+        "enforced_by": "error:E.NUMERICAL.NON_FINITE_EVALUATION"
+      },
+      {
+        "id": "error_estimate_heuristic",
+        "statement": "误差估计是启发式的；可能漏掉区间里窄的尖峰",
+        "enforced_by": "check:refinement_consistent"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "value_abs": 6.721988358981248e-11,
+        "kronrod_sum": 6.721988358981248e-11
+      },
+      "basis": "max(Σ Gauss–Kronrod (7, 15) 误差估计, |全部子区间再二分一次后的变化|)（启发式；前者在端点奇异处会偏小）"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "tolerance_met": true,
+        "refinement_consistent": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": {
+        "converged": true,
+        "iterations": null
+      },
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "tolerance_met": "full",
+        "refinement_consistent": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:28ef4bcabf85799700ee6a5956851873337749af232a302fe9a84c7f20ef3d76",
+      "result": "sha256:c4f8a19e75724e45e0c2b89541502b65285a924e8554a5f5511515eae5e9fb61",
+      "output_hash": "sha256:d3c72aa0b61f8e10bccdf4ac5a6600819dbca485de0491b94256a08c1699f4c6",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of calculus.quadrature.integral@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:f37648fedcc867b6e2b7f7e4cc44fafecb823e0b54c6f98f74915a0d5a65f823",
+    "output_hash": "sha256:d3c72aa0b61f8e10bccdf4ac5a6600819dbca485de0491b94256a08c1699f4c6",
+    "platform": "x86_64-linux",
+    "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.19279
+  }
+}
+```
+
+**其他例子**：`request.singular.json` 是 1/√x 在 [0, 1] 上的积分。变量替换之后，10 个子区间就达到了容差。
+
+**错误请求与响应**（1/x² 在 [−1, 1] 上，0 处不可积：IN-5）
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "calculus.quadrature.integral",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.NUMERICAL.NON_FINITE_EVALUATION",
+    "category": "numerical",
+    "retryable": true,
+    "message": "被积函数在 x = -4.894368276682204e-155 处不是有限值（NaN 或 Inf）。",
+    "agent_hint": "积分区间内有奇点或定义域问题：把区间在奇点处分开，或检查表达式。",
+    "details": {
+      "path": "/expression",
+      "at": -4.894368276682204e-155
+    },
+    "remediation": [
+      {
+        "id": "ask",
+        "kind": "ask_user",
+        "description": "向用户确认输入与建模假设",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.905641
+  }
+}
+```
+
+**Parity 测试规格** — `examples/calculus.quadrature.integral/parity.yaml`
+
+```yaml
+# Parity test spec — calculus.quadrature.integral 0.4.0 (AEOI v0.4.15-draft)
+operator: calculus.quadrature.integral
+references:
+  - {engine: scipy, version: "scipy.integrate.quad (QUADPACK)", role: dev_reference, status: active, generator: gen_golden_quad.py,
+     golden_store: "golden/python-control/calculus.quadrature.integral/0.4.0/*.json", note: "NOT MATLAB output"}
+  - {engine: mpmath, role: high_precision_reference, status: active, note: "mpmath.quad at 50 digits"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_quad"
+tolerance_class: T1
+compare:
+  value: "|I − I*| ≤ max(abs_tol, rel_tol·|I*|) against mpmath.quad (50 digits; closed forms where they exist, cross-checked)"
+  error_estimate: "≥ the actual error / 10 (Kronrod sum, or the change under one more bisection if larger)"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py
+  echoed: "tolerances equal the request or the defaults rel_tol 1e-10, abs_tol 1e-12"
+  honesty: "the reported error_estimate must cover the actual error against the truth within a factor 10"
+```
+
+共 19 个 golden 用例，13 个成功、6 个错误。最坏的用例用掉了容差的 1.2e-3。结果见 `aeoi-numeric/tests/parity_quad.rs` 和 `reports/parity-quad.json`。
+
+## 10.32 `calculus.quadrature.trapz`：数据的梯形积分（v0.4.15）
+
+对应 MATLAB 的 `trapz`；`cumulative = true` 时对应 `cumtrapz`。真值是存储数据的精确有理数求和。
+
+**规范性条款**
+
+- TZ-1 **输入**：y 为 [n] 或 [k, n]，每行一个通道。采样位置 MUST 显式给出：要么 x（每个点的位置），要么 dx（等间距步长），恰好一种，否则报 `E.VALIDATION.OPTION_CONFLICT` 并附 `ask_user`。MATLAB 的 `trapz(y)` 缺省步长为 1，这是常见的单位错误来源（与 BW-1 同理）。
+- TZ-2 **输出**：`value`；`cumulative`（部分和，形状同 y）；`spacing` 回显所用的采样位置。
+- TZ-3 **精度**：每一项拆成两个乘积，用补偿算术累加，对给定数据至多一次舍入。golden 上 7 个成功用例全部与精确值相同；其中一个是 10 万个约 ±1e8 的数相互抵消，普通求和在这里会丢很多位。至于结果与数据背后真实函数的积分差多少，取决于采样，算子无法估计；receipt 的前提里写明了这一点。
+
+**Manifest** — `examples/calculus.quadrature.trapz/manifest.json`
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "id": "calculus.quadrature.trapz",
+  "version": "0.4.0",
+  "title": "Trapezoidal integration of data",
+  "description": "对离散数据做梯形积分（= MATLAB trapz；cumulative = true 时 = cumtrapz）。y 每行一个通道；采样位置必须显式给出：x（每个点的位置）或 dx（等间距步长）——MATLAB 的 trapz(y) 缺省步长 1，常被误用。补偿求和，对给定数据精确到一次舍入。",
+  "category": "analysis",
+  "tags": ["integral", "trapz", "cumtrapz", "data"],
+  "applicability": {
+    "preconditions": ["y 为 [n] 或 [k, n]", "x（[n]）或 dx 恰好给出一种"],
+    "not_for": ["由函数求积分（integral）", "高阶求积（Simpson 等）"],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "Σ (x_{k+1} − x_k)·(y_k + y_{k+1})/2，每项拆成两个乘积用补偿算术（Dot2）累加；cumulative 时给出部分和",
+    "references": [
+      {
+        "type": "paper",
+        "cite": "T. Ogita, S. M. Rump, S. Oishi, Accurate sum and dot product, SIAM J. Sci. Comput. 26(6), 2005",
+        "doi": "10.1137/030601818"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "quad::trapz",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {},
+  "encodings": {
+    "input": ["json", "b64", "ref"],
+    "output": ["json", "b64"]
+  },
+  "limits": {
+    "max_points": 10000000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/calculus.quadrature.trapz/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ENCODING",
+    "E.VALIDATION.OPTION_CONFLICT",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [],
+  "mcp": {
+    "tool_name": "calculus_quadrature_trapz",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:trapz:compensated",
+    "assumptions": [
+      {
+        "id": "spacing",
+        "statement": "采样位置（x 或 dx）由调用方显式给出",
+        "enforced_by": "error:E.VALIDATION.OPTION_CONFLICT"
+      },
+      {
+        "id": "sampling",
+        "statement": "数据采样足以描述被积函数（梯形公式对数据精确，对真实函数的误差算子无法估计）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "channels",
+        "statement": "y 每行一个通道",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none"
+    },
+    "postconditions": ["all_finite"]
+  }
+}
+```
+
+**请求与响应**（sin 在 [0, π] 上取 11 个点，带部分和）
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "calculus.quadrature.trapz",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "value": 1.9835235375094544,
+    "cumulative": {
+      "dtype": "f64",
+      "shape": [11],
+      "data": [
+        0.0,
+        0.048540275968136655,
+        0.18940964346079614,
+        0.40881882729320046,
+        0.6852905278381598,
+        0.9917617687547272,
+        1.2982330096712946,
+        1.574704710216254,
+        1.7941138940486583,
+        1.9349832615413178,
+        1.9835235375094544
+      ]
+    },
+    "spacing": "x"
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "applicable": false
+    },
+    "condition": {
+      "applicable": false
+    },
+    "error_estimate": {
+      "applicable": false,
+      "note": "梯形公式对给定数据是精确的求和（补偿算术，至多一次舍入）；它与数据背后真实函数的积分之差取决于采样，算子无法估计"
+    },
+    "checks": {
+      "all_finite": true
+    },
+    "accuracy_grade": "A",
+    "credentials": null,
+    "derived": {
+      "rule": "Σ (x_{k+1} − x_k)·(y_k + y_{k+1})/2，补偿求和"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:trapz:compensated",
+      "routine": "quad::trapz",
+      "provenance": "aeoi://operators/calculus.quadrature.trapz/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "spacing",
+        "statement": "采样位置（x 或 dx）由调用方显式给出",
+        "enforced_by": "error:E.VALIDATION.OPTION_CONFLICT"
+      },
+      {
+        "id": "sampling",
+        "statement": "数据采样足以描述被积函数（梯形公式对数据精确，对真实函数的误差算子无法估计）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "channels",
+        "statement": "y 每行一个通道",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none",
+      "bound": null,
+      "basis": null
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "A",
+      "tolerance_class": "T1",
+      "credentials": null
+    },
+    "fingerprint": {
+      "request": "sha256:eefb039bc8f826d908d7569f45b043b85f58fd87f8f2dad00e2c7271a3c9bed8",
+      "result": "sha256:3301ca8f5ae7a3472a344fab3aaf2f0ef122d368a4d08676f5781393dacbac54",
+      "output_hash": "sha256:863532252eb3998979546b0fcad6a9a3454605c81eb4c0aed818d3c322e800da",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of calculus.quadrature.trapz@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:4d0f32cd9571778eb7db594c9c772e61b95a4ede4429a820031834af9a993868",
+    "output_hash": "sha256:863532252eb3998979546b0fcad6a9a3454605c81eb4c0aed818d3c322e800da",
+    "platform": "x86_64-linux",
+    "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.16610999999999998
+  }
+}
+```
+
+**Parity 测试规格** — `examples/calculus.quadrature.trapz/parity.yaml`
+
+```yaml
+# Parity test spec — calculus.quadrature.trapz 0.4.0 (AEOI v0.4.15-draft)
+operator: calculus.quadrature.trapz
+references:
+  - {engine: numpy, version: "numpy.trapezoid", role: dev_reference, status: active, generator: gen_golden_quad.py,
+     golden_store: "golden/python-control/calculus.quadrature.trapz/0.4.0/*.json", note: "NOT MATLAB output"}
+  - {engine: exact, role: high_precision_reference, status: active, note: "rational arithmetic on the stored data"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_quad"
+tolerance_class: T1
+compare:
+  value: "≤ one rounding of the exact rational trapezoidal sum of the stored data"
+  cumulative: "each partial sum ≤ one rounding"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py
+  recomputed: "the runner computes the exact rational trapezoidal sum from the request (Fractions) and requires ≤ 2 roundings"
+```
+
 ## 11. Rust 参考实现（v0.3）
 
 ### 11.1 结构
@@ -14686,11 +15328,11 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 
 1. 在有授权的机器上运行 `matlab/gen_golden_bode.m`（并补 step/lqr 脚本），先核对 `memory_order_nonsymmetric` 用例与 python-control 一致，再跑通第一份 A 级凭证
 2. ~~修复 `lqr` 病态 R 的精度差距~~（v0.3.2 用补偿 Newton–Kleinman 完成）；剩余：平衡 + 有序 Schur（或广义特征值）作为符号函数不收敛时的后备路径，以及 `dlqr` 的同类精化
-3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；v0.4.10 加了 `linalg.system.solve`（10.19）与 `interp.grid.interp1`（10.20）；v0.4.11 加了 `fit.poly.polyfit`（10.21）、`linalg.decomp.eig`（10.22）、`linalg.decomp.svd`（10.23）；v0.4.12 加了 `signal.design.butter`（10.24）、`signal.filter.filter`（10.25）；v0.4.13 加了 `nonlinear.root.fzero`（10.26）、`nonlinear.system.fsolve`（10.27）；v0.4.14 加了 `optim.linear.linprog`、`optim.local.fmincon`、`optim.local.fminsearch`（10.28–10.30）；之后做 优化、`integral`，以及隐式/刚性方法（`ode15s`）与事件检测；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
+3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；v0.4.10 加了 `linalg.system.solve`（10.19）与 `interp.grid.interp1`（10.20）；v0.4.11 加了 `fit.poly.polyfit`（10.21）、`linalg.decomp.eig`（10.22）、`linalg.decomp.svd`（10.23）；v0.4.12 加了 `signal.design.butter`（10.24）、`signal.filter.filter`（10.25）；v0.4.13 加了 `nonlinear.root.fzero`（10.26）、`nonlinear.system.fsolve`（10.27）；v0.4.14 加了 `optim.linear.linprog`、`optim.local.fmincon`、`optim.local.fminsearch`（10.28–10.30）；v0.4.15 加了 `calculus.quadrature.integral`、`calculus.quadrature.trapz`（10.31–10.32）；之后做 优化、`integral`，以及隐式/刚性方法（`ode15s`）与事件检测；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
 5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；v0.3.4 另有 `aeoi-web design`。v0.3.5 实现了试点里排在前面的算子（串联、并联、反馈、PID 构造、stepinfo、Padé），v0.3.6 加了具名角色、`loopsens`（含带宽读数）和回合预算。下一步是按 A-4 写 `pidtune`（必须先声明对象类、指标和唯一性），以及控制器离散化和 MIMO 裕度；扩充问答题、加入"Agent + 裸 scipy"对照组。非线性吸引域仍不做。
 6. 分发：为 `aeoi-mcp` 发布各平台预编译二进制（GitHub Releases）、Claude Desktop 一键安装扩展、登记到 MCP 公开目录（v0.4.9：数学库、矩阵乘法内核与 FFT 旋转因子已统一，5 个平台的 golden 哈希完全相同；`v0.4.9` 是第一个正式发布）；之后做纯浏览器的结果查看器（`aeoi-wasm`：结果、信任信息、收据与本地重放）。不做独立的图形界面客户端或自带 LLM 的聊天客户端：AEOI 的客户端是 MCP 宿主
-7. 一致性套件（9.4）：v0.4.14 有 22 个算子的数值规则（22 / 35 = 63%；作者定的下限是 30%，以后提高），参考实现 1066 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 42 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
+7. 一致性套件（9.4）：v0.4.15 有 24 个算子的数值规则（24 / 37 = 65%；作者定的下限是 30%，以后提高），参考实现 1111 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 45 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
 8. 根据以上反馈修订，冻结 v1.0
 
 ### 12.3 目标算子清单（v0.4.11，作者决定 2026-11-25）
@@ -14703,10 +15345,10 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 | 线性代数 | `\`/linsolve、eig、svd、inv、det、rank、cond、norm、chol、lu、qr、pinv、null、orth、expm | 15 | 3（rank、cond 可从 svd 结果读出） |
 | 信号 | fft/ifft、filter、filtfilt、butter、cheby1、freqz、conv、xcorr、pwelch、spectrogram、resample、decimate、hilbert、findpeaks | 14 | 4（v0.4.12 加了 butter、filter） |
 | 多项式、插值、拟合 | polyfit、polyval、roots、conv/deconv、interp1（含 spline、pchip）、interp2、griddata、lsqcurvefit | 11 | 4 |
-| 微积分与 ODE | ode45、ode23、ode15s、integral、integral2、trapz、cumtrapz、bvp4c、pdepe、gradient | 10 | 1 |
+| 微积分与 ODE | ode45、ode23、ode15s、integral、integral2、trapz、cumtrapz、bvp4c、pdepe、gradient | 10 | 4（v0.4.15 加了 integral、trapz、cumtrapz） |
 | 非线性方程与优化 | fzero、fsolve、fminsearch、fminbnd、fminunc、fmincon、linprog、quadprog、lsqnonlin | 9 | 5（v0.4.13、v0.4.14；quadprog 只差一层算子外壳，QP 内核已有） |
 | 统计 | regress/fitlm、corrcoef、histcounts、mean/std 的稳健版本等 | 8 | 0 |
-| 合计 | | 约 100 | 约 42（42%） |
+| 合计 | | 约 100 | 约 45（45%） |
 
 顺序：
 1. 剩下的四批：`butter` + `filter`、`fzero`/`fsolve`、`fminsearch`/`fmincon`/`linprog`、`integral`/`trapz`。
@@ -14715,6 +15357,32 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 4. 其余。
 
 ## 13. Changelog
+
+### v0.4.15-draft（2026-11-25）
+
+起因：四批中的最后一批，积分。作者定了两件事：
+- integral 缺省 rel_tol = 1e-10，并回显容差、给出误差估计；
+- 达不到容差时报错，附上当前估计值。
+
+**规范改动**
+
+| # | 位置 | 改动 | 理由 |
+|---|---|---|---|
+| 1 | 10.31 IN-1 – IN-6 | 新算子 `calculus.quadrature.integral` 0.4.0：自适应 GK(7, 15)，变量替换同 MATLAB；误差估计取 Kronrod 估计与“再二分一次的变化”中较大的那个 | 端点奇异时，单靠 Kronrod 估计会偏小 10 倍 |
+| 2 | 10.32 TZ-1 – TZ-3 | 新算子 `calculus.quadrature.trapz` 0.4.0：补偿求和；x 或 dx 必须显式给出 | MATLAB 缺省步长 1，常被误用 |
+| 3 | 3.15 EX-2（实现） | `t` 只在 ODE 里是保留名（规范原文就是这样写的，实现一直把它全局保留）；fzero、fsolve、integral、优化算子都可以用 t 作变量 | 积分、求根里用 t 作变量很常见；v0.4.13 记下的问题，这里修正 |
+
+**开发中发现的问题**
+
+| # | 问题 | 处理 |
+|---|---|---|
+| 1 | 无穷区间上，GK 节点在舍入后可能恰好落在 t = 1，映射到 x = ∞，得到 0·∞ = NaN | 该点的贡献记为 0（IN-3） |
+| 2 | 1/x 在 [0, 1] 上会求值到 x = 0，得到 Inf，所以走的是 `NON_FINITE_EVALUATION`，不是不收敛 | 两种都是如实的报告；golden 的不收敛用例改用 1/x 在 [1, ∞) 上：处处有限，但积分发散 |
+
+**结果**
+
+- golden：`integral` 19 个（13 个成功 / 6 个错误），真值来自 mpmath，且与闭式交叉核对；`trapz` 12 个（7 / 5），全部与精确的有理数求和相同。
+- 一致性：24 / 37 = 65% 的算子有数值规则，参考实现 1111 / 0 / 291；新增 3 种代理改写，都被抓住，其中包括“把误差估计少报 10⁶ 倍”。
 
 ### v0.4.14-draft（2026-11-25）
 

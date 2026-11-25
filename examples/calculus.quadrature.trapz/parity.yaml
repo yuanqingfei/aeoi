@@ -1,0 +1,14 @@
+# Parity test spec — calculus.quadrature.trapz 0.4.0 (AEOI v0.4.15-draft)
+operator: calculus.quadrature.trapz
+references:
+  - {engine: numpy, version: "numpy.trapezoid", role: dev_reference, status: active, generator: gen_golden_quad.py,
+     golden_store: "golden/python-control/calculus.quadrature.trapz/0.4.0/*.json", note: "NOT MATLAB output"}
+  - {engine: exact, role: high_precision_reference, status: active, note: "rational arithmetic on the stored data"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_quad"
+tolerance_class: T1
+compare:
+  value: "≤ one rounding of the exact rational trapezoidal sum of the stored data"
+  cumulative: "each partial sum ≤ one rounding"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py
+  recomputed: "the runner computes the exact rational trapezoidal sum from the request (Fractions) and requires ≤ 2 roundings"
