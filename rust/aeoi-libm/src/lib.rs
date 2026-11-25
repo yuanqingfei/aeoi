@@ -63,19 +63,32 @@ mod symbols {
         SinCos { sin, cos }
     }
 
+    /// LLVM rewrites `pow(10.0, x)` into `__exp10(x)` on Apple targets (and `exp10` where it knows one exists).
+    /// Other targets keep `pow`, so both names compute `pow(10, x)`: the bits then do not depend on whether
+    /// the rewrite happened (CI found it: `10f64.powf(..)` in `control.lti.pade` differed on macOS).
+    #[no_mangle]
+    pub extern "C" fn __exp10(x: f64) -> f64 {
+        libm::pow(10.0, x)
+    }
+
+    #[no_mangle]
+    pub extern "C" fn exp10(x: f64) -> f64 {
+        libm::pow(10.0, x)
+    }
+
     /// MSVC: Rust's `f64::hypot` calls `_hypot`.
     #[no_mangle]
     pub extern "C" fn _hypot(x: f64, y: f64) -> f64 {
         libm::hypot(x, y)
     }
 
-    pub fn addresses() -> [usize; 27] {
+    pub fn addresses() -> [usize; 29] {
         [
             sin as *const () as usize, cos as *const () as usize, tan as *const () as usize, asin as *const () as usize, acos as *const () as usize, atan as *const () as usize, sinh as *const () as usize,
             cosh as *const () as usize, tanh as *const () as usize, asinh as *const () as usize, acosh as *const () as usize, atanh as *const () as usize, exp as *const () as usize, exp2 as *const () as usize,
             expm1 as *const () as usize, log as *const () as usize, log10 as *const () as usize, log2 as *const () as usize, log1p as *const () as usize, cbrt as *const () as usize,
             atan2 as *const () as usize, pow as *const () as usize, hypot as *const () as usize, sincos as *const () as usize, __sincos_stret as *const () as usize, _hypot as *const () as usize,
-            0,
+            __exp10 as *const () as usize, exp10 as *const () as usize, 0,
         ]
     }
 }
@@ -86,7 +99,7 @@ pub fn linked() -> bool {
     #[cfg(not(target_arch = "wasm32"))]
     {
         let a = std::hint::black_box(symbols::addresses());
-        a.iter().take(26).all(|&p| p != 0)
+        a.iter().take(28).all(|&p| p != 0)
     }
     #[cfg(target_arch = "wasm32")]
     {

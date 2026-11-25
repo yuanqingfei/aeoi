@@ -27,6 +27,10 @@ fn main() {
         host.data_root = args.get(i + 1).map(Into::into);
         args.drain(i..(i + 2).min(args.len()));
     }
+    if args.get(1).map(String::as_str) == Some("mathprobe") {
+        mathprobe();
+        return;
+    }
     if args.get(1).map(String::as_str) == Some("hashes") && args.len() >= 3 {
         hashes(std::path::Path::new(&args[2]), &host);
         return;
@@ -84,4 +88,38 @@ fn hashes(dir: &std::path::Path, host: &HostCtx) {
         map.insert(key, v);
     }
     println!("{}", serde_json::to_string_pretty(&map).unwrap());
+}
+
+/// Diagnostic (release CI): digests of the math functions as this binary computes them, called the way
+/// operator code calls them (including patterns LLVM rewrites, such as pow(10, x)). Equal on every platform
+/// iff spec 2.1 M-7a holds for these functions.
+fn mathprobe() {
+    use std::hint::black_box;
+    let xs: Vec<f64> = (0..20_000).map(|i| (i as f64 - 10_000.0) * 0.000_731 + 1e-3 * ((i * 7919) % 97) as f64).collect();
+    let probes: Vec<(&str, Box<dyn Fn(f64) -> f64>)> = vec![
+        ("sin", Box::new(|x: f64| x.sin())),
+        ("cos", Box::new(|x: f64| x.cos())),
+        ("sin_cos", Box::new(|x: f64| { let (s, c) = x.sin_cos(); s + 3.0 * c })),
+        ("twiddle", Box::new(|x: f64| { let a = -2f64 * std::f64::consts::PI / 97.0 * x; a.cos() + a.sin() })),
+        ("exp", Box::new(|x: f64| x.exp())),
+        ("ln", Box::new(|x: f64| x.abs().ln())),
+        ("pow10", Box::new(|x: f64| 10f64.powf(x))),
+        ("pow2", Box::new(|x: f64| 2f64.powf(x))),
+        ("powf", Box::new(|x: f64| x.abs().powf(1.37))),
+        ("atan2", Box::new(|x: f64| x.atan2(0.3))),
+        ("hypot", Box::new(|x: f64| x.hypot(0.3))),
+        ("powi", Box::new(|x: f64| x.powi(7))),
+        ("mul_add", Box::new(|x: f64| x.mul_add(1.0 / 3.0, 0.1))),
+        ("sqrt", Box::new(|x: f64| x.abs().sqrt())),
+    ];
+    for (name, f) in &probes {
+        let mut h: u64 = 0xcbf2_9ce4_8422_2325; // FNV-1a over the result bits
+        for &x in &xs {
+            for b in f(black_box(x)).to_bits().to_le_bytes() {
+                h = (h ^ b as u64).wrapping_mul(0x0000_0100_0000_01b3);
+            }
+        }
+        println!("{name:8} {h:016x}");
+    }
+    println!("libm     {}", aeoi_core::operator::libm());
 }

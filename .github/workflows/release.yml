@@ -59,6 +59,17 @@ jobs:
         env:
           AEOI_GIT_SHA: ${{ github.sha }}
         run: cargo build --release --target ${{ matrix.target }} -p aeoi-mcp -p aeoi-ops
+      - name: math diagnostics (spec 2.1 M-7a)
+        continue-on-error: true
+        run: |
+          b=rust/target/${{ matrix.target }}/release/aeoi-call${{ matrix.exe }}
+          "$b" mathprobe
+          M='sin|cos|tan|exp|log|pow|hypot|atan|fma|cbrt|sinh|cosh|tanh|asin|acos|expm1|log1p|sincos|exp10|sinpi|cospi'
+          case "${{ matrix.target }}" in
+            *apple*) echo "math symbols imported:"; nm -u "$b" | grep -E "^_+($M)" || echo "  none" ;;
+            *windows*) pip install -q pefile && python3 -c "import pefile,sys,re; p=pefile.PE(sys.argv[1]); print('math symbols imported:', sorted(f'{e.dll.decode()}!{i.name.decode()}' for e in p.DIRECTORY_ENTRY_IMPORT for i in e.imports if i.name and re.fullmatch(r'_*(?:' + sys.argv[2] + r')f?', i.name.decode())) or 'none')" "$b" "$M" ;;
+            *) echo "math symbols imported:"; nm -D --undefined-only "$b" 2>/dev/null | grep -E " ($M)(@|$)" || echo "  none" ;;
+          esac
       - name: conformance (own binary)
         if: ${{ !matrix.cross }}
         run: |
