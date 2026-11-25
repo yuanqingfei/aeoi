@@ -62,6 +62,7 @@ name = "aeoi-numeric"
 version = "0.3.0"
 dependencies = [
  "aeoi-core",
+ "aeoi-libm",
  "nalgebra",
  "rustfft",
  "serde_json",

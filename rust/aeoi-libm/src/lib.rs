@@ -18,6 +18,9 @@
 #![no_builtins]
 #![allow(clippy::missing_safety_doc)]
 
+/// The `libm` crate itself, for kernels that call it by name (no reliance on symbol interposition).
+pub use libm;
+
 /// Version of the `libm` crate the math symbols come from (reported in `reproducibility.libm`).
 pub const LIBM_VERSION: &str = "0.2.16";
 

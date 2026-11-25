@@ -2,9 +2,9 @@
   "reference": "independent 50-digit mpmath construction (truth); scipy.signal.butter recorded. Not MATLAB.",
   "cases": 33,
   "error_cases": 13,
-  "worst_zpk_error": 7.880222251642048e-14,
-  "worst_sos_response_deviation": 2.5854248294236417e-13,
-  "worst_ba_coefficient_error": 4.635011166999415e-16,
+  "worst_zpk_error": 7.894549928463215e-14,
+  "worst_sos_response_deviation": 2.5859003659017754e-13,
+  "worst_ba_coefficient_error": 7.660641183853028e-16,
   "tolerance": "z, p, k ≤ 1e-12 relative (sets); sos response ≤ 1e-11·max|H| on 64 points; b/a coefficients ≤ 1e-12·max|coefficient| unless flagged ill-conditioned",
   "cases_detail": [
     {
@@ -15,8 +15,8 @@
     },
     {
       "family": "analog_bandstop",
-      "zpk_error": 1.498324130642078e-16,
-      "ba_deviation": 3.981203302736396e-14,
+      "zpk_error": 1.5012476927013587e-16,
+      "ba_deviation": 4.4165010403048315e-14,
       "scipy_ba_deviation": 3.5853242643217924e-14
     },
     {
@@ -34,18 +34,18 @@
     {
       "family": "bandpass_default_type",
       "zpk_error": 1.4794041380025728e-15,
-      "ba_deviation": 1.6628979754651782e-11,
+      "ba_deviation": 2.0816402659000635e-11,
       "scipy_ba_deviation": 2.3490596259070615e-11
     },
     {
       "family": "bandpass_explicit",
       "zpk_error": 2.801725885452579e-16,
-      "ba_deviation": 1.5167450724831806e-14,
+      "ba_deviation": 1.771312473820098e-14,
       "scipy_ba_deviation": 1.608913894436134e-14
     },
     {
       "family": "bandpass_narrow_warns",
-      "zpk_error": 7.880222251642048e-14,
+      "zpk_error": 7.894549928463215e-14,
       "ba_deviation": 1.0,
       "scipy_ba_deviation": 1.0
     },
@@ -57,8 +57,8 @@
     },
     {
       "family": "bandstop_wide",
-      "zpk_error": 3.841648151666373e-16,
-      "ba_deviation": 2.301962443978778e-14,
+      "zpk_error": 3.510833468576701e-16,
+      "ba_deviation": 3.520549421761555e-14,
       "scipy_ba_deviation": 2.2779127899212368e-14
     },
     {
@@ -75,7 +75,7 @@
     },
     {
       "family": "high_order_low_cutoff_warns",
-      "zpk_error": 3.6540378725057317e-16,
+      "zpk_error": 2.2215299868541707e-16,
       "ba_deviation": 1.0,
       "scipy_ba_deviation": 1.0
     },
@@ -105,8 +105,8 @@
     },
     {
       "family": "low_normalized",
-      "zpk_error": 4.537183478033381e-16,
-      "ba_deviation": 2.6523237352751493e-14,
+      "zpk_error": 3.0247889853555875e-16,
+      "ba_deviation": 2.6409441137145e-14,
       "scipy_ba_deviation": 2.479180466871996e-14
     },
     {

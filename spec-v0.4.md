@@ -13640,6 +13640,7 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 | # | 问题 | 处理 |
 |---|---|---|
 | 1 | 3.15 把 `t` 保留给 ODE 的时间，所以 fzero 不能用 t 作变量名 | 维持保留（语言要简单），golden 改用 w；以后如果用户反映不便，再考虑按算子放开 |
+| 3 | v0.4.12 的发布预演中，Windows 版在 8 个 `butter` golden 用例上的 `output_hash` 与其他平台不同：都是数字设计，都要用 tan 预畸变，而模拟设计都相同 | 滤波内核与表达式求值改为按名字直接调用编入的 `libm`（`aeoi_libm::libm::tan` 等）；复数平方根和整数次幂改为显式写出，不再依赖 `f64::tan`、num_complex 的极坐标开方和 `powi` 在各平台上解析到哪个符号（2.1 M-7a）。Linux、macOS 上的结果不变（原本就走同一个 libm）；Windows 上由发布流水线确认 |
 | 2 | 从 (−1.2, 1) 出发解 Rosenbrock 梯度方程会失败，scipy 的 hybr 和 lm 也一样 | 作为错误用例收入 golden（`E.NUMERICAL.NO_CONVERGENCE`，附最好的点）；另从 (0.5, 0.2) 出发的用例能收敛 |
 
 **结果**

@@ -9,6 +9,7 @@
 use aeoi_core::error::{ask_user, modify_input, OpError, Warning};
 use aeoi_core::kernels::filter::*;
 use aeoi_core::lti::C64;
+use aeoi_libm::libm;
 use aeoi_core::{num, ExecCtx, HostCtx, Operator, Output};
 use serde_json::{json, Value};
 
@@ -115,7 +116,7 @@ impl Operator for Butter {
     fn execute(&self, i: In, _ctx: &ExecCtx) -> Result<Output, OpError> {
         let proto = buttap(i.n);
         // digital: prewarp with fs = 2 (normalised frequency, 1 = Nyquist), like scipy
-        let warp = |w: f64| if i.analog { w } else { 4.0 * (std::f64::consts::PI * w / 2.0).tan() };
+        let warp = |w: f64| if i.analog { w } else { 4.0 * libm::tan(std::f64::consts::PI * w / 2.0) };
         let w: Vec<f64> = i.edges.iter().map(|e| warp(*e)).collect();
         let a = match i.kind {
             Kind::Low => lp2lp(&proto, w[0]),
@@ -128,17 +129,17 @@ impl Operator for Butter {
         let sos = if i.analog { None } else { Some(zpk2sos(&f)) };
         // response grid: digital on the unit circle, analog on jω around the band
         let pts: Vec<C64> = if i.analog {
-            let w0 = i.edges.iter().fold(1.0, |p, v| p * v).powf(1.0 / i.edges.len() as f64);
-            (0..64).map(|k| C64::new(0.0, w0 * 10f64.powf(-2.0 + 4.0 * k as f64 / 63.0))).collect()
+            let w0 = if i.edges.len() == 2 { (i.edges[0] * i.edges[1]).sqrt() } else { i.edges[0] };
+            (0..64).map(|k| C64::new(0.0, w0 * libm::pow(10.0, -2.0 + 4.0 * k as f64 / 63.0))).collect()
         } else {
-            (0..64).map(|k| { let t = std::f64::consts::PI * (k as f64 + 0.5) / 64.0; C64::new(t.cos(), t.sin()) }).collect()
+            (0..64).map(|k| { let t = std::f64::consts::PI * (k as f64 + 0.5) / 64.0; C64::new(libm::cos(t), libm::sin(t)) }).collect()
         };
         let hz: Vec<C64> = pts.iter().map(|x| zpk_eval(&f, *x)).collect();
         let hmax = hz.iter().map(|h| h.norm()).fold(0.0, f64::max).max(f64::MIN_POSITIVE);
         let ba_dev = pts.iter().zip(&hz).map(|(x, h)| ((if i.analog { ba_eval_s(&b, &aa, *x) } else { ba_eval_z(&b, &aa, *x) }) - h).norm()).fold(0.0, f64::max) / hmax;
         let sos_dev = sos.as_ref().map(|s| pts.iter().zip(&hz).map(|(x, h)| (sos_eval_z(s, *x) - h).norm()).fold(0.0, f64::max) / hmax);
         // |H|² = 1/2 at every edge (Butterworth: −3.0103 dB)
-        let edge_pts: Vec<C64> = i.edges.iter().map(|e| if i.analog { C64::new(0.0, *e) } else { let t = std::f64::consts::PI * e; C64::new(t.cos(), t.sin()) }).collect();
+        let edge_pts: Vec<C64> = i.edges.iter().map(|e| if i.analog { C64::new(0.0, *e) } else { let t = std::f64::consts::PI * e; C64::new(libm::cos(t), libm::sin(t)) }).collect();
         let edge_gain: Vec<f64> = edge_pts.iter().map(|x| zpk_eval(&f, *x).norm_sqr()).collect();
         let edge_err = edge_gain.iter().map(|g| (g - 0.5).abs()).fold(0.0, f64::max);
         let stable = f.p.iter().all(|p| if i.analog { p.re < 0.0 } else { p.norm() < 1.0 });

@@ -14,6 +14,7 @@
 //! name    = ( letter | "_" ) { letter | digit | "_" }    ASCII only
 //! ```
 use aeoi_core::error::OpError;
+use aeoi_libm::libm;
 use serde_json::{json, Value};
 
 pub const MAX_LEN: usize = 10_000;
@@ -280,23 +281,23 @@ pub fn eval(n: &Node, vars: &[f64]) -> f64 {
         Node::Sub(a, b) => eval(a, vars) - eval(b, vars),
         Node::Mul(a, b) => eval(a, vars) * eval(b, vars),
         Node::Div(a, b) => eval(a, vars) / eval(b, vars),
-        Node::Pow(a, b) => eval(a, vars).powf(eval(b, vars)),
+        Node::Pow(a, b) => libm::pow(eval(a, vars), eval(b, vars)),
         Node::Call(f, args) => {
             let x = eval(&args[0], vars);
             match *f {
-                "sin" => x.sin(),
-                "cos" => x.cos(),
-                "tan" => x.tan(),
-                "asin" => x.asin(),
-                "acos" => x.acos(),
-                "atan" => x.atan(),
-                "atan2" => x.atan2(eval(&args[1], vars)),
-                "sinh" => x.sinh(),
-                "cosh" => x.cosh(),
-                "tanh" => x.tanh(),
-                "exp" => x.exp(),
-                "log" => x.ln(),
-                "log10" => x.log10(),
+                "sin" => libm::sin(x),
+                "cos" => libm::cos(x),
+                "tan" => libm::tan(x),
+                "asin" => libm::asin(x),
+                "acos" => libm::acos(x),
+                "atan" => libm::atan(x),
+                "atan2" => libm::atan2(x, eval(&args[1], vars)),
+                "sinh" => libm::sinh(x),
+                "cosh" => libm::cosh(x),
+                "tanh" => libm::tanh(x),
+                "exp" => libm::exp(x),
+                "log" => libm::log(x),
+                "log10" => libm::log10(x),
                 "sqrt" => x.sqrt(),
                 "abs" => x.abs(),
                 "min" => {
@@ -307,7 +308,7 @@ pub fn eval(n: &Node, vars: &[f64]) -> f64 {
                     let y = eval(&args[1], vars);
                     if x.is_nan() || y.is_nan() { f64::NAN } else { x.max(y) }
                 }
-                "hypot" => x.hypot(eval(&args[1], vars)),
+                "hypot" => libm::hypot(x, eval(&args[1], vars)),
                 "sign" => {
                     if x > 0.0 { 1.0 } else if x < 0.0 { -1.0 } else if x == 0.0 { 0.0 } else { f64::NAN }
                 }
@@ -438,12 +439,12 @@ pub fn eval_grad(n: &Node, vars: &[f64], seed: &[Option<usize>], nd: usize) -> (
         Node::Pow(a, b) => {
             let (va, ga) = eval_grad(a, vars, seed, nd);
             let (vb, gb) = eval_grad(b, vars, seed, nd);
-            let v = va.powf(vb);
+            let v = libm::pow(va, vb);
             if gb.iter().all(|x| *x == 0.0) {
-                let d = if vb == 0.0 { 0.0 } else { vb * va.powf(vb - 1.0) };
+                let d = if vb == 0.0 { 0.0 } else { vb * libm::pow(va, vb - 1.0) };
                 (v, lin(&ga, d))
             } else {
-                let la = va.ln();
+                let la = libm::log(va);
                 (v, ga.iter().zip(&gb).map(|(x, y)| v * (y * la + vb * x / va)).collect())
             }
         }
@@ -451,23 +452,23 @@ pub fn eval_grad(n: &Node, vars: &[f64], seed: &[Option<usize>], nd: usize) -> (
             let (x, gx) = eval_grad(&args[0], vars, seed, nd);
             let two = |args: &Vec<Node>| eval_grad(&args[1], vars, seed, nd);
             match *f {
-                "sin" => (x.sin(), lin(&gx, x.cos())),
-                "cos" => (x.cos(), lin(&gx, -x.sin())),
-                "tan" => { let t = x.tan(); (t, lin(&gx, 1.0 + t * t)) }
-                "asin" => (x.asin(), lin(&gx, 1.0 / (1.0 - x * x).sqrt())),
-                "acos" => (x.acos(), lin(&gx, -1.0 / (1.0 - x * x).sqrt())),
-                "atan" => (x.atan(), lin(&gx, 1.0 / (1.0 + x * x))),
+                "sin" => (libm::sin(x), lin(&gx, libm::cos(x))),
+                "cos" => (libm::cos(x), lin(&gx, -libm::sin(x))),
+                "tan" => { let t = libm::tan(x); (t, lin(&gx, 1.0 + t * t)) }
+                "asin" => (libm::asin(x), lin(&gx, 1.0 / (1.0 - x * x).sqrt())),
+                "acos" => (libm::acos(x), lin(&gx, -1.0 / (1.0 - x * x).sqrt())),
+                "atan" => (libm::atan(x), lin(&gx, 1.0 / (1.0 + x * x))),
                 "atan2" => {
                     let (y, gy) = two(args);
                     let r2 = x * x + y * y;
-                    (x.atan2(y), gx.iter().zip(&gy).map(|(dx, dy)| (y * dx - x * dy) / r2).collect())
+                    (libm::atan2(x, y), gx.iter().zip(&gy).map(|(dx, dy)| (y * dx - x * dy) / r2).collect())
                 }
-                "sinh" => (x.sinh(), lin(&gx, x.cosh())),
-                "cosh" => (x.cosh(), lin(&gx, x.sinh())),
-                "tanh" => { let t = x.tanh(); (t, lin(&gx, 1.0 - t * t)) }
-                "exp" => { let e = x.exp(); (e, lin(&gx, e)) }
-                "log" => (x.ln(), lin(&gx, 1.0 / x)),
-                "log10" => (x.log10(), lin(&gx, 1.0 / (x * std::f64::consts::LN_10))),
+                "sinh" => (libm::sinh(x), lin(&gx, libm::cosh(x))),
+                "cosh" => (libm::cosh(x), lin(&gx, libm::sinh(x))),
+                "tanh" => { let t = libm::tanh(x); (t, lin(&gx, 1.0 - t * t)) }
+                "exp" => { let e = libm::exp(x); (e, lin(&gx, e)) }
+                "log" => (libm::log(x), lin(&gx, 1.0 / x)),
+                "log10" => (libm::log10(x), lin(&gx, 1.0 / (x * std::f64::consts::LN_10))),
                 "sqrt" => { let r = x.sqrt(); (r, lin(&gx, 0.5 / r)) }
                 "abs" => (x.abs(), lin(&gx, if x > 0.0 { 1.0 } else if x < 0.0 { -1.0 } else { 0.0 })),
                 "min" | "max" => {
@@ -480,7 +481,7 @@ pub fn eval_grad(n: &Node, vars: &[f64], seed: &[Option<usize>], nd: usize) -> (
                 }
                 "hypot" => {
                     let (y, gy) = two(args);
-                    let h = x.hypot(y);
+                    let h = libm::hypot(x, y);
                     (h, gx.iter().zip(&gy).map(|(dx, dy)| if h == 0.0 { 0.0 } else { (x * dx + y * dy) / h }).collect())
                 }
                 "sign" => (if x > 0.0 { 1.0 } else if x < 0.0 { -1.0 } else if x == 0.0 { 0.0 } else { f64::NAN }, zero()),

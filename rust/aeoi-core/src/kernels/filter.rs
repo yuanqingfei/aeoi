@@ -5,6 +5,33 @@
 //! and root finding use crate::poly (the same code as control.lti.convert / poles_zeros).
 use crate::lti::C64;
 use crate::poly::poly_real;
+use aeoi_libm::libm;
+
+// Every transcendental call below goes to the bundled `libm` by name, and powers / complex square roots are
+// written out: the Windows build differed in 8 butter golden cases when these went through f64::tan,
+// num_complex's polar sqrt and powi (release compare, v0.4.12), so nothing here relies on how the platform
+// resolves math symbols (spec 2.1 M-7a).
+
+/// x^k for integer k ≥ 0 by repeated multiplication (same order everywhere).
+pub fn powu(x: f64, k: usize) -> f64 {
+    (0..k).fold(1.0, |a, _| a * x)
+}
+
+/// Principal complex square root (Kahan's formulation, hypot from libm).
+pub fn csqrt(z: C64) -> C64 {
+    let (a, b) = (z.re, z.im);
+    if a == 0.0 && b == 0.0 {
+        return C64::new(0.0, b);
+    }
+    let r = libm::hypot(a, b);
+    if a >= 0.0 {
+        let t = ((r + a) / 2.0).sqrt();
+        C64::new(t, b / (2.0 * t))
+    } else {
+        let t = ((r - a) / 2.0).sqrt();
+        C64::new(b.abs() / (2.0 * t), t.copysign(b))
+    }
+}
 
 pub struct Zpk {
     pub z: Vec<C64>,
@@ -25,15 +52,15 @@ pub fn buttap(n: usize) -> Zpk {
         .map(|j| {
             let m = -(n as f64) + 1.0 + 2.0 * j as f64;
             let th = std::f64::consts::PI * m / (2.0 * n as f64);
-            -C64::new(th.cos(), th.sin())
+            -C64::new(libm::cos(th), libm::sin(th))
         })
         .collect();
     Zpk { z: vec![], p, k: 1.0 }
 }
 
 pub fn lp2lp(f: &Zpk, wo: f64) -> Zpk {
-    let deg = (f.p.len() - f.z.len()) as i32;
-    Zpk { z: f.z.iter().map(|z| z * wo).collect(), p: f.p.iter().map(|p| p * wo).collect(), k: f.k * wo.powi(deg) }
+    let deg = f.p.len() - f.z.len();
+    Zpk { z: f.z.iter().map(|z| z * wo).collect(), p: f.p.iter().map(|p| p * wo).collect(), k: f.k * powu(wo, deg as usize) }
 }
 
 pub fn lp2hp(f: &Zpk, wo: f64) -> Zpk {
@@ -48,8 +75,8 @@ pub fn lp2hp(f: &Zpk, wo: f64) -> Zpk {
 
 fn bp_roots(v: &[C64], bw: f64, wo: f64) -> Vec<C64> {
     let l: Vec<C64> = v.iter().map(|x| x * (bw / 2.0)).collect();
-    let mut out: Vec<C64> = l.iter().map(|x| x + (x * x - wo * wo).sqrt()).collect();
-    out.extend(l.iter().map(|x| x - (x * x - wo * wo).sqrt()));
+    let mut out: Vec<C64> = l.iter().map(|x| x + csqrt(x * x - wo * wo)).collect();
+    out.extend(l.iter().map(|x| x - csqrt(x * x - wo * wo)));
     out
 }
 
@@ -57,15 +84,15 @@ pub fn lp2bp(f: &Zpk, wo: f64, bw: f64) -> Zpk {
     let deg = f.p.len() - f.z.len();
     let mut z = bp_roots(&f.z, bw, wo);
     z.extend(std::iter::repeat(c(0.0)).take(deg));
-    Zpk { z, p: bp_roots(&f.p, bw, wo), k: f.k * bw.powi(deg as i32) }
+    Zpk { z, p: bp_roots(&f.p, bw, wo), k: f.k * powu(bw, deg) }
 }
 
 pub fn lp2bs(f: &Zpk, wo: f64, bw: f64) -> Zpk {
     let deg = f.p.len() - f.z.len();
     let inv = |v: &[C64]| -> Vec<C64> { v.iter().map(|x| c(bw / 2.0) / x).collect() };
     let split = |h: Vec<C64>| -> Vec<C64> {
-        let mut out: Vec<C64> = h.iter().map(|x| x + (x * x - wo * wo).sqrt()).collect();
-        out.extend(h.iter().map(|x| x - (x * x - wo * wo).sqrt()));
+        let mut out: Vec<C64> = h.iter().map(|x| x + csqrt(x * x - wo * wo)).collect();
+        out.extend(h.iter().map(|x| x - csqrt(x * x - wo * wo)));
         out
     };
     let mut z = split(inv(&f.z));

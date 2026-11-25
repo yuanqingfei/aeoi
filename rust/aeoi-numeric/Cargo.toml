@@ -7,6 +7,7 @@ description = "AEOI operators outside control: signal processing, ODEs, and the 
 
 [dependencies]
 aeoi-core = { path = "../aeoi-core" }
+aeoi-libm = { path = "../aeoi-libm" }
 nalgebra.workspace = true
 serde_json.workspace = true
 rustfft = { version = "6.4", default-features = false }
