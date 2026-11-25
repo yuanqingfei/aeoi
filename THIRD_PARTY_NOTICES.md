@@ -9,6 +9,7 @@ into the binaries we build. Regenerate the crate table with `python3 tools/gen_t
 | Asset | Where | License | Notice |
 |---|---|---|---|
 | matrixmultiply 0.3.11, patched copy (© bluss and contributors) | `rust/vendor/matrixmultiply` (linked into every binary through `[patch.crates-io]`; only change: the portable kernel is always used, see `AEOI-PATCH.md`) | MIT OR Apache-2.0 | `rust/vendor/matrixmultiply/LICENSE-MIT`, `LICENSE-APACHE` |
+| rustfft 6.4.1, patched copy (© Allen Welkie, Elliott Mahler and contributors) | `rust/vendor/rustfft` (linked into every binary through `[patch.crates-io]`; only change: twiddle factors via `libm::cos/sin`, see `AEOI-PATCH.md`) | MIT OR Apache-2.0 | `rust/vendor/rustfft/LICENSE-MIT`, `LICENSE-APACHE` |
 | Plotly.js basic 2.35.2 (© 2021 Plotly, Inc) | `rust/aeoi-web/static/vendor/plotly-basic-2.35.2.min.js`, copied to the Pages site `vendor/` | MIT | `rust/aeoi-web/static/vendor/plotly-LICENSE.txt` (shipped next to the file on the site) |
 
 ## Reference data and dev-only tools (not linked into any aeoi binary)
@@ -38,19 +39,19 @@ Ideas borrowed, no code copied: result receipts and verify-by-replay (spec 4.3) 
 | Apache-2.0 | 4 |
 | Zlib OR Apache-2.0 OR MIT | 4 |
 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | 3 |
-| ISC | 2 |
 | MIT OR Apache-2.0 OR LGPL-2.1-or-later | 2 |
-| BSD-2-Clause OR Apache-2.0 OR MIT | 2 |
 | Unlicense OR MIT | 2 |
 | Apache-2.0 OR ISC OR MIT | 2 |
-| Apache-2.0 AND ISC | 1 |
-| (MIT OR Apache-2.0) AND Unicode-3.0 | 1 |
-| Zlib | 1 |
-| MIT OR Apache-2.0 OR Zlib | 1 |
-| MIT AND BSD-3-Clause | 1 |
+| ISC | 2 |
+| BSD-2-Clause OR Apache-2.0 OR MIT | 2 |
 | BSD-3-Clause | 1 |
-| CDLA-Permissive-2.0 | 1 |
+| MIT AND BSD-3-Clause | 1 |
+| MIT OR Apache-2.0 OR Zlib | 1 |
 | Apache-2.0/MIT | 1 |
+| (MIT OR Apache-2.0) AND Unicode-3.0 | 1 |
+| CDLA-Permissive-2.0 | 1 |
+| Apache-2.0 AND ISC | 1 |
+| Zlib | 1 |
 | Apache-2.0 OR BSL-1.0 | 1 |
 
 | Crate | Version | License | In browser build |

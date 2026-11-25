@@ -34,3 +34,5 @@ panic = "abort"
 # AVX/FMA/NEON kernel at run time. The patched copy always uses the portable kernel (vendor/matrixmultiply/AEOI-PATCH.md).
 [patch.crates-io]
 matrixmultiply = { path = "vendor/matrixmultiply" }
+# rustfft twiddles via libm, not f64::cos (folded at compile time with the build host's C library): vendor/rustfft/AEOI-PATCH.md
+rustfft = { path = "vendor/rustfft" }
