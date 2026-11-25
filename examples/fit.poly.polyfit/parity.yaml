@@ -1,0 +1,26 @@
+# Parity test spec — fit.poly.polyfit 0.4.0 (AEOI v0.4.11-draft)
+operator: fit.poly.polyfit
+references:
+  - {engine: numpy, version: "numpy.polyfit (LAPACK dgelsd on the column-scaled Vandermonde matrix)", role: dev_reference, status: active,
+     generator: gen_golden_polyfit.py, golden_store: "golden/python-control/fit.poly.polyfit/0.4.0/*.json",
+     note: "NOT MATLAB output. MATLAB polyfit: Householder QR of the unscaled Vandermonde matrix, no refinement"}
+  - {engine: mpmath, role: high_precision_reference, status: active,
+     note: "exact least-squares answer for the stored f64 data: 60-digit normal equations; mean/std exact for center_scale"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_polyfit"
+tolerance_class: T1
+compare:
+  p: {against: exact answer, bound: "‖D(p − p*)‖₂ / ‖D p*‖₂ ≤ 1e-12 · max(1, κ/100); D = column 2-norms of the Vandermonde matrix, κ = cond₂(V·D⁻¹) from the reference"}
+  mu: "|Δ| ≤ 4e-16 · max(|mean|, std)"
+  residual_norm: "|Δ| ≤ 1e-12 · max(1, κ) · ‖y‖₂"
+  std_errors: "relative ≤ 1e-8 · max(1, κ/1e4); not compared when the fit is (nearly) exact; null iff dof = 0"
+  warnings: "W.NUMERICAL.ILL_CONDITIONED exactly where expect_warning says"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py (rule_polyfit)
+  p: "shape exact; scaled forward error against the exact answer as above"
+  echoed: "degree, scaling, dof"
+  recomputed: "the runner recomputes Vᵀ(y − V·p) for the returned p from the request in exact rational arithmetic (the normal-equation residual; zero for the exact least-squares solution) and requires ‖D⁻¹Vᵀr‖₂ ≤ 10·n·u·‖V·D⁻¹‖_F·(‖r‖₂ + ‖V·D⁻¹‖_F‖D p‖₂)"
+case_families:
+  - {name: "line_exact / quadratic_exact / constant_mean / interpolating_dof0 / repeated_points", n: 5}
+  - {name: "noisy_cubic / degree8_unit_interval / runge_degree10 / random_degree5 / negative_large_x", n: 5}
+  - {name: "years_degree3 / years_degree4_warns / years_degree4_center_scale / years_degree8_center_scale", n: 4, note: "x = 1990…2020: κ(V·D⁻¹) 1.3e8 / 7e10 (warns) / 11 / 320"}
+  - {name: errors, n: 10, expect: "E.DOMAIN.UNDERDETERMINED ×2, E.NUMERICAL.SINGULAR (years, degree 8, with a center_scale patch), E.VALIDATION.SHAPE ×2, NON_FINITE, SCHEMA ×2, RANGE, OPTION_CONFLICT"}

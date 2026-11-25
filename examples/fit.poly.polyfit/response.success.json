@@ -1,0 +1,168 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "fit.poly.polyfit",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "p": {
+      "dtype": "f64",
+      "shape": [
+        3
+      ],
+      "data": [
+        1.0085714285714285,
+        -2.0385714285714287,
+        1.0457142857142856
+      ]
+    },
+    "degree": 2,
+    "scaling": "none",
+    "mu": null,
+    "residual_norm": 0.07091242083423346,
+    "dof": 4,
+    "std_errors": [
+      0.01547435886597328,
+      0.04831867007225081,
+      0.030948717731946546
+    ]
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "backward_error": 7.341231337526174e-17,
+      "threshold": 7.771561172376096e-15,
+      "definition": "‖Vsᵀ(y − V·p)‖₂ / (‖Vs‖_F·(‖r‖₂ + ‖Vs‖_F‖D·p‖₂))，Vs = V·D⁻¹，D = diag(‖V 的列‖₂)（最小二乘最优性，与 x 的单位无关；残差用补偿算术 Dot2）"
+    },
+    "condition": {
+      "kappa1_estimate": 18.027658573967805,
+      "rcond": 0.055470320557546735,
+      "of": "R·D⁻¹（V = QR，V 为所用基的 Vandermonde 矩阵，D 为其列 2-范数；与 x 的单位无关）",
+      "estimator": "Hager–Higham 1-范数估计，下界"
+    },
+    "error_estimate": {
+      "Dp_rel_forward_2": 2.7090779567964676e-15,
+      "basis": "‖D·(p̂ − p)‖₂/‖D·p‖₂ 的一阶界 η·(2κ + κ²·‖r‖/(‖Vs‖‖D·p‖))（Golub–Van Loan 5.3.8）；D·p 的分量 = 各项在数据上的贡献大小"
+    },
+    "checks": {
+      "backward_stable": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "refinement_steps": 2,
+      "std_errors_model": "y = V·p + ε，ε 独立同分布、等方差；σ̂ = ‖r‖₂/sqrt(dof)",
+      "basis": "t = x"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:polyfit:vandermonde-householder-qr",
+      "routine": "polyfit::fit",
+      "provenance": "aeoi://operators/fit.poly.polyfit/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "enough_points",
+        "statement": "x 至少有 degree + 1 个不同的值",
+        "enforced_by": "error:E.DOMAIN.UNDERDETERMINED"
+      },
+      {
+        "id": "numerical_rank",
+        "statement": "单项式基在 f64 下列满秩",
+        "enforced_by": "error:E.NUMERICAL.SINGULAR"
+      },
+      {
+        "id": "conditioning",
+        "statement": "κ₁(R·D⁻¹) ≤ 1e10，否则数据的微小扰动会被大幅放大到系数上",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      },
+      {
+        "id": "model",
+        "statement": "数据确实可以用该次数的多项式描述；次数由用户选择",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "noise_model",
+        "statement": "std_errors 假设误差独立、等方差",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "Dp_rel_forward_2": 2.7090779567964676e-15
+      },
+      "basis": "‖D·(p̂ − p)‖₂/‖D·p‖₂ 的一阶界 η·(2κ + κ²·‖r‖/(‖Vs‖‖D·p‖))（Golub–Van Loan 5.3.8）；D·p 的分量 = 各项在数据上的贡献大小"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "backward_stable": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "backward_stable": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:3d141abf48ffcb557768493117729cd5af2f6ffa737e0244c95d302923376171",
+      "result": "sha256:4bbba2d05fd7074ef802e3cbfea75ea7a69dff12ab76f9696a41a5806ffb40c2",
+      "output_hash": "sha256:ee15d653c3aab246390200aefa21f39c32d2140be614d0381d67e0a4685a7328",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of fit.poly.polyfit@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:7bf84ef3991e8ac3fae37d5a902a30b4f539954f5cde1a32aa626efdb3a34d96",
+    "output_hash": "sha256:ee15d653c3aab246390200aefa21f39c32d2140be614d0381d67e0a4685a7328",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.18206599999999998
+  }
+}

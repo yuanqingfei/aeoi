@@ -146,3 +146,79 @@ fn interp1_example() {
     assert_eq!(rem.len(), 3);
     assert!(rem.iter().all(|r| r["requires_user_confirmation"] == true));
 }
+
+/// v0.4.11: polyfit — request.json (quadratic, std errors), request.ill.json (years, degree 4: warns with a
+/// center_scale suggestion), request.error.json (two distinct x for degree 2 → UNDERDETERMINED).
+#[test]
+fn polyfit_example() {
+    let op = "fit.poly.polyfit";
+    let dir = format!("examples/{op}");
+    let rf = read(&format!("{dir}/reference.python-control.json"));
+    for (rq, rs) in [("request.json", "response.success.json"), ("request.ill.json", "response.ill.json")] {
+        let env = call(op, &read(&format!("{dir}/{rq}")));
+        assert!(env["status"] == "ok" || env["status"] == "ok_with_warnings", "{rq}: {}", env["error"]);
+        assert_hash_on_same_platform(&env, &read(&format!("{dir}/{rs}")), &format!("{op} {rq}: bitwise example"));
+        let got: Vec<f64> = env["result"]["p"]["data"].as_array().unwrap().iter().map(|v| v.as_f64().unwrap()).collect();
+        let want: Vec<f64> = rf[rq]["p_true"].as_array().unwrap().iter().map(|v| v.as_f64().unwrap()).collect();
+        let tol = if rq == "request.ill.json" { 1e-9 } else { 1e-14 };
+        for (g, w) in got.iter().zip(&want) {
+            assert!((g - w).abs() <= tol * w.abs().max(1e-300), "{rq}: {g} vs {w}");
+        }
+        if rq == "request.ill.json" {
+            let w = env["warnings"].as_array().unwrap().iter().find(|w| w["code"] == "W.NUMERICAL.ILL_CONDITIONED").unwrap();
+            assert_eq!(w["details"]["suggested_remediation"]["requires_user_confirmation"], true);
+            assert_eq!(w["details"]["suggested_remediation"]["patch"][0]["value"], "center_scale");
+        }
+    }
+    let e = call(op, &read(&format!("{dir}/request.error.json")));
+    assert_eq!(e["error"]["code"], "E.DOMAIN.UNDERDETERMINED");
+    assert_eq!(e["error"]["remediation"][0]["requires_user_confirmation"], true);
+}
+
+/// v0.4.11: eig — symmetric tridiagonal (request.json), companion matrix with a conjugate pair
+/// (request.general.json), Jordan block (request.defective.json: warns, the three vectors coincide).
+#[test]
+fn eig_example() {
+    let op = "linalg.decomp.eig";
+    let dir = format!("examples/{op}");
+    let rf = read(&format!("{dir}/reference.python-control.json"));
+    for (rq, rs) in [("request.json", "response.success.json"), ("request.general.json", "response.general.json"), ("request.defective.json", "response.defective.json")] {
+        let env = call(op, &read(&format!("{dir}/{rq}")));
+        assert!(env["status"] == "ok" || env["status"] == "ok_with_warnings", "{rq}: {}", env["error"]);
+        assert_hash_on_same_platform(&env, &read(&format!("{dir}/{rs}")), &format!("{op} {rq}: bitwise example"));
+        let got = &env["result"]["values"]["data"];
+        let want = &rf[rq]["values_true"];
+        for k in 0..want.as_array().unwrap().len() {
+            let (gr, gi) = match &got[k] {
+                Value::Array(p) => (p[0].as_f64().unwrap(), p[1].as_f64().unwrap()),
+                v => (v.as_f64().unwrap(), 0.0),
+            };
+            let (wr, wi) = (want[k][0].as_f64().unwrap(), want[k][1].as_f64().unwrap());
+            assert!((gr - wr).hypot(gi - wi) <= 1e-13, "{rq}: λ_{k}");
+        }
+        assert_eq!(env["warnings"].as_array().unwrap().iter().any(|w| w["code"] == "W.NUMERICAL.ILL_CONDITIONED"), rq == "request.defective.json", "{rq}");
+    }
+    let e = call(op, &read(&format!("{dir}/request.error.json")));
+    assert_eq!(e["error"]["code"], "E.VALIDATION.SHAPE");
+}
+
+/// v0.4.11: svd — thin (request.json) and full with a rank-deficient matrix (request.full.json: rank 2).
+#[test]
+fn svd_example() {
+    let op = "linalg.decomp.svd";
+    let dir = format!("examples/{op}");
+    let rf = read(&format!("{dir}/reference.python-control.json"));
+    for (rq, rs) in [("request.json", "response.success.json"), ("request.full.json", "response.full.json")] {
+        let env = call(op, &read(&format!("{dir}/{rq}")));
+        assert_eq!(env["status"], "ok", "{rq}: {}", env["error"]);
+        assert_hash_on_same_platform(&env, &read(&format!("{dir}/{rs}")), &format!("{op} {rq}: bitwise example"));
+        let got: Vec<f64> = env["result"]["s"]["data"].as_array().unwrap().iter().map(|v| v.as_f64().unwrap()).collect();
+        let want: Vec<f64> = rf[rq]["s_true"].as_array().unwrap().iter().map(|v| v.as_f64().unwrap()).collect();
+        for (g, w) in got.iter().zip(&want) {
+            assert!((g - w).abs() <= 1e-14 * want[0], "{rq}: {g} vs {w}");
+        }
+    }
+    assert_eq!(call(op, &read(&format!("{dir}/request.full.json")))["result"]["rank"], 2);
+    let e = call(op, &read(&format!("{dir}/request.error.json")));
+    assert_eq!(e["error"]["code"], "E.VALIDATION.SHAPE");
+}

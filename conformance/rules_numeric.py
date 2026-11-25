@@ -1,5 +1,6 @@
 """Numeric comparison rules (spec 9.4 CF-6) for operators outside control: signal.spectral.fft (v0.4.7),
-ode.ivp.solve (v0.4.8), linalg.system.solve and interp.grid.interp1 (v0.4.10).
+ode.ivp.solve (v0.4.8), linalg.system.solve and interp.grid.interp1 (v0.4.10), fit.poly.polyfit,
+linalg.decomp.eig and linalg.decomp.svd (v0.4.11).
 
 Same ground rules as rules_control.py: tolerances from the suite (parity.yaml), every scale computed here from
 the reference request or values, nothing the implementation reports is used.
@@ -177,4 +178,111 @@ def rule_interp1(case, env, manifest, req=None, expected=None):
             check("node hits exact, values within the interval's end values (not spline), clamp outside — recomputed from the request", float(viol), 0.0)]
 
 
-RULES = {"signal.spectral.fft": rule_fft, "ode.ivp.solve": rule_ode, "linalg.system.solve": rule_linsolve, "interp.grid.interp1": rule_interp1}
+# ---------------------------------------------------------------- fit.poly.polyfit (parity.yaml: T1)
+def rule_polyfit(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = expected or case["expected"]; r = env["result"]
+    d = int(req["degree"]); c = d + 1
+    gp = arr(r["p"]).ravel()
+    if gp.shape != (c,):
+        return [fail("p: shape [degree + 1]", f"got {gp.shape}")]
+    truth = np.array(e["p_true"], dtype=float); cn = np.array(e["col_norms"], dtype=float)
+    kappa = float(e["kappa_scaled_2"])
+    fe = float(np.linalg.norm(cn * (gp - truth)) / max(np.linalg.norm(cn * truth), np.finfo(float).tiny))
+    scaling = req.get("scaling", "none")
+    out = [check("p vs exact answer: ‖D(p − p*)‖₂/‖D p*‖₂ ≤ 1e-12·max(1, κ/100)  [T1, V-6]", fe, 1e-12 * max(1.0, kappa / 100.0)),
+           ("degree, scaling and dof echo the request  [O-1]", r.get("degree") == d and r.get("scaling") == scaling and r.get("dof") == e["dof"], None, None, f"got {r.get('degree')}, {r.get('scaling')}, {r.get('dof')}")]
+    x = arr(req["x"]).ravel(); y = arr(req["y"]).ravel()
+    if scaling == "center_scale":
+        mu = r.get("mu") or [float("nan"), float("nan")]
+        mt = e["mu_true"]
+        dmu = max(abs(float(mu[0]) - mt[0]), abs(float(mu[1]) - mt[1])) / max(abs(mt[0]), mt[1])
+        out.append(check("mu vs exact mean and sample std  [10.21 PF-3]", dmu, 4e-16))
+        t = (x - float(mu[0])) / float(mu[1])
+    else:
+        out.append(("mu is null without scaling", r.get("mu") is None, None, None, f"got {r.get('mu')}"))
+        t = x
+    if ((env.get("trust") or {}).get("checks") or {}).get("backward_stable") is True and np.all(np.isfinite(gp)):
+        # exact rational residual of the normal equations for the returned p, in the basis t the spec defines
+        tf = [Fraction(float(v)) for v in t]; yf = [Fraction(float(v)) for v in y]; pf = [Fraction(float(v)) for v in gp]
+        V = [[ti ** (d - j) for j in range(c)] for ti in tf]
+        res = [yf[i] - sum(V[i][j] * pf[j] for j in range(c)) for i in range(len(tf))]
+        vtr = [sum(V[i][j] * res[i] for i in range(len(tf))) for j in range(c)]
+        D = [math.sqrt(float(sum(V[i][j] ** 2 for i in range(len(tf))))) for j in range(c)]
+        num_ = math.sqrt(sum((float(vtr[j]) / D[j]) ** 2 for j in range(c)))
+        rn = math.sqrt(float(sum(v * v for v in res))); dp = math.sqrt(sum((float(pf[j]) * D[j]) ** 2 for j in range(c)))
+        den = math.sqrt(c) * (rn + math.sqrt(c) * dp)
+        eta = num_ / den if den else 0.0
+        out.append(check("backward_stable = true ⇒ ‖D⁻¹Vᵀr‖₂ ≤ 10·n·u·‖V·D⁻¹‖_F·(‖r‖₂ + ‖V·D⁻¹‖_F‖D p‖₂), recomputed exactly by the runner  [E-5]", eta, 10 * len(x) * U))
+    return out
+
+
+# ---------------------------------------------------------------- linalg.decomp.eig (parity.yaml: T2)
+def _eig_key(z):
+    return (z.real, abs(z.imag), z.imag < 0)
+
+
+def rule_eig(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = expected or case["expected"]; r = env["result"]
+    A = arr(req["A"]); n = A.shape[0]
+    lam = arr(r["values"]).astype(complex).ravel()
+    if lam.shape != (n,):
+        return [fail("values: n eigenvalues", f"got {lam.shape}")]
+    truth = np.array([complex(a, b) for a, b in e["values_true"]])
+    cond = [float("inf") if v == "Infinity" else float(v) for v in e["eigenvalue_condition_true"]]
+    anorm = max(float(e["norm_fro"]), np.finfo(float).tiny)
+    ordered = all(_eig_key(lam[k - 1]) <= _eig_key(lam[k]) for k in range(1, n))
+    used = set(); worst = 0.0
+    for k in range(n):
+        j = min((j for j in range(n) if j not in used), key=lambda j: abs(lam[k] - truth[j])); used.add(j)
+        tol = 1e-4 * anorm if not cond[j] <= 1e8 else 1e-12 * anorm * max(1.0, cond[j])
+        worst = max(worst, abs(lam[k] - truth[j]) / tol)
+    out = [("structure echoes the reference  [10.22 EG-1]", r.get("structure") == e["structure"], None, None, f"got {r.get('structure')}"),
+           ("ordering: ascending (symmetric) / (Re, |Im|) with conjugate pairs Im > 0 first  [10.22 EG-3]", ordered, None, None, str(lam)),
+           check("values vs exact eigenvalues: |Δλ_k| ≤ 1e-12·‖A‖_F·max(1, cond_k)  [T2]", worst, 1.0)]
+    if r.get("vectors") is not None:
+        Vm = arr(r["vectors"]).astype(complex).reshape(n, n)
+        res = 0.0; norm_ok = True
+        for k in range(n):
+            v = Vm[:, k]
+            av = [complex(math.fsum((A[i, c] * v[c]).real for c in range(n)) - (lam[k] * v[i]).real,
+                          math.fsum((A[i, c] * v[c]).imag for c in range(n)) - (lam[k] * v[i]).imag) for i in range(n)]
+            res = max(res, math.sqrt(sum(abs(z) ** 2 for z in av)) / anorm)
+            big = int(np.argmax(np.abs(v)))
+            norm_ok &= abs(np.linalg.norm(v) - 1) < 1e-14 and v[big].imag == 0 and v[big].real > 0
+        out.append(check("‖A·v_k − λ_k·v_k‖₂/‖A‖_F ≤ 100·n·u for every pair, recomputed by the runner  [10.22 EG-5]", res, 100 * n * U))
+        out.append(("vectors: ‖v‖₂ = 1, largest-modulus entry real positive  [10.22 EG-4]", bool(norm_ok), None, None, ""))
+        if e["structure"] == "symmetric":
+            G = Vm.conj().T @ Vm - np.eye(n)
+            out.append(check("symmetric: ‖VᵀV − I‖_max ≤ 100·n·u, recomputed  [10.22 EG-5]", float(np.max(np.abs(G))), 100 * n * U))
+    return out
+
+
+# ---------------------------------------------------------------- linalg.decomp.svd (parity.yaml: T1)
+def rule_svd(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = expected or case["expected"]; r = env["result"]
+    A = arr(req["A"]); m, n = A.shape; p = min(m, n)
+    s = arr(r["s"]).ravel(); st = np.array(e["s_true"], dtype=float)
+    if s.shape != (p,):
+        return [fail("s: min(m, n) singular values", f"got {s.shape}")]
+    smax = float(st[0])
+    mode = req.get("mode", "thin")
+    out = [("s descending", bool(np.all(np.diff(s) <= 0)), None, None, str(s)),
+           check("s vs exact singular values: |Δs_k| ≤ 1e-12·s_max  [T1]", float(np.max(np.abs(s - st))), 1e-12 * smax),
+           ("mode and rank echo / match the reference (MATLAB tolerance)  [10.23 SV-4]", r.get("mode") == mode and r.get("rank") == e["rank"], None, None, f"got {r.get('mode')}, rank {r.get('rank')}, want {e['rank']}")]
+    if mode != "values":
+        Uf = arr(r["U"]); Vf = arr(r["V"])
+        uc, vc = (m, n) if mode == "full" else (p, p)
+        if Uf.shape != (m, uc) or Vf.shape != (n, vc):
+            return out + [fail("U, V shapes by mode", f"got {Uf.shape}, {Vf.shape}")]
+        R = A - Uf[:, :p] @ np.diag(s) @ Vf[:, :p].T
+        rec = float(np.linalg.norm(R) / max(np.linalg.norm(A), np.finfo(float).tiny))
+        thr = 100 * max(m, n) * U
+        out.append(check("‖A − U·diag(s)·Vᵀ‖_F/‖A‖_F ≤ 100·max(m, n)·u, recomputed by the runner  [10.23 SV-5]", rec, thr))
+        out.append(check("‖UᵀU − I‖_max, ‖VᵀV − I‖_max ≤ 100·max(m, n)·u, recomputed  [10.23 SV-5]", float(max(np.max(np.abs(Uf.T @ Uf - np.eye(uc))), np.max(np.abs(Vf.T @ Vf - np.eye(vc))))), thr))
+        sign_ok = all(Uf[int(np.argmax(np.abs(Uf[:, k]))), k] >= 0 for k in range(p))
+        out.append(("sign rule: largest-modulus entry of u_k positive  [10.23 SV-3]", bool(sign_ok), None, None, ""))
+    return out
+
+
+RULES = {"signal.spectral.fft": rule_fft, "ode.ivp.solve": rule_ode, "linalg.system.solve": rule_linsolve, "interp.grid.interp1": rule_interp1,
+         "fit.poly.polyfit": rule_polyfit, "linalg.decomp.eig": rule_eig, "linalg.decomp.svd": rule_svd}

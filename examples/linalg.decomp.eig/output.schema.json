@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.decomp.eig/0.4.0/output",
+  "type": "object",
+  "required": [
+    "values",
+    "vectors",
+    "structure",
+    "ordering"
+  ],
+  "properties": {
+    "values": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "特征值 [n]：对称算法为 f64（升序），一般算法为 c128（实部升序，共轭对相邻、虚部为正的在前）"
+    },
+    "vectors": {
+      "description": "特征向量 [n, n]，第 k 列对应 values[k]（f64 或 c128，与 values 一致）；vectors = false 时为 null"
+    },
+    "structure": {
+      "enum": [
+        "symmetric",
+        "general"
+      ],
+      "description": "实际所用的算法"
+    },
+    "ordering": {
+      "type": "string",
+      "description": "排序规则（回显）"
+    }
+  }
+}

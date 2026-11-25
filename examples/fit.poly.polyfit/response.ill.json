@@ -1,0 +1,196 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok_with_warnings",
+  "dry_run": false,
+  "operator": {
+    "id": "fit.poly.polyfit",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "p": {
+      "dtype": "f64",
+      "shape": [
+        5
+      ],
+      "data": [
+        7.074400023282502e-07,
+        -0.005820253209330438,
+        17.945090001121727,
+        -24575.312388116643,
+        12613249.934665717
+      ]
+    },
+    "degree": 4,
+    "scaling": "none",
+    "mu": null,
+    "residual_norm": 0.06178813601095176,
+    "dof": 26,
+    "std_errors": [
+      5.027259227589313e-07,
+      0.004031863784252329,
+      12.125744249178094,
+      16207.84044758602,
+      8123999.408250119
+    ]
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "backward_error": 1.0993149119314213e-17,
+      "threshold": 3.441691376337985e-14,
+      "definition": "‖Vsᵀ(y − V·p)‖₂ / (‖Vs‖_F·(‖r‖₂ + ‖Vs‖_F‖D·p‖₂))，Vs = V·D⁻¹，D = diag(‖V 的列‖₂)（最小二乘最优性，与 x 的单位无关；残差用补偿算术 Dot2）"
+    },
+    "condition": {
+      "kappa1_estimate": 60793518871.44739,
+      "rcond": 1.6449121856469232e-11,
+      "of": "R·D⁻¹（V = QR，V 为所用基的 Vandermonde 矩阵，D 为其列 2-范数；与 x 的单位无关）",
+      "estimator": "Hager–Higham 1-范数估计，下界"
+    },
+    "error_estimate": {
+      "Dp_rel_forward_2": 3.3406381399105035e-06,
+      "basis": "‖D·(p̂ − p)‖₂/‖D·p‖₂ 的一阶界 η·(2κ + κ²·‖r‖/(‖Vs‖‖D·p‖))（Golub–Van Loan 5.3.8）；D·p 的分量 = 各项在数据上的贡献大小"
+    },
+    "checks": {
+      "backward_stable": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "refinement_steps": 3,
+      "std_errors_model": "y = V·p + ε，ε 独立同分布、等方差；σ̂ = ‖r‖₂/sqrt(dof)",
+      "basis": "t = x"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:polyfit:vandermonde-householder-qr",
+      "routine": "polyfit::fit",
+      "provenance": "aeoi://operators/fit.poly.polyfit/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "enough_points",
+        "statement": "x 至少有 degree + 1 个不同的值",
+        "enforced_by": "error:E.DOMAIN.UNDERDETERMINED"
+      },
+      {
+        "id": "numerical_rank",
+        "statement": "单项式基在 f64 下列满秩",
+        "enforced_by": "error:E.NUMERICAL.SINGULAR"
+      },
+      {
+        "id": "conditioning",
+        "statement": "κ₁(R·D⁻¹) ≤ 1e10，否则数据的微小扰动会被大幅放大到系数上",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      },
+      {
+        "id": "model",
+        "statement": "数据确实可以用该次数的多项式描述；次数由用户选择",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "noise_model",
+        "statement": "std_errors 假设误差独立、等方差",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "Dp_rel_forward_2": 3.3406381399105035e-06
+      },
+      "basis": "‖D·(p̂ − p)‖₂/‖D·p‖₂ 的一阶界 η·(2κ + κ²·‖r‖/(‖Vs‖‖D·p‖))（Golub–Van Loan 5.3.8）；D·p 的分量 = 各项在数据上的贡献大小"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "backward_stable": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "backward_stable": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:120eefbc349631cc9eee283219395228efa6bcc789462c87166edf313b80c5a8",
+      "result": "sha256:fd55945b10ea91c71edc0209b71ff98712ea52f48b59afe4fcf1e750f523c928",
+      "output_hash": "sha256:e436c6ad5434c573f6667b63f2f4312933c1ed9411cfbd16ce97c1c6def115fb",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of fit.poly.polyfit@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [
+    {
+      "code": "W.NUMERICAL.ILL_CONDITIONED",
+      "message": "拟合病态：κ₁(R·D⁻¹) ≈ 6.079e10 > 1e10。对给定数据算得的系数仍然准确（误差估计 3.3e-6），但数据的相对扰动会被放大约 κ 倍传到系数上，系数之间高度相关。建议 scaling = center_scale（见 details.suggested_remediation，须用户确认）。拟合曲线本身（残差）通常仍然可用。",
+      "path": "/degree",
+      "details": {
+        "kappa1_estimate": 60793518871.44739,
+        "threshold": 10000000000.0,
+        "suggested_remediation": {
+          "id": "center_scale",
+          "kind": "modify_input",
+          "description": "加上 scaling = center_scale：系数改为对 (x − mean)/std 的多项式（mu 随结果返回），条件数通常降几个数量级。改变系数的含义，须用户确认",
+          "confidence": "high",
+          "requires_user_confirmation": true,
+          "patch": [
+            {
+              "op": "add",
+              "path": "/scaling",
+              "value": "center_scale"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:7bc33f7333bd5f0a3aeca964fe293184bffb001370def5200ed57c73a9f81c5a",
+    "output_hash": "sha256:e436c6ad5434c573f6667b63f2f4312933c1ed9411cfbd16ce97c1c6def115fb",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.22683699999999998
+  }
+}

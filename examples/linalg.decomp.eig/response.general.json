@@ -1,0 +1,221 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.decomp.eig",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "values": {
+      "dtype": "c128",
+      "shape": [
+        3
+      ],
+      "data": [
+        [
+          -1.0000000000000016,
+          0.0
+        ],
+        [
+          -0.4999999999999978,
+          1.322875655532298
+        ],
+        [
+          -0.4999999999999978,
+          -1.322875655532298
+        ]
+      ]
+    },
+    "vectors": {
+      "dtype": "c128",
+      "shape": [
+        3,
+        3
+      ],
+      "data": [
+        [
+          0.577350269189626,
+          0.0
+        ],
+        [
+          -0.2834733547569213,
+          0.24999999999999964
+        ],
+        [
+          -0.2834733547569213,
+          -0.24999999999999964
+        ],
+        [
+          -0.5773502691896251,
+          0.0
+        ],
+        [
+          -0.18898223650461407,
+          -0.499999999999999
+        ],
+        [
+          -0.18898223650461407,
+          0.499999999999999
+        ],
+        [
+          0.5773502691896265,
+          0.0
+        ],
+        [
+          0.7559289460184546,
+          0.0
+        ],
+        [
+          0.7559289460184546,
+          -0.0
+        ]
+      ]
+    },
+    "structure": "general",
+    "ordering": "real_ascending_then_abs_imag_conjugate_pairs_positive_first"
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "backward_error": 1.370388321717097e-15,
+      "threshold": 3.3306690738754696e-14,
+      "definition": "max_k ‖A·v_k − λ_k·v_k‖₂ / ‖A‖_F"
+    },
+    "condition": {
+      "eigenvalue_condition": [
+        2.121320343559639,
+        1.8708286933869687,
+        1.8708286933869687
+      ],
+      "definition": "1/|yᴴx|（x、y 为单位右、左特征向量）"
+    },
+    "error_estimate": {
+      "value_abs": [
+        6.328271240363381e-15,
+        1.117517857252656e-14,
+        1.117517857252656e-14
+      ],
+      "vector_angle": null,
+      "basis": "一阶估计 |Δλ_k| ≲ cond_k·‖r_k‖₂；cond_k > 1e8（可能亏损）时一阶估计失效，记为 null：误差可达 ‖A‖·u^(1/m)（m 为 Jordan 块阶数）"
+    },
+    "checks": {
+      "residual_small": true,
+      "orthonormal": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "orthonormal_applies": false,
+      "note": "一般矩阵的特征向量不正交，orthonormal 不适用，按空真报告（规范 IP-6、开放问题 26）"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:eig:symmetric-jacobi-or-schur-backsubstitution",
+      "routine": "eig::eig",
+      "provenance": "aeoi://operators/linalg.decomp.eig/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "square",
+        "statement": "A 为方阵",
+        "enforced_by": "error:E.VALIDATION.SHAPE"
+      },
+      {
+        "id": "converged",
+        "statement": "Jacobi 扫描或 Schur 的 QR 迭代在上限内收敛",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "nondefective",
+        "statement": "特征值条件数 ≤ 1e8，否则可能亏损：特征值只有约一半有效数字，特征向量接近平行",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      },
+      {
+        "id": "row_major",
+        "statement": "A 按 row-major 录入",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "uniqueness",
+        "statement": "特征向量只确定到规范规定的规一化；重特征值对应的特征向量只确定到子空间",
+        "enforced_by": "validation"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": "一阶估计 |Δλ_k| ≲ cond_k·‖r_k‖₂；cond_k > 1e8（可能亏损）时一阶估计失效，记为 null：误差可达 ‖A‖·u^(1/m)（m 为 Jordan 块阶数）"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "residual_small": true,
+        "orthonormal": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null,
+      "coverage": {
+        "residual_small": "full",
+        "orthonormal": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:4673a83d353f97c2f6a1f0ee41a4b29a7b663307f3c6ac0b2f7052eec2a841b9",
+      "result": "sha256:008cac5380bd4aeb701327ebd5bf0ae3c8a7d86ecf79c27983239ca969d4dcdc",
+      "output_hash": "sha256:767245a1e55922f8af4784334da8e76c6c7458b6880549b79234f7926505d687",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.decomp.eig@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:4db3229e7cd659363f3ba665d1807dcf44c4c4b1faf62135232c7e66443fedae",
+    "output_hash": "sha256:767245a1e55922f8af4784334da8e76c6c7458b6880549b79234f7926505d687",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.17164000000000001
+  }
+}

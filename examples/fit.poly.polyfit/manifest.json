@@ -1,0 +1,165 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "fit.poly.polyfit",
+  "version": "0.4.0",
+  "title": "Polynomial least-squares fit",
+  "description": "最小二乘多项式拟合：求 d 次多项式 p（系数从最高次到常数项，与 MATLAB polyfit、numpy.polyfit 相同）使 ‖V·p − y‖₂ 最小。Householder QR 求解；结果带每个系数的标准误差、残差范数、自由度、条件数估计与后向误差。病态时照原样拟合并警告，建议（须用户确认）改用中心化缩放 scaling = center_scale（= MATLAB 的 [p, S, mu]）。",
+  "category": "analysis",
+  "tags": [
+    "fit",
+    "polynomial",
+    "polyfit",
+    "regression",
+    "least-squares"
+  ],
+  "applicability": {
+    "preconditions": [
+      "x、y 为等长的 [n] 实数向量",
+      "degree（次数 d）由调用方给出",
+      "x 至少有 d + 1 个不同的值"
+    ],
+    "not_for": [
+      "加权拟合与约束拟合（0.4.0 未支持）",
+      "非多项式模型（lsqcurvefit）",
+      "外推：拟合多项式在数据范围外通常没有意义"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "Vandermonde 矩阵 V[i][j] = t_i^(d−j)（逐列连乘，同 MATLAB polyfit），t = x（scaling = none，缺省）或 t = (x − mean)/std（scaling = center_scale，std 为样本标准差，mean、std 用补偿求和）。Householder QR（与 linalg.system.solve 相同），p = R⁻¹·(Qᵀy)，再用修正半正规方程做至多 3 步精化（δ = R⁻¹R⁻ᵀ·(Vᵀr)，Vᵀr 用补偿算术）。秩判定与条件数都在列缩放后的 R·D⁻¹ 上（D 为 V 的列 2-范数，与 x 的单位无关）：|r_jj| ≤ max(m, n)·u·max|r_ii| 报 E.NUMERICAL.SINGULAR；κ₁ 用 Hager–Higham 估计，> 1e10 时 W.NUMERICAL.ILL_CONDITIONED。标准误差 sqrt(diag((RᵀR)⁻¹))·‖r‖₂/sqrt(n − d − 1)。后向误差 ‖Vsᵀr‖₂ / (‖Vs‖_F·(‖r‖₂ + ‖Vs‖_F‖D·p‖₂))（Vs = V·D⁻¹），残差用补偿算术",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §19–20（QR 与最小二乘）、§22（Vandermonde 系统）"
+      },
+      {
+        "type": "textbook",
+        "cite": "G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., JHU Press 2013, §5.3（最小二乘的敏感性）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "polyfit::fit",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {},
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_degree": 30,
+    "max_points": 1000000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/fit.poly.polyfit/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.RANGE",
+    "E.VALIDATION.OPTION_CONFLICT",
+    "E.VALIDATION.ENCODING",
+    "E.DOMAIN.UNDERDETERMINED",
+    "E.NUMERICAL.SINGULAR",
+    "E.NUMERICAL.NON_FINITE_EVALUATION",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.NUMERICAL.ILL_CONDITIONED"
+  ],
+  "mcp": {
+    "tool_name": "fit_poly_polyfit",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:polyfit:vandermonde-householder-qr",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "enough_points",
+        "statement": "x 至少有 degree + 1 个不同的值",
+        "enforced_by": "error:E.DOMAIN.UNDERDETERMINED"
+      },
+      {
+        "id": "numerical_rank",
+        "statement": "单项式基在 f64 下列满秩",
+        "enforced_by": "error:E.NUMERICAL.SINGULAR"
+      },
+      {
+        "id": "conditioning",
+        "statement": "κ₁(R·D⁻¹) ≤ 1e10，否则数据的微小扰动会被大幅放大到系数上",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      },
+      {
+        "id": "model",
+        "statement": "数据确实可以用该次数的多项式描述；次数由用户选择",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "noise_model",
+        "statement": "std_errors 假设误差独立、等方差",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "backward_stable",
+      "all_finite"
+    ],
+    "coverage": {
+      "backward_stable": "full"
+    },
+    "guards": {
+      "backward_stable": [
+        "/p",
+        "/std_errors"
+      ]
+    }
+  }
+}

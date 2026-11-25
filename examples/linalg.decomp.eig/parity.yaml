@@ -1,0 +1,25 @@
+# Parity test spec — linalg.decomp.eig 0.4.0 (AEOI v0.4.11-draft)
+operator: linalg.decomp.eig
+references:
+  - {engine: numpy, version: "numpy.linalg.eigvalsh / eigvals (LAPACK dsyevd / dgeev)", role: dev_reference, status: active,
+     generator: gen_golden_eig.py, golden_store: "golden/python-control/linalg.decomp.eig/0.4.0/*.json",
+     note: "NOT MATLAB output. Neither numpy nor MATLAB sorts general eigenvalues; the reference is sorted by the AEOI rule"}
+  - {engine: mpmath, role: high_precision_reference, status: active,
+     note: "exact eigenvalues, unit eigenvectors and eigenvalue condition numbers of the stored f64 matrix (50 digits; eigsy / eig with left and right vectors)"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_eig"
+tolerance_class: T2
+compare:
+  values: {against: exact eigenvalues (nearest matching), bound: "|Δλ_k| ≤ 1e-12 · ‖A‖_F · max(1, cond_k); 1e-4 · ‖A‖_F when cond_k > 1e8 (possibly defective)"}
+  ordering: "exact rule: symmetric ascending; general (Re, |Im|) ascending, conjugate pairs adjacent with Im > 0 first"
+  vectors: "‖v‖₂ = 1; largest-modulus entry real positive; conjugate pairs exactly conjugate; for simple, separated eigenvalues ‖v̂ − e^{iφ}v‖₂ ≤ 1e-10 · max(1, ‖A‖_F/gap) · max(1, cond)"
+  eigenvalue_condition: "within a factor 2 of the exact value while ≤ 1e8"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py (rule_eig)
+  values: "count and ordering exact; nearest matching to the exact eigenvalues with the bound above"
+  echoed: "structure"
+  recomputed: "the runner recomputes ‖A·v_k − λ_k·v_k‖₂ / ‖A‖_F for every returned pair from the request (compensated sums) and requires ≤ 100·n·u; for structure = symmetric also ‖VᵀV − I‖ ≤ 100·n·u"
+case_families:
+  - {name: "symmetric_random ×4 / repeated / identity / laplacian / graded / forced_general / values_only", n: 10}
+  - {name: "general_random ×3 / rotation / companion / upper_triangular / equal_real_parts / damped_oscillator / frank6 / values_only", n: 10}
+  - {name: "general_jordan3_warns / general_graded_warns", n: 2, note: "cond > 1e8 → W.NUMERICAL.ILL_CONDITIONED"}
+  - {name: errors, n: 6, expect: "E.VALIDATION.SHAPE ×2, DTYPE, NON_FINITE, SCHEMA ×2"}

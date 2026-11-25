@@ -1,0 +1,174 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "linalg.decomp.svd",
+  "version": "0.4.0",
+  "title": "Singular value decomposition",
+  "description": "实矩阵的奇异值分解 A = U·diag(s)·Vᵀ（= MATLAB svd）。mode = values 只返回奇异值，thin（缺省，= svd(A, \"econ\")）返回 [m, p] 与 [n, p] 的 U、V（p = min(m, n)），full 返回方阵 U、V。奇异值降序；每对奇异向量的符号规定为 u_k 的最大模分量为正。结果带数值秩（容差 max(m, n)·eps(s_max)，eps(x) 为 x 处的浮点间距，同 MATLAB rank）、2-范数条件数、重构残差与正交性。",
+  "category": "analysis",
+  "tags": [
+    "linalg",
+    "svd",
+    "singular-values",
+    "rank"
+  ],
+  "applicability": {
+    "preconditions": [
+      "A 为 [m, n] 实数矩阵"
+    ],
+    "not_for": [
+      "复数矩阵",
+      "大型稀疏矩阵的部分奇异值（svds）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "单边 Jacobi（Hestenes）：对 A（m < n 时对 Aᵀ）的列做循环旋转，|g_pᵀg_q| > sqrt(m)·ε·‖g_p‖‖g_q‖ 时旋转，至多 60 轮扫描；σ_k = ‖g_k‖₂，u_k = g_k/σ_k，零奇异值的 u_k 由正交补全给出；按奇异值降序重排；full 模式用 U_thin 的 Householder QR 补全正交基（前 p 列保持 U_thin 不变）。符号：u_k 的最大模分量（并列取下标最小）为正，v_k 随之变号。数值秩：s_k > max(m, n)·eps(s_max) 的个数。检查：‖A − U·diag(s)·Vᵀ‖_F/‖A‖_F 与 ‖UᵀU − I‖、‖VᵀV − I‖ 的最大元。",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., JHU Press 2013, §8.6.4（单边 Jacobi）"
+      },
+      {
+        "type": "paper",
+        "cite": "J. Demmel, K. Veselić, Jacobi's method is more accurate than QR, SIAM J. Matrix Anal. Appl. 13(4), 1992",
+        "doi": "10.1137/0613074"
+      },
+      {
+        "type": "textbook",
+        "cite": "J. W. Demmel, Applied Numerical Linear Algebra, SIAM 1997, §5.2（奇异值的扰动）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "svd::svd",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {
+    "/A": {
+      "policy": "densify",
+      "max_dense_elements": 250000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_dimension": 500
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/linalg.decomp.svd/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ENCODING",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "linalg_decomp_svd",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:svd:one-sided-jacobi",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "converged",
+        "statement": "Jacobi 扫描在上限内收敛",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "row_major",
+        "statement": "A 按 row-major 录入",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "uniqueness",
+        "statement": "奇异向量只确定到规范规定的符号；重奇异值对应的奇异向量只确定到子空间",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "absolute_accuracy",
+        "statement": "小奇异值只有绝对精度（≈ u·s_max），没有相对精度",
+        "enforced_by": "validation"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "reconstructs",
+      "orthonormal_u",
+      "orthonormal_v",
+      "all_finite"
+    ],
+    "coverage": {
+      "reconstructs": "full",
+      "orthonormal_u": "full",
+      "orthonormal_v": "full"
+    },
+    "guards": {
+      "reconstructs": [
+        "/s",
+        "/U",
+        "/V",
+        "/rank",
+        "/cond2"
+      ],
+      "orthonormal_u": [
+        "/U"
+      ],
+      "orthonormal_v": [
+        "/V"
+      ]
+    }
+  }
+}

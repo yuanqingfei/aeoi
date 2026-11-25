@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.10-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.11-draft
 
-> 状态：Draft v0.4.10 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.11 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.11 新增三个算子：多项式拟合 `fit.poly.polyfit`（10.21，带标准误差；病态时警告并建议中心化缩放，须用户确认）、特征分解 `linalg.decomp.eig`（10.22）与奇异值分解 `linalg.decomp.svd`（10.23）。后两者的特征向量、奇异向量本身不唯一，规范给出排序与规一化约定，一致性规则只比较不变量。
 >
 > v0.4.10 新增两个算子：线性方程组 `linalg.system.solve`（10.19，对应 `A\b`，带迭代精化、条件数估计和后向误差）和一维插值 `interp.grid.interp1`（10.20，范围外缺省报错）。
 >
@@ -1803,6 +1805,193 @@ A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与�
 
 共 56 个 golden 用例，44 个成功、12 个错误。成功用例中，29 个与参考逐位相同；最大偏差是 3.0e-16·max(1, max|y|)，与精确值的最大偏差是 2.3e-16。结果见 `aeoi-numeric/tests/parity_interp1.rs` 和 `reports/parity-interp1.json`。
 
+## 10.21 `fit.poly.polyfit`：多项式拟合（v0.4.11）
+
+对应 MATLAB 的 `polyfit`。参考值来自 numpy.polyfit（LAPACK `dgelsd`，先对 Vandermonde 矩阵做列缩放）；真值是 mpmath 以 60 位精度对存储下来的 f64 数据解正规方程得到的。都不是 MATLAB 的结果。这个算子逼出的规范问题有两个：
+
+- **病态时算子该不该替用户改模型。** 年份这类 x 离 0 远、跨度小，单项式基会严重病态。MATLAB 只打印一句“建议中心化缩放”。中心化缩放会改变系数的含义：系数变成关于 (x − mean)/std 的多项式，所以不能悄悄替用户做。
+- **一个“警告”怎么附上修复建议。** 5.1 的 warning 没有 `remediation` 字段。
+
+**规范性条款**
+
+- PF-1 **输入**（作者决定，2026-11-25）：
+  - x、y 为等长的 [n] 实数向量。
+  - `degree` 必填，来源 `user`：次数是模型选择，算子和 LLM 都不得代填。
+  - `scaling` 取 `none`（缺省）或 `center_scale`。
+  - x 不同值的个数少于 degree + 1 时，报 `E.DOMAIN.UNDERDETERMINED`（复用 LS-1 的码），附两个 remediation：一个把次数降到“不同值个数 − 1”的补丁（改变模型，须用户确认），一个 `ask_user`（补充数据）。
+- PF-2 **解法**：
+  - V[i][j] = t_i^(d−j)，按列连乘（同 MATLAB），用 Householder QR 求解（与 10.19 共用）。
+  - 解出 p 之后，再用修正半正规方程做至多 3 步精化：δ = R⁻¹R⁻ᵀ·(Vᵀr)，Vᵀr 用补偿算术算。修正量没有减半，或已到 u 的量级时停止。
+  - 精化的效果：golden 上 14 个成功用例全都比 numpy 准。最病态的一个（年份、4 次，κ = 7e10）上，numpy 的误差是 3.0e-7，本算子是 3.4e-12。
+- PF-3 **列缩放**：秩判定、条件数、后向误差都在 V·D⁻¹ 上计算，D 为 V 的列 2-范数。这样这些量与 x 的单位无关，只反映 x 的位置与跨度。
+  - 原因：未缩放的 R 在年份数据上，3 次就判为数值秩不足（列范数从 5.6 到 8e9），而按缩放后的条件数，问题其实只有 1.3e8。
+  - `center_scale` 时 t = (x − mu[0])/mu[1]，mean 与样本标准差用补偿求和，mu 随结果返回。x 只有一个不同值时，标准差为 0，报 `E.VALIDATION.OPTION_CONFLICT`。
+- PF-4 **病态**（作者决定）：缩放后列满秩、但 κ₁(R·D⁻¹) > 1e10 时，照原样拟合，并发 `W.NUMERICAL.ILL_CONDITIONED`。
+  - 警告的 `details.suggested_remediation` 是一个与错误 remediation 同形的对象（`modify_input`，补丁加上 `scaling = center_scale`，`requires_user_confirmation: true`）。这是“警告附修复建议”的写法，见开放问题 27。
+  - 警告文字要说清：对给定数据算得的系数仍然准确；但数据的相对扰动会被放大约 κ 倍传到系数上，而且系数之间高度相关。
+  - 缩放后仍数值秩不足时，报 `E.NUMERICAL.SINGULAR`，补丁同上。
+- PF-5 **输出**：
+  - `p`：最高次在前。
+  - `degree`、`scaling`、`mu`（`center_scale` 时为 [mean, std]，否则 null）。
+  - `residual_norm`、`dof` = n − d − 1。
+  - `std_errors`：sqrt(diag((RᵀR)⁻¹))·‖r‖₂/sqrt(dof)，假设误差独立、等方差；dof = 0 时为 null。MATLAB 的第二个输出 S 只给 R、自由度和残差范数，标准误差要调用方自己算（作者决定直接给出）。
+- PF-6 **后置条件 `backward_stable`**：‖D⁻¹Vᵀr‖₂ / (‖V·D⁻¹‖_F·(‖r‖₂ + ‖V·D⁻¹‖_F‖D·p‖₂)) ≤ 10·n·u，r 用补偿算术。
+- PF-7 **确定性**：`platform_bitwise`。
+
+**Manifest** — `examples/fit.poly.polyfit/manifest.json`
+
+```json
+{{jsonc:examples/fit.poly.polyfit/manifest.json}}
+```
+
+**请求与响应**（7 个点的二次拟合，带标准误差）
+
+```json
+{{file:examples/fit.poly.polyfit/request.json}}
+```
+
+```json
+{{jsonc:examples/fit.poly.polyfit/response.success.json}}
+```
+
+**病态的例子** — `request.ill.json`：x = 1990…2020，4 次。响应 `response.ill.json` 的状态是 `ok_with_warnings`：κ₁(R·D⁻¹) ≈ 6.1e10，警告里附有 `center_scale` 补丁。系数的标准误差与系数本身同量级，说明这些系数单独看没有意义。
+
+**错误请求与响应**（x 只有 2 个不同值，却要 2 次：PF-1）
+
+```json
+{{jsonc:examples/fit.poly.polyfit/response.error.json}}
+```
+
+**Parity 测试规格** — `examples/fit.poly.polyfit/parity.yaml`
+
+```yaml
+{{file:examples/fit.poly.polyfit/parity.yaml}}
+```
+
+共 24 个 golden 用例，14 个成功、10 个错误。缩放后的前向误差，最坏的用例用掉了容差的 6.2e-4。结果见 `aeoi-numeric/tests/parity_polyfit.rs` 和 `reports/parity-polyfit.json`。
+
+## 10.22 `linalg.decomp.eig`：特征值与特征向量（v0.4.11）
+
+对应 MATLAB 的 `eig(A)` 与 `[V, D] = eig(A)`。真值是 mpmath 以 50 位精度给出的特征值、特征向量和特征值条件数，numpy（LAPACK `dsyevd`/`dgeev`）的值只作记录。都不是 MATLAB 的结果。这个算子逼出的规范问题是**结果不唯一**：
+
+- 一般矩阵的特征值，MATLAB 和 numpy 都不排序。
+- 特征向量可以差一个非零复数因子。
+- 重特征值的特征向量只确定到子空间。
+
+两个正确的实现可以给出看起来完全不同的 V。
+
+**规范性条款**
+
+- EG-1 **算法选择**：`structure = auto`（缺省）时，A 与 Aᵀ 逐位相等才用对称算法（同 MATLAB 的判定），否则用一般算法；`structure = general` 总用一般算法。实际所用的算法在 `structure` 里回显。
+- EG-2 **算法**：
+  - 对称：循环双边 Jacobi，|a_pq| > ε·sqrt(|a_pp·a_qq|) 时旋转。
+  - 一般：实 Schur 分解 → 复 Schur 形（每个 2×2 块用一个 Givens 旋转消去，同 MATLAB `rsf2csf`）→ 在上三角因子上回代求特征向量，前代求左特征向量。小除数按 LAPACK `ztrevc` 抬到 max(ε·|λ|, smlnum)。
+  - 2×2 块的特征值由实数块直接算出，所以共轭对是精确共轭的；对中第二个向量取第一个的共轭。
+  - 先试过 nalgebra 的 SymmetricEigen：它在分级矩阵 diag(1e6, 1, 1e-6)·S·diag(1e6, 1, 1e-6) 上的后向误差是 3e-13（≈ 1000u），后置条件如实报了不成立，所以换成 Jacobi。
+- EG-3 **排序**（作者决定）：
+  - 对称：升序。
+  - 一般：按 (实部, |虚部|) 升序，共轭对相邻，虚部为正的在前。
+  - 排序规则在 `ordering` 里回显。
+- EG-4 **规一化**（作者决定）：‖v‖₂ = 1，模最大的分量（并列取下标最小）为正实数。
+  - 实特征值的特征向量取实部。
+  - 重特征值的特征向量只确定到子空间，规范不规定选哪一组；比较时只比较残差与正交性（9.4）。
+- EG-5 **后置条件**：
+  - `residual_small`：max_k ‖A·v_k − λ_k·v_k‖₂/‖A‖_F ≤ 100·n·u。
+  - `orthonormal`：只对对称算法有意义，‖VᵀV − I‖_max ≤ 100·n·u；一般算法按 IP-6 报空真，`derived.orthonormal_applies = false`。这是开放问题 26 的第二个实例。
+  - `all_finite`。
+  - `vectors = false` 时，特征向量仍在内部计算并检查，只是不返回。
+- EG-6 **条件数与误差估计**：
+  - 一般矩阵：报告每个特征值的条件数 cond_k = 1/|yᴴx|（x、y 为单位右、左特征向量），误差估计 |Δλ_k| ≲ cond_k·‖r_k‖₂。
+  - 对称矩阵：cond = 1，|Δλ_k| ≤ ‖r_k‖₂（残差界），特征向量夹角 ≲ ‖r_k‖₂/gap_k（Davis–Kahan）。
+  - 任一 cond_k > 1e8（≈ u^(−1/2)）时，发 `W.NUMERICAL.ILL_CONDITIONED`：A 可能亏损，特征值可能只有约一半有效数字，特征向量接近平行。这些特征值的误差估计记为 null，因为一阶估计已经失效。
+  - 例：Jordan 块 `request.defective.json` 的三个特征向量相同，V 奇异，这就是正确答案。
+- EG-7 **确定性**：`platform_bitwise`。
+
+**Manifest** — `examples/linalg.decomp.eig/manifest.json`
+
+```json
+{{jsonc:examples/linalg.decomp.eig/manifest.json}}
+```
+
+**请求与响应**（对称三对角，特征值 2 − √2、2、2 + √2）
+
+```json
+{{file:examples/linalg.decomp.eig/request.json}}
+```
+
+```json
+{{jsonc:examples/linalg.decomp.eig/response.success.json}}
+```
+
+**一般矩阵** — `request.general.json`：多项式 s³ + 2s² + 3s + 2 的友矩阵。特征值是 −1 和 −0.5 ± 1.3229i；响应里共轭对相邻，虚部为正的在前，两个特征向量互为共轭。
+
+**错误请求与响应**（2×3：EG-1 要求方阵）
+
+```json
+{{jsonc:examples/linalg.decomp.eig/response.error.json}}
+```
+
+**Parity 测试规格** — `examples/linalg.decomp.eig/parity.yaml`
+
+```yaml
+{{file:examples/linalg.decomp.eig/parity.yaml}}
+```
+
+共 28 个 golden 用例，22 个成功、6 个错误。特征值误差最坏的用例用掉了容差的 1.6e-3，特征向量的是 4.0e-6；在不亏损的用例上，条件数与真值之比都在 [0.5, 2] 内。结果见 `aeoi-numeric/tests/parity_eig.rs` 和 `reports/parity-eig.json`。
+
+## 10.23 `linalg.decomp.svd`：奇异值分解（v0.4.11）
+
+对应 MATLAB 的 `svd`。真值是 mpmath 以 50 位精度给出的奇异值与奇异向量，numpy（LAPACK `dgesdd`）的值只作记录。都不是 MATLAB 的结果。
+
+**规范性条款**
+
+- SV-1 **模式**：
+  - `values`：只要奇异值。
+  - `thin`：缺省，同 MATLAB `svd(A, "econ")`，U 为 [m, p]、V 为 [n, p]，p = min(m, n)。
+  - `full`：U、V 为方阵；补全部分是 thin 因子的 Householder QR 给出的正交补，前 p 列保持不变。
+
+  返回 V 而不是 Vᵀ（同 MATLAB；numpy 返回 Vᵀ）。
+- SV-2 **算法**：单边 Jacobi（Hestenes），m < n 时作用在 Aᵀ 上；|g_pᵀg_q| > sqrt(m)·ε·‖g_p‖‖g_q‖ 时旋转，至多 60 轮扫描；σ_k = ‖g_k‖₂，零奇异值对应的 u_k 由正交补全给出。
+  - 先试过 nalgebra 的双对角 QR：在行分级矩阵（行尺度 1e8 : 1 : 1e-8）上重构残差为 8.7e-10，中间一行的信息丢了。后置条件 `reconstructs` 如实报了不成立，所以换成 Jacobi，重构残差降到 2.5e-16。
+  - 在 400×400 上耗时约 2 秒，因此 `limits.max_dimension` 为 500。
+- SV-3 **符号**（作者决定）：u_k 中模最大的分量（并列取下标最小）为正，v_k 随之变号。
+- SV-4 **数值秩**：s_k > max(m, n)·eps(s_max) 的个数，eps(x) 为 x 处的浮点间距（同 MATLAB `rank`）。输出 `rank`、`rank_tol`、`cond2` = s_max/s_min（s_min = 0 时为 "Inf"）。
+- SV-5 **后置条件**：`reconstructs`（‖A − U·diag(s)·Vᵀ‖_F/‖A‖_F）、`orthonormal_u`、`orthonormal_v`（‖UᵀU − I‖_max 等）都 ≤ 100·max(m, n)·u；外加 `all_finite`。`values` 模式也在内部检查。
+- SV-6 **误差估计**：|Δs_k| ≲ ‖A‖_F·残差 + s_max·正交性误差（Weyl）。小奇异值只有绝对精度，没有相对精度。奇异向量夹角 ≲ 该界/gap_k（Wedin）。
+- SV-7 **确定性**：`platform_bitwise`。
+
+**Manifest** — `examples/linalg.decomp.svd/manifest.json`
+
+```json
+{{jsonc:examples/linalg.decomp.svd/manifest.json}}
+```
+
+**请求与响应**（2×3，thin）
+
+```json
+{{file:examples/linalg.decomp.svd/request.json}}
+```
+
+```json
+{{jsonc:examples/linalg.decomp.svd/response.success.json}}
+```
+
+**秩亏的例子** — `request.full.json`：A = [1 2 3; 4 5 6; 7 8 9]，full 模式。最小奇异值是 1.5e-16，小于 `rank_tol` = 1.1e-14，所以 `rank` = 2；`cond2` ≈ 1.1e17。
+
+**错误请求与响应**（一维 A：SV-1 要求 [m, n]）
+
+```json
+{{jsonc:examples/linalg.decomp.svd/response.error.json}}
+```
+
+**Parity 测试规格** — `examples/linalg.decomp.svd/parity.yaml`
+
+```yaml
+{{file:examples/linalg.decomp.svd/parity.yaml}}
+```
+
+共 20 个 golden 用例，15 个成功、5 个错误。奇异值误差最坏的用例用掉了容差的 2.3e-3，奇异向量的是 5.1e-6。结果见 `aeoi-numeric/tests/parity_svd.rs` 和 `reports/parity-svd.json`。
+
 ## 11. Rust 参考实现（v0.3）
 
 ### 11.1 结构
@@ -1983,20 +2172,57 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 23. ~~**（v0.4.2 新，一致性规则发现）`lyap` 的 mpmath 容差不一致**~~ **已决定（v0.4.3）：一致性对所有参考引擎用同一个 κ 缩放容差。** 高精度参考（mpmath）只是更准的参考值，不是更严的要求。`parity.yaml` 里的“1e-12 不放宽”是参考实现自己的精度目标，由它的 `cargo test` 检验：参考实现带精化，实测 `lyap` ≤ 7e-15；而没有精化的后向稳定算法达不到，SciPy 在 `lyap`（κ ≈ 1.6e8）上为 7.5e-9，在 `lqr`（cond(R) = 1e11）上为 3.7e-9。把它当门槛会让标准实现无法通过。`lqr` 的 mpmath 分支同样改为 `cond_S` 缩放（v0.4.2 时误设为 1e-12）。试过用 CARE 的一阶条件数（闭环 Lyapunov 算子）缩放，最病态的用例容差 ≥ 1，等于不检查，所以没有采用；剩下的个别超差（上面 SciPy 的 `lqr` 用例超出 6.5 倍）按 CF-7 登记 `known_deviations`。原问题：：`parity.yaml` 对 mpmath 用例写“rel_fro ≤ 1e-12，不放宽”，运行器的 `lyap` 规则对所有引擎都用 T2 × max(1, κ/100)。`lqr` 的新规则对 mpmath 用 1e-12。改 `lyap` 规则会影响 Python 第二实现在病态用例上的结果，需要先重跑。
 24. **（v0.4.4 新，写默认值用例时发现）默认值与请求指纹**：H-1 按请求原样计算 `input_hash`，不补默认值，所以“省略 `type`”与“写出 `type: continuous`”的请求指纹不同，而 4.3 R-3 说请求指纹表示“同一个问题”。要么在哈希前补齐 schema 默认值（会改变所有省略了默认值的已发布 `input_hash` 与 golden 文件名之外的指纹，需要一次迁移），要么在 R-3 写明指纹只认字面相同的请求。一致性套件目前只要求结果相同，不比较这两个指纹。
 25. **（v0.4.9 新，发布流水线证实全平台逐位相同后）`platform_bitwise` 升为 `bitwise`**：参考实现已在 5 个平台上对全部 golden 逐位相同（2.1、M-7a），但 manifest 仍声明较弱的 `platform_bitwise`。改声明是新的承诺（G-2 MINOR），23 个算子要一起升版本、重新生成 manifest 与示例；还要决定 `aeoi_verify` 在 `bitwise` 下遇到跨平台差异时的判定（现在跨平台只给 `tolerance_match`）。建议随下一批算子升版本时一并处理。
-26. **（v0.4.10 新）只对部分方法有意义的后置条件**：`interp1` 的 `spline_c2` 只适用于 spline，`local_bounds` 不适用于 spline。E-11 把缺失的后置条件算作不成立，所以现在只能按空真报告（IP-6）。可选做法：manifest 的 `receipt.postconditions` 允许按 `method` 条件列出，或在 `trust.checks` 里允许 `null` 表示“不适用”。两种都改核心 schema（MINOR），留到第二个有此需要的算子出现时再定。
+26. **（v0.4.10 新）只对部分方法有意义的后置条件**：`interp1` 的 `spline_c2` 只适用于 spline，`local_bounds` 不适用于 spline。E-11 把缺失的后置条件算作不成立，所以现在只能按空真报告（IP-6）。可选做法：manifest 的 `receipt.postconditions` 允许按 `method` 条件列出，或在 `trust.checks` 里允许 `null` 表示“不适用”。两种都改核心 schema（MINOR），留到第二个有此需要的算子出现时再定。v0.4.11 出现了第二个实例：`eig` 的 `orthonormal` 只对对称算法有意义（EG-5），暂时同样按空真处理，等作者决定。
+27. **（v0.4.11 新）警告附修复建议**：5.1 的 warning 没有 `remediation` 字段。`polyfit` 的病态警告把一个与错误 remediation 同形的对象放在 `details.suggested_remediation`（PF-4）。可选做法：给 warning 增加可选的 `remediation` 数组（核心 schema MINOR），或维持放在 `details` 的约定。
 
 ### 12.2 下一步（建议顺序）
 
 1. 在有授权的机器上运行 `matlab/gen_golden_bode.m`（并补 step/lqr 脚本），先核对 `memory_order_nonsymmetric` 用例与 python-control 一致，再跑通第一份 A 级凭证
 2. ~~修复 `lqr` 病态 R 的精度差距~~（v0.3.2 用补偿 Newton–Kleinman 完成）；剩余：平衡 + 有序 Schur（或广义特征值）作为符号函数不收敛时的后备路径，以及 `dlqr` 的同类精化
-3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；v0.4.10 加了 `linalg.system.solve`（10.19）与 `interp.grid.interp1`（10.20）；之后按 MATLAB 使用频率做 `polyfit`、`butter` + `filter`、`fzero`/`fsolve`（复用 3.15）、优化、`eig`/`svd`、`integral`，以及隐式/刚性方法（`ode15s`）与事件检测；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
+3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；v0.4.10 加了 `linalg.system.solve`（10.19）与 `interp.grid.interp1`（10.20）；v0.4.11 加了 `fit.poly.polyfit`（10.21）、`linalg.decomp.eig`（10.22）、`linalg.decomp.svd`（10.23）；之后按 MATLAB 使用频率做 `butter` + `filter`、`fzero`/`fsolve`（复用 3.15）、优化、`integral`，以及隐式/刚性方法（`ode15s`）与事件检测；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
 5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；v0.3.4 另有 `aeoi-web design`。v0.3.5 实现了试点里排在前面的算子（串联、并联、反馈、PID 构造、stepinfo、Padé），v0.3.6 加了具名角色、`loopsens`（含带宽读数）和回合预算。下一步是按 A-4 写 `pidtune`（必须先声明对象类、指标和唯一性），以及控制器离散化和 MIMO 裕度；扩充问答题、加入"Agent + 裸 scipy"对照组。非线性吸引域仍不做。
 6. 分发：为 `aeoi-mcp` 发布各平台预编译二进制（GitHub Releases）、Claude Desktop 一键安装扩展、登记到 MCP 公开目录（v0.4.9：数学库、矩阵乘法内核与 FFT 旋转因子已统一，5 个平台的 golden 哈希完全相同；`v0.4.9` 是第一个正式发布）；之后做纯浏览器的结果查看器（`aeoi-wasm`：结果、信任信息、收据与本地重放）。不做独立的图形界面客户端或自带 LLM 的聊天客户端：AEOI 的客户端是 MCP 宿主
-7. 一致性套件（9.4）：v0.4.10 有 12 个算子的数值规则（12 / 25 = 48%；作者定的下限是 30%，以后提高），参考实现 813 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 23 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
+7. 一致性套件（9.4）：v0.4.11 有 15 个算子的数值规则（15 / 28 = 54%；作者定的下限是 30%，以后提高），参考实现 900 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 30 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
 8. 根据以上反馈修订，冻结 v1.0
 
 ## 13. Changelog
+
+### v0.4.11-draft（2026-11-25）
+
+起因：按 MATLAB 使用频率继续加算子。作者选了 `polyfit` + `eig`/`svd`，并定了三件事：
+- `polyfit` 病态时照原样拟合，警告并附中心化缩放的补丁，补丁须用户确认，不悄悄缩放；
+- 直接给出每个系数的标准误差；
+- `eig` 先做实对称与一般实矩阵，排序与规一化写死在规范里；`svd` 支持 thin 与 full。
+
+线协议标识、核心 schema 和已有算子的版本都不变。
+
+**规范改动**
+
+| # | 位置 | 改动 | 理由 |
+|---|---|---|---|
+| 1 | 10.21 PF-1 – PF-7 | 新算子 `fit.poly.polyfit` 0.4.0：Householder QR 加修正半正规方程精化；输出标准误差、自由度、mu | 与 MATLAB `[p, S, mu]` 对应，但直接给出调用方真正要的标准误差 |
+| 2 | 10.21 PF-3 | 秩判定、条件数、后向误差都在列缩放的 V·D⁻¹ 上计算 | 未缩放时，年份数据 3 次拟合就被误判为数值秩不足；缩放后只反映 x 的位置与跨度，与单位无关 |
+| 3 | 10.21 PF-4、开放问题 27 | 病态警告的 `details.suggested_remediation` 带一个须用户确认的补丁 | 中心化缩放改变系数的含义，只能建议，不能代做；warning 目前没有 remediation 字段 |
+| 4 | 10.22 EG-1 – EG-7 | 新算子 `linalg.decomp.eig` 0.4.0：对称 Jacobi / 一般 Schur + 三角回代；排序（对称升序；一般按 (Re, \|Im\|)，共轭对正虚部在前）与规一化（单位 2-范数，最大模分量为正实数）写死；报告每个特征值的条件数，> 1e8 时警告可能亏损 | 特征向量不唯一，不写死约定就无法比较、无法复现 |
+| 5 | 10.22 EG-5、开放问题 26 | `orthonormal` 只适用于对称算法，一般算法按空真报告 | 开放问题 26 的第二个实例 |
+| 6 | 10.23 SV-1 – SV-7 | 新算子 `linalg.decomp.svd` 0.4.0：单边 Jacobi；values / thin / full；u_k 的符号约定；数值秩用 MATLAB 的容差 | — |
+| 7 | 9.4（`rules_numeric.py`） | 三个算子的一致性规则只比较不变量：特征值（最近匹配）、残差、正交性、规一化规则；运行器从请求重算残差 | 两个正确实现给出的 V 可以完全不同 |
+
+**开发中发现的问题**
+
+| # | 问题 | 处理 |
+|---|---|---|
+| 1 | nalgebra 的 SVD（双对角 QR）在行分级矩阵（行尺度 1e8 : 1 : 1e-8）上，重构残差为 8.7e-10，中间一行的信息丢了 | 后置条件 `reconstructs` 如实报了不成立；改用单边 Jacobi，残差降到 2.5e-16 |
+| 2 | nalgebra 的 SymmetricEigen 在分级对称矩阵上的后向误差是 3e-13（≈ 1000u） | 后置条件 `residual_small` 如实报了不成立；改用循环 Jacobi |
+| 3 | `polyfit` 的秩判定起初用未缩放的 R，年份数据 3 次就报 `E.NUMERICAL.SINGULAR` | 改为列缩放（PF-3） |
+| 4 | `polyfit` 只做 QR 时，病态用例的误差比 numpy 大 10–20 倍 | 加了修正半正规方程精化，之后全部比 numpy 准 |
+
+**结果**
+
+- golden 用例数（成功 / 错误）：`polyfit` 24 个（14 / 10）；`eig` 28 个（22 / 6）；`svd` 20 个（15 / 5）。真值全部来自 mpmath。
+- 最坏用例占容差的比例：`polyfit` 缩放后的前向误差 6.2e-4；`eig` 特征值 1.6e-3、特征向量 4.0e-6；`svd` 奇异值 2.3e-3、奇异向量 5.1e-6。
+- 一致性套件：15 / 28 = 54% 的算子有数值规则；参考实现 900 / 0 / 291。新增 7 种代理改写，都被预期的检查抓住，其中包括两种约定类改写：共轭对顺序反了；u、v 同时变号，这个 SVD 本身等价，但违反了符号约定。
 
 ### v0.4.10-draft（2026-11-25）
 

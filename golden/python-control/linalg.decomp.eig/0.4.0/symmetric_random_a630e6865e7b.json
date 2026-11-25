@@ -1,0 +1,83 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "linalg.decomp.eig",
+ "operator_version": "0.4.0",
+ "case_family": "symmetric_random",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    -0.7370369950484608,
+    2.1422221701611965,
+    2.1422221701611965,
+    -2.6977660014668485
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "numpy.linalg (LAPACK dsyevd / dgeev) / mpmath",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "seed": 20261125,
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "structure": "symmetric",
+  "values_true": [
+   [
+    -4.073294192223735,
+    0.0
+   ],
+   [
+    0.6384911957084258,
+    0.0
+   ]
+  ],
+  "values_numpy": [
+   [
+    -4.073294192223735,
+    0.0
+   ],
+   [
+    0.6384911957084256,
+    0.0
+   ]
+  ],
+  "vectors_true": [
+   [
+    [
+     -0.5403087456084774,
+     0.0
+    ],
+    [
+     0.8414668498633762,
+     0.0
+    ]
+   ],
+   [
+    [
+     0.8414668498633762,
+     0.0
+    ],
+    [
+     0.5403087456084774,
+     0.0
+    ]
+   ]
+  ],
+  "eigenvalue_condition_true": [
+   1.0,
+   1.0
+  ],
+  "gaps_true": [
+   4.711785387932161,
+   4.711785387932161
+  ],
+  "norm_fro": 4.123032449957287
+ }
+}

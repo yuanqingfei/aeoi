@@ -1,0 +1,83 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "linalg.decomp.eig",
+ "operator_version": "0.4.0",
+ "case_family": "general_rotation",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    0.0,
+    -1.0,
+    1.0,
+    0.0
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "numpy.linalg (LAPACK dsyevd / dgeev) / mpmath",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "seed": 20261125,
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "structure": "general",
+  "values_true": [
+   [
+    0.0,
+    1.0
+   ],
+   [
+    0.0,
+    -1.0
+   ]
+  ],
+  "values_numpy": [
+   [
+    0.0,
+    1.0
+   ],
+   [
+    0.0,
+    -1.0
+   ]
+  ],
+  "vectors_true": [
+   [
+    [
+     -0.7071067811865476,
+     0.0
+    ],
+    [
+     0.0,
+     0.7071067811865476
+    ]
+   ],
+   [
+    [
+     0.0,
+     -0.7071067811865476
+    ],
+    [
+     0.7071067811865476,
+     0.0
+    ]
+   ]
+  ],
+  "eigenvalue_condition_true": [
+   1.0,
+   1.0
+  ],
+  "gaps_true": [
+   2.0,
+   2.0
+  ],
+  "norm_fro": 1.4142135623730951
+ }
+}

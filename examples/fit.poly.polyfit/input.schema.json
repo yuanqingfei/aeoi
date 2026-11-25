@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/fit.poly.polyfit/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "x",
+    "y",
+    "degree"
+  ],
+  "properties": {
+    "x": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "自变量 [n]"
+    },
+    "y": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "观测值 [n]，与 x 一一对应"
+    },
+    "degree": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "多项式次数 d（模型选择，由用户决定；不要代填）",
+      "x-aeoi-provenance": "user"
+    },
+    "scaling": {
+      "enum": [
+        "none",
+        "center_scale"
+      ],
+      "default": "none",
+      "x-aeoi-provenance": "convention",
+      "description": "none（缺省：对 x 本身拟合）或 center_scale（对 (x − mean)/std 拟合，mu 随结果返回；x 远离 0 或跨度大时可显著改善条件数，但系数含义改变，须用户确认）"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  },
+  "x-aeoi-shape-constraints": [
+    "x: [n]",
+    "y: [n]"
+  ]
+}

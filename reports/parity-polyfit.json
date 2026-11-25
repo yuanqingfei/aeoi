@@ -1,0 +1,122 @@
+{
+  "reference": "numpy.polyfit (dgelsd, column-scaled); exact answer for the stored data by mpmath at 60 digits. Not MATLAB.",
+  "cases": 24,
+  "error_cases": 10,
+  "worst_scaled_forward_error_over_tolerance": 0.0006173687486445463,
+  "more_accurate_than_numpy": 14,
+  "tolerance": "‖D(p − p*)‖₂/‖D p*‖₂ ≤ 1e-12 · max(1, κ(V·D⁻¹)/100), D = column 2-norms of V (T1, V-6 κ scaling)",
+  "cases_detail": [
+    {
+      "family": "constant_mean",
+      "scaled_forward_error": 0.0,
+      "numpy_scaled_forward_error": 1.1842378929335003e-16,
+      "kappa_scaled_2": 1.0,
+      "kappa1_estimate": 1.0,
+      "backward_error": 0.0
+    },
+    {
+      "family": "degree8_unit_interval",
+      "scaled_forward_error": 3.4473650759888854e-13,
+      "numpy_scaled_forward_error": 8.792877064581408e-12,
+      "kappa_scaled_2": 398086.1062727157,
+      "kappa1_estimate": 644257.0200421863,
+      "backward_error": 6.268981894225729e-18
+    },
+    {
+      "family": "interpolating_dof0",
+      "scaled_forward_error": 0.0,
+      "numpy_scaled_forward_error": 2.1780489960043222e-15,
+      "kappa_scaled_2": 69.71140397725985,
+      "kappa1_estimate": 101.0094547928789,
+      "backward_error": 2.2820456808922544e-17
+    },
+    {
+      "family": "line_exact",
+      "scaled_forward_error": 0.0,
+      "numpy_scaled_forward_error": 3.108624468950438e-16,
+      "kappa_scaled_2": 3.146264369941973,
+      "kappa1_estimate": 4.3854106816800735,
+      "backward_error": 0.0
+    },
+    {
+      "family": "negative_large_x",
+      "scaled_forward_error": 1.1118482056032086e-16,
+      "numpy_scaled_forward_error": 7.198211687653595e-16,
+      "kappa_scaled_2": 2.6254142267537457,
+      "kappa1_estimate": 3.7067505611033513,
+      "backward_error": 2.0897989421930463e-17
+    },
+    {
+      "family": "noisy_cubic",
+      "scaled_forward_error": 1.2829583096942007e-16,
+      "numpy_scaled_forward_error": 8.509938182105578e-16,
+      "kappa_scaled_2": 82.34717807586102,
+      "kappa1_estimate": 108.53572607342733,
+      "backward_error": 1.699270748751132e-17
+    },
+    {
+      "family": "quadratic_exact",
+      "scaled_forward_error": 0.0,
+      "numpy_scaled_forward_error": 1.1533585896220825e-15,
+      "kappa_scaled_2": 5.460061941265445,
+      "kappa1_estimate": 6.802534384191851,
+      "backward_error": 0.0
+    },
+    {
+      "family": "random_degree5",
+      "scaled_forward_error": 1.7982477191649197e-16,
+      "numpy_scaled_forward_error": 1.4234350447251879e-15,
+      "kappa_scaled_2": 33.99131272116813,
+      "kappa1_estimate": 54.49532325094706,
+      "backward_error": 4.8411275708746295e-18
+    },
+    {
+      "family": "repeated_points",
+      "scaled_forward_error": 0.0,
+      "numpy_scaled_forward_error": 9.971059089012064e-16,
+      "kappa_scaled_2": 12.342109776645373,
+      "kappa1_estimate": 15.46451554590926,
+      "backward_error": 2.4828019294797175e-17
+    },
+    {
+      "family": "runge_degree10",
+      "scaled_forward_error": 1.7369972882002088e-15,
+      "numpy_scaled_forward_error": 2.1370909592118855e-14,
+      "kappa_scaled_2": 1735.0544463667761,
+      "kappa1_estimate": 2672.4890794118432,
+      "backward_error": 1.03754524212463e-18
+    },
+    {
+      "family": "years_degree3",
+      "scaled_forward_error": 9.568868104837079e-17,
+      "numpy_scaled_forward_error": 3.61373114999098e-10,
+      "kappa_scaled_2": 128993032.34997974,
+      "kappa1_estimate": 116916270.16769789,
+      "backward_error": 3.966945551203684e-17
+    },
+    {
+      "family": "years_degree4_center_scale",
+      "scaled_forward_error": 2.853379813542499e-17,
+      "numpy_scaled_forward_error": 7.792267740744475e-16,
+      "kappa_scaled_2": 11.101454056865977,
+      "kappa1_estimate": 14.678482084579958,
+      "backward_error": 1.5746634614674168e-18
+    },
+    {
+      "family": "years_degree4_warns",
+      "scaled_forward_error": 3.3570450388666757e-12,
+      "numpy_scaled_forward_error": 2.957010132048223e-7,
+      "kappa_scaled_2": 69839888799.45552,
+      "kappa1_estimate": 60793518871.44739,
+      "backward_error": 1.6325365507130164e-17
+    },
+    {
+      "family": "years_degree8_center_scale",
+      "scaled_forward_error": 1.954356368137575e-15,
+      "numpy_scaled_forward_error": 2.094675498735821e-15,
+      "kappa_scaled_2": 316.5622445950544,
+      "kappa1_estimate": 466.65765718451905,
+      "backward_error": 8.723400047763678e-19
+    }
+  ]
+}

@@ -609,6 +609,9 @@ DESC={
  "control.lti.stepinfo":{"system":SYS_D,"time":"时间网格，与 step 相同：uniform（t_final、dt，单位 s）或 auto。指标相对这个网格定义","rise_time_limits":"上升时间的低/高阈值，默认 [0.1, 0.9]（10% 到 90%）。这是指标定义，不是对象的物理参数；省略即用默认，不必询问","settling_threshold":"调节带半宽，默认 0.02（2%）。定义默认值，省略即用默认"},
  "ode.ivp.solve":{"states":"状态名列表，如 [\"x\", \"v\"]。顺序决定 y 的行序；表达式里按名字引用，不用下标","rhs":"右端表达式列表，与 states 一一对应：第 i 个是 d(states[i])/dt，如 [\"v\", \"-k*x - c*v\"]。可用 t、状态名、参数名、常数 pi、+ − * / ^（右结合，-x^2 = -(x^2)）与函数 sin cos tan asin acos atan atan2 sinh cosh tanh exp log log10 sqrt abs min max hypot sign","params":"参数名到数值，如 {\"k\": 4, \"c\": 0.5}；名字不能与状态名重复","initial":"初值，键为状态名，如 {\"x\": 1, \"v\": 0}；每个状态都要给","t_span":"[t0, tf]；tf < t0 时反向积分","t_eval":"输出时刻（在区间内、沿积分方向单调）。不给时用 n_out 个等距点","n_out":"不给 t_eval 时的输出点数，默认 101（含两端）。与 t_eval 二选一","rtol":"相对容差，默认 1e-3（与 MATLAB ode45、scipy 相同）。要更准就调小，如 1e-8","atol":"绝对容差，默认 1e-6","max_step":"最大步长（可选）","first_step":"初始步长（可选；不给时自动选择）"},
  "linalg.system.solve":{"A":"系数矩阵 [m, n]，row-major（MATLAB 是 column-major，先转置再展平）；m ≥ n。大矩阵可用 b64 或 ref 编码","b":"右端项：[m]（一个）或 [m, k]（k 个，每列一个）","refinement":"auto（缺省：用补偿残差做至多 3 步迭代精化）或 none（只做一次 LU 求解，与 MATLAB 的 A\\b 相同）。只影响方阵"},
+ "fit.poly.polyfit":{"x":"自变量 [n]","y":"观测值 [n]，与 x 一一对应","degree":"多项式次数 d（模型选择，由用户决定；不要代填）","scaling":"none（缺省：对 x 本身拟合）或 center_scale（对 (x − mean)/std 拟合，mu 随结果返回；x 远离 0 或跨度大时可显著改善条件数，但系数含义改变，须用户确认）"},
+ "linalg.decomp.eig":{"A":"实方阵 [n, n]，row-major（MATLAB 是 column-major，先转置再展平；对称矩阵不受影响）","structure":"auto（缺省：A 与 Aᵀ 逐位相等时用对称算法）或 general（总用一般算法，结果为 c128）","vectors":"是否返回特征向量（缺省 true）"},
+ "linalg.decomp.svd":{"A":"实矩阵 [m, n]，row-major","mode":"values（只要奇异值）、thin（缺省，= MATLAB svd(A, \"econ\")）或 full（方阵 U、V）"},
  "interp.grid.interp1":{"x":"采样点 [n]，严格递增","y":"采样值：[n]，或 [k, n]（k 个通道，每行一个；MATLAB 习惯按列存，要转置）","xq":"查询点 [q]，任意顺序","method":"linear（缺省）、nearest（中点归右）、previous、next、pchip（保形三次，不过冲）、spline（not-a-knot 三次样条，可能过冲）","extrapolation":"查询点超出 [x 的最小值, 最大值] 时：error（缺省，报错并给出可选补丁）、nan（标成缺失）、clamp（取端点值）、extrapolate（延长端点那一段）。不确定时问用户"},
  "signal.spectral.fft":{"x":"要变换的序列：f64 或 c128，形状 [n] 或 [m, n]（m 个通道，沿最后一维变换，与 lsim 的 [nu, nt] 相同）。长数据可用 b64 或 ref 编码","n":"变换长度。缺省为 x 最后一维的长度；更短则截断，更长则在末尾补零（= MATLAB fft(x, n)）","direction":"forward（缺省）或 inverse","normalization":"backward（缺省：正变换不缩放、逆变换乘 1/n，与 MATLAB、numpy 相同）、ortho（两个方向都乘 1/√n）或 forward（正变换乘 1/n）","sides":"two（缺省，全部 n 个频点）或 one（只返回 0..fs/2，仅用于实数输入的正变换）","sample_rate_hz":"采样率（Hz）。给出时 frequency 以 Hz 为单位，否则以 cycles/sample 为单位"},
  "control.design.pidtune":{"plant":"被控对象 G（SISO、连续、proper）。上一个工具返回了系统就原样粘贴 result.system","type":"PI 或 PID。必填：控制器类型是设计决定，不由算子选","wc_rad_s":"目标增益穿越频率 ωc（rad/s）。必填，由用户或题目给出，算子不猜；不知道就问用户期望的响应速度（ωc 约为闭环带宽）","phase_margin_deg":"目标相位裕度（度），默认 60。定义默认值，省略即可","ti_td_ratio":"只用于 PID：Ti/Td 比，默认 4（Åström–Hägglund）。PI 不要给","derivative_filter_n":"只用于 PID：微分滤波 Tf = Td/N 的 N，默认 10。PI 不要给","lineage":"可选。上游 receipt.fingerprint.request，只回显"},
@@ -616,6 +619,58 @@ DESC={
  "control.analysis.loopsens":{"plant":"被控对象 G（SISO）。上一个工具返回了系统（例如 control_lti_pade 与对象串联的结果、control_lti_convert 的结果）就原样粘贴 result.system","controller":"控制器 C，在前向通路。省略 = 1（只看对象本身的单位负反馈）。PID 用 control_design_pid 的 result.system 原样粘贴","sensor":"反馈通路 H（测量动态）。省略 = 单位反馈。不要把控制器放在这里","time":"可选。给出时返回闭环 T 的阶跃指标（step_metrics）：uniform（t_final、dt，单位 s）或 auto。不给则 step_metrics 为 null","rise_time_limits":"阶跃上升时间阈值，默认 [0.1, 0.9]。定义默认值，省略即可","settling_threshold":"调节带半宽，默认 0.02（2%）。定义默认值，省略即可","bandwidth_drop_db":"闭环带宽的下降量（dB，负数），默认 -3。定义默认值，省略即可","lineage":"可选。上游 receipt.fingerprint.request，只回显"},
  "control.lti.pade":{"delay":"纯时滞 θ（秒），必须 > 0。没有默认值。用户没给、题目也算不出时先询问，不得假设 0.1 或 1。这不是采样周期那种必须逐字引用的测量值：由 t1、t2 算出的 θ 可以填在这里","order":"对角 Padé 阶次 N（1 到 20）。没有默认值，不得假设 N=1。题目没指定时先询问；设计评测的提示若写明了用哪个 N，按提示填写","lineage":"可选。上游 receipt 指纹，只回显"},
 }
+# ---- v0.4.11: fit.poly.polyfit, linalg.decomp.eig, linalg.decomp.svd
+V411="0.4.0"
+pfit=man("fit.poly.polyfit","Polynomial least-squares fit","最小二乘多项式拟合：求 d 次多项式 p（系数从最高次到常数项，与 MATLAB polyfit、numpy.polyfit 相同）使 ‖V·p − y‖₂ 最小。Householder QR 求解；结果带每个系数的标准误差、残差范数、自由度、条件数估计与后向误差。病态时照原样拟合并警告，建议（须用户确认）改用中心化缩放 scaling = center_scale（= MATLAB 的 [p, S, mu]）。","analysis",["fit","polynomial","polyfit","regression","least-squares"],
+ ["x、y 为等长的 [n] 实数向量","degree（次数 d）由调用方给出","x 至少有 d + 1 个不同的值"],
+ ["加权拟合与约束拟合（0.4.0 未支持）","非多项式模型（lsqcurvefit）","外推：拟合多项式在数据范围外通常没有意义"],
+ "Vandermonde 矩阵 V[i][j] = t_i^(d−j)（逐列连乘，同 MATLAB polyfit），t = x（scaling = none，缺省）或 t = (x − mean)/std（scaling = center_scale，std 为样本标准差，mean、std 用补偿求和）。Householder QR（与 linalg.system.solve 相同），p = R⁻¹·(Qᵀy)，再用修正半正规方程做至多 3 步精化（δ = R⁻¹R⁻ᵀ·(Vᵀr)，Vᵀr 用补偿算术）。秩判定与条件数都在列缩放后的 R·D⁻¹ 上（D 为 V 的列 2-范数，与 x 的单位无关）：|r_jj| ≤ max(m, n)·u·max|r_ii| 报 E.NUMERICAL.SINGULAR；κ₁ 用 Hager–Higham 估计，> 1e10 时 W.NUMERICAL.ILL_CONDITIONED。标准误差 sqrt(diag((RᵀR)⁻¹))·‖r‖₂/sqrt(n − d − 1)。后向误差 ‖Vsᵀr‖₂ / (‖Vs‖_F·(‖r‖₂ + ‖Vs‖_F‖D·p‖₂))（Vs = V·D⁻¹），残差用补偿算术",
+ [{"type":"textbook","cite":"N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §19–20（QR 与最小二乘）、§22（Vandermonde 系统）"},
+  {"type":"textbook","cite":"G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., JHU Press 2013, §5.3（最小二乘的敏感性）"}],
+ "polyfit::fit (Vandermonde + Householder QR)","T1",{"max_degree":30,"max_points":1000000},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.RANGE","E.VALIDATION.OPTION_CONFLICT","E.VALIDATION.ENCODING","E.DOMAIN.UNDERDETERMINED","E.NUMERICAL.SINGULAR","E.NUMERICAL.NON_FINITE_EVALUATION","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["W.NUMERICAL.ILL_CONDITIONED"],sparse={},ver=V411,backend=BACK_NUM("polyfit::fit"))
+pfit_in=ins("fit.poly.polyfit",{"x":M,"y":M,"degree":{"type":"integer","minimum":0,"description":"多项式次数 d","x-aeoi-provenance":"user"},
+ "scaling":{"enum":["none","center_scale"],"default":"none","x-aeoi-provenance":"convention"}},["x","y","degree"],
+ {"x-aeoi-shape-constraints":["x: [n]","y: [n]"]},ver=V411)
+pfit_out=outs("fit.poly.polyfit",{"p":dict(M,description="系数 [d + 1]，最高次在前；scaling = center_scale 时是对 t = (x − mu[0])/mu[1] 的多项式"),
+ "degree":{"type":"integer"},"scaling":{"enum":["none","center_scale"]},
+ "mu":{"description":"scaling = center_scale 时为 [mean(x), std(x)]（样本标准差），否则 null"},
+ "residual_norm":{"type":"number","description":"‖y − V·p‖₂"},"dof":{"type":"integer","description":"自由度 n − d − 1"},
+ "std_errors":{"description":"每个系数的标准误差 [d + 1]（假设误差独立同分布）；dof = 0 时为 null"}},
+ ["p","degree","scaling","mu","residual_norm","dof","std_errors"],ver=V411)
+eigm=man("linalg.decomp.eig","Eigenvalues and eigenvectors","实方阵的特征值与特征向量（= MATLAB eig(A) / [V, D] = eig(A)）。A 精确对称时用对称算法：实特征值升序、正交特征向量；否则用一般算法：复特征值按实部升序、共轭对相邻（虚部为正的在前）。特征向量 2-范数为 1，最大模分量为正实数。结果带每个特征对的残差、特征值条件数与误差估计；可能亏损（重特征值）时警告。","analysis",["linalg","eigenvalues","eig","spectral"],
+ ["A 为 [n, n] 实数方阵"],["广义特征值问题 eig(A, B)（0.4.0 未支持）","复数矩阵","大型稀疏矩阵的部分特征值（eigs）"],
+ "structure = auto（缺省）：A 与 Aᵀ 逐位相等时用对称算法（循环双边 Jacobi：|a_pq| > ε·sqrt(|a_pp·a_qq|) 时旋转，至多 60 轮扫描），否则用一般算法：实 Schur 分解（nalgebra Schur，隐式双位移 QR，不收敛时做确定性相似变换后重试）→ 复 Schur 形（rsf2csf，Givens 消去 2×2 块）→ 上三角回代求特征向量（小除数按 LAPACK ztrevc 抬到 max(u·|λ|, 最小正规数)），共轭对的第二个向量取第一个的共轭；左特征向量同法求得，特征值条件数 1/|yᴴx|。排序：对称升序；一般按 (实部, |虚部|) 升序，共轭对虚部为正的在前。规一化：‖v‖₂ = 1，最大模分量（并列取下标最小）为正实数。",
+ [{"type":"textbook","cite":"G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., JHU Press 2013, §7.5（QR 算法）、§7.6（特征向量）、§8.3（对称 QR）"},
+  {"type":"textbook","cite":"J. W. Demmel, Applied Numerical Linear Algebra, SIAM 1997, §4.3、§5.2（扰动理论）"},
+  {"type":"textbook","cite":"E. Anderson et al., LAPACK Users' Guide, 3rd ed., SIAM 1999, §4.8（特征问题的误差界）"}],
+ "eig::eig (symmetric Jacobi / real Schur + complex triangular back-substitution)","T2",{"max_dimension":500},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.ENCODING","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["W.NUMERICAL.ILL_CONDITIONED","W.PERFORMANCE.SPARSE_DENSIFIED"],sparse={"/A":{"policy":"densify","max_dense_elements":250000}},ver=V411,backend=BACK_NUM("eig::eig"))
+eig_in=ins("linalg.decomp.eig",{"A":M,"structure":{"enum":["auto","general"],"default":"auto","x-aeoi-provenance":"convention"},
+ "vectors":{"type":"boolean","default":True,"x-aeoi-provenance":"convention"}},["A"],{"x-aeoi-shape-constraints":["A: [n, n]"]},ver=V411)
+eig_out=outs("linalg.decomp.eig",{"values":dict(M,description="特征值 [n]：对称算法为 f64（升序），一般算法为 c128（实部升序，共轭对相邻、虚部为正的在前）"),
+ "vectors":{"description":"特征向量 [n, n]，第 k 列对应 values[k]（f64 或 c128，与 values 一致）；vectors = false 时为 null"},
+ "structure":{"enum":["symmetric","general"],"description":"实际所用的算法"},
+ "ordering":{"type":"string","description":"排序规则（回显）"}},["values","vectors","structure","ordering"],ver=V411)
+svdm=man("linalg.decomp.svd","Singular value decomposition","实矩阵的奇异值分解 A = U·diag(s)·Vᵀ（= MATLAB svd）。mode = values 只返回奇异值，thin（缺省，= svd(A, \"econ\")）返回 [m, p] 与 [n, p] 的 U、V（p = min(m, n)），full 返回方阵 U、V。奇异值降序；每对奇异向量的符号规定为 u_k 的最大模分量为正。结果带数值秩（容差 max(m, n)·eps(s_max)，eps(x) 为 x 处的浮点间距，同 MATLAB rank）、2-范数条件数、重构残差与正交性。","analysis",["linalg","svd","singular-values","rank"],
+ ["A 为 [m, n] 实数矩阵"],["复数矩阵","大型稀疏矩阵的部分奇异值（svds）"],
+ "单边 Jacobi（Hestenes）：对 A（m < n 时对 Aᵀ）的列做循环旋转，|g_pᵀg_q| > sqrt(m)·ε·‖g_p‖‖g_q‖ 时旋转，至多 60 轮扫描；σ_k = ‖g_k‖₂，u_k = g_k/σ_k，零奇异值的 u_k 由正交补全给出；按奇异值降序重排；full 模式用 U_thin 的 Householder QR 补全正交基（前 p 列保持 U_thin 不变）。符号：u_k 的最大模分量（并列取下标最小）为正，v_k 随之变号。数值秩：s_k > max(m, n)·eps(s_max) 的个数。检查：‖A − U·diag(s)·Vᵀ‖_F/‖A‖_F 与 ‖UᵀU − I‖、‖VᵀV − I‖ 的最大元。",
+ [{"type":"textbook","cite":"G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., JHU Press 2013, §8.6.4（单边 Jacobi）"},
+  {"type":"paper","cite":"J. Demmel, K. Veselić, Jacobi's method is more accurate than QR, SIAM J. Matrix Anal. Appl. 13(4), 1992","doi":"10.1137/0613074"},
+  {"type":"textbook","cite":"J. W. Demmel, Applied Numerical Linear Algebra, SIAM 1997, §5.2（奇异值的扰动）"}],
+ "svd::svd (one-sided Jacobi)","T1",{"max_dimension":500},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.ENCODING","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["W.PERFORMANCE.SPARSE_DENSIFIED"],sparse={"/A":{"policy":"densify","max_dense_elements":250000}},ver=V411,backend=BACK_NUM("svd::svd"))
+svd_in=ins("linalg.decomp.svd",{"A":M,"mode":{"enum":["values","thin","full"],"default":"thin","x-aeoi-provenance":"convention"}},["A"],{"x-aeoi-shape-constraints":["A: [m, n]"]},ver=V411)
+svd_out=outs("linalg.decomp.svd",{"s":dict(M,description="奇异值 [p]，降序，p = min(m, n)"),
+ "U":{"description":"左奇异向量：thin [m, p]，full [m, m]；mode = values 时为 null"},
+ "V":{"description":"右奇异向量（不是 Vᵀ，同 MATLAB）：thin [n, p]，full [n, n]；mode = values 时为 null"},
+ "mode":{"enum":["values","thin","full"]},"rank":{"type":"integer","description":"数值秩：s_k > rank_tol 的个数"},
+ "rank_tol":{"type":"number","description":"max(m, n)·eps(s_max)（eps(x) 为 x 处的浮点间距；同 MATLAB rank）"},
+ "cond2":{"description":"s_max / s_min（s_min = 0 时为 \"Inf\"）"}},["s","U","V","mode","rank","rank_tol","cond2"],ver=V411)
+B3.update({"fit.poly.polyfit":(pfit,pfit_in,pfit_out),"linalg.decomp.eig":(eigm,eig_in,eig_out),"linalg.decomp.svd":(svdm,svd_in,svd_out)})
 ALL_OPS={"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2|B3
 for op,props in DESC.items():
     for (m_,i_,o_) in [ALL_OPS[op]]:
@@ -674,6 +729,12 @@ RECEIPT["signal.spectral.fft"]={"method_id":"aeoi:fft:rustfft-scalar","assumptio
    "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["parseval","dft_spot_check","all_finite"]}
 RECEIPT["linalg.system.solve"]={"method_id":"aeoi:linsolve:lu-refine-or-householder-qr","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("not_underdetermined","m ≥ n","error:E.DOMAIN.UNDERDETERMINED"),A("full_rank","A 列满秩（方阵非奇异）","error:E.NUMERICAL.SINGULAR"),A("conditioning","κ·u ≪ 1，否则解没有有效数字（前向误差 ≈ κ·η）","warning:W.NUMERICAL.ILL_CONDITIONED"),A("row_major","A 按 row-major 录入","caller")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["backward_stable","all_finite"]}
+RECEIPT["fit.poly.polyfit"]={"method_id":"aeoi:polyfit:vandermonde-householder-qr","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("enough_points","x 至少有 degree + 1 个不同的值","error:E.DOMAIN.UNDERDETERMINED"),A("numerical_rank","单项式基在 f64 下列满秩","error:E.NUMERICAL.SINGULAR"),A("conditioning","κ₁(R·D⁻¹) ≤ 1e10，否则数据的微小扰动会被大幅放大到系数上","warning:W.NUMERICAL.ILL_CONDITIONED"),A("model","数据确实可以用该次数的多项式描述；次数由用户选择","caller"),A("noise_model","std_errors 假设误差独立、等方差","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["backward_stable","all_finite"]}
+RECEIPT["linalg.decomp.eig"]={"method_id":"aeoi:eig:symmetric-jacobi-or-schur-backsubstitution","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("square","A 为方阵","error:E.VALIDATION.SHAPE"),A("converged","Jacobi 扫描或 Schur 的 QR 迭代在上限内收敛","error:E.NUMERICAL.NO_CONVERGENCE"),A("nondefective","特征值条件数 ≤ 1e8，否则可能亏损：特征值只有约一半有效数字，特征向量接近平行","warning:W.NUMERICAL.ILL_CONDITIONED"),A("row_major","A 按 row-major 录入","caller"),A("uniqueness","特征向量只确定到规范规定的规一化；重特征值对应的特征向量只确定到子空间","validation")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["residual_small","orthonormal","all_finite"]}
+RECEIPT["linalg.decomp.svd"]={"method_id":"aeoi:svd:one-sided-jacobi","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("converged","Jacobi 扫描在上限内收敛","error:E.NUMERICAL.NO_CONVERGENCE"),A("row_major","A 按 row-major 录入","caller"),A("uniqueness","奇异向量只确定到规范规定的符号；重奇异值对应的奇异向量只确定到子空间","validation"),A("absolute_accuracy","小奇异值只有绝对精度（≈ u·s_max），没有相对精度","validation")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["reconstructs","orthonormal_u","orthonormal_v","all_finite"]}
 RECEIPT["interp.grid.interp1"]={"method_id":"aeoi:interp1:piecewise","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("strictly_increasing","x 严格递增","error:E.VALIDATION.GRID"),A("in_range","查询点在数据范围内，或调用方显式选择了范围外的处理","error:E.DOMAIN.EXTRAPOLATION_REQUIRED"),A("model","插值反映的是数据之间的一种约定曲线（方法决定），不是真实函数；与真实函数的误差算子无法估计","caller"),A("channels","y 每行一个通道","caller")],
    "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["all_finite","pieces_interpolate","spline_c2","local_bounds"]}
 RECEIPT["control.design.pidtune"]={"method_id":"aeoi:pidtune:frequency-point","assumptions":[A("lti_model","plant 准确描述被控对象（单位、符号）","caller"),A("siso_continuous","SISO、连续、proper","error:E.DOMAIN.NOT_CONTINUOUS"),A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("target_from_user","ωc 由调用方给出；PM、Ti/Td、N 用请求里的值或规范默认","validation"),A("achievable","所需控制器相位在 PI/PID 可达范围内","error:E.DOMAIN.TARGET_NOT_ACHIEVABLE"),A("closed_loop_stable","结果闭环稳定","error:E.DOMAIN.TARGET_NOT_ACHIEVABLE"),A("single_crossover","L 只有一个增益穿越点（否则实际相位裕度可能小于目标）","warning:W.DOMAIN.EXTRA_CROSSOVER")],
@@ -693,7 +754,10 @@ COVERAGE.update({"control.design.pid":{"formula_matches":"test_points"},"control
  "signal.spectral.fft":{"parseval":"full","dft_spot_check":"sampled"},
  "ode.ivp.solve":{"tolerance_consistent":"full"},
  "linalg.system.solve":{"backward_stable":"full"},
- "interp.grid.interp1":{"pieces_interpolate":"full","spline_c2":"full","local_bounds":"full"}})
+ "interp.grid.interp1":{"pieces_interpolate":"full","spline_c2":"full","local_bounds":"full"},
+ "fit.poly.polyfit":{"backward_stable":"full"},
+ "linalg.decomp.eig":{"residual_small":"full","orthonormal":"full"},
+ "linalg.decomp.svd":{"reconstructs":"full","orthonormal_u":"full","orthonormal_v":"full"}})
 # v0.3.6 E-13: result fields that are not usable when a post-condition fails (listed in receipt.evidence.unreliable).
 GUARDS={"control.analysis.ctrb_obsv":{"pbh_agrees_ctrb":["/ctrb/rank","/ctrb/full_rank","/minimal"],"pbh_agrees_obsv":["/obsv/rank","/obsv/full_rank","/minimal"]},
  "control.analysis.loopsens":{"closed_loop_identity":["/open_loop","/closed_loop","/sensitivity"],"stability_consistent":["/closed_loop_stable"],"sub_operator_checks":["/margins","/gain_crossover_rad_s","/gain_crossover_hz","/step_metrics"]}}
@@ -703,6 +767,9 @@ GUARDS["control.lti.lsim"]={"half_step_consistent":["/y","/x"]}
 GUARDS["ode.ivp.solve"]={"tolerance_consistent":["/y"]}
 GUARDS["linalg.system.solve"]={"backward_stable":["/x"]}
 GUARDS["interp.grid.interp1"]={"pieces_interpolate":["/yq"],"spline_c2":["/yq"],"local_bounds":["/yq"]}
+GUARDS["fit.poly.polyfit"]={"backward_stable":["/p","/std_errors"]}
+GUARDS["linalg.decomp.eig"]={"residual_small":["/values","/vectors"],"orthonormal":["/vectors"]}
+GUARDS["linalg.decomp.svd"]={"reconstructs":["/s","/U","/V","/rank","/cond2"],"orthonormal_u":["/U"],"orthonormal_v":["/V"]}
 GUARDS["signal.spectral.fft"]={"parseval":["/X"],"dft_spot_check":["/X","/frequency"]}
 GUARDS["control.design.pidtune"]={"target_met":["/controller","/gains","/gains_standard"],"sub_operator_checks":["/achieved"]}
 for op,c in COVERAGE.items(): RECEIPT[op]["coverage"]=c

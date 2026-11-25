@@ -1,0 +1,172 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "linalg.decomp.eig",
+  "version": "0.4.0",
+  "title": "Eigenvalues and eigenvectors",
+  "description": "实方阵的特征值与特征向量（= MATLAB eig(A) / [V, D] = eig(A)）。A 精确对称时用对称算法：实特征值升序、正交特征向量；否则用一般算法：复特征值按实部升序、共轭对相邻（虚部为正的在前）。特征向量 2-范数为 1，最大模分量为正实数。结果带每个特征对的残差、特征值条件数与误差估计；可能亏损（重特征值）时警告。",
+  "category": "analysis",
+  "tags": [
+    "linalg",
+    "eigenvalues",
+    "eig",
+    "spectral"
+  ],
+  "applicability": {
+    "preconditions": [
+      "A 为 [n, n] 实数方阵"
+    ],
+    "not_for": [
+      "广义特征值问题 eig(A, B)（0.4.0 未支持）",
+      "复数矩阵",
+      "大型稀疏矩阵的部分特征值（eigs）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "structure = auto（缺省）：A 与 Aᵀ 逐位相等时用对称算法（循环双边 Jacobi：|a_pq| > ε·sqrt(|a_pp·a_qq|) 时旋转，至多 60 轮扫描），否则用一般算法：实 Schur 分解（nalgebra Schur，隐式双位移 QR，不收敛时做确定性相似变换后重试）→ 复 Schur 形（rsf2csf，Givens 消去 2×2 块）→ 上三角回代求特征向量（小除数按 LAPACK ztrevc 抬到 max(u·|λ|, 最小正规数)），共轭对的第二个向量取第一个的共轭；左特征向量同法求得，特征值条件数 1/|yᴴx|。排序：对称升序；一般按 (实部, |虚部|) 升序，共轭对虚部为正的在前。规一化：‖v‖₂ = 1，最大模分量（并列取下标最小）为正实数。",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., JHU Press 2013, §7.5（QR 算法）、§7.6（特征向量）、§8.3（对称 QR）"
+      },
+      {
+        "type": "textbook",
+        "cite": "J. W. Demmel, Applied Numerical Linear Algebra, SIAM 1997, §4.3、§5.2（扰动理论）"
+      },
+      {
+        "type": "textbook",
+        "cite": "E. Anderson et al., LAPACK Users' Guide, 3rd ed., SIAM 1999, §4.8（特征问题的误差界）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "eig::eig",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T2",
+  "sparse_support": {
+    "/A": {
+      "policy": "densify",
+      "max_dense_elements": 250000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_dimension": 500
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/linalg.decomp.eig/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ENCODING",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.NUMERICAL.ILL_CONDITIONED",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "linalg_decomp_eig",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:eig:symmetric-jacobi-or-schur-backsubstitution",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "square",
+        "statement": "A 为方阵",
+        "enforced_by": "error:E.VALIDATION.SHAPE"
+      },
+      {
+        "id": "converged",
+        "statement": "Jacobi 扫描或 Schur 的 QR 迭代在上限内收敛",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "nondefective",
+        "statement": "特征值条件数 ≤ 1e8，否则可能亏损：特征值只有约一半有效数字，特征向量接近平行",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      },
+      {
+        "id": "row_major",
+        "statement": "A 按 row-major 录入",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "uniqueness",
+        "statement": "特征向量只确定到规范规定的规一化；重特征值对应的特征向量只确定到子空间",
+        "enforced_by": "validation"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "residual_small",
+      "orthonormal",
+      "all_finite"
+    ],
+    "coverage": {
+      "residual_small": "full",
+      "orthonormal": "full"
+    },
+    "guards": {
+      "residual_small": [
+        "/values",
+        "/vectors"
+      ],
+      "orthonormal": [
+        "/vectors"
+      ]
+    }
+  }
+}

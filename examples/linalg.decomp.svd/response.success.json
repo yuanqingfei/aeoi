@@ -1,0 +1,192 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.decomp.svd",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "s": {
+      "dtype": "f64",
+      "shape": [
+        2
+      ],
+      "data": [
+        5.0,
+        2.9999999999999996
+      ]
+    },
+    "U": {
+      "dtype": "f64",
+      "shape": [
+        2,
+        2
+      ],
+      "data": [
+        0.7071067811865475,
+        0.7071067811865475,
+        0.7071067811865475,
+        -0.7071067811865475
+      ]
+    },
+    "V": {
+      "dtype": "f64",
+      "shape": [
+        3,
+        2
+      ],
+      "data": [
+        0.7071067811865475,
+        0.23570226039551587,
+        0.7071067811865475,
+        -0.23570226039551587,
+        0.0,
+        0.9428090415820635
+      ]
+    },
+    "mode": "thin",
+    "rank": 2,
+    "rank_tol": 2.6645352591003757e-15,
+    "cond2": 1.666666666666667
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "backward_error": 1.8655478282543342e-16,
+      "threshold": 3.3306690738754696e-14,
+      "definition": "‖A − U·diag(s)·Vᵀ‖_F / ‖A‖_F（p 个奇异三元组）",
+      "orthonormality_u": 2.220446049250313e-16,
+      "orthonormality_v": 2.220446049250313e-16
+    },
+    "condition": {
+      "cond2": 1.666666666666667,
+      "note": "奇异值本身是良态的：|Δs_k| ≤ ‖ΔA‖₂（Weyl）"
+    },
+    "error_estimate": {
+      "value_abs": 3.3082380136587277e-15,
+      "vector_angle": [
+        1.6541190068293634e-15,
+        1.6541190068293634e-15
+      ],
+      "basis": "|Δs_k| ≲ ‖A‖_F·残差 + s_max·(正交性误差)（Weyl；小奇异值只有绝对精度）；奇异向量夹角 ≲ 该界 / gap_k（Wedin；重奇异值时 gap = 0，向量只确定到子空间）"
+    },
+    "checks": {
+      "reconstructs": true,
+      "orthonormal_u": true,
+      "orthonormal_v": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "checked_factors": "返回的 U、V"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:svd:one-sided-jacobi",
+      "routine": "svd::svd",
+      "provenance": "aeoi://operators/linalg.decomp.svd/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "converged",
+        "statement": "Jacobi 扫描在上限内收敛",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "row_major",
+        "statement": "A 按 row-major 录入",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "uniqueness",
+        "statement": "奇异向量只确定到规范规定的符号；重奇异值对应的奇异向量只确定到子空间",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "absolute_accuracy",
+        "statement": "小奇异值只有绝对精度（≈ u·s_max），没有相对精度",
+        "enforced_by": "validation"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "value_abs": 3.3082380136587277e-15
+      },
+      "basis": "|Δs_k| ≲ ‖A‖_F·残差 + s_max·(正交性误差)（Weyl；小奇异值只有绝对精度）；奇异向量夹角 ≲ 该界 / gap_k（Wedin；重奇异值时 gap = 0，向量只确定到子空间）"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "reconstructs": true,
+        "orthonormal_u": true,
+        "orthonormal_v": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "reconstructs": "full",
+        "orthonormal_u": "full",
+        "orthonormal_v": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:11d8661d1c3cebe87aefc48ae4136119c6af6bff4b2acc2d4fa7b53237abab90",
+      "result": "sha256:487d24735286fbd1f76b47678f72770a7fa94cab1dcd524c3f9e400926ed12b9",
+      "output_hash": "sha256:02d7c512170629580b022f71438f90d33ed3813b12b8e4b6f838f0246c7fea59",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.decomp.svd@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:902484353920a2b6b7a40100515f0db268ba4ebe29a87799d8eab49e898109ec",
+    "output_hash": "sha256:02d7c512170629580b022f71438f90d33ed3813b12b8e4b6f838f0246c7fea59",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.17318
+  }
+}

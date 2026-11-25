@@ -1,0 +1,190 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.decomp.eig",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "values": {
+      "dtype": "f64",
+      "shape": [
+        3
+      ],
+      "data": [
+        0.5857864376269051,
+        2.0,
+        3.414213562373095
+      ]
+    },
+    "vectors": {
+      "dtype": "f64",
+      "shape": [
+        3,
+        3
+      ],
+      "data": [
+        0.5,
+        0.7071067811865476,
+        -0.5,
+        0.7071067811865476,
+        -9.111855352308912e-17,
+        0.7071067811865476,
+        0.5000000000000001,
+        -0.7071067811865476,
+        -0.5000000000000002
+      ]
+    },
+    "structure": "symmetric",
+    "ordering": "ascending"
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "backward_error": 1.2412670766236366e-16,
+      "threshold": 3.3306690738754696e-14,
+      "definition": "max_k ‖A·v_k − λ_k·v_k‖₂ / ‖A‖_F",
+      "orthonormality": 4.440892098500626e-16
+    },
+    "condition": {
+      "eigenvalue_condition": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "note": "对称矩阵的特征值条件数都是 1"
+    },
+    "error_estimate": {
+      "value_abs": [
+        1.6653345369377348e-16,
+        3.980749787885307e-17,
+        4.965068306494546e-16
+      ],
+      "vector_angle": [
+        1.1775693440128314e-16,
+        2.814815169220612e-17,
+        3.5108334685767017e-16
+      ],
+      "basis": "|λ̂_k − λ| ≤ ‖r_k‖₂（对称矩阵的残差界）；特征向量夹角 sinθ ≲ ‖r_k‖₂ / gap_k（Davis–Kahan，gap_k 为到其余特征值的最小距离；重特征值时 gap = 0，向量只确定到子空间）"
+    },
+    "checks": {
+      "residual_small": true,
+      "orthonormal": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "orthonormal_applies": true,
+      "symmetry": "A 与 Aᵀ 逐位相等"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:eig:symmetric-jacobi-or-schur-backsubstitution",
+      "routine": "eig::eig",
+      "provenance": "aeoi://operators/linalg.decomp.eig/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "square",
+        "statement": "A 为方阵",
+        "enforced_by": "error:E.VALIDATION.SHAPE"
+      },
+      {
+        "id": "converged",
+        "statement": "Jacobi 扫描或 Schur 的 QR 迭代在上限内收敛",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "nondefective",
+        "statement": "特征值条件数 ≤ 1e8，否则可能亏损：特征值只有约一半有效数字，特征向量接近平行",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      },
+      {
+        "id": "row_major",
+        "statement": "A 按 row-major 录入",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "uniqueness",
+        "statement": "特征向量只确定到规范规定的规一化；重特征值对应的特征向量只确定到子空间",
+        "enforced_by": "validation"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": "|λ̂_k − λ| ≤ ‖r_k‖₂（对称矩阵的残差界）；特征向量夹角 sinθ ≲ ‖r_k‖₂ / gap_k（Davis–Kahan，gap_k 为到其余特征值的最小距离；重特征值时 gap = 0，向量只确定到子空间）"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "residual_small": true,
+        "orthonormal": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null,
+      "coverage": {
+        "residual_small": "full",
+        "orthonormal": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:7a13610f26465c16e8ed02cf9f5c316a5b4c9014b9af080dd4bb678a900fc0bd",
+      "result": "sha256:be07e9547ea92fa64aa15f8bfca045840637ef542b1cf937c3cca253be2dab94",
+      "output_hash": "sha256:4c478c6bfdf8590d49b0d9ca642f073eb5cdb0dbee37cd370ee33799ee9fb655",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.decomp.eig@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:832b5ab26ac095f8686b38c86d275a7facd08aff5d1a8e5cdd346fe0e0158251",
+    "output_hash": "sha256:4c478c6bfdf8590d49b0d9ca642f073eb5cdb0dbee37cd370ee33799ee9fb655",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.167603
+  }
+}

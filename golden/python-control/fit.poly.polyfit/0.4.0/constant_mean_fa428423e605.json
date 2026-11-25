@@ -1,0 +1,60 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "fit.poly.polyfit",
+ "operator_version": "0.4.0",
+ "case_family": "constant_mean",
+ "request": {
+  "x": {
+   "dtype": "f64",
+   "shape": [
+    4
+   ],
+   "data": [
+    0.0,
+    1.0,
+    2.0,
+    3.0
+   ]
+  },
+  "y": {
+   "dtype": "f64",
+   "shape": [
+    4
+   ],
+   "data": [
+    1.0,
+    2.0,
+    4.0,
+    8.0
+   ]
+  },
+  "degree": 0
+ },
+ "reference_env": {
+  "engine": "numpy.polyfit / mpmath",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "seed": 20261125,
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "p_true": [
+   3.75
+  ],
+  "p_numpy": [
+   3.7499999999999996
+  ],
+  "mu_true": null,
+  "residual_norm_true": 5.361902647381804,
+  "std_errors_true": [
+   1.547847968417226
+  ],
+  "col_norms": [
+   2.0
+  ],
+  "kappa_scaled_2": 1.0,
+  "dof": 3,
+  "numpy_scaled_forward_error": 1.1842378929335003e-16
+ }
+}

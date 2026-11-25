@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.decomp.svd/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "A"
+  ],
+  "properties": {
+    "A": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "实矩阵 [m, n]，row-major"
+    },
+    "mode": {
+      "enum": [
+        "values",
+        "thin",
+        "full"
+      ],
+      "default": "thin",
+      "x-aeoi-provenance": "convention",
+      "description": "values（只要奇异值）、thin（缺省，= MATLAB svd(A, \"econ\")）或 full（方阵 U、V）"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  },
+  "x-aeoi-shape-constraints": [
+    "A: [m, n]"
+  ]
+}

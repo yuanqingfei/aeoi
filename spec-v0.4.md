@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.10-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.11-draft
 
-> 状态：Draft v0.4.10 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.11 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.11 新增三个算子：多项式拟合 `fit.poly.polyfit`（10.21，带标准误差；病态时警告并建议中心化缩放，须用户确认）、特征分解 `linalg.decomp.eig`（10.22）与奇异值分解 `linalg.decomp.svd`（10.23）。后两者的特征向量、奇异向量本身不唯一，规范给出排序与规一化约定，一致性规则只比较不变量。
 >
 > v0.4.10 新增两个算子：线性方程组 `linalg.system.solve`（10.19，对应 `A\b`，带迭代精化、条件数估计和后向误差）和一维插值 `interp.grid.interp1`（10.20，范围外缺省报错）。
 >
@@ -10472,6 +10474,1338 @@ case_families:
 
 共 56 个 golden 用例，44 个成功、12 个错误。成功用例中，29 个与参考逐位相同；最大偏差是 3.0e-16·max(1, max|y|)，与精确值的最大偏差是 2.3e-16。结果见 `aeoi-numeric/tests/parity_interp1.rs` 和 `reports/parity-interp1.json`。
 
+## 10.21 `fit.poly.polyfit`：多项式拟合（v0.4.11）
+
+对应 MATLAB 的 `polyfit`。参考值来自 numpy.polyfit（LAPACK `dgelsd`，先对 Vandermonde 矩阵做列缩放）；真值是 mpmath 以 60 位精度对存储下来的 f64 数据解正规方程得到的。都不是 MATLAB 的结果。这个算子逼出的规范问题有两个：
+
+- **病态时算子该不该替用户改模型。** 年份这类 x 离 0 远、跨度小，单项式基会严重病态。MATLAB 只打印一句“建议中心化缩放”。中心化缩放会改变系数的含义：系数变成关于 (x − mean)/std 的多项式，所以不能悄悄替用户做。
+- **一个“警告”怎么附上修复建议。** 5.1 的 warning 没有 `remediation` 字段。
+
+**规范性条款**
+
+- PF-1 **输入**（作者决定，2026-11-25）：
+  - x、y 为等长的 [n] 实数向量。
+  - `degree` 必填，来源 `user`：次数是模型选择，算子和 LLM 都不得代填。
+  - `scaling` 取 `none`（缺省）或 `center_scale`。
+  - x 不同值的个数少于 degree + 1 时，报 `E.DOMAIN.UNDERDETERMINED`（复用 LS-1 的码），附两个 remediation：一个把次数降到“不同值个数 − 1”的补丁（改变模型，须用户确认），一个 `ask_user`（补充数据）。
+- PF-2 **解法**：
+  - V[i][j] = t_i^(d−j)，按列连乘（同 MATLAB），用 Householder QR 求解（与 10.19 共用）。
+  - 解出 p 之后，再用修正半正规方程做至多 3 步精化：δ = R⁻¹R⁻ᵀ·(Vᵀr)，Vᵀr 用补偿算术算。修正量没有减半，或已到 u 的量级时停止。
+  - 精化的效果：golden 上 14 个成功用例全都比 numpy 准。最病态的一个（年份、4 次，κ = 7e10）上，numpy 的误差是 3.0e-7，本算子是 3.4e-12。
+- PF-3 **列缩放**：秩判定、条件数、后向误差都在 V·D⁻¹ 上计算，D 为 V 的列 2-范数。这样这些量与 x 的单位无关，只反映 x 的位置与跨度。
+  - 原因：未缩放的 R 在年份数据上，3 次就判为数值秩不足（列范数从 5.6 到 8e9），而按缩放后的条件数，问题其实只有 1.3e8。
+  - `center_scale` 时 t = (x − mu[0])/mu[1]，mean 与样本标准差用补偿求和，mu 随结果返回。x 只有一个不同值时，标准差为 0，报 `E.VALIDATION.OPTION_CONFLICT`。
+- PF-4 **病态**（作者决定）：缩放后列满秩、但 κ₁(R·D⁻¹) > 1e10 时，照原样拟合，并发 `W.NUMERICAL.ILL_CONDITIONED`。
+  - 警告的 `details.suggested_remediation` 是一个与错误 remediation 同形的对象（`modify_input`，补丁加上 `scaling = center_scale`，`requires_user_confirmation: true`）。这是“警告附修复建议”的写法，见开放问题 27。
+  - 警告文字要说清：对给定数据算得的系数仍然准确；但数据的相对扰动会被放大约 κ 倍传到系数上，而且系数之间高度相关。
+  - 缩放后仍数值秩不足时，报 `E.NUMERICAL.SINGULAR`，补丁同上。
+- PF-5 **输出**：
+  - `p`：最高次在前。
+  - `degree`、`scaling`、`mu`（`center_scale` 时为 [mean, std]，否则 null）。
+  - `residual_norm`、`dof` = n − d − 1。
+  - `std_errors`：sqrt(diag((RᵀR)⁻¹))·‖r‖₂/sqrt(dof)，假设误差独立、等方差；dof = 0 时为 null。MATLAB 的第二个输出 S 只给 R、自由度和残差范数，标准误差要调用方自己算（作者决定直接给出）。
+- PF-6 **后置条件 `backward_stable`**：‖D⁻¹Vᵀr‖₂ / (‖V·D⁻¹‖_F·(‖r‖₂ + ‖V·D⁻¹‖_F‖D·p‖₂)) ≤ 10·n·u，r 用补偿算术。
+- PF-7 **确定性**：`platform_bitwise`。
+
+**Manifest** — `examples/fit.poly.polyfit/manifest.json`
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "id": "fit.poly.polyfit",
+  "version": "0.4.0",
+  "title": "Polynomial least-squares fit",
+  "description": "最小二乘多项式拟合：求 d 次多项式 p（系数从最高次到常数项，与 MATLAB polyfit、numpy.polyfit 相同）使 ‖V·p − y‖₂ 最小。Householder QR 求解；结果带每个系数的标准误差、残差范数、自由度、条件数估计与后向误差。病态时照原样拟合并警告，建议（须用户确认）改用中心化缩放 scaling = center_scale（= MATLAB 的 [p, S, mu]）。",
+  "category": "analysis",
+  "tags": ["fit", "polynomial", "polyfit", "regression", "least-squares"],
+  "applicability": {
+    "preconditions": ["x、y 为等长的 [n] 实数向量", "degree（次数 d）由调用方给出", "x 至少有 d + 1 个不同的值"],
+    "not_for": ["加权拟合与约束拟合（0.4.0 未支持）", "非多项式模型（lsqcurvefit）", "外推：拟合多项式在数据范围外通常没有意义"],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "Vandermonde 矩阵 V[i][j] = t_i^(d−j)（逐列连乘，同 MATLAB polyfit），t = x（scaling = none，缺省）或 t = (x − mean)/std（scaling = center_scale，std 为样本标准差，mean、std 用补偿求和）。Householder QR（与 linalg.system.solve 相同），p = R⁻¹·(Qᵀy)，再用修正半正规方程做至多 3 步精化（δ = R⁻¹R⁻ᵀ·(Vᵀr)，Vᵀr 用补偿算术）。秩判定与条件数都在列缩放后的 R·D⁻¹ 上（D 为 V 的列 2-范数，与 x 的单位无关）：|r_jj| ≤ max(m, n)·u·max|r_ii| 报 E.NUMERICAL.SINGULAR；κ₁ 用 Hager–Higham 估计，> 1e10 时 W.NUMERICAL.ILL_CONDITIONED。标准误差 sqrt(diag((RᵀR)⁻¹))·‖r‖₂/sqrt(n − d − 1)。后向误差 ‖Vsᵀr‖₂ / (‖Vs‖_F·(‖r‖₂ + ‖Vs‖_F‖D·p‖₂))（Vs = V·D⁻¹），残差用补偿算术",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §19–20（QR 与最小二乘）、§22（Vandermonde 系统）"
+      },
+      {
+        "type": "textbook",
+        "cite": "G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., JHU Press 2013, §5.3（最小二乘的敏感性）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "polyfit::fit",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {},
+  "encodings": {
+    "input": ["json", "b64", "ref"],
+    "output": ["json", "b64"]
+  },
+  "limits": {
+    "max_degree": 30,
+    "max_points": 1000000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/fit.poly.polyfit/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.RANGE",
+    "E.VALIDATION.OPTION_CONFLICT",
+    "E.VALIDATION.ENCODING",
+    "E.DOMAIN.UNDERDETERMINED",
+    "E.NUMERICAL.SINGULAR",
+    "E.NUMERICAL.NON_FINITE_EVALUATION",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": ["W.NUMERICAL.ILL_CONDITIONED"],
+  "mcp": {
+    "tool_name": "fit_poly_polyfit",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:polyfit:vandermonde-householder-qr",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "enough_points",
+        "statement": "x 至少有 degree + 1 个不同的值",
+        "enforced_by": "error:E.DOMAIN.UNDERDETERMINED"
+      },
+      {
+        "id": "numerical_rank",
+        "statement": "单项式基在 f64 下列满秩",
+        "enforced_by": "error:E.NUMERICAL.SINGULAR"
+      },
+      {
+        "id": "conditioning",
+        "statement": "κ₁(R·D⁻¹) ≤ 1e10，否则数据的微小扰动会被大幅放大到系数上",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      },
+      {
+        "id": "model",
+        "statement": "数据确实可以用该次数的多项式描述；次数由用户选择",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "noise_model",
+        "statement": "std_errors 假设误差独立、等方差",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": ["backward_stable", "all_finite"],
+    "coverage": {
+      "backward_stable": "full"
+    },
+    "guards": {
+      "backward_stable": ["/p", "/std_errors"]
+    }
+  }
+}
+```
+
+**请求与响应**（7 个点的二次拟合，带标准误差）
+
+```json
+{
+  "x": {
+    "dtype": "f64",
+    "shape": [
+      7
+    ],
+    "data": [
+      0.0,
+      0.5,
+      1.0,
+      1.5,
+      2.0,
+      2.5,
+      3.0
+    ]
+  },
+  "y": {
+    "dtype": "f64",
+    "shape": [
+      7
+    ],
+    "data": [
+      1.02,
+      0.31,
+      0.05,
+      0.22,
+      0.98,
+      2.27,
+      4.01
+    ]
+  },
+  "degree": 2
+}
+```
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "fit.poly.polyfit",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "p": {
+      "dtype": "f64",
+      "shape": [3],
+      "data": [1.0085714285714285, -2.0385714285714287, 1.0457142857142856]
+    },
+    "degree": 2,
+    "scaling": "none",
+    "mu": null,
+    "residual_norm": 0.07091242083423346,
+    "dof": 4,
+    "std_errors": [0.01547435886597328, 0.04831867007225081, 0.030948717731946546]
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "backward_error": 7.341231337526174e-17,
+      "threshold": 7.771561172376096e-15,
+      "definition": "‖Vsᵀ(y − V·p)‖₂ / (‖Vs‖_F·(‖r‖₂ + ‖Vs‖_F‖D·p‖₂))，Vs = V·D⁻¹，D = diag(‖V 的列‖₂)（最小二乘最优性，与 x 的单位无关；残差用补偿算术 Dot2）"
+    },
+    "condition": {
+      "kappa1_estimate": 18.027658573967805,
+      "rcond": 0.055470320557546735,
+      "of": "R·D⁻¹（V = QR，V 为所用基的 Vandermonde 矩阵，D 为其列 2-范数；与 x 的单位无关）",
+      "estimator": "Hager–Higham 1-范数估计，下界"
+    },
+    "error_estimate": {
+      "Dp_rel_forward_2": 2.7090779567964676e-15,
+      "basis": "‖D·(p̂ − p)‖₂/‖D·p‖₂ 的一阶界 η·(2κ + κ²·‖r‖/(‖Vs‖‖D·p‖))（Golub–Van Loan 5.3.8）；D·p 的分量 = 各项在数据上的贡献大小"
+    },
+    "checks": {
+      "backward_stable": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "refinement_steps": 2,
+      "std_errors_model": "y = V·p + ε，ε 独立同分布、等方差；σ̂ = ‖r‖₂/sqrt(dof)",
+      "basis": "t = x"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:polyfit:vandermonde-householder-qr",
+      "routine": "polyfit::fit",
+      "provenance": "aeoi://operators/fit.poly.polyfit/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "enough_points",
+        "statement": "x 至少有 degree + 1 个不同的值",
+        "enforced_by": "error:E.DOMAIN.UNDERDETERMINED"
+      },
+      {
+        "id": "numerical_rank",
+        "statement": "单项式基在 f64 下列满秩",
+        "enforced_by": "error:E.NUMERICAL.SINGULAR"
+      },
+      {
+        "id": "conditioning",
+        "statement": "κ₁(R·D⁻¹) ≤ 1e10，否则数据的微小扰动会被大幅放大到系数上",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      },
+      {
+        "id": "model",
+        "statement": "数据确实可以用该次数的多项式描述；次数由用户选择",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "noise_model",
+        "statement": "std_errors 假设误差独立、等方差",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "Dp_rel_forward_2": 2.7090779567964676e-15
+      },
+      "basis": "‖D·(p̂ − p)‖₂/‖D·p‖₂ 的一阶界 η·(2κ + κ²·‖r‖/(‖Vs‖‖D·p‖))（Golub–Van Loan 5.3.8）；D·p 的分量 = 各项在数据上的贡献大小"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "backward_stable": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "backward_stable": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:3d141abf48ffcb557768493117729cd5af2f6ffa737e0244c95d302923376171",
+      "result": "sha256:4bbba2d05fd7074ef802e3cbfea75ea7a69dff12ab76f9696a41a5806ffb40c2",
+      "output_hash": "sha256:ee15d653c3aab246390200aefa21f39c32d2140be614d0381d67e0a4685a7328",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of fit.poly.polyfit@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:7bf84ef3991e8ac3fae37d5a902a30b4f539954f5cde1a32aa626efdb3a34d96",
+    "output_hash": "sha256:ee15d653c3aab246390200aefa21f39c32d2140be614d0381d67e0a4685a7328",
+    "platform": "x86_64-linux",
+    "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.18206599999999998
+  }
+}
+```
+
+**病态的例子** — `request.ill.json`：x = 1990…2020，4 次。响应 `response.ill.json` 的状态是 `ok_with_warnings`：κ₁(R·D⁻¹) ≈ 6.1e10，警告里附有 `center_scale` 补丁。系数的标准误差与系数本身同量级，说明这些系数单独看没有意义。
+
+**错误请求与响应**（x 只有 2 个不同值，却要 2 次：PF-1）
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "fit.poly.polyfit",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.DOMAIN.UNDERDETERMINED",
+    "category": "domain",
+    "retryable": true,
+    "message": "2 次多项式有 3 个系数，但 x 只有 2 个不同的值（共 5 个点）：拟合多项式不唯一。",
+    "agent_hint": "降低次数（至多 {nd} − 1），或补充不同 x 处的数据。",
+    "details": {
+      "path": "/degree",
+      "distinct_x": 2,
+      "coefficients": 3
+    },
+    "remediation": [
+      {
+        "id": "lower_degree",
+        "kind": "modify_input",
+        "description": "把次数降到 1（模型改变，须用户确认）",
+        "confidence": "medium",
+        "requires_user_confirmation": true,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/degree",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "more_data",
+        "kind": "ask_user",
+        "description": "数据点不够：能否补充更多不同 x 处的测量？",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.080708
+  }
+}
+```
+
+**Parity 测试规格** — `examples/fit.poly.polyfit/parity.yaml`
+
+```yaml
+# Parity test spec — fit.poly.polyfit 0.4.0 (AEOI v0.4.11-draft)
+operator: fit.poly.polyfit
+references:
+  - {engine: numpy, version: "numpy.polyfit (LAPACK dgelsd on the column-scaled Vandermonde matrix)", role: dev_reference, status: active,
+     generator: gen_golden_polyfit.py, golden_store: "golden/python-control/fit.poly.polyfit/0.4.0/*.json",
+     note: "NOT MATLAB output. MATLAB polyfit: Householder QR of the unscaled Vandermonde matrix, no refinement"}
+  - {engine: mpmath, role: high_precision_reference, status: active,
+     note: "exact least-squares answer for the stored f64 data: 60-digit normal equations; mean/std exact for center_scale"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_polyfit"
+tolerance_class: T1
+compare:
+  p: {against: exact answer, bound: "‖D(p − p*)‖₂ / ‖D p*‖₂ ≤ 1e-12 · max(1, κ/100); D = column 2-norms of the Vandermonde matrix, κ = cond₂(V·D⁻¹) from the reference"}
+  mu: "|Δ| ≤ 4e-16 · max(|mean|, std)"
+  residual_norm: "|Δ| ≤ 1e-12 · max(1, κ) · ‖y‖₂"
+  std_errors: "relative ≤ 1e-8 · max(1, κ/1e4); not compared when the fit is (nearly) exact; null iff dof = 0"
+  warnings: "W.NUMERICAL.ILL_CONDITIONED exactly where expect_warning says"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py (rule_polyfit)
+  p: "shape exact; scaled forward error against the exact answer as above"
+  echoed: "degree, scaling, dof"
+  recomputed: "the runner recomputes Vᵀ(y − V·p) for the returned p from the request in exact rational arithmetic (the normal-equation residual; zero for the exact least-squares solution) and requires ‖D⁻¹Vᵀr‖₂ ≤ 10·n·u·‖V·D⁻¹‖_F·(‖r‖₂ + ‖V·D⁻¹‖_F‖D p‖₂)"
+case_families:
+  - {name: "line_exact / quadratic_exact / constant_mean / interpolating_dof0 / repeated_points", n: 5}
+  - {name: "noisy_cubic / degree8_unit_interval / runge_degree10 / random_degree5 / negative_large_x", n: 5}
+  - {name: "years_degree3 / years_degree4_warns / years_degree4_center_scale / years_degree8_center_scale", n: 4, note: "x = 1990…2020: κ(V·D⁻¹) 1.3e8 / 7e10 (warns) / 11 / 320"}
+  - {name: errors, n: 10, expect: "E.DOMAIN.UNDERDETERMINED ×2, E.NUMERICAL.SINGULAR (years, degree 8, with a center_scale patch), E.VALIDATION.SHAPE ×2, NON_FINITE, SCHEMA ×2, RANGE, OPTION_CONFLICT"}
+```
+
+共 24 个 golden 用例，14 个成功、10 个错误。缩放后的前向误差，最坏的用例用掉了容差的 6.2e-4。结果见 `aeoi-numeric/tests/parity_polyfit.rs` 和 `reports/parity-polyfit.json`。
+
+## 10.22 `linalg.decomp.eig`：特征值与特征向量（v0.4.11）
+
+对应 MATLAB 的 `eig(A)` 与 `[V, D] = eig(A)`。真值是 mpmath 以 50 位精度给出的特征值、特征向量和特征值条件数，numpy（LAPACK `dsyevd`/`dgeev`）的值只作记录。都不是 MATLAB 的结果。这个算子逼出的规范问题是**结果不唯一**：
+
+- 一般矩阵的特征值，MATLAB 和 numpy 都不排序。
+- 特征向量可以差一个非零复数因子。
+- 重特征值的特征向量只确定到子空间。
+
+两个正确的实现可以给出看起来完全不同的 V。
+
+**规范性条款**
+
+- EG-1 **算法选择**：`structure = auto`（缺省）时，A 与 Aᵀ 逐位相等才用对称算法（同 MATLAB 的判定），否则用一般算法；`structure = general` 总用一般算法。实际所用的算法在 `structure` 里回显。
+- EG-2 **算法**：
+  - 对称：循环双边 Jacobi，|a_pq| > ε·sqrt(|a_pp·a_qq|) 时旋转。
+  - 一般：实 Schur 分解 → 复 Schur 形（每个 2×2 块用一个 Givens 旋转消去，同 MATLAB `rsf2csf`）→ 在上三角因子上回代求特征向量，前代求左特征向量。小除数按 LAPACK `ztrevc` 抬到 max(ε·|λ|, smlnum)。
+  - 2×2 块的特征值由实数块直接算出，所以共轭对是精确共轭的；对中第二个向量取第一个的共轭。
+  - 先试过 nalgebra 的 SymmetricEigen：它在分级矩阵 diag(1e6, 1, 1e-6)·S·diag(1e6, 1, 1e-6) 上的后向误差是 3e-13（≈ 1000u），后置条件如实报了不成立，所以换成 Jacobi。
+- EG-3 **排序**（作者决定）：
+  - 对称：升序。
+  - 一般：按 (实部, |虚部|) 升序，共轭对相邻，虚部为正的在前。
+  - 排序规则在 `ordering` 里回显。
+- EG-4 **规一化**（作者决定）：‖v‖₂ = 1，模最大的分量（并列取下标最小）为正实数。
+  - 实特征值的特征向量取实部。
+  - 重特征值的特征向量只确定到子空间，规范不规定选哪一组；比较时只比较残差与正交性（9.4）。
+- EG-5 **后置条件**：
+  - `residual_small`：max_k ‖A·v_k − λ_k·v_k‖₂/‖A‖_F ≤ 100·n·u。
+  - `orthonormal`：只对对称算法有意义，‖VᵀV − I‖_max ≤ 100·n·u；一般算法按 IP-6 报空真，`derived.orthonormal_applies = false`。这是开放问题 26 的第二个实例。
+  - `all_finite`。
+  - `vectors = false` 时，特征向量仍在内部计算并检查，只是不返回。
+- EG-6 **条件数与误差估计**：
+  - 一般矩阵：报告每个特征值的条件数 cond_k = 1/|yᴴx|（x、y 为单位右、左特征向量），误差估计 |Δλ_k| ≲ cond_k·‖r_k‖₂。
+  - 对称矩阵：cond = 1，|Δλ_k| ≤ ‖r_k‖₂（残差界），特征向量夹角 ≲ ‖r_k‖₂/gap_k（Davis–Kahan）。
+  - 任一 cond_k > 1e8（≈ u^(−1/2)）时，发 `W.NUMERICAL.ILL_CONDITIONED`：A 可能亏损，特征值可能只有约一半有效数字，特征向量接近平行。这些特征值的误差估计记为 null，因为一阶估计已经失效。
+  - 例：Jordan 块 `request.defective.json` 的三个特征向量相同，V 奇异，这就是正确答案。
+- EG-7 **确定性**：`platform_bitwise`。
+
+**Manifest** — `examples/linalg.decomp.eig/manifest.json`
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "id": "linalg.decomp.eig",
+  "version": "0.4.0",
+  "title": "Eigenvalues and eigenvectors",
+  "description": "实方阵的特征值与特征向量（= MATLAB eig(A) / [V, D] = eig(A)）。A 精确对称时用对称算法：实特征值升序、正交特征向量；否则用一般算法：复特征值按实部升序、共轭对相邻（虚部为正的在前）。特征向量 2-范数为 1，最大模分量为正实数。结果带每个特征对的残差、特征值条件数与误差估计；可能亏损（重特征值）时警告。",
+  "category": "analysis",
+  "tags": ["linalg", "eigenvalues", "eig", "spectral"],
+  "applicability": {
+    "preconditions": ["A 为 [n, n] 实数方阵"],
+    "not_for": ["广义特征值问题 eig(A, B)（0.4.0 未支持）", "复数矩阵", "大型稀疏矩阵的部分特征值（eigs）"],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "structure = auto（缺省）：A 与 Aᵀ 逐位相等时用对称算法（循环双边 Jacobi：|a_pq| > ε·sqrt(|a_pp·a_qq|) 时旋转，至多 60 轮扫描），否则用一般算法：实 Schur 分解（nalgebra Schur，隐式双位移 QR，不收敛时做确定性相似变换后重试）→ 复 Schur 形（rsf2csf，Givens 消去 2×2 块）→ 上三角回代求特征向量（小除数按 LAPACK ztrevc 抬到 max(u·|λ|, 最小正规数)），共轭对的第二个向量取第一个的共轭；左特征向量同法求得，特征值条件数 1/|yᴴx|。排序：对称升序；一般按 (实部, |虚部|) 升序，共轭对虚部为正的在前。规一化：‖v‖₂ = 1，最大模分量（并列取下标最小）为正实数。",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., JHU Press 2013, §7.5（QR 算法）、§7.6（特征向量）、§8.3（对称 QR）"
+      },
+      {
+        "type": "textbook",
+        "cite": "J. W. Demmel, Applied Numerical Linear Algebra, SIAM 1997, §4.3、§5.2（扰动理论）"
+      },
+      {
+        "type": "textbook",
+        "cite": "E. Anderson et al., LAPACK Users' Guide, 3rd ed., SIAM 1999, §4.8（特征问题的误差界）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "eig::eig",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T2",
+  "sparse_support": {
+    "/A": {
+      "policy": "densify",
+      "max_dense_elements": 250000
+    }
+  },
+  "encodings": {
+    "input": ["json", "b64", "ref"],
+    "output": ["json", "b64"]
+  },
+  "limits": {
+    "max_dimension": 500
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/linalg.decomp.eig/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ENCODING",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": ["W.NUMERICAL.ILL_CONDITIONED", "W.PERFORMANCE.SPARSE_DENSIFIED"],
+  "mcp": {
+    "tool_name": "linalg_decomp_eig",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:eig:symmetric-jacobi-or-schur-backsubstitution",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "square",
+        "statement": "A 为方阵",
+        "enforced_by": "error:E.VALIDATION.SHAPE"
+      },
+      {
+        "id": "converged",
+        "statement": "Jacobi 扫描或 Schur 的 QR 迭代在上限内收敛",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "nondefective",
+        "statement": "特征值条件数 ≤ 1e8，否则可能亏损：特征值只有约一半有效数字，特征向量接近平行",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      },
+      {
+        "id": "row_major",
+        "statement": "A 按 row-major 录入",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "uniqueness",
+        "statement": "特征向量只确定到规范规定的规一化；重特征值对应的特征向量只确定到子空间",
+        "enforced_by": "validation"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": ["residual_small", "orthonormal", "all_finite"],
+    "coverage": {
+      "residual_small": "full",
+      "orthonormal": "full"
+    },
+    "guards": {
+      "residual_small": ["/values", "/vectors"],
+      "orthonormal": ["/vectors"]
+    }
+  }
+}
+```
+
+**请求与响应**（对称三对角，特征值 2 − √2、2、2 + √2）
+
+```json
+{
+  "A": {
+    "dtype": "f64",
+    "shape": [
+      3,
+      3
+    ],
+    "data": [
+      2.0,
+      -1.0,
+      0.0,
+      -1.0,
+      2.0,
+      -1.0,
+      0.0,
+      -1.0,
+      2.0
+    ]
+  }
+}
+```
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.decomp.eig",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "values": {
+      "dtype": "f64",
+      "shape": [3],
+      "data": [0.5857864376269051, 2.0, 3.414213562373095]
+    },
+    "vectors": {
+      "dtype": "f64",
+      "shape": [3, 3],
+      "data": [0.5, 0.7071067811865476, -0.5, 0.7071067811865476, -9.111855352308912e-17, 0.7071067811865476, 0.5000000000000001, -0.7071067811865476, -0.5000000000000002]
+    },
+    "structure": "symmetric",
+    "ordering": "ascending"
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "backward_error": 1.2412670766236366e-16,
+      "threshold": 3.3306690738754696e-14,
+      "definition": "max_k ‖A·v_k − λ_k·v_k‖₂ / ‖A‖_F",
+      "orthonormality": 4.440892098500626e-16
+    },
+    "condition": {
+      "eigenvalue_condition": [1.0, 1.0, 1.0],
+      "note": "对称矩阵的特征值条件数都是 1"
+    },
+    "error_estimate": {
+      "value_abs": [1.6653345369377348e-16, 3.980749787885307e-17, 4.965068306494546e-16],
+      "vector_angle": [1.1775693440128314e-16, 2.814815169220612e-17, 3.5108334685767017e-16],
+      "basis": "|λ̂_k − λ| ≤ ‖r_k‖₂（对称矩阵的残差界）；特征向量夹角 sinθ ≲ ‖r_k‖₂ / gap_k（Davis–Kahan，gap_k 为到其余特征值的最小距离；重特征值时 gap = 0，向量只确定到子空间）"
+    },
+    "checks": {
+      "residual_small": true,
+      "orthonormal": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "orthonormal_applies": true,
+      "symmetry": "A 与 Aᵀ 逐位相等"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:eig:symmetric-jacobi-or-schur-backsubstitution",
+      "routine": "eig::eig",
+      "provenance": "aeoi://operators/linalg.decomp.eig/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "square",
+        "statement": "A 为方阵",
+        "enforced_by": "error:E.VALIDATION.SHAPE"
+      },
+      {
+        "id": "converged",
+        "statement": "Jacobi 扫描或 Schur 的 QR 迭代在上限内收敛",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "nondefective",
+        "statement": "特征值条件数 ≤ 1e8，否则可能亏损：特征值只有约一半有效数字，特征向量接近平行",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      },
+      {
+        "id": "row_major",
+        "statement": "A 按 row-major 录入",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "uniqueness",
+        "statement": "特征向量只确定到规范规定的规一化；重特征值对应的特征向量只确定到子空间",
+        "enforced_by": "validation"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": "|λ̂_k − λ| ≤ ‖r_k‖₂（对称矩阵的残差界）；特征向量夹角 sinθ ≲ ‖r_k‖₂ / gap_k（Davis–Kahan，gap_k 为到其余特征值的最小距离；重特征值时 gap = 0，向量只确定到子空间）"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "residual_small": true,
+        "orthonormal": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null,
+      "coverage": {
+        "residual_small": "full",
+        "orthonormal": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:7a13610f26465c16e8ed02cf9f5c316a5b4c9014b9af080dd4bb678a900fc0bd",
+      "result": "sha256:be07e9547ea92fa64aa15f8bfca045840637ef542b1cf937c3cca253be2dab94",
+      "output_hash": "sha256:4c478c6bfdf8590d49b0d9ca642f073eb5cdb0dbee37cd370ee33799ee9fb655",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.decomp.eig@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:832b5ab26ac095f8686b38c86d275a7facd08aff5d1a8e5cdd346fe0e0158251",
+    "output_hash": "sha256:4c478c6bfdf8590d49b0d9ca642f073eb5cdb0dbee37cd370ee33799ee9fb655",
+    "platform": "x86_64-linux",
+    "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.167603
+  }
+}
+```
+
+**一般矩阵** — `request.general.json`：多项式 s³ + 2s² + 3s + 2 的友矩阵。特征值是 −1 和 −0.5 ± 1.3229i；响应里共轭对相邻，虚部为正的在前，两个特征向量互为共轭。
+
+**错误请求与响应**（2×3：EG-1 要求方阵）
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.decomp.eig",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.VALIDATION.SHAPE",
+    "category": "validation",
+    "retryable": true,
+    "message": "A 的形状是 [2, 3]；特征值要求非空方阵 [n, n]。",
+    "agent_hint": "检查 A 的形状；非方阵请用 linalg.decomp.svd。",
+    "details": {
+      "path": "/A/shape"
+    },
+    "remediation": [
+      {
+        "id": "ask",
+        "kind": "ask_user",
+        "description": "向用户确认输入与建模假设",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.060113
+  }
+}
+```
+
+**Parity 测试规格** — `examples/linalg.decomp.eig/parity.yaml`
+
+```yaml
+# Parity test spec — linalg.decomp.eig 0.4.0 (AEOI v0.4.11-draft)
+operator: linalg.decomp.eig
+references:
+  - {engine: numpy, version: "numpy.linalg.eigvalsh / eigvals (LAPACK dsyevd / dgeev)", role: dev_reference, status: active,
+     generator: gen_golden_eig.py, golden_store: "golden/python-control/linalg.decomp.eig/0.4.0/*.json",
+     note: "NOT MATLAB output. Neither numpy nor MATLAB sorts general eigenvalues; the reference is sorted by the AEOI rule"}
+  - {engine: mpmath, role: high_precision_reference, status: active,
+     note: "exact eigenvalues, unit eigenvectors and eigenvalue condition numbers of the stored f64 matrix (50 digits; eigsy / eig with left and right vectors)"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_eig"
+tolerance_class: T2
+compare:
+  values: {against: exact eigenvalues (nearest matching), bound: "|Δλ_k| ≤ 1e-12 · ‖A‖_F · max(1, cond_k); 1e-4 · ‖A‖_F when cond_k > 1e8 (possibly defective)"}
+  ordering: "exact rule: symmetric ascending; general (Re, |Im|) ascending, conjugate pairs adjacent with Im > 0 first"
+  vectors: "‖v‖₂ = 1; largest-modulus entry real positive; conjugate pairs exactly conjugate; for simple, separated eigenvalues ‖v̂ − e^{iφ}v‖₂ ≤ 1e-10 · max(1, ‖A‖_F/gap) · max(1, cond)"
+  eigenvalue_condition: "within a factor 2 of the exact value while ≤ 1e8"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py (rule_eig)
+  values: "count and ordering exact; nearest matching to the exact eigenvalues with the bound above"
+  echoed: "structure"
+  recomputed: "the runner recomputes ‖A·v_k − λ_k·v_k‖₂ / ‖A‖_F for every returned pair from the request (compensated sums) and requires ≤ 100·n·u; for structure = symmetric also ‖VᵀV − I‖ ≤ 100·n·u"
+case_families:
+  - {name: "symmetric_random ×4 / repeated / identity / laplacian / graded / forced_general / values_only", n: 10}
+  - {name: "general_random ×3 / rotation / companion / upper_triangular / equal_real_parts / damped_oscillator / frank6 / values_only", n: 10}
+  - {name: "general_jordan3_warns / general_graded_warns", n: 2, note: "cond > 1e8 → W.NUMERICAL.ILL_CONDITIONED"}
+  - {name: errors, n: 6, expect: "E.VALIDATION.SHAPE ×2, DTYPE, NON_FINITE, SCHEMA ×2"}
+```
+
+共 28 个 golden 用例，22 个成功、6 个错误。特征值误差最坏的用例用掉了容差的 1.6e-3，特征向量的是 4.0e-6；在不亏损的用例上，条件数与真值之比都在 [0.5, 2] 内。结果见 `aeoi-numeric/tests/parity_eig.rs` 和 `reports/parity-eig.json`。
+
+## 10.23 `linalg.decomp.svd`：奇异值分解（v0.4.11）
+
+对应 MATLAB 的 `svd`。真值是 mpmath 以 50 位精度给出的奇异值与奇异向量，numpy（LAPACK `dgesdd`）的值只作记录。都不是 MATLAB 的结果。
+
+**规范性条款**
+
+- SV-1 **模式**：
+  - `values`：只要奇异值。
+  - `thin`：缺省，同 MATLAB `svd(A, "econ")`，U 为 [m, p]、V 为 [n, p]，p = min(m, n)。
+  - `full`：U、V 为方阵；补全部分是 thin 因子的 Householder QR 给出的正交补，前 p 列保持不变。
+
+  返回 V 而不是 Vᵀ（同 MATLAB；numpy 返回 Vᵀ）。
+- SV-2 **算法**：单边 Jacobi（Hestenes），m < n 时作用在 Aᵀ 上；|g_pᵀg_q| > sqrt(m)·ε·‖g_p‖‖g_q‖ 时旋转，至多 60 轮扫描；σ_k = ‖g_k‖₂，零奇异值对应的 u_k 由正交补全给出。
+  - 先试过 nalgebra 的双对角 QR：在行分级矩阵（行尺度 1e8 : 1 : 1e-8）上重构残差为 8.7e-10，中间一行的信息丢了。后置条件 `reconstructs` 如实报了不成立，所以换成 Jacobi，重构残差降到 2.5e-16。
+  - 在 400×400 上耗时约 2 秒，因此 `limits.max_dimension` 为 500。
+- SV-3 **符号**（作者决定）：u_k 中模最大的分量（并列取下标最小）为正，v_k 随之变号。
+- SV-4 **数值秩**：s_k > max(m, n)·eps(s_max) 的个数，eps(x) 为 x 处的浮点间距（同 MATLAB `rank`）。输出 `rank`、`rank_tol`、`cond2` = s_max/s_min（s_min = 0 时为 "Inf"）。
+- SV-5 **后置条件**：`reconstructs`（‖A − U·diag(s)·Vᵀ‖_F/‖A‖_F）、`orthonormal_u`、`orthonormal_v`（‖UᵀU − I‖_max 等）都 ≤ 100·max(m, n)·u；外加 `all_finite`。`values` 模式也在内部检查。
+- SV-6 **误差估计**：|Δs_k| ≲ ‖A‖_F·残差 + s_max·正交性误差（Weyl）。小奇异值只有绝对精度，没有相对精度。奇异向量夹角 ≲ 该界/gap_k（Wedin）。
+- SV-7 **确定性**：`platform_bitwise`。
+
+**Manifest** — `examples/linalg.decomp.svd/manifest.json`
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "id": "linalg.decomp.svd",
+  "version": "0.4.0",
+  "title": "Singular value decomposition",
+  "description": "实矩阵的奇异值分解 A = U·diag(s)·Vᵀ（= MATLAB svd）。mode = values 只返回奇异值，thin（缺省，= svd(A, \"econ\")）返回 [m, p] 与 [n, p] 的 U、V（p = min(m, n)），full 返回方阵 U、V。奇异值降序；每对奇异向量的符号规定为 u_k 的最大模分量为正。结果带数值秩（容差 max(m, n)·eps(s_max)，eps(x) 为 x 处的浮点间距，同 MATLAB rank）、2-范数条件数、重构残差与正交性。",
+  "category": "analysis",
+  "tags": ["linalg", "svd", "singular-values", "rank"],
+  "applicability": {
+    "preconditions": ["A 为 [m, n] 实数矩阵"],
+    "not_for": ["复数矩阵", "大型稀疏矩阵的部分奇异值（svds）"],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "单边 Jacobi（Hestenes）：对 A（m < n 时对 Aᵀ）的列做循环旋转，|g_pᵀg_q| > sqrt(m)·ε·‖g_p‖‖g_q‖ 时旋转，至多 60 轮扫描；σ_k = ‖g_k‖₂，u_k = g_k/σ_k，零奇异值的 u_k 由正交补全给出；按奇异值降序重排；full 模式用 U_thin 的 Householder QR 补全正交基（前 p 列保持 U_thin 不变）。符号：u_k 的最大模分量（并列取下标最小）为正，v_k 随之变号。数值秩：s_k > max(m, n)·eps(s_max) 的个数。检查：‖A − U·diag(s)·Vᵀ‖_F/‖A‖_F 与 ‖UᵀU − I‖、‖VᵀV − I‖ 的最大元。",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., JHU Press 2013, §8.6.4（单边 Jacobi）"
+      },
+      {
+        "type": "paper",
+        "cite": "J. Demmel, K. Veselić, Jacobi's method is more accurate than QR, SIAM J. Matrix Anal. Appl. 13(4), 1992",
+        "doi": "10.1137/0613074"
+      },
+      {
+        "type": "textbook",
+        "cite": "J. W. Demmel, Applied Numerical Linear Algebra, SIAM 1997, §5.2（奇异值的扰动）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "svd::svd",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {
+    "/A": {
+      "policy": "densify",
+      "max_dense_elements": 250000
+    }
+  },
+  "encodings": {
+    "input": ["json", "b64", "ref"],
+    "output": ["json", "b64"]
+  },
+  "limits": {
+    "max_dimension": 500
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/linalg.decomp.svd/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ENCODING",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": ["W.PERFORMANCE.SPARSE_DENSIFIED"],
+  "mcp": {
+    "tool_name": "linalg_decomp_svd",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:svd:one-sided-jacobi",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "converged",
+        "statement": "Jacobi 扫描在上限内收敛",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "row_major",
+        "statement": "A 按 row-major 录入",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "uniqueness",
+        "statement": "奇异向量只确定到规范规定的符号；重奇异值对应的奇异向量只确定到子空间",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "absolute_accuracy",
+        "statement": "小奇异值只有绝对精度（≈ u·s_max），没有相对精度",
+        "enforced_by": "validation"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": ["reconstructs", "orthonormal_u", "orthonormal_v", "all_finite"],
+    "coverage": {
+      "reconstructs": "full",
+      "orthonormal_u": "full",
+      "orthonormal_v": "full"
+    },
+    "guards": {
+      "reconstructs": ["/s", "/U", "/V", "/rank", "/cond2"],
+      "orthonormal_u": ["/U"],
+      "orthonormal_v": ["/V"]
+    }
+  }
+}
+```
+
+**请求与响应**（2×3，thin）
+
+```json
+{
+  "A": {
+    "dtype": "f64",
+    "shape": [
+      2,
+      3
+    ],
+    "data": [
+      3.0,
+      2.0,
+      2.0,
+      2.0,
+      3.0,
+      -2.0
+    ]
+  }
+}
+```
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.decomp.svd",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "s": {
+      "dtype": "f64",
+      "shape": [2],
+      "data": [5.0, 2.9999999999999996]
+    },
+    "U": {
+      "dtype": "f64",
+      "shape": [2, 2],
+      "data": [0.7071067811865475, 0.7071067811865475, 0.7071067811865475, -0.7071067811865475]
+    },
+    "V": {
+      "dtype": "f64",
+      "shape": [3, 2],
+      "data": [0.7071067811865475, 0.23570226039551587, 0.7071067811865475, -0.23570226039551587, 0.0, 0.9428090415820635]
+    },
+    "mode": "thin",
+    "rank": 2,
+    "rank_tol": 2.6645352591003757e-15,
+    "cond2": 1.666666666666667
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "backward_error": 1.8655478282543342e-16,
+      "threshold": 3.3306690738754696e-14,
+      "definition": "‖A − U·diag(s)·Vᵀ‖_F / ‖A‖_F（p 个奇异三元组）",
+      "orthonormality_u": 2.220446049250313e-16,
+      "orthonormality_v": 2.220446049250313e-16
+    },
+    "condition": {
+      "cond2": 1.666666666666667,
+      "note": "奇异值本身是良态的：|Δs_k| ≤ ‖ΔA‖₂（Weyl）"
+    },
+    "error_estimate": {
+      "value_abs": 3.3082380136587277e-15,
+      "vector_angle": [1.6541190068293634e-15, 1.6541190068293634e-15],
+      "basis": "|Δs_k| ≲ ‖A‖_F·残差 + s_max·(正交性误差)（Weyl；小奇异值只有绝对精度）；奇异向量夹角 ≲ 该界 / gap_k（Wedin；重奇异值时 gap = 0，向量只确定到子空间）"
+    },
+    "checks": {
+      "reconstructs": true,
+      "orthonormal_u": true,
+      "orthonormal_v": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "checked_factors": "返回的 U、V"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:svd:one-sided-jacobi",
+      "routine": "svd::svd",
+      "provenance": "aeoi://operators/linalg.decomp.svd/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "converged",
+        "statement": "Jacobi 扫描在上限内收敛",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "row_major",
+        "statement": "A 按 row-major 录入",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "uniqueness",
+        "statement": "奇异向量只确定到规范规定的符号；重奇异值对应的奇异向量只确定到子空间",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "absolute_accuracy",
+        "statement": "小奇异值只有绝对精度（≈ u·s_max），没有相对精度",
+        "enforced_by": "validation"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "value_abs": 3.3082380136587277e-15
+      },
+      "basis": "|Δs_k| ≲ ‖A‖_F·残差 + s_max·(正交性误差)（Weyl；小奇异值只有绝对精度）；奇异向量夹角 ≲ 该界 / gap_k（Wedin；重奇异值时 gap = 0，向量只确定到子空间）"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "reconstructs": true,
+        "orthonormal_u": true,
+        "orthonormal_v": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "reconstructs": "full",
+        "orthonormal_u": "full",
+        "orthonormal_v": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:11d8661d1c3cebe87aefc48ae4136119c6af6bff4b2acc2d4fa7b53237abab90",
+      "result": "sha256:487d24735286fbd1f76b47678f72770a7fa94cab1dcd524c3f9e400926ed12b9",
+      "output_hash": "sha256:02d7c512170629580b022f71438f90d33ed3813b12b8e4b6f838f0246c7fea59",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.decomp.svd@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:902484353920a2b6b7a40100515f0db268ba4ebe29a87799d8eab49e898109ec",
+    "output_hash": "sha256:02d7c512170629580b022f71438f90d33ed3813b12b8e4b6f838f0246c7fea59",
+    "platform": "x86_64-linux",
+    "cpu_features": ["avx", "avx2", "fma", "avx512f"],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.17318
+  }
+}
+```
+
+**秩亏的例子** — `request.full.json`：A = [1 2 3; 4 5 6; 7 8 9]，full 模式。最小奇异值是 1.5e-16，小于 `rank_tol` = 1.1e-14，所以 `rank` = 2；`cond2` ≈ 1.1e17。
+
+**错误请求与响应**（一维 A：SV-1 要求 [m, n]）
+
+```json
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.decomp.svd",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.VALIDATION.SHAPE",
+    "category": "validation",
+    "retryable": true,
+    "message": "A 是一维的（长度 3）；要求 [m, n]。",
+    "agent_hint": "行向量写 shape [1, n]，列向量写 [m, 1]。",
+    "details": {
+      "path": "/A/shape"
+    },
+    "remediation": [
+      {
+        "id": "ask",
+        "kind": "ask_user",
+        "description": "向用户确认输入与建模假设",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.053652
+  }
+}
+```
+
+**Parity 测试规格** — `examples/linalg.decomp.svd/parity.yaml`
+
+```yaml
+# Parity test spec — linalg.decomp.svd 0.4.0 (AEOI v0.4.11-draft)
+operator: linalg.decomp.svd
+references:
+  - {engine: numpy, version: "numpy.linalg.svd (LAPACK dgesdd)", role: dev_reference, status: active,
+     generator: gen_golden_svd.py, golden_store: "golden/python-control/linalg.decomp.svd/0.4.0/*.json",
+     note: "NOT MATLAB output"}
+  - {engine: mpmath, role: high_precision_reference, status: active, note: "exact singular values and vectors of the stored f64 matrix (50 digits, svd_r)"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_svd"
+tolerance_class: T1
+compare:
+  s: {against: exact singular values, bound: "|Δs_k| ≤ 1e-12 · s_max (absolute; small singular values have no relative accuracy guarantee)"}
+  rank: "exact, with MATLAB's tolerance max(m, n)·eps(s_max) applied to the exact singular values"
+  vectors: "shape by mode; largest-modulus entry of u_k positive; for separated, non-negligible s_k ‖û_k ∓ u_k‖, ‖v̂_k ∓ v_k‖ ≤ 1e-10 · max(1, s_max/gap_k) · max(1, s_max/s_k)"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py (rule_svd)
+  s: "count, descending order, |Δs_k| ≤ 1e-12 · s_max against the exact values"
+  echoed: "mode, rank"
+  recomputed: "for thin/full the runner recomputes ‖A − U·diag(s)·Vᵀ‖_F/‖A‖_F and ‖UᵀU − I‖, ‖VᵀV − I‖ from the request and the returned factors, each ≤ 100·max(m, n)·u"
+case_families:
+  - {name: "random tall / wide / square / tall_full / wide_full / values / large_tall", n: 7}
+  - {name: "scalar / row_vector / column_vector / zero_matrix", n: 4}
+  - {name: "rank_deficient_3x3 / hilbert_8 / repeated_singular_values / graded", n: 4, note: "graded rows 1e8 : 1 : 1e-8 broke nalgebra's bidiagonal QR (reconstruction 8.7e-10); one-sided Jacobi: 2.5e-16"}
+  - {name: errors, n: 5, expect: "E.VALIDATION.SHAPE, DTYPE, NON_FINITE, SCHEMA ×2"}
+```
+
+共 20 个 golden 用例，15 个成功、5 个错误。奇异值误差最坏的用例用掉了容差的 2.3e-3，奇异向量的是 5.1e-6。结果见 `aeoi-numeric/tests/parity_svd.rs` 和 `reports/parity-svd.json`。
+
 ## 11. Rust 参考实现（v0.3）
 
 ### 11.1 结构
@@ -10652,20 +11986,57 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 23. ~~**（v0.4.2 新，一致性规则发现）`lyap` 的 mpmath 容差不一致**~~ **已决定（v0.4.3）：一致性对所有参考引擎用同一个 κ 缩放容差。** 高精度参考（mpmath）只是更准的参考值，不是更严的要求。`parity.yaml` 里的“1e-12 不放宽”是参考实现自己的精度目标，由它的 `cargo test` 检验：参考实现带精化，实测 `lyap` ≤ 7e-15；而没有精化的后向稳定算法达不到，SciPy 在 `lyap`（κ ≈ 1.6e8）上为 7.5e-9，在 `lqr`（cond(R) = 1e11）上为 3.7e-9。把它当门槛会让标准实现无法通过。`lqr` 的 mpmath 分支同样改为 `cond_S` 缩放（v0.4.2 时误设为 1e-12）。试过用 CARE 的一阶条件数（闭环 Lyapunov 算子）缩放，最病态的用例容差 ≥ 1，等于不检查，所以没有采用；剩下的个别超差（上面 SciPy 的 `lqr` 用例超出 6.5 倍）按 CF-7 登记 `known_deviations`。原问题：：`parity.yaml` 对 mpmath 用例写“rel_fro ≤ 1e-12，不放宽”，运行器的 `lyap` 规则对所有引擎都用 T2 × max(1, κ/100)。`lqr` 的新规则对 mpmath 用 1e-12。改 `lyap` 规则会影响 Python 第二实现在病态用例上的结果，需要先重跑。
 24. **（v0.4.4 新，写默认值用例时发现）默认值与请求指纹**：H-1 按请求原样计算 `input_hash`，不补默认值，所以“省略 `type`”与“写出 `type: continuous`”的请求指纹不同，而 4.3 R-3 说请求指纹表示“同一个问题”。要么在哈希前补齐 schema 默认值（会改变所有省略了默认值的已发布 `input_hash` 与 golden 文件名之外的指纹，需要一次迁移），要么在 R-3 写明指纹只认字面相同的请求。一致性套件目前只要求结果相同，不比较这两个指纹。
 25. **（v0.4.9 新，发布流水线证实全平台逐位相同后）`platform_bitwise` 升为 `bitwise`**：参考实现已在 5 个平台上对全部 golden 逐位相同（2.1、M-7a），但 manifest 仍声明较弱的 `platform_bitwise`。改声明是新的承诺（G-2 MINOR），23 个算子要一起升版本、重新生成 manifest 与示例；还要决定 `aeoi_verify` 在 `bitwise` 下遇到跨平台差异时的判定（现在跨平台只给 `tolerance_match`）。建议随下一批算子升版本时一并处理。
-26. **（v0.4.10 新）只对部分方法有意义的后置条件**：`interp1` 的 `spline_c2` 只适用于 spline，`local_bounds` 不适用于 spline。E-11 把缺失的后置条件算作不成立，所以现在只能按空真报告（IP-6）。可选做法：manifest 的 `receipt.postconditions` 允许按 `method` 条件列出，或在 `trust.checks` 里允许 `null` 表示“不适用”。两种都改核心 schema（MINOR），留到第二个有此需要的算子出现时再定。
+26. **（v0.4.10 新）只对部分方法有意义的后置条件**：`interp1` 的 `spline_c2` 只适用于 spline，`local_bounds` 不适用于 spline。E-11 把缺失的后置条件算作不成立，所以现在只能按空真报告（IP-6）。可选做法：manifest 的 `receipt.postconditions` 允许按 `method` 条件列出，或在 `trust.checks` 里允许 `null` 表示“不适用”。两种都改核心 schema（MINOR），留到第二个有此需要的算子出现时再定。v0.4.11 出现了第二个实例：`eig` 的 `orthonormal` 只对对称算法有意义（EG-5），暂时同样按空真处理，等作者决定。
+27. **（v0.4.11 新）警告附修复建议**：5.1 的 warning 没有 `remediation` 字段。`polyfit` 的病态警告把一个与错误 remediation 同形的对象放在 `details.suggested_remediation`（PF-4）。可选做法：给 warning 增加可选的 `remediation` 数组（核心 schema MINOR），或维持放在 `details` 的约定。
 
 ### 12.2 下一步（建议顺序）
 
 1. 在有授权的机器上运行 `matlab/gen_golden_bode.m`（并补 step/lqr 脚本），先核对 `memory_order_nonsymmetric` 用例与 python-control 一致，再跑通第一份 A 级凭证
 2. ~~修复 `lqr` 病态 R 的精度差距~~（v0.3.2 用补偿 Newton–Kleinman 完成）；剩余：平衡 + 有序 Schur（或广义特征值）作为符号函数不收敛时的后备路径，以及 `dlqr` 的同类精化
-3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；v0.4.10 加了 `linalg.system.solve`（10.19）与 `interp.grid.interp1`（10.20）；之后按 MATLAB 使用频率做 `polyfit`、`butter` + `filter`、`fzero`/`fsolve`（复用 3.15）、优化、`eig`/`svd`、`integral`，以及隐式/刚性方法（`ode15s`）与事件检测；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
+3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；v0.4.10 加了 `linalg.system.solve`（10.19）与 `interp.grid.interp1`（10.20）；v0.4.11 加了 `fit.poly.polyfit`（10.21）、`linalg.decomp.eig`（10.22）、`linalg.decomp.svd`（10.23）；之后按 MATLAB 使用频率做 `butter` + `filter`、`fzero`/`fsolve`（复用 3.15）、优化、`integral`，以及隐式/刚性方法（`ode15s`）与事件检测；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
 5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；v0.3.4 另有 `aeoi-web design`。v0.3.5 实现了试点里排在前面的算子（串联、并联、反馈、PID 构造、stepinfo、Padé），v0.3.6 加了具名角色、`loopsens`（含带宽读数）和回合预算。下一步是按 A-4 写 `pidtune`（必须先声明对象类、指标和唯一性），以及控制器离散化和 MIMO 裕度；扩充问答题、加入"Agent + 裸 scipy"对照组。非线性吸引域仍不做。
 6. 分发：为 `aeoi-mcp` 发布各平台预编译二进制（GitHub Releases）、Claude Desktop 一键安装扩展、登记到 MCP 公开目录（v0.4.9：数学库、矩阵乘法内核与 FFT 旋转因子已统一，5 个平台的 golden 哈希完全相同；`v0.4.9` 是第一个正式发布）；之后做纯浏览器的结果查看器（`aeoi-wasm`：结果、信任信息、收据与本地重放）。不做独立的图形界面客户端或自带 LLM 的聊天客户端：AEOI 的客户端是 MCP 宿主
-7. 一致性套件（9.4）：v0.4.10 有 12 个算子的数值规则（12 / 25 = 48%；作者定的下限是 30%，以后提高），参考实现 813 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 23 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
+7. 一致性套件（9.4）：v0.4.11 有 15 个算子的数值规则（15 / 28 = 54%；作者定的下限是 30%，以后提高），参考实现 900 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 30 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
 8. 根据以上反馈修订，冻结 v1.0
 
 ## 13. Changelog
+
+### v0.4.11-draft（2026-11-25）
+
+起因：按 MATLAB 使用频率继续加算子。作者选了 `polyfit` + `eig`/`svd`，并定了三件事：
+- `polyfit` 病态时照原样拟合，警告并附中心化缩放的补丁，补丁须用户确认，不悄悄缩放；
+- 直接给出每个系数的标准误差；
+- `eig` 先做实对称与一般实矩阵，排序与规一化写死在规范里；`svd` 支持 thin 与 full。
+
+线协议标识、核心 schema 和已有算子的版本都不变。
+
+**规范改动**
+
+| # | 位置 | 改动 | 理由 |
+|---|---|---|---|
+| 1 | 10.21 PF-1 – PF-7 | 新算子 `fit.poly.polyfit` 0.4.0：Householder QR 加修正半正规方程精化；输出标准误差、自由度、mu | 与 MATLAB `[p, S, mu]` 对应，但直接给出调用方真正要的标准误差 |
+| 2 | 10.21 PF-3 | 秩判定、条件数、后向误差都在列缩放的 V·D⁻¹ 上计算 | 未缩放时，年份数据 3 次拟合就被误判为数值秩不足；缩放后只反映 x 的位置与跨度，与单位无关 |
+| 3 | 10.21 PF-4、开放问题 27 | 病态警告的 `details.suggested_remediation` 带一个须用户确认的补丁 | 中心化缩放改变系数的含义，只能建议，不能代做；warning 目前没有 remediation 字段 |
+| 4 | 10.22 EG-1 – EG-7 | 新算子 `linalg.decomp.eig` 0.4.0：对称 Jacobi / 一般 Schur + 三角回代；排序（对称升序；一般按 (Re, \|Im\|)，共轭对正虚部在前）与规一化（单位 2-范数，最大模分量为正实数）写死；报告每个特征值的条件数，> 1e8 时警告可能亏损 | 特征向量不唯一，不写死约定就无法比较、无法复现 |
+| 5 | 10.22 EG-5、开放问题 26 | `orthonormal` 只适用于对称算法，一般算法按空真报告 | 开放问题 26 的第二个实例 |
+| 6 | 10.23 SV-1 – SV-7 | 新算子 `linalg.decomp.svd` 0.4.0：单边 Jacobi；values / thin / full；u_k 的符号约定；数值秩用 MATLAB 的容差 | — |
+| 7 | 9.4（`rules_numeric.py`） | 三个算子的一致性规则只比较不变量：特征值（最近匹配）、残差、正交性、规一化规则；运行器从请求重算残差 | 两个正确实现给出的 V 可以完全不同 |
+
+**开发中发现的问题**
+
+| # | 问题 | 处理 |
+|---|---|---|
+| 1 | nalgebra 的 SVD（双对角 QR）在行分级矩阵（行尺度 1e8 : 1 : 1e-8）上，重构残差为 8.7e-10，中间一行的信息丢了 | 后置条件 `reconstructs` 如实报了不成立；改用单边 Jacobi，残差降到 2.5e-16 |
+| 2 | nalgebra 的 SymmetricEigen 在分级对称矩阵上的后向误差是 3e-13（≈ 1000u） | 后置条件 `residual_small` 如实报了不成立；改用循环 Jacobi |
+| 3 | `polyfit` 的秩判定起初用未缩放的 R，年份数据 3 次就报 `E.NUMERICAL.SINGULAR` | 改为列缩放（PF-3） |
+| 4 | `polyfit` 只做 QR 时，病态用例的误差比 numpy 大 10–20 倍 | 加了修正半正规方程精化，之后全部比 numpy 准 |
+
+**结果**
+
+- golden 用例数（成功 / 错误）：`polyfit` 24 个（14 / 10）；`eig` 28 个（22 / 6）；`svd` 20 个（15 / 5）。真值全部来自 mpmath。
+- 最坏用例占容差的比例：`polyfit` 缩放后的前向误差 6.2e-4；`eig` 特征值 1.6e-3、特征向量 4.0e-6；`svd` 奇异值 2.3e-3、奇异向量 5.1e-6。
+- 一致性套件：15 / 28 = 54% 的算子有数值规则；参考实现 900 / 0 / 291。新增 7 种代理改写，都被预期的检查抓住，其中包括两种约定类改写：共轭对顺序反了；u、v 同时变号，这个 SVD 本身等价，但违反了符号约定。
 
 ### v0.4.10-draft（2026-11-25）
 

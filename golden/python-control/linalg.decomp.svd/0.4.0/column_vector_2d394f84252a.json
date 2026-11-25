@@ -1,0 +1,54 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "linalg.decomp.svd",
+ "operator_version": "0.4.0",
+ "case_family": "column_vector",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    1
+   ],
+   "data": [
+    3.0,
+    4.0
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "numpy.linalg.svd (LAPACK dgesdd) / mpmath svd_r",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "seed": 20261125,
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "s_true": [
+   5.0
+  ],
+  "s_numpy": [
+   5.0
+  ],
+  "u_true": [
+   [
+    -0.6,
+    -0.8
+   ]
+  ],
+  "v_true": [
+   [
+    -1.0
+   ]
+  ],
+  "gaps_true": [
+   null
+  ],
+  "rank": 1,
+  "shape": [
+   2,
+   1
+  ]
+ }
+}

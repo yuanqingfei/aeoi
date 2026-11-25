@@ -1,0 +1,32 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "linalg.decomp.eig",
+ "operator_version": "0.4.0",
+ "case_family": "not_square",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    3
+   ],
+   "data": [
+    -1.6934521946890282,
+    -0.695820007329286,
+    2.411864510128077,
+    0.17368289330588194,
+    0.3639891200044742,
+    -0.8397271011627282
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "numpy.linalg (LAPACK dsyevd / dgeev) / mpmath",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "seed": 20261125,
+  "note": "NOT MATLAB output"
+ },
+ "expected_error": "E.VALIDATION.SHAPE"
+}

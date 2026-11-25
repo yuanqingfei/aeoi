@@ -1,0 +1,202 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.decomp.svd",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "s": {
+      "dtype": "f64",
+      "shape": [
+        3
+      ],
+      "data": [
+        16.848103352614213,
+        1.0683695145547087,
+        1.473048158783726e-16
+      ]
+    },
+    "U": {
+      "dtype": "f64",
+      "shape": [
+        3,
+        3
+      ],
+      "data": [
+        0.21483723836839622,
+        0.8872306883463704,
+        -0.4082482904638631,
+        0.520587389464737,
+        0.2496439529882981,
+        0.8164965809277261,
+        0.826337540561078,
+        -0.3879427823697744,
+        -0.4082482904638629
+      ]
+    },
+    "V": {
+      "dtype": "f64",
+      "shape": [
+        3,
+        3
+      ],
+      "data": [
+        0.4796711778777718,
+        -0.7766909903215593,
+        -0.408248290463863,
+        0.5723677939720625,
+        -0.0756864701045585,
+        0.8164965809277261,
+        0.665064410066353,
+        0.6253180501124426,
+        -0.40824829046386313
+      ]
+    },
+    "mode": "full",
+    "rank": 2,
+    "rank_tol": 1.0658141036401503e-14,
+    "cond2": 1.1437578094205312e+17
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "backward_error": 6.21530087301273e-16,
+      "threshold": 3.3306690738754696e-14,
+      "definition": "‖A − U·diag(s)·Vᵀ‖_F / ‖A‖_F（p 个奇异三元组）",
+      "orthonormality_u": 2.220446049250313e-16,
+      "orthonormality_v": 4.440892098500626e-16
+    },
+    "condition": {
+      "cond2": 1.1437578094205312e+17,
+      "note": "奇异值本身是良态的：|Δs_k| ≤ ‖ΔA‖₂（Weyl）"
+    },
+    "error_estimate": {
+      "value_abs": 2.1715726874634916e-14,
+      "vector_angle": [
+        1.3761782738222272e-15,
+        2.032604504227728e-14,
+        2.032604504227728e-14
+      ],
+      "basis": "|Δs_k| ≲ ‖A‖_F·残差 + s_max·(正交性误差)（Weyl；小奇异值只有绝对精度）；奇异向量夹角 ≲ 该界 / gap_k（Wedin；重奇异值时 gap = 0，向量只确定到子空间）"
+    },
+    "checks": {
+      "reconstructs": true,
+      "orthonormal_u": true,
+      "orthonormal_v": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "checked_factors": "返回的 U、V"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:svd:one-sided-jacobi",
+      "routine": "svd::svd",
+      "provenance": "aeoi://operators/linalg.decomp.svd/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "converged",
+        "statement": "Jacobi 扫描在上限内收敛",
+        "enforced_by": "error:E.NUMERICAL.NO_CONVERGENCE"
+      },
+      {
+        "id": "row_major",
+        "statement": "A 按 row-major 录入",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "uniqueness",
+        "statement": "奇异向量只确定到规范规定的符号；重奇异值对应的奇异向量只确定到子空间",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "absolute_accuracy",
+        "statement": "小奇异值只有绝对精度（≈ u·s_max），没有相对精度",
+        "enforced_by": "validation"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "value_abs": 2.1715726874634916e-14
+      },
+      "basis": "|Δs_k| ≲ ‖A‖_F·残差 + s_max·(正交性误差)（Weyl；小奇异值只有绝对精度）；奇异向量夹角 ≲ 该界 / gap_k（Wedin；重奇异值时 gap = 0，向量只确定到子空间）"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "reconstructs": true,
+        "orthonormal_u": true,
+        "orthonormal_v": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "reconstructs": "full",
+        "orthonormal_u": "full",
+        "orthonormal_v": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:81cc2f9cbdcfcca7d8487a8596f8f4db47714874a8b0ec658cbf2c24e55f0beb",
+      "result": "sha256:46349de94c34df78840efa042346855921ffa1a7d17f1be2b46358c66049f42b",
+      "output_hash": "sha256:d1f339d7557e1cfbab23892e2b97dfc93afb960cc4fe5a867b32521fcd51f3ab",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.decomp.svd@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:dc5c06844bc89d512d18c8546eb5c2f83b22c798682d3a90ff00e4ca9a7e389c",
+    "output_hash": "sha256:d1f339d7557e1cfbab23892e2b97dfc93afb960cc4fe5a867b32521fcd51f3ab",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.19065400000000002
+  }
+}

@@ -1,7 +1,7 @@
 {
   "generated_by": "rust/aeoi-control/tests/receipt.rs",
-  "golden_successes": 839,
-  "golden_errors": 106,
+  "golden_successes": 890,
+  "golden_errors": 127,
   "claims_by_operator": {
     "control.analysis.ctrb_obsv": {
       "verified": 26
@@ -66,8 +66,17 @@
     "control.math.lyap": {
       "unchecked": 41
     },
+    "fit.poly.polyfit": {
+      "verified": 14
+    },
     "interp.grid.interp1": {
       "verified": 44
+    },
+    "linalg.decomp.eig": {
+      "verified": 22
+    },
+    "linalg.decomp.svd": {
+      "verified": 15
     },
     "linalg.system.solve": {
       "unverified": 1,

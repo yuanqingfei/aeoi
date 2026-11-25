@@ -1,0 +1,28 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "linalg.decomp.svd",
+ "operator_version": "0.4.0",
+ "case_family": "vector_A",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    3
+   ],
+   "data": [
+    1.0,
+    2.0,
+    3.0
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "numpy.linalg.svd (LAPACK dgesdd) / mpmath svd_r",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "seed": 20261125,
+  "note": "NOT MATLAB output"
+ },
+ "expected_error": "E.VALIDATION.SHAPE"
+}

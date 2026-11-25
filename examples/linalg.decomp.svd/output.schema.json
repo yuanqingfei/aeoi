@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.decomp.svd/0.4.0/output",
+  "type": "object",
+  "required": [
+    "s",
+    "U",
+    "V",
+    "mode",
+    "rank",
+    "rank_tol",
+    "cond2"
+  ],
+  "properties": {
+    "s": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "奇异值 [p]，降序，p = min(m, n)"
+    },
+    "U": {
+      "description": "左奇异向量：thin [m, p]，full [m, m]；mode = values 时为 null"
+    },
+    "V": {
+      "description": "右奇异向量（不是 Vᵀ，同 MATLAB）：thin [n, p]，full [n, n]；mode = values 时为 null"
+    },
+    "mode": {
+      "enum": [
+        "values",
+        "thin",
+        "full"
+      ]
+    },
+    "rank": {
+      "type": "integer",
+      "description": "数值秩：s_k > rank_tol 的个数"
+    },
+    "rank_tol": {
+      "type": "number",
+      "description": "max(m, n)·eps(s_max)（eps(x) 为 x 处的浮点间距；同 MATLAB rank）"
+    },
+    "cond2": {
+      "description": "s_max / s_min（s_min = 0 时为 \"Inf\"）"
+    }
+  }
+}

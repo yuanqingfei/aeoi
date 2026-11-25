@@ -28,7 +28,7 @@ pub struct In {
 }
 
 /// Row-major dense real matrix from a parsed array: (rows, cols, data, was_1d).
-fn real_rows(v: &Value, path: &str, host: &HostCtx) -> Result<(usize, usize, Vec<f64>, bool), OpError> {
+pub(crate) fn real_rows(v: &Value, path: &str, host: &HostCtx) -> Result<(usize, usize, Vec<f64>, bool), OpError> {
     let arr = parse_array(v, path, host, false)?;
     match arr {
         Array::Dense(d) => {
@@ -216,7 +216,7 @@ pub fn qr_factor(a: &[f64], m: usize, n: usize) -> Qr {
 
 impl Qr {
     /// Qᵀ b (length m).
-    fn qt(&self, b: &[f64]) -> Vec<f64> {
+    pub(crate) fn qt(&self, b: &[f64]) -> Vec<f64> {
         let (m, n) = (self.m, self.n);
         let mut y = b.to_vec();
         for k in 0..n {
@@ -235,11 +235,31 @@ impl Qr {
         }
         y
     }
-    fn r(&self, i: usize, j: usize) -> f64 {
+    /// Q b (length m): H_0·H_1·…·H_{n−1}·b.
+    pub(crate) fn q_apply(&self, b: &[f64]) -> Vec<f64> {
+        let (m, n) = (self.m, self.n);
+        let mut y = b.to_vec();
+        for k in (0..n).rev() {
+            if self.tau[k] == 0.0 {
+                continue;
+            }
+            let mut w = y[k];
+            for i in k + 1..m {
+                w += self.a[i * n + k] * y[i];
+            }
+            w *= self.tau[k];
+            y[k] -= w;
+            for i in k + 1..m {
+                y[i] -= w * self.a[i * n + k];
+            }
+        }
+        y
+    }
+    pub(crate) fn r(&self, i: usize, j: usize) -> f64 {
         self.a[i * self.n + j]
     }
     /// R x = c (upper triangular n×n).
-    fn solve_r(&self, c: &[f64]) -> Vec<f64> {
+    pub(crate) fn solve_r(&self, c: &[f64]) -> Vec<f64> {
         let n = self.n;
         let mut x = c[..n].to_vec();
         for i in (0..n).rev() {
@@ -252,7 +272,7 @@ impl Qr {
         x
     }
     /// Rᵀ x = c.
-    fn solve_rt(&self, c: &[f64]) -> Vec<f64> {
+    pub(crate) fn solve_rt(&self, c: &[f64]) -> Vec<f64> {
         let n = self.n;
         let mut x = c[..n].to_vec();
         for i in 0..n {
@@ -311,7 +331,7 @@ fn norm_inf_mat(a: &[f64], m: usize, n: usize) -> f64 {
 fn norm_inf(v: &[f64]) -> f64 {
     v.iter().fold(0.0, |s, x| s.max(x.abs()))
 }
-fn norm2(v: &[f64]) -> f64 {
+pub(crate) fn norm2(v: &[f64]) -> f64 {
     v.iter().map(|x| x * x).sum::<f64>().sqrt()
 }
 
@@ -331,7 +351,7 @@ pub fn residual_dd(a: &[f64], m: usize, n: usize, x: &[f64], b: &[f64]) -> Vec<f
 }
 
 /// Aᵀ r in compensated arithmetic.
-fn at_r_dd(a: &[f64], m: usize, n: usize, r: &[f64]) -> Vec<f64> {
+pub(crate) fn at_r_dd(a: &[f64], m: usize, n: usize, r: &[f64]) -> Vec<f64> {
     (0..n)
         .map(|j| {
             let mut d = Dot2::default();

@@ -41,6 +41,13 @@ PROXY_EXPECT = {
     "linsolve_overclaims": ("linalg.system.solve", "backward_stable = true ⇒"),
     "interp1_one_ulp": ("interp.grid.interp1", "node hits exact"),
     "interp1_count_wrong": ("interp.grid.interp1", "out_of_range_count recomputed"),
+    "polyfit_coef_wrong": ("fit.poly.polyfit", "p vs exact answer"),
+    "polyfit_mu_wrong": ("fit.poly.polyfit", "mu vs exact mean"),
+    "eig_vectors_swapped": ("linalg.decomp.eig", "recomputed by the runner"),
+    "eig_pair_order": ("linalg.decomp.eig", "ordering"),
+    "eig_value_wrong": ("linalg.decomp.eig", "values vs exact eigenvalues"),
+    "svd_u_sign_only": ("linalg.decomp.svd", "U·diag(s)·Vᵀ"),
+    "svd_both_signs": ("linalg.decomp.svd", "sign rule"),
 }
 
 # mutant -> substring that must appear among the names of the failed checks

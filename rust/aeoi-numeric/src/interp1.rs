@@ -69,7 +69,7 @@ pub struct In {
     n_out: usize,
 }
 
-fn vec1(v: &Value, path: &str, host: &HostCtx) -> Result<(Vec<f64>, Vec<usize>), OpError> {
+pub(crate) fn vec1(v: &Value, path: &str, host: &HostCtx) -> Result<(Vec<f64>, Vec<usize>), OpError> {
     match parse_array(v, path, host, false)? {
         Array::Dense(d) => {
             let data = match &d.data {

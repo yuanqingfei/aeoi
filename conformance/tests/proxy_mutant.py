@@ -160,6 +160,56 @@ def m_interp1_count_wrong(r):               # out_of_range_count off by one
     r["out_of_range_count"] = r["out_of_range_count"] + 1
 
 
+
+def m_polyfit_coef_wrong(r):                # leading coefficient off by 1e-6 (relative)
+    d = r["p"]["data"]; d[0] = d[0] * (1 + 1e-6) + 1e-12
+
+
+def m_polyfit_mu_wrong(r):                  # centering mean shifted by 1e-9 of its size (p untouched)
+    if r.get("mu"):
+        r["mu"][0] = r["mu"][0] * (1 + 1e-9) + 1e-12
+
+
+def m_eig_vectors_swapped(r):               # eigenvector columns 0 and 1 exchanged (labels no longer match)
+    v = r.get("vectors")
+    if v and v["shape"][0] > 1:
+        n = v["shape"][0]; d = v["data"]
+        for i in range(n):
+            d[i * n], d[i * n + 1] = d[i * n + 1], d[i * n]
+
+
+def m_eig_pair_order(r):                    # conjugate pairs listed with Im < 0 first (values only)
+    d = r["values"]["data"]
+    for k in range(len(d) - 1):
+        if isinstance(d[k], list) and isinstance(d[k][1], float) and d[k][1] > 0 and d[k + 1][1] == -d[k][1]:
+            d[k], d[k + 1] = d[k + 1], d[k]
+
+
+def m_eig_value_wrong(r):                   # one eigenvalue off by 1e-8 (relative to its size)
+    d = r["values"]["data"]
+    if isinstance(d[0], list):
+        d[0][0] = d[0][0] * (1 + 1e-8) + 1e-8
+    else:
+        d[0] = d[0] * (1 + 1e-8) + 1e-8
+
+
+def m_svd_u_sign_only(r):                   # u_0 negated without v_0: factors no longer reproduce A
+    u = r.get("U")
+    if u:
+        c = u["shape"][1]
+        for i in range(u["shape"][0]):
+            u["data"][i * c] = -u["data"][i * c]
+
+
+def m_svd_both_signs(r):                    # u_0 and v_0 both negated: an equivalent SVD that breaks the sign rule
+    for key in ("U", "V"):
+        f = r.get(key)
+        if f:
+            c = f["shape"][1]
+            for i in range(f["shape"][0]):
+                f["data"][i * c] = -f["data"][i * c]
+
+
 # name -> (operator, transform)
 MUTANTS = {
     "pz_pole_wrong": ("control.lti.poles_zeros", m_pz_pole_wrong),
@@ -185,6 +235,13 @@ MUTANTS = {
     "linsolve_overclaims": ("linalg.system.solve", m_linsolve_overclaims),
     "interp1_one_ulp": ("interp.grid.interp1", m_interp1_one_ulp),
     "interp1_count_wrong": ("interp.grid.interp1", m_interp1_count_wrong),
+    "polyfit_coef_wrong": ("fit.poly.polyfit", m_polyfit_coef_wrong),
+    "polyfit_mu_wrong": ("fit.poly.polyfit", m_polyfit_mu_wrong),
+    "eig_vectors_swapped": ("linalg.decomp.eig", m_eig_vectors_swapped),
+    "eig_pair_order": ("linalg.decomp.eig", m_eig_pair_order),
+    "eig_value_wrong": ("linalg.decomp.eig", m_eig_value_wrong),
+    "svd_u_sign_only": ("linalg.decomp.svd", m_svd_u_sign_only),
+    "svd_both_signs": ("linalg.decomp.svd", m_svd_both_signs),
 }
 
 

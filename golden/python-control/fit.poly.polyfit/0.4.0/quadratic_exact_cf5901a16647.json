@@ -1,0 +1,70 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "fit.poly.polyfit",
+ "operator_version": "0.4.0",
+ "case_family": "quadratic_exact",
+ "request": {
+  "x": {
+   "dtype": "f64",
+   "shape": [
+    5
+   ],
+   "data": [
+    -1.0,
+    0.0,
+    1.0,
+    2.0,
+    3.0
+   ]
+  },
+  "y": {
+   "dtype": "f64",
+   "shape": [
+    5
+   ],
+   "data": [
+    6.0,
+    3.0,
+    2.0,
+    3.0,
+    6.0
+   ]
+  },
+  "degree": 2
+ },
+ "reference_env": {
+  "engine": "numpy.polyfit / mpmath",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "seed": 20261125,
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "p_true": [
+   1.0,
+   -2.0,
+   3.0
+  ],
+  "p_numpy": [
+   1.0000000000000013,
+   -2.0000000000000018,
+   2.999999999999997
+  ],
+  "mu_true": null,
+  "residual_norm_true": 0.0,
+  "std_errors_true": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "col_norms": [
+   9.9498743710662,
+   3.872983346207417,
+   2.23606797749979
+  ],
+  "kappa_scaled_2": 5.460061941265445,
+  "dof": 2,
+  "numpy_scaled_forward_error": 1.1533585896220825e-15
+ }
+}

@@ -1,0 +1,23 @@
+# Parity test spec — linalg.decomp.svd 0.4.0 (AEOI v0.4.11-draft)
+operator: linalg.decomp.svd
+references:
+  - {engine: numpy, version: "numpy.linalg.svd (LAPACK dgesdd)", role: dev_reference, status: active,
+     generator: gen_golden_svd.py, golden_store: "golden/python-control/linalg.decomp.svd/0.4.0/*.json",
+     note: "NOT MATLAB output"}
+  - {engine: mpmath, role: high_precision_reference, status: active, note: "exact singular values and vectors of the stored f64 matrix (50 digits, svd_r)"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_svd"
+tolerance_class: T1
+compare:
+  s: {against: exact singular values, bound: "|Δs_k| ≤ 1e-12 · s_max (absolute; small singular values have no relative accuracy guarantee)"}
+  rank: "exact, with MATLAB's tolerance max(m, n)·eps(s_max) applied to the exact singular values"
+  vectors: "shape by mode; largest-modulus entry of u_k positive; for separated, non-negligible s_k ‖û_k ∓ u_k‖, ‖v̂_k ∓ v_k‖ ≤ 1e-10 · max(1, s_max/gap_k) · max(1, s_max/s_k)"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py (rule_svd)
+  s: "count, descending order, |Δs_k| ≤ 1e-12 · s_max against the exact values"
+  echoed: "mode, rank"
+  recomputed: "for thin/full the runner recomputes ‖A − U·diag(s)·Vᵀ‖_F/‖A‖_F and ‖UᵀU − I‖, ‖VᵀV − I‖ from the request and the returned factors, each ≤ 100·max(m, n)·u"
+case_families:
+  - {name: "random tall / wide / square / tall_full / wide_full / values / large_tall", n: 7}
+  - {name: "scalar / row_vector / column_vector / zero_matrix", n: 4}
+  - {name: "rank_deficient_3x3 / hilbert_8 / repeated_singular_values / graded", n: 4, note: "graded rows 1e8 : 1 : 1e-8 broke nalgebra's bidiagonal QR (reconstruction 8.7e-10); one-sided Jacobi: 2.5e-16"}
+  - {name: errors, n: 5, expect: "E.VALIDATION.SHAPE, DTYPE, NON_FINITE, SCHEMA ×2"}

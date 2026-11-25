@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/fit.poly.polyfit/0.4.0/output",
+  "type": "object",
+  "required": [
+    "p",
+    "degree",
+    "scaling",
+    "mu",
+    "residual_norm",
+    "dof",
+    "std_errors"
+  ],
+  "properties": {
+    "p": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "系数 [d + 1]，最高次在前；scaling = center_scale 时是对 t = (x − mu[0])/mu[1] 的多项式"
+    },
+    "degree": {
+      "type": "integer"
+    },
+    "scaling": {
+      "enum": [
+        "none",
+        "center_scale"
+      ]
+    },
+    "mu": {
+      "description": "scaling = center_scale 时为 [mean(x), std(x)]（样本标准差），否则 null"
+    },
+    "residual_norm": {
+      "type": "number",
+      "description": "‖y − V·p‖₂"
+    },
+    "dof": {
+      "type": "integer",
+      "description": "自由度 n − d − 1"
+    },
+    "std_errors": {
+      "description": "每个系数的标准误差 [d + 1]（假设误差独立同分布）；dof = 0 时为 null"
+    }
+  }
+}

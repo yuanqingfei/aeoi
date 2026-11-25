@@ -1,0 +1,175 @@
+{
+  "reference": "exact singular values / vectors of the stored matrix (mpmath 50 digits); numpy (LAPACK dgesdd) values recorded. Not MATLAB.",
+  "cases": 20,
+  "error_cases": 5,
+  "worst_value_error_over_tolerance": 0.0022981907110299904,
+  "worst_vector_error_over_tolerance": 5.089697023071361e-6,
+  "tolerance": "|Δs_k| ≤ 1e-12·s_max (T1, absolute); ‖û_k ∓ u_k‖, ‖v̂_k ∓ v_k‖ ≤ 1e-10·max(1, s_max/gap_k)·max(1, s_max/s_k) for separated, non-negligible s_k",
+  "cases_detail": [
+    {
+      "family": "column_vector",
+      "shape": [
+        2,
+        1
+      ],
+      "mode": "thin",
+      "rank": 1,
+      "cond2": 1.0,
+      "reconstruction": 0.0
+    },
+    {
+      "family": "graded",
+      "shape": [
+        3,
+        3
+      ],
+      "mode": "thin",
+      "rank": 2,
+      "cond2": 9305739143990548.0,
+      "reconstruction": 2.543221481337849e-16
+    },
+    {
+      "family": "hilbert_8",
+      "shape": [
+        8,
+        8
+      ],
+      "mode": "thin",
+      "rank": 8,
+      "cond2": 15257577275.315193,
+      "reconstruction": 1.169446020383288e-15
+    },
+    {
+      "family": "large_tall",
+      "shape": [
+        60,
+        25
+      ],
+      "mode": "thin",
+      "rank": 25,
+      "cond2": 5.213386576739328,
+      "reconstruction": 3.608962680462894e-15
+    },
+    {
+      "family": "random_square",
+      "shape": [
+        10,
+        10
+      ],
+      "mode": "thin",
+      "rank": 10,
+      "cond2": 14.187047359073755,
+      "reconstruction": 2.2009905443127525e-15
+    },
+    {
+      "family": "random_tall",
+      "shape": [
+        5,
+        3
+      ],
+      "mode": "thin",
+      "rank": 3,
+      "cond2": 3.5881800300704305,
+      "reconstruction": 4.708708243912438e-16
+    },
+    {
+      "family": "random_tall_full",
+      "shape": [
+        6,
+        2
+      ],
+      "mode": "full",
+      "rank": 2,
+      "cond2": 1.8745830462083892,
+      "reconstruction": 1.2020272003029442e-16
+    },
+    {
+      "family": "random_values",
+      "shape": [
+        8,
+        4
+      ],
+      "mode": "values",
+      "rank": 4,
+      "cond2": 3.1735301198714017,
+      "reconstruction": 4.542528800753009e-16
+    },
+    {
+      "family": "random_wide",
+      "shape": [
+        3,
+        5
+      ],
+      "mode": "thin",
+      "rank": 3,
+      "cond2": 2.345956846993383,
+      "reconstruction": 2.989860786647735e-16
+    },
+    {
+      "family": "random_wide_full",
+      "shape": [
+        2,
+        5
+      ],
+      "mode": "full",
+      "rank": 2,
+      "cond2": 3.183477412398572,
+      "reconstruction": 1.6537674773059776e-16
+    },
+    {
+      "family": "rank_deficient_3x3",
+      "shape": [
+        3,
+        3
+      ],
+      "mode": "thin",
+      "rank": 2,
+      "cond2": 1.1437578094205312e+17,
+      "reconstruction": 6.21530087301273e-16
+    },
+    {
+      "family": "repeated_singular_values",
+      "shape": [
+        4,
+        3
+      ],
+      "mode": "thin",
+      "rank": 3,
+      "cond2": 2.0,
+      "reconstruction": 1.716587549445839e-16
+    },
+    {
+      "family": "row_vector",
+      "shape": [
+        1,
+        4
+      ],
+      "mode": "thin",
+      "rank": 1,
+      "cond2": 1.0,
+      "reconstruction": 0.0
+    },
+    {
+      "family": "scalar",
+      "shape": [
+        1,
+        1
+      ],
+      "mode": "thin",
+      "rank": 1,
+      "cond2": 1.0,
+      "reconstruction": 0.0
+    },
+    {
+      "family": "zero_matrix",
+      "shape": [
+        2,
+        3
+      ],
+      "mode": "thin",
+      "rank": 0,
+      "cond2": "Inf",
+      "reconstruction": 0.0
+    }
+  ]
+}

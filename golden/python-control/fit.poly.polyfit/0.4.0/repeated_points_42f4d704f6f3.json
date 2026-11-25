@@ -1,0 +1,72 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "fit.poly.polyfit",
+ "operator_version": "0.4.0",
+ "case_family": "repeated_points",
+ "request": {
+  "x": {
+   "dtype": "f64",
+   "shape": [
+    6
+   ],
+   "data": [
+    0.0,
+    0.0,
+    1.0,
+    1.0,
+    2.0,
+    2.0
+   ]
+  },
+  "y": {
+   "dtype": "f64",
+   "shape": [
+    6
+   ],
+   "data": [
+    0.9,
+    1.1,
+    2.0,
+    2.2,
+    5.1,
+    4.9
+   ]
+  },
+  "degree": 2
+ },
+ "reference_env": {
+  "engine": "numpy.polyfit / mpmath",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "seed": 20261125,
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "p_true": [
+   0.8999999999999999,
+   0.2000000000000001,
+   1.0
+  ],
+  "p_numpy": [
+   0.9000000000000007,
+   0.19999999999999907,
+   1.0000000000000007
+  ],
+  "mu_true": null,
+  "residual_norm_true": 0.24494897427831763,
+  "std_errors_true": [
+   0.12247448713915882,
+   0.25495097567963904,
+   0.09999999999999992
+  ],
+  "col_norms": [
+   5.830951894845301,
+   3.1622776601683795,
+   2.449489742783178
+  ],
+  "kappa_scaled_2": 12.342109776645373,
+  "dof": 3,
+  "numpy_scaled_forward_error": 9.971059089012064e-16
+ }
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.decomp.eig/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "A"
+  ],
+  "properties": {
+    "A": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "实方阵 [n, n]，row-major（MATLAB 是 column-major，先转置再展平；对称矩阵不受影响）"
+    },
+    "structure": {
+      "enum": [
+        "auto",
+        "general"
+      ],
+      "default": "auto",
+      "x-aeoi-provenance": "convention",
+      "description": "auto（缺省：A 与 Aᵀ 逐位相等时用对称算法）或 general（总用一般算法，结果为 c128）"
+    },
+    "vectors": {
+      "type": "boolean",
+      "default": true,
+      "x-aeoi-provenance": "convention",
+      "description": "是否返回特征向量（缺省 true）"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  },
+  "x-aeoi-shape-constraints": [
+    "A: [n, n]"
+  ]
+}
