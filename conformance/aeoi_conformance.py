@@ -43,7 +43,7 @@ DEFAULT_VARIANTS = 3                                                            
 # ---------------------------------------------------------------- MCP stdio client (CF-3)
 class McpClient:
     def __init__(self, command):
-        self.p = subprocess.Popen(shlex.split(command), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
+        self.p = subprocess.Popen(shlex.split(command), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", bufsize=1)
         self.q, self.err, self.n = queue.Queue(), [], 0
         threading.Thread(target=self._pump, args=(self.p.stdout, self.q), daemon=True).start()
         threading.Thread(target=lambda: [self.err.append(l) for l in self.p.stderr], daemon=True).start()
@@ -107,7 +107,7 @@ def envelope_of(resp):
 def load_registry(schema_dir):
     reg, docs = Registry(), {}
     for f in glob.glob(os.path.join(schema_dir, "*.schema.json")):
-        d = json.load(open(f))
+        d = json.load(open(f, encoding="utf-8"))
         docs[d["$id"]] = d
         reg = reg.with_resource(d["$id"], Resource.from_contents(d))
     return reg, docs
@@ -263,7 +263,7 @@ def main():
 
     reg, docs = load_registry(a.schemas)
     env_validator = Draft202012Validator(docs["aeoi://schemas/envelope/0.4"], registry=reg)
-    deviations = {d["case_id"]: d for d in json.load(open(a.known_deviations))} if a.known_deviations else {}
+    deviations = {d["case_id"]: d for d in json.load(open(a.known_deviations, encoding="utf-8"))} if a.known_deviations else {}
 
     files = sorted(f for f in glob.glob(os.path.join(a.golden, "*", "*", "*", "*.json")) if not f.endswith("INDEX.json"))
     want_ops = None if a.operators == "all" else set(a.operators.split(","))
@@ -273,10 +273,10 @@ def main():
         engine, op = f.split(os.sep)[-4], f.split(os.sep)[-3]
         if (want_ops and op not in want_ops) or (want_eng and engine not in want_eng):
             continue
-        d = json.load(open(f)); d["_engine"] = engine; d["_file"] = f
+        d = json.load(open(f, encoding="utf-8")); d["_engine"] = engine; d["_file"] = f
         d["_id"] = f"{engine}/{op}/{d['case_family']}/{os.path.basename(f)[:12]}"
         cases.append(d)
-    suite_hash = "sha256:" + hashlib.sha256(b"".join(os.path.relpath(c["_file"], a.golden).encode() + open(c["_file"], "rb").read() for c in cases)).hexdigest()
+    suite_hash = "sha256:" + hashlib.sha256(b"".join(os.path.relpath(c["_file"], a.golden).replace(os.sep, "/").encode() + open(c["_file"], "rb").read() for c in cases)).hexdigest()
 
     cli = McpClient(a.impl)
     init = cli.request("initialize", {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "aeoi-conformance", "version": RUNNER_VERSION}})
@@ -369,7 +369,7 @@ def main():
         sf = os.path.join(a.examples, op, "input.schema.json")
         if not os.path.exists(sf):
             continue
-        props = json.load(open(sf)).get("properties", {})
+        props = json.load(open(sf, encoding="utf-8")).get("properties", {})
         defaults = {k: v["default"] for k, v in props.items() if isinstance(v, dict) and "default" in v}
         for field, dv in sorted(defaults.items()):
             picked = {"omit": [], "add": []}
@@ -417,7 +417,7 @@ def main():
               "results": [{"operator": k[0], "version": k[1], "method": k[2], **v} for k, v in groups.items()],
               "known_deviations": list(deviations.values()), "notes": sorted(notes), "cases": results}
     if a.report:
-        json.dump(report, open(a.report, "w"), ensure_ascii=False, indent=1)
+        json.dump(report, open(a.report, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     tot = {k: sum(1 for x in results if x["result"] == k) for k in ("pass", "pass_with_deviation", "fail", "skip")}
     print(f"impl: {info.get('name')} {info.get('version')}   suite {suite_hash[:19]}…   cases {len(results)}")
     for g in report["results"]:

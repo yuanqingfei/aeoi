@@ -194,9 +194,11 @@ def rewrite(line, op, f):
 
 
 def main():
+    for st in (sys.stdin, sys.stdout):
+        st.reconfigure(encoding="utf-8")   # Windows: the console code page would mangle non-ASCII JSON
     op, f = MUTANTS[os.environ["AEOI_MUTANT"]]
     impl = os.environ.get("AEOI_IMPL", os.path.join(ROOT, "rust", "target", "release", "aeoi-mcp"))
-    p = subprocess.Popen([impl], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1)
+    p = subprocess.Popen([impl], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, encoding="utf-8", bufsize=1)
 
     def pump_in():
         for line in sys.stdin:

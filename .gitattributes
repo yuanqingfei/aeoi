@@ -1,0 +1,4 @@
+# Same bytes on every platform (golden files are hashed into the conformance suite_hash; spec 2.1 M-7a).
+* text=auto eol=lf
+*.png binary
+*.wasm binary

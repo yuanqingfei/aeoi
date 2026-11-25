@@ -70,6 +70,7 @@ jobs:
         run: |
           rust/target/${{ matrix.target }}/release/aeoi-call${{ matrix.exe }} hashes golden > /tmp/h.json
           mv /tmp/h.json hashes-${{ matrix.name }}.json
+          python3 -c "import hashlib,json,sys; d=json.load(open(sys.argv[1], encoding='utf-8')); print(len(d), 'golden cases, map digest', hashlib.sha256(json.dumps(d, sort_keys=True).encode()).hexdigest())" hashes-${{ matrix.name }}.json
       - name: package
         run: |
           d=aeoi-${{ matrix.name }}

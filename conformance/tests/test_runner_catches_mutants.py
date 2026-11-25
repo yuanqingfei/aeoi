@@ -56,8 +56,8 @@ def run(command, env=None, operators="control.math.lyap"):
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as t:
         rp = t.name
     p = subprocess.run([sys.executable, "-I", RUNNER, "run", "--impl", command, "--operators", operators, "--report", rp],
-                       cwd=ROOT, capture_output=True, text=True, env={**os.environ, **(env or {})})
-    rep = json.load(open(rp)); os.unlink(rp)
+                       cwd=ROOT, capture_output=True, text=True, encoding="utf-8", env={**os.environ, **(env or {})})
+    rep = json.load(open(rp, encoding="utf-8")); os.unlink(rp)
     return p.returncode, rep
 
 
