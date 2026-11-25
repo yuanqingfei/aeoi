@@ -2143,6 +2143,15 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 - 只在一台 x86_64-linux 机器上测试，跨平台（aarch64、无 AVX-512）的 `platform_bitwise` 行为未验证。
 - b64/ref 编码只测试了 f64；c128/i64/bool 的二进制解码路径已实现但没有测试。`reject` 稀疏策略已定义但算子都未使用。
 
+### 11.5 算子之间的复用（v0.4.11，作者决定 2026-11-25）
+
+- RI-1 **一个算子用到另一个算子的计算时，参考实现 MUST 调用那个算子所基于的内核，也就是同一段代码。** MUST NOT 另写一份，也 MUST NOT 改调外部库里的同类功能。
+  - 内核放在 `aeoi-core::kernels`：`dense`（LU、Householder QR、1-范数条件数估计、补偿残差）、`svd`（单边 Jacobi）、`eig`（对称 Jacobi；Schur → 复 Schur → 三角回代）。
+  - 对应的算子（`linalg.system.solve`、`linalg.decomp.svd`、`linalg.decomp.eig`）只是内核外面的一层：校验、输出格式、后置条件。
+  - 理由：同一个计算出现两份实现，精度与行为就可能不一致，而 parity 和一致性套件只验证了其中一份。v0.4.11 正好有实例：nalgebra 的 SVD 和对称特征分解在分级矩阵上不准，被 `svd`、`eig` 的后置条件抓到；而控制算子当时还在用它们。
+- RI-2 **一个算子自身的核心算法可以来自外部库**，例如 `fft` 用 rustfft，`eig` 的实 Schur 用 nalgebra，但 MUST 写在 manifest 的 `backend` 里，并受 2.1 M-7a（跨平台逐位相同）约束。外部库给出的功能一旦有了 AEOI 自己的算子，其他算子 MUST 改用该算子的内核（RI-1）。
+- RI-3 **迁移**（已知违反项）：v0.4.11 审计时，控制算子与 `aeoi-core` 的 `linalg`、`sysalg` 里还有约 45 处直接调用 nalgebra 的 LU、SVD、Cholesky、对称特征分解或 QR（`bode`、`c2d`、`connect`、`ctrb_obsv`、`dlqr`、`lqr`、`lyap`、`place`、`poles_zeros`、`step`）。它们要逐一改用内核。结果的末几位会变：在容差类内按 G-3 处理，超出容差的按 G-2 升版本。计划在四批新算子之后完成（12.2）。
+
 ## 12. 开放问题与下一步
 
 ### 12.1 开放问题
@@ -2186,6 +2195,27 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 7. 一致性套件（9.4）：v0.4.11 有 15 个算子的数值规则（15 / 28 = 54%；作者定的下限是 30%，以后提高），参考实现 900 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 30 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
 8. 根据以上反馈修订，冻结 v1.0
 
+### 12.3 目标算子清单（v0.4.11，作者决定 2026-11-25）
+
+本项目的目标，是覆盖工程计算中最常用的约 100 个 MATLAB 函数。逐元素运算（`sin`、`sum` 之类）、绘图、文件读写、字符串和数据结构不在其中，它们不需要 AEOI 的信任信息。清单是作者与 Claude 的判断，不是统计结果；以后可以用公开 MATLAB 代码的调用频率修正。
+
+| 类别 | 目标函数 | 约数 | v0.4.11 已覆盖 |
+|---|---|---|---|
+| 控制 | tf/ss/zpk 转换、step、impulse、lsim、bode、nyquist、nichols、margin、rlocus、pole、zero、feedback、series、parallel、c2d、d2c、lqr、dlqr、kalman/lqe、place、acker、ctrb、obsv、lyap/dlyap、pid、pidtune、stepinfo、pade、minreal、balreal | 32 | 25 |
+| 线性代数 | `\`/linsolve、eig、svd、inv、det、rank、cond、norm、chol、lu、qr、pinv、null、orth、expm | 15 | 3（rank、cond 可从 svd 结果读出） |
+| 信号 | fft/ifft、filter、filtfilt、butter、cheby1、freqz、conv、xcorr、pwelch、spectrogram、resample、decimate、hilbert、findpeaks | 14 | 2 |
+| 多项式、插值、拟合 | polyfit、polyval、roots、conv/deconv、interp1（含 spline、pchip）、interp2、griddata、lsqcurvefit | 11 | 4 |
+| 微积分与 ODE | ode45、ode23、ode15s、integral、integral2、trapz、cumtrapz、bvp4c、pdepe、gradient | 10 | 1 |
+| 非线性方程与优化 | fzero、fsolve、fminsearch、fminbnd、fminunc、fmincon、linprog、quadprog、lsqnonlin | 9 | 0 |
+| 统计 | regress/fitlm、corrcoef、histcounts、mean/std 的稳健版本等 | 8 | 0 |
+| 合计 | | 约 100 | 约 35（35%） |
+
+顺序：
+1. 剩下的四批：`butter` + `filter`、`fzero`/`fsolve`、`fminsearch`/`fmincon`/`linprog`、`integral`/`trapz`。
+2. 控制算子迁移到共享内核（11.5 RI-3）。
+3. polyval/roots、inv/det/norm、ode15s、filtfilt/freqz/pwelch、nyquist/rlocus、interp2/spline、lsqcurvefit。
+4. 其余。
+
 ## 13. Changelog
 
 ### v0.4.11-draft（2026-11-25）
@@ -2207,6 +2237,7 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 | 4 | 10.22 EG-1 – EG-7 | 新算子 `linalg.decomp.eig` 0.4.0：对称 Jacobi / 一般 Schur + 三角回代；排序（对称升序；一般按 (Re, \|Im\|)，共轭对正虚部在前）与规一化（单位 2-范数，最大模分量为正实数）写死；报告每个特征值的条件数，> 1e8 时警告可能亏损 | 特征向量不唯一，不写死约定就无法比较、无法复现 |
 | 5 | 10.22 EG-5、开放问题 26 | `orthonormal` 只适用于对称算法，一般算法按空真报告 | 开放问题 26 的第二个实例 |
 | 6 | 10.23 SV-1 – SV-7 | 新算子 `linalg.decomp.svd` 0.4.0：单边 Jacobi；values / thin / full；u_k 的符号约定；数值秩用 MATLAB 的容差 | — |
+| 8 | 11.5 RI-1 – RI-3、12.3 | 作者决定：目标是约 100 个常用工程计算函数（12.3）；算子之间复用 MUST 调用同一内核（`aeoi-core::kernels`），不得重写，也不得改调外部库；已知的约 45 处违反列入迁移计划 | 同一计算两份实现会不一致；nalgebra 的 SVD、对称特征分解刚被证明在分级矩阵上不准 |
 | 7 | 9.4（`rules_numeric.py`） | 三个算子的一致性规则只比较不变量：特征值（最近匹配）、残差、正交性、规一化规则；运行器从请求重算残差 | 两个正确实现给出的 V 可以完全不同 |
 
 **开发中发现的问题**

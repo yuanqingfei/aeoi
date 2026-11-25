@@ -16,6 +16,8 @@ AEOI（AI Engineering Operator Interface Spec）是叠加在 MCP 之上的工程
 - **提交、推送不必等作者确认**（作者 2026-11-25 授权）；做完一步就提交并推送，不留未推送的提交。**打 tag / 正式发布仍要作者当次同意。**
 - 提交：`git -c user.name=Claude -c user.email=noreply@anthropic.com commit`；推送：`git -c push.negotiate=true push origin main`；提交信息末尾带会话给出的 attribution 行。
 - 路线：不断加新算子，一方面扩大用户群，一方面让算子逼出规范问题并写进规范。一次 1–2 个。领域按 MATLAB 使用频率排（控制已告一段落；已做 fft、ode45；候选 interp1、polyfit、linsolve、fzero/fsolve、butter+filter、eig/svd、integral）。
+- **算子之间复用必须调用同一内核**（规范 11.5 RI-1，作者 2026-11-25）：要用另一个算子的计算时，调用 `aeoi-core::kernels` 里它所基于的代码；不得重写，不得改调外部库的同类功能。新算子先把可复用的部分写成内核，再在外面包一层算子。
+- 目标是约 100 个常用工程计算函数，清单与顺序见规范 12.3。
 - 一致性数值规则覆盖的算子 ≥ 全部算子的 30%（以后提高）；每加一个算子都带规则。
 - 有真正的设计选择（指标、约定、语法）时用 AskUserQuestion 让作者选，给出推荐项。
 

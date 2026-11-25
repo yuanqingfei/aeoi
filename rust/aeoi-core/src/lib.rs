@@ -2,6 +2,7 @@
 //! validation, envelopes, structured errors, canonical hashing, and small dense linear-algebra helpers.
 pub mod error;
 pub mod jcs;
+pub mod kernels;
 pub mod host;
 pub mod matrix;
 pub mod lti;

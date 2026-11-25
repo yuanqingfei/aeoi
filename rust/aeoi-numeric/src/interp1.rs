@@ -173,7 +173,7 @@ fn spline_slopes(x: &[f64], y: &[f64]) -> Option<Vec<f64>> {
         // the parabola through the three points: 3×3 system solved by LU with partial pivoting
         let a = [1.0, 1.0, 0.0, dx[1], 2.0 * (dx[0] + dx[1]), dx[0], 0.0, 1.0, 1.0];
         let b = [2.0 * slope[0], 3.0 * (dx[0] * slope[1] + dx[1] * slope[0]), 2.0 * slope[1]];
-        let lu = crate::linsolve::lu_factor(&a, 3);
+        let lu = aeoi_core::kernels::dense::lu_factor(&a, 3);
         if lu.zero_pivot.is_some() {
             return None;
         }

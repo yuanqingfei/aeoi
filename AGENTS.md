@@ -18,6 +18,8 @@ AEOI（AI Engineering Operator Interface Spec）是叠加在 MCP 之上的工程
 6. 手写的解析解（golden 的真值）要用独立的高精度方法交叉核对。
 7. 推送后查看 CI 结果（`gh api repos/yuanqingfei/aeoi/actions/runs`）。Pages 的冒烟测试曾连续失败 5 次没人发现。
 8. 不要引入依赖系统数学库或按 CPU 分派内核的计算路径（规范 2.1 M-7a）：超越函数经 `aeoi-libm` 走编入的 Rust `libm`，矩阵乘法用 `rust/vendor/matrixmultiply` 的通用内核。
+9. **算子之间复用必须调用同一内核**（规范 11.5 RI-1，作者 2026-11-25）：一个算子用到另一个算子的计算（线性方程组、QR、SVD、特征分解……），调用 `aeoi-core::kernels` 里那个算子所基于的代码，不得另写一份，也不得改调 nalgebra 等外部库的同类功能。新内核放进 `aeoi-core::kernels`，算子只做校验、输出与后置条件。
+10. 目标：约 100 个常用工程计算函数（规范 12.3 的清单与顺序）。
 
 ## 验证
 ```bash

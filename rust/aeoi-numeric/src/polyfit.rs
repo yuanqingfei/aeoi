@@ -10,7 +10,7 @@
 //! W.NUMERICAL.ILL_CONDITIONED and a suggested center_scale patch the user has to confirm; standard errors of
 //! the coefficients are part of the result.
 use crate::interp1::vec1;
-use crate::linsolve::{at_r_dd, inv_norm1_estimate, norm2, qr_factor, residual_dd};
+use aeoi_core::kernels::dense::{at_r_dd, inv_norm1_estimate, norm2, qr_factor, residual_dd};
 use aeoi_core::error::{ask_user, modify_input, OpError, Warning};
 use aeoi_core::sysalg::Dot2;
 use aeoi_core::{num, ExecCtx, HostCtx, Operator, Output};
