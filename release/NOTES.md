@@ -2,7 +2,7 @@ AEOI reference implementation: an MCP server for engineering computation (contro
 
 ## Install
 
-**Claude Desktop (macOS, Windows)**: download `aeoi.mcpb` and double-click it (or Settings → Extensions → Advanced settings → Install Extension…). It adds the AEOI tools to Claude; nothing else changes and you can disable it at any time.
+**Claude Desktop (macOS, Windows)**: download `aeoi.mcpb` and double-click it. If nothing happens, open Settings → Desktop app → Extensions ("Manage") → Advanced settings → Install Extension… and pick the file (older layout: Settings → Extensions; not the Plugins page), or drag the file onto the Claude Desktop window. It adds the AEOI tools to Claude; nothing else changes and you can disable it at any time.
 
 **Any MCP client** (Claude Code, Cursor, VS Code, …): download the archive for your platform, unpack it, and register the `aeoi-mcp` binary as a stdio server, for example
 

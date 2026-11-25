@@ -15,7 +15,7 @@
 
 从 [Releases](https://github.com/yuanqingfei/aeoi/releases) 下载，不需要 Rust：
 
-- **Claude Desktop（macOS、Windows）**：下载 `aeoi.mcpb`，双击安装（或 设置 → 扩展 → 高级设置 → 安装扩展）。它只是给 Claude 多加一组工具，随时可以停用或卸载。
+- **Claude Desktop（macOS、Windows）**：下载 `aeoi.mcpb`，双击安装；双击没反应时，在 Claude Desktop 里打开 设置 → 桌面应用（Desktop app）→ Extensions 旁的“管理” → 高级设置 → 安装扩展（Install Extension…），选中 `aeoi.mcpb`（旧版界面是 设置 → 扩展）。注意不是“插件”页。也可以把文件拖进 Claude Desktop 窗口。它只是给 Claude 多加一组工具，随时可以停用或卸载。
 - **任何 MCP 客户端**（Claude Code、Cursor、VS Code 等）：下载对应平台的压缩包，把 `aeoi-mcp` 登记为 stdio 服务器，例如 `claude mcp add aeoi -- /path/to/aeoi-mcp`。Cursor、VS Code 在各自的 MCP 配置里写 `{"command": "/path/to/aeoi-mcp"}`。
 - **不经过 LLM**：`aeoi-call <算子 id> request.json` 输出结果信封，`aeoi-call verify …` 重放收据。
 
