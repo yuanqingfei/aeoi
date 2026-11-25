@@ -1,0 +1,38 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "signal.filter.filter",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.VALIDATION.ZERO_DENOMINATOR",
+    "category": "validation",
+    "retryable": true,
+    "message": "a 的第一个系数 a0 为 0（同 MATLAB filter 的要求）。",
+    "agent_hint": "a0 必须非零；检查系数顺序：这里是 z⁻¹ 的升幂，a0 在最前。",
+    "details": {
+      "path": "/a/0"
+    },
+    "remediation": [
+      {
+        "id": "ask",
+        "kind": "ask_user",
+        "description": "向用户确认输入与建模假设",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.079677
+  }
+}

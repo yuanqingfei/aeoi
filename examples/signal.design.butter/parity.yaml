@@ -1,0 +1,23 @@
+# Parity test spec — signal.design.butter 0.4.0 (AEOI v0.4.12-draft)
+operator: signal.design.butter
+references:
+  - {engine: scipy, version: "scipy.signal.butter (output zpk / ba / sos)", role: dev_reference, status: active,
+     generator: gen_golden_butter.py, golden_store: "golden/python-control/signal.design.butter/0.4.0/*.json",
+     note: "NOT MATLAB output. MATLAB butter uses the same prototype / transform / prewarped bilinear construction"}
+  - {engine: mpmath, role: high_precision_reference, status: active, note: "independent 50-digit implementation of the construction (truth for z, p, k, b, a)"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_butter"
+tolerance_class: T1
+compare:
+  z, p: {against: truth, bound: "set matching, |Δ| ≤ 1e-12 · max(1, |root|)"}
+  k: "relative ≤ 1e-12"
+  sos: "frequency response on 64 points of the unit circle ≤ 1e-11 · max|H| against the truth zpk (section pairing is AEOI's own rule, coefficients are not compared)"
+  b, a: "coefficients ≤ 1e-12 · max|coefficient| against the truth, unless the case is flagged W.NUMERICAL.ILL_CONDITIONED (then the flag is asserted)"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py (rule_butter)
+  z, p, k: "as above"
+  recomputed: "the runner evaluates the returned sos (digital) or zpk (analog) at the cutoff edges from the request and requires |H|² = 1/2 within 1e-9; it recomputes the b/a response deviation and requires the warning exactly when it exceeds 1e-8"
+case_families:
+  - {name: "low_normalized ×6 / low_hz / low_near_nyquist / high ×2 / bandpass ×2 / bandstop ×2", n: 14}
+  - {name: "analog low / high_hz / bandpass / bandstop", n: 4}
+  - {name: "high_order_low_cutoff_warns / bandpass_narrow_warns", n: 2, note: "b/a response deviation 1.0 (useless) — scipy's b/a is just as bad"}
+  - {name: errors, n: 13, expect: "OPTION_CONFLICT ×6 (cutoff given 0 or 2 ways, Hz without fs, fs with Wn, wrong unit for the domain), ABOVE_NYQUIST ×2, SHAPE, RANGE ×2, SCHEMA ×2"}

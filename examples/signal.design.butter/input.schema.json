@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/signal.design.butter/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "order"
+  ],
+  "properties": {
+    "order": {
+      "type": "integer",
+      "minimum": 1,
+      "x-aeoi-provenance": "user",
+      "description": "阶数 n（由用户决定，不要代填）"
+    },
+    "type": {
+      "enum": [
+        "low",
+        "high",
+        "bandpass",
+        "bandstop"
+      ],
+      "x-aeoi-provenance": "user",
+      "description": "low、high、bandpass、bandstop；省略时一个截止频率为 low、两个为 bandpass"
+    },
+    "domain": {
+      "enum": [
+        "digital",
+        "analog"
+      ],
+      "default": "digital",
+      "x-aeoi-provenance": "convention",
+      "description": "digital（缺省）或 analog"
+    },
+    "cutoff_hz": {
+      "oneOf": [
+        {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "minItems": 2,
+          "maxItems": 2
+        }
+      ],
+      "x-aeoi-provenance": "user",
+      "description": "截止频率（Hz）：一个数，或带通/带阻的 [下限, 上限]；数字滤波器必须同时给 sample_rate_hz"
+    },
+    "cutoff_normalized": {
+      "oneOf": [
+        {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "minItems": 2,
+          "maxItems": 2
+        }
+      ],
+      "x-aeoi-provenance": "user",
+      "description": "数字滤波器的归一化截止频率（= MATLAB 的 Wn）：0 < Wn < 1，1 = Nyquist（采样率的一半），不是 rad/sample，也不是相对采样率"
+    },
+    "cutoff_rad_s": {
+      "oneOf": [
+        {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "minItems": 2,
+          "maxItems": 2
+        }
+      ],
+      "x-aeoi-provenance": "user",
+      "description": "模拟滤波器的截止频率（rad/s）"
+    },
+    "sample_rate_hz": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "x-aeoi-provenance": "user",
+      "description": "采样率（Hz），与 cutoff_hz 一起用"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  }
+}

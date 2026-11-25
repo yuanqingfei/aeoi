@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/signal.filter.filter/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "x"
+  ],
+  "properties": {
+    "x": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "输入信号 [n]，或 [k, n]（每行一个通道）"
+    },
+    "b": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 1,
+      "description": "分子系数，z⁻¹ 升幂（同 MATLAB filter）"
+    },
+    "a": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 1,
+      "description": "分母系数，z⁻¹ 升幂，a[0] ≠ 0"
+    },
+    "sos": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "二阶节 [L, 6]，每行 [b0 b1 b2 a0 a1 a2]（高阶滤波器优先用它）"
+    },
+    "zi": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "初始状态（可选）：b/a 为 max(len(a), len(b)) − 1 个数；sos 为 [L, 2]；多通道可给 [k, …]"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  },
+  "x-aeoi-shape-constraints": [
+    "x: [n] 或 [k, n]",
+    "sos: [L, 6]",
+    "zi: b/a 为 [max(len) − 1]（或每通道 [k, …]）；sos 为 [L, 2]（或 [k, L, 2]）"
+  ]
+}

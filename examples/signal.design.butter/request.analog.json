@@ -1,0 +1,5 @@
+{
+  "order": 3,
+  "domain": "analog",
+  "cutoff_rad_s": 10.0
+}

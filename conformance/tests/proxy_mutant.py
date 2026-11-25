@@ -210,6 +210,24 @@ def m_svd_both_signs(r):                    # u_0 and v_0 both negated: an equiv
                 f["data"][i * c] = -f["data"][i * c]
 
 
+
+def m_butter_pole_wrong(r):                 # first pole moved by 1e-9
+    r["p"][0][0] = r["p"][0][0] + 1e-9
+
+
+def m_butter_warning_dropped(r, env):       # the b/a warning removed (b/a still useless)
+    env["warnings"] = [w for w in env.get("warnings", []) if w.get("code") != "W.NUMERICAL.ILL_CONDITIONED"]
+
+
+def m_filter_y_wrong(r):                    # one output sample off by 1e-9 of the signal scale
+    d = r["y"]["data"]; i = len(d) // 2
+    d[i] = d[i] + 1e-9 * max(abs(v) for v in d if isinstance(v, float))
+
+
+def m_filter_state_dropped(r):              # final state reported as zero
+    r["zf"]["data"] = [0.0 for _ in r["zf"]["data"]]
+
+
 # name -> (operator, transform)
 MUTANTS = {
     "pz_pole_wrong": ("control.lti.poles_zeros", m_pz_pole_wrong),
@@ -242,6 +260,10 @@ MUTANTS = {
     "eig_value_wrong": ("linalg.decomp.eig", m_eig_value_wrong),
     "svd_u_sign_only": ("linalg.decomp.svd", m_svd_u_sign_only),
     "svd_both_signs": ("linalg.decomp.svd", m_svd_both_signs),
+    "butter_pole_wrong": ("signal.design.butter", m_butter_pole_wrong),
+    "butter_warning_dropped": ("signal.design.butter", m_butter_warning_dropped),
+    "filter_y_wrong": ("signal.filter.filter", m_filter_y_wrong),
+    "filter_state_dropped": ("signal.filter.filter", m_filter_state_dropped),
 }
 
 

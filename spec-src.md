@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.11-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.12-draft
 
-> 状态：Draft v0.4.11 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.12 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.12 新增滤波器设计 `signal.design.butter`（10.24）与滤波 `signal.filter.filter`（10.25）；截止频率必须显式写明单位。同时定下两条：目标是约 100 个常用工程计算函数（12.3）；算子之间的复用必须调用同一内核（11.5）。
 >
 > v0.4.11 新增三个算子：多项式拟合 `fit.poly.polyfit`（10.21，带标准误差；病态时警告并建议中心化缩放，须用户确认）、特征分解 `linalg.decomp.eig`（10.22）与奇异值分解 `linalg.decomp.svd`（10.23）。后两者的特征向量、奇异向量本身不唯一，规范给出排序与规一化约定，一致性规则只比较不变量。
 >
@@ -1992,6 +1994,120 @@ A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与�
 
 共 20 个 golden 用例，15 个成功、5 个错误。奇异值误差最坏的用例用掉了容差的 2.3e-3，奇异向量的是 5.1e-6。结果见 `aeoi-numeric/tests/parity_svd.rs` 和 `reports/parity-svd.json`。
 
+## 10.24 `signal.design.butter`：巴特沃斯滤波器设计（v0.4.12）
+
+对应 MATLAB 的 `butter`。真值来自 mpmath 以 50 位精度对同一构造的独立实现，scipy.signal.butter 的值只作记录；都不是 MATLAB 的结果。这个算子逼出的规范问题有两个：
+
+- **频率单位。** MATLAB 的 Wn 是“相对 Nyquist 的归一化频率”。它很容易和 Hz、rad/sample、“相对采样率”混淆，而且写错了往往不报错，只会得到另一个滤波器。
+- **同一个结果的三种表示，精度不同。** 高阶或截止频率很低时，多项式 b/a 已经完全失真；golden 里的两个例子，b/a 的频率响应与正确答案相差 100%。scipy 的 b/a 一样坏，MATLAB 文档也建议改用 zpk 或 sos。
+
+**规范性条款**
+
+- BW-1 **截止频率**（作者决定，2026-11-25）：MUST 显式给出，没有缺省。
+  - 数字滤波器：`cutoff_hz` 加 `sample_rate_hz`，或 `cutoff_normalized`（= MATLAB 的 Wn，0 < Wn < 1，1 = Nyquist）。
+  - 模拟滤波器：`cutoff_rad_s` 或 `cutoff_hz`。
+  - 一种都没给、给了两种、只给 Hz 没给采样率、或给了不适用于该 domain 的写法，都报 `E.VALIDATION.OPTION_CONFLICT`。附 `ask_user`，问清截止频率与单位。
+  - 截止频率 ≥ Nyquist 报 `E.DOMAIN.ABOVE_NYQUIST`。
+  - 结果在 `cutoff` 里同时回显归一化值和 Hz 值。
+- BW-2 **类型与阶数**：`order` 来源 `user`。`type` 省略时，一个截止频率按低通、两个按带通（同 MATLAB）；实际类型在结果里回显。
+- BW-3 **构造**：
+  - 模拟原型 p_k = −exp(iπm/(2n))，m = −n+1, −n+3, …, n−1。
+  - 频率变换：lp2lp、lp2hp、lp2bp、lp2bs（零极点形式）。
+  - 数字滤波器：先预畸变 w = 4·tan(π·Wn/2)，再做双线性变换（fs = 2）。这与 scipy、MATLAB 相同。
+  - 内核在 `aeoi-core::kernels::filter`（11.5 RI-1）。b/a 由零极点展开，用的是 `control.lti.convert` 的同一段代码。
+- BW-4 **输出与 b/a 警告**（作者决定）：
+  - 同时给出 z/p/k、sos（数字滤波器）、b/a，以及 `system`：模拟滤波器是 ts = 0 的 LTI 系统；数字滤波器给了采样率时 ts = 1/fs；只给归一化频率时为 null，因为这时时间基未知。
+  - b/a 的频率响应与零极点形式在 64 个频点上的最大相对偏差 > 1e-8 时，发 `W.NUMERICAL.ILL_CONDITIONED`，`details.unreliable_fields` = ["/b", "/a"]。这是警告，不是后置条件：zpk 与 sos 仍然可用，不应因此把整个结果判为 `unverified`。
+  - sos 的配对规则：极点组按离单位圆由远到近排列，各取最近的零点，增益放在第一节。这是 AEOI 自己的约定，与 scipy 的 `nearest` 配对不保证逐系数相同，所以只比较频率响应。
+- BW-5 **后置条件**：
+  - `stable`：数字滤波器 |p| < 1；模拟滤波器 Re p < 0。
+  - `edge_gain`：每个截止点 |H|² = 1/2，偏差 ≤ 1e-10。
+  - `sos_consistent`：sos 与零极点的响应偏差 ≤ 1e-10。模拟滤波器没有 sos，按空真报告（开放问题 26 的第三个实例）。
+  - `all_finite`。
+- BW-6 **确定性**：`platform_bitwise`。
+
+**Manifest** — `examples/signal.design.butter/manifest.json`
+
+```json
+{{jsonc:examples/signal.design.butter/manifest.json}}
+```
+
+**请求与响应**（4 阶低通，50 Hz，采样率 1000 Hz）
+
+```json
+{{file:examples/signal.design.butter/request.json}}
+```
+
+```json
+{{jsonc:examples/signal.design.butter/response.success.json}}
+```
+
+**其他例子**：
+- `request.analog.json`：3 阶模拟低通，10 rad/s。结果的 `system` 可以直接交给 `control.lti.bode`。
+- `request.ill.json`：20 阶，Wn = 0.01。响应带 `W.NUMERICAL.ILL_CONDITIONED`，b/a 的响应偏差为 1.0；sos 与真值的偏差仍 ≤ 1e-11。
+
+**错误请求与响应**（给了 cutoff_hz 但没给采样率：BW-1）
+
+```json
+{{jsonc:examples/signal.design.butter/response.error.json}}
+```
+
+**Parity 测试规格** — `examples/signal.design.butter/parity.yaml`
+
+```yaml
+{{file:examples/signal.design.butter/parity.yaml}}
+```
+
+共 33 个 golden 用例，20 个成功、13 个错误。最坏用例：零极点误差 7.9e-14，sos 响应偏差 2.6e-13，未标记的 b/a 系数误差 4.6e-16。结果见 `aeoi-numeric/tests/parity_butter.rs` 和 `reports/parity-butter.json`。
+
+## 10.25 `signal.filter.filter`：数字滤波（v0.4.12）
+
+对应 MATLAB 的 `filter`（sos 形式对应 scipy 的 `sosfilt`）。真值来自 mpmath 以 50 位精度、在存储下来的数据上逐样本计算的差分方程，scipy 的 lfilter、sosfilt 只作记录；都不是 MATLAB 的结果。
+
+**规范性条款**
+
+- FL-1 **滤波器形式**：b/a 与 `sos` 恰好给出一种，否则报 `E.VALIDATION.OPTION_CONFLICT`。
+  - b、a 是 z⁻¹ 的升幂（MATLAB 约定），a[0] 必须非零，否则报 `E.VALIDATION.ZERO_DENOMINATOR`。
+  - sos 为 [L, 6]，每行 [b0 b1 b2 a0 a1 a2]。
+  - 高阶滤波器 SHOULD 用 sos（见 BW-4）。
+- FL-2 **通道与状态**：x 为 [n] 或 [k, n]，每行一个通道，与 `fft`、`interp1` 相同。MATLAB 按列存，[n, k] 要先转置。
+  - 初始状态 `zi`：b/a 为 max(len(a), len(b)) − 1 个数，sos 为 [L, 2]；多通道可以每个通道一份。
+  - 返回末状态 `zf`，可以直接作为下一段数据的 `zi`。
+- FL-3 **算法**：转置直接 II 型递推，同 MATLAB `filter` 与 scipy `lfilter`。b、a 补齐到同长并除以 a0。sos 为各节依次计算。内核在 `aeoi-core::kernels::filter`，与 `butter` 共用。
+- FL-4 **后置条件 `difference_equation`**：每个样本的差分方程残差 |Σa_i·y[n−i] − Σb_i·x[n−i]| ≤ 10·m·u·(Σ|a_i·y[n−i]| + Σ|b_i·x[n−i]|)，用补偿算术计算，sos 逐节检查；给了 `zi` 时，前 m − 1 个样本不查。另有 `all_finite`。
+- FL-5 **稳定性**：分母多项式的根（与 `control.lti.poles_zeros` 同一求根代码）在单位圆上或圆外时，发 `W.DOMAIN.UNSTABLE_SYSTEM`。这是警告：不稳定递推的输出仍然是差分方程的正确解。
+- FL-6 **确定性**：`platform_bitwise`。
+
+**Manifest** — `examples/signal.filter.filter/manifest.json`
+
+```json
+{{jsonc:examples/signal.filter.filter/manifest.json}}
+```
+
+**请求与响应**（10 Hz 与 120 Hz 正弦加噪声，经过 50 Hz、4 阶巴特沃斯 sos）
+
+```json
+{{jsonc:examples/signal.filter.filter/response.success.json}}
+```
+
+**其他例子**：
+- `request.ba.json`：一阶 IIR 的冲激响应，结果为 0.1·0.9ⁿ。
+- `request.unstable.json`：a = [1, −1.2]，响应带 `W.DOMAIN.UNSTABLE_SYSTEM`。
+
+**错误请求与响应**（a0 = 0：FL-1）
+
+```json
+{{jsonc:examples/signal.filter.filter/response.error.json}}
+```
+
+**Parity 测试规格** — `examples/signal.filter.filter/parity.yaml`
+
+```yaml
+{{file:examples/signal.filter.filter/parity.yaml}}
+```
+
+共 24 个 golden 用例，15 个成功、9 个错误。最坏用例只用掉了容差的 3.1%；15 个成功用例中，13 个的误差不超过 scipy。结果见 `aeoi-numeric/tests/parity_filter.rs` 和 `reports/parity-filter.json`。
+
 ## 11. Rust 参考实现（v0.3）
 
 ### 11.1 结构
@@ -2181,18 +2297,18 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 23. ~~**（v0.4.2 新，一致性规则发现）`lyap` 的 mpmath 容差不一致**~~ **已决定（v0.4.3）：一致性对所有参考引擎用同一个 κ 缩放容差。** 高精度参考（mpmath）只是更准的参考值，不是更严的要求。`parity.yaml` 里的“1e-12 不放宽”是参考实现自己的精度目标，由它的 `cargo test` 检验：参考实现带精化，实测 `lyap` ≤ 7e-15；而没有精化的后向稳定算法达不到，SciPy 在 `lyap`（κ ≈ 1.6e8）上为 7.5e-9，在 `lqr`（cond(R) = 1e11）上为 3.7e-9。把它当门槛会让标准实现无法通过。`lqr` 的 mpmath 分支同样改为 `cond_S` 缩放（v0.4.2 时误设为 1e-12）。试过用 CARE 的一阶条件数（闭环 Lyapunov 算子）缩放，最病态的用例容差 ≥ 1，等于不检查，所以没有采用；剩下的个别超差（上面 SciPy 的 `lqr` 用例超出 6.5 倍）按 CF-7 登记 `known_deviations`。原问题：：`parity.yaml` 对 mpmath 用例写“rel_fro ≤ 1e-12，不放宽”，运行器的 `lyap` 规则对所有引擎都用 T2 × max(1, κ/100)。`lqr` 的新规则对 mpmath 用 1e-12。改 `lyap` 规则会影响 Python 第二实现在病态用例上的结果，需要先重跑。
 24. **（v0.4.4 新，写默认值用例时发现）默认值与请求指纹**：H-1 按请求原样计算 `input_hash`，不补默认值，所以“省略 `type`”与“写出 `type: continuous`”的请求指纹不同，而 4.3 R-3 说请求指纹表示“同一个问题”。要么在哈希前补齐 schema 默认值（会改变所有省略了默认值的已发布 `input_hash` 与 golden 文件名之外的指纹，需要一次迁移），要么在 R-3 写明指纹只认字面相同的请求。一致性套件目前只要求结果相同，不比较这两个指纹。
 25. **（v0.4.9 新，发布流水线证实全平台逐位相同后）`platform_bitwise` 升为 `bitwise`**：参考实现已在 5 个平台上对全部 golden 逐位相同（2.1、M-7a），但 manifest 仍声明较弱的 `platform_bitwise`。改声明是新的承诺（G-2 MINOR），23 个算子要一起升版本、重新生成 manifest 与示例；还要决定 `aeoi_verify` 在 `bitwise` 下遇到跨平台差异时的判定（现在跨平台只给 `tolerance_match`）。建议随下一批算子升版本时一并处理。
-26. **（v0.4.10 新）只对部分方法有意义的后置条件**：`interp1` 的 `spline_c2` 只适用于 spline，`local_bounds` 不适用于 spline。E-11 把缺失的后置条件算作不成立，所以现在只能按空真报告（IP-6）。可选做法：manifest 的 `receipt.postconditions` 允许按 `method` 条件列出，或在 `trust.checks` 里允许 `null` 表示“不适用”。两种都改核心 schema（MINOR），留到第二个有此需要的算子出现时再定。v0.4.11 出现了第二个实例：`eig` 的 `orthonormal` 只对对称算法有意义（EG-5），暂时同样按空真处理，等作者决定。
+26. **（v0.4.10 新）只对部分方法有意义的后置条件**：`interp1` 的 `spline_c2` 只适用于 spline，`local_bounds` 不适用于 spline。E-11 把缺失的后置条件算作不成立，所以现在只能按空真报告（IP-6）。可选做法：manifest 的 `receipt.postconditions` 允许按 `method` 条件列出，或在 `trust.checks` 里允许 `null` 表示“不适用”。两种都改核心 schema（MINOR），留到第二个有此需要的算子出现时再定。v0.4.11 出现了第二个实例：`eig` 的 `orthonormal` 只对对称算法有意义（EG-5）；v0.4.12 出现了第三个：`butter` 的 `sos_consistent` 不适用于模拟滤波器（BW-5）。暂时都按空真处理，等作者决定。
 27. **（v0.4.11 新）警告附修复建议**：5.1 的 warning 没有 `remediation` 字段。`polyfit` 的病态警告把一个与错误 remediation 同形的对象放在 `details.suggested_remediation`（PF-4）。可选做法：给 warning 增加可选的 `remediation` 数组（核心 schema MINOR），或维持放在 `details` 的约定。
 
 ### 12.2 下一步（建议顺序）
 
 1. 在有授权的机器上运行 `matlab/gen_golden_bode.m`（并补 step/lqr 脚本），先核对 `memory_order_nonsymmetric` 用例与 python-control 一致，再跑通第一份 A 级凭证
 2. ~~修复 `lqr` 病态 R 的精度差距~~（v0.3.2 用补偿 Newton–Kleinman 完成）；剩余：平衡 + 有序 Schur（或广义特征值）作为符号函数不收敛时的后备路径，以及 `dlqr` 的同类精化
-3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；v0.4.10 加了 `linalg.system.solve`（10.19）与 `interp.grid.interp1`（10.20）；v0.4.11 加了 `fit.poly.polyfit`（10.21）、`linalg.decomp.eig`（10.22）、`linalg.decomp.svd`（10.23）；之后按 MATLAB 使用频率做 `butter` + `filter`、`fzero`/`fsolve`（复用 3.15）、优化、`integral`，以及隐式/刚性方法（`ode15s`）与事件检测；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
+3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；v0.4.10 加了 `linalg.system.solve`（10.19）与 `interp.grid.interp1`（10.20）；v0.4.11 加了 `fit.poly.polyfit`（10.21）、`linalg.decomp.eig`（10.22）、`linalg.decomp.svd`（10.23）；v0.4.12 加了 `signal.design.butter`（10.24）、`signal.filter.filter`（10.25）；之后做 `fzero`/`fsolve`（复用 3.15）、优化、`integral`，以及隐式/刚性方法（`ode15s`）与事件检测；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
 4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
 5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；v0.3.4 另有 `aeoi-web design`。v0.3.5 实现了试点里排在前面的算子（串联、并联、反馈、PID 构造、stepinfo、Padé），v0.3.6 加了具名角色、`loopsens`（含带宽读数）和回合预算。下一步是按 A-4 写 `pidtune`（必须先声明对象类、指标和唯一性），以及控制器离散化和 MIMO 裕度；扩充问答题、加入"Agent + 裸 scipy"对照组。非线性吸引域仍不做。
 6. 分发：为 `aeoi-mcp` 发布各平台预编译二进制（GitHub Releases）、Claude Desktop 一键安装扩展、登记到 MCP 公开目录（v0.4.9：数学库、矩阵乘法内核与 FFT 旋转因子已统一，5 个平台的 golden 哈希完全相同；`v0.4.9` 是第一个正式发布）；之后做纯浏览器的结果查看器（`aeoi-wasm`：结果、信任信息、收据与本地重放）。不做独立的图形界面客户端或自带 LLM 的聊天客户端：AEOI 的客户端是 MCP 宿主
-7. 一致性套件（9.4）：v0.4.11 有 15 个算子的数值规则（15 / 28 = 54%；作者定的下限是 30%，以后提高），参考实现 900 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 30 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
+7. 一致性套件（9.4）：v0.4.12 有 17 个算子的数值规则（17 / 30 = 57%；作者定的下限是 30%，以后提高），参考实现 962 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 34 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
 8. 根据以上反馈修订，冻结 v1.0
 
 ### 12.3 目标算子清单（v0.4.11，作者决定 2026-11-25）
@@ -2203,12 +2319,12 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 |---|---|---|---|
 | 控制 | tf/ss/zpk 转换、step、impulse、lsim、bode、nyquist、nichols、margin、rlocus、pole、zero、feedback、series、parallel、c2d、d2c、lqr、dlqr、kalman/lqe、place、acker、ctrb、obsv、lyap/dlyap、pid、pidtune、stepinfo、pade、minreal、balreal | 32 | 25 |
 | 线性代数 | `\`/linsolve、eig、svd、inv、det、rank、cond、norm、chol、lu、qr、pinv、null、orth、expm | 15 | 3（rank、cond 可从 svd 结果读出） |
-| 信号 | fft/ifft、filter、filtfilt、butter、cheby1、freqz、conv、xcorr、pwelch、spectrogram、resample、decimate、hilbert、findpeaks | 14 | 2 |
+| 信号 | fft/ifft、filter、filtfilt、butter、cheby1、freqz、conv、xcorr、pwelch、spectrogram、resample、decimate、hilbert、findpeaks | 14 | 4（v0.4.12 加了 butter、filter） |
 | 多项式、插值、拟合 | polyfit、polyval、roots、conv/deconv、interp1（含 spline、pchip）、interp2、griddata、lsqcurvefit | 11 | 4 |
 | 微积分与 ODE | ode45、ode23、ode15s、integral、integral2、trapz、cumtrapz、bvp4c、pdepe、gradient | 10 | 1 |
 | 非线性方程与优化 | fzero、fsolve、fminsearch、fminbnd、fminunc、fmincon、linprog、quadprog、lsqnonlin | 9 | 0 |
 | 统计 | regress/fitlm、corrcoef、histcounts、mean/std 的稳健版本等 | 8 | 0 |
-| 合计 | | 约 100 | 约 35（35%） |
+| 合计 | | 约 100 | 约 37（37%） |
 
 顺序：
 1. 剩下的四批：`butter` + `filter`、`fzero`/`fsolve`、`fminsearch`/`fmincon`/`linprog`、`integral`/`trapz`。
@@ -2217,6 +2333,29 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 4. 其余。
 
 ## 13. Changelog
+
+### v0.4.12-draft（2026-11-25）
+
+起因：作者定下项目目标是约 100 个常用工程计算函数（12.3），并要求算子之间的复用必须调用同一内核（11.5 RI-1）。之后继续剩下的四批，这是第一批：`butter` + `filter`。作者为 `butter` 选了三件事：
+- zpk 与 sos 为主，b/a 也给，但失真时警告；
+- 截止频率必须显式二选一（Hz 加采样率，或 MATLAB 的 Wn），没有缺省；
+- 支持模拟滤波器，并输出为 LTI 系统。
+
+**规范改动**
+
+| # | 位置 | 改动 | 理由 |
+|---|---|---|---|
+| 1 | 11.5 RI-1 – RI-3 | 共享内核 `aeoi-core::kernels`（dense、svd、eig、filter）；已知约 45 处违反列入迁移 | 同一计算两份实现会不一致 |
+| 2 | 12.3 | 目标算子清单约 100 个，及完成顺序 | 作者决定 |
+| 3 | 10.24 BW-1 – BW-6 | 新算子 `signal.design.butter` 0.4.0 | 频率单位必须显式；b/a 失真时警告，不判整个结果失败 |
+| 4 | 10.25 FL-1 – FL-6 | 新算子 `signal.filter.filter` 0.4.0：b/a 或 sos，多通道，zi/zf，差分方程残差作为后置条件 | — |
+| 5 | 开放问题 26 | 第三个实例（`butter` 的模拟滤波器没有 sos） | — |
+
+**结果**
+
+- golden：`butter` 33 个（20 个成功 / 13 个错误），真值来自 50 位精度的独立构造；`filter` 24 个（15 / 9），真值来自 50 位精度的差分方程。
+- 高阶失真的两个例子里，我们和 scipy 的 b/a 响应偏差都是 1.0，我们的 sos 偏差 ≤ 1e-11。
+- 一致性：17 / 30 = 57% 的算子有数值规则，参考实现 962 / 0 / 291；新增 4 种代理改写，都被抓住，其中包括“删掉 b/a 警告”：运行器自己重算偏差来判断该不该有警告。
 
 ### v0.4.11-draft（2026-11-25）
 

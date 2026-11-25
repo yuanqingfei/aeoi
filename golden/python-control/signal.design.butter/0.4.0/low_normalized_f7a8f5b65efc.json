@@ -1,0 +1,68 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "signal.design.butter",
+ "operator_version": "0.4.0",
+ "case_family": "low_normalized",
+ "request": {
+  "order": 1,
+  "cutoff_normalized": 0.3
+ },
+ "reference_env": {
+  "engine": "scipy.signal.butter / mpmath",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "z_true": [
+   [
+    -1.0,
+    0.0
+   ]
+  ],
+  "p_true": [
+   [
+    0.32491969623290634,
+    0.0
+   ]
+  ],
+  "k_true": 0.3375401518835468,
+  "b_true": [
+   0.3375401518835468,
+   0.3375401518835468
+  ],
+  "a_true": [
+   1.0,
+   -0.32491969623290634
+  ],
+  "z_scipy": [
+   [
+    -1.0,
+    0.0
+   ]
+  ],
+  "p_scipy": [
+   [
+    0.32491969623290634,
+    0.0
+   ]
+  ],
+  "k_scipy": 0.33754015188354686,
+  "b_scipy": [
+   0.33754015188354686,
+   0.33754015188354686
+  ],
+  "a_scipy": [
+   1.0,
+   -0.32491969623290634
+  ],
+  "type": "low",
+  "edges": [
+   0.3
+  ],
+  "analog": false,
+  "scipy_ba_response_deviation": 5.662690724996338e-16
+ }
+}

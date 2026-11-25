@@ -1,0 +1,164 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "signal.design.butter",
+  "version": "0.4.0",
+  "title": "Butterworth filter design",
+  "description": "设计巴特沃斯滤波器（= MATLAB butter）：低通、高通、带通、带阻；数字（缺省，双线性变换并预畸变）或模拟。结果同时给出零极点 z/p/k、二阶节 sos（数字滤波器的推荐形式）和多项式 b/a（高阶时可能失去精度，会警告）。截止频率必须显式给出：数字滤波器用 cutoff_hz + sample_rate_hz，或 cutoff_normalized（= MATLAB 的 Wn，1 = Nyquist）；模拟滤波器用 cutoff_rad_s 或 cutoff_hz。",
+  "category": "design",
+  "tags": [
+    "signal",
+    "filter",
+    "butterworth",
+    "iir",
+    "butter"
+  ],
+  "applicability": {
+    "preconditions": [
+      "order（阶数）与截止频率由调用方给出",
+      "数字：0 < 截止频率 < Nyquist",
+      "带通/带阻：[下限, 上限]，下限 < 上限"
+    ],
+    "not_for": [
+      "其他原型（切比雪夫、椭圆、贝塞尔：以后的算子）",
+      "FIR 设计",
+      "按指标自动选阶（buttord）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "模拟原型 p_k = −exp(iπm/(2n))（m = −n+1, −n+3, …, n−1，同 scipy buttap），频率变换 lp2lp / lp2hp / lp2bp / lp2bs（零极点形式，scipy 约定）；数字：预畸变 w = 4·tan(π·Wn/2) 后做双线性变换（fs = 2），与 scipy.signal.butter、MATLAB butter 相同。b/a 由零极点展开（与 control.lti.convert 同一代码）；sos：极点组按离单位圆由远到近排列，各取最近的零点，增益放在第一节",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "A. V. Oppenheim, R. W. Schafer, Discrete-Time Signal Processing, 3rd ed., Pearson 2010, §7.2（双线性变换与巴特沃斯设计）"
+      },
+      {
+        "type": "textbook",
+        "cite": "T. W. Parks, C. S. Burrus, Digital Filter Design, Wiley 1987, Ch. 7"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "filter::butter",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {},
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_order": 30
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/signal.design.butter/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.RANGE",
+    "E.VALIDATION.OPTION_CONFLICT",
+    "E.DOMAIN.ABOVE_NYQUIST",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.NUMERICAL.ILL_CONDITIONED"
+  ],
+  "mcp": {
+    "tool_name": "signal_design_butter",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:butter:prototype-zpk-bilinear",
+    "assumptions": [
+      {
+        "id": "spec_from_user",
+        "statement": "阶数、类型与截止频率来自用户（含单位）",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "below_nyquist",
+        "statement": "数字：截止频率低于 Nyquist",
+        "enforced_by": "error:E.DOMAIN.ABOVE_NYQUIST"
+      },
+      {
+        "id": "ba_accuracy",
+        "statement": "b/a 多项式形式未失去精度（否则用 sos 或 zpk）",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "stable",
+      "edge_gain",
+      "sos_consistent",
+      "all_finite"
+    ],
+    "coverage": {
+      "stable": "full",
+      "edge_gain": "full",
+      "sos_consistent": "test_points"
+    },
+    "guards": {
+      "stable": [
+        "/z",
+        "/p",
+        "/k",
+        "/sos",
+        "/b",
+        "/a",
+        "/system"
+      ],
+      "edge_gain": [
+        "/z",
+        "/p",
+        "/k",
+        "/sos",
+        "/b",
+        "/a",
+        "/system"
+      ],
+      "sos_consistent": [
+        "/sos"
+      ]
+    }
+  }
+}

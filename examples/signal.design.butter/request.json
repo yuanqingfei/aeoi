@@ -1,0 +1,5 @@
+{
+  "order": 4,
+  "cutoff_hz": 50.0,
+  "sample_rate_hz": 1000.0
+}

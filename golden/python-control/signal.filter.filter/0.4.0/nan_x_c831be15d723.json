@@ -1,0 +1,34 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "signal.filter.filter",
+ "operator_version": "0.4.0",
+ "case_family": "nan_x",
+ "request": {
+  "x": {
+   "dtype": "f64",
+   "shape": [
+    2
+   ],
+   "data": [
+    1.0,
+    "NaN"
+   ]
+  },
+  "b": [
+   1.0
+  ],
+  "a": [
+   1.0
+  ]
+ },
+ "reference_env": {
+  "engine": "scipy.signal.lfilter / sosfilt / mpmath",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "seed": 20261125,
+  "note": "NOT MATLAB output"
+ },
+ "expected_error": "E.VALIDATION.NON_FINITE"
+}

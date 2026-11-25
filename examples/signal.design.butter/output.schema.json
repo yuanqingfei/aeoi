@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/signal.design.butter/0.4.0/output",
+  "type": "object",
+  "required": [
+    "z",
+    "p",
+    "k",
+    "sos",
+    "b",
+    "a",
+    "system",
+    "type",
+    "order",
+    "domain",
+    "cutoff"
+  ],
+  "properties": {
+    "z": {
+      "type": "array",
+      "description": "零点 [[re, im], …]"
+    },
+    "p": {
+      "type": "array",
+      "description": "极点 [[re, im], …]"
+    },
+    "k": {
+      "type": "number"
+    },
+    "sos": {
+      "description": "二阶节 [L, 6]，每行 [b0 b1 b2 a0 a1 a2]（数字滤波器；模拟为 null）"
+    },
+    "b": {
+      "type": "array",
+      "description": "分子系数（数字：z⁻¹ 升幂；模拟：s 降幂）"
+    },
+    "a": {
+      "type": "array",
+      "description": "分母系数，a[0] = 1"
+    },
+    "system": {
+      "description": "LtiSystem（zpk）：模拟滤波器 ts = 0；数字滤波器给了采样率时 ts = 1/fs；否则 null"
+    },
+    "type": {
+      "enum": [
+        "low",
+        "high",
+        "bandpass",
+        "bandstop"
+      ]
+    },
+    "order": {
+      "type": "integer"
+    },
+    "domain": {
+      "enum": [
+        "digital",
+        "analog"
+      ]
+    },
+    "cutoff": {
+      "type": "object",
+      "description": "回显：数字为 normalized（1 = Nyquist）与 hz（给了采样率时），模拟为 rad_s"
+    }
+  }
+}

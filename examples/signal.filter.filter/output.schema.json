@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/signal.filter.filter/0.4.0/output",
+  "type": "object",
+  "required": [
+    "y",
+    "zf",
+    "form"
+  ],
+  "properties": {
+    "y": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "输出，形状同 x"
+    },
+    "zf": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "末状态（形状同 zi 的约定），可作为下一段的 zi"
+    },
+    "form": {
+      "enum": [
+        "ba",
+        "sos"
+      ]
+    }
+  }
+}

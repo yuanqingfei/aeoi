@@ -1,6 +1,6 @@
 """Numeric comparison rules (spec 9.4 CF-6) for operators outside control: signal.spectral.fft (v0.4.7),
 ode.ivp.solve (v0.4.8), linalg.system.solve and interp.grid.interp1 (v0.4.10), fit.poly.polyfit,
-linalg.decomp.eig and linalg.decomp.svd (v0.4.11).
+linalg.decomp.eig and linalg.decomp.svd (v0.4.11), signal.design.butter and signal.filter.filter (v0.4.12).
 
 Same ground rules as rules_control.py: tolerances from the suite (parity.yaml), every scale computed here from
 the reference request or values, nothing the implementation reports is used.
@@ -284,5 +284,73 @@ def rule_svd(case, env, manifest, req=None, expected=None):
     return out
 
 
+# ---------------------------------------------------------------- signal.design.butter (parity.yaml: T1)
+def _cl(v):
+    return np.array([complex(num(a), num(b)) for a, b in v], dtype=complex)
+
+
+def _set_err(got, want):
+    used = set(); worst = 0.0
+    for g in got:
+        j = min((j for j in range(len(want)) if j not in used), key=lambda j: abs(g - want[j])); used.add(j)
+        worst = max(worst, abs(g - want[j]) / max(1.0, abs(want[j])))
+    return worst
+
+
+def rule_butter(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = expected or case["expected"]; r = env["result"]
+    z, p = _cl(r["z"]), _cl(r["p"]); k = float(num(r["k"]))
+    if len(z) != len(e["z_true"]) or len(p) != len(e["p_true"]):
+        return [fail("z, p counts", f"got {len(z)}, {len(p)}")]
+    zt = np.array([complex(a, b) for a, b in e["z_true"]]); pt = np.array([complex(a, b) for a, b in e["p_true"]])
+    err = max(_set_err(z, zt), _set_err(p, pt), abs(k - e["k_true"]) / abs(e["k_true"]))
+    analog = e["analog"]; edges = e["edges"]
+    if analog:
+        H = lambda x: k * np.prod(x - z) / np.prod(x - p)
+        pts = [1j * w for w in edges]
+    else:
+        S = arr(r["sos"]).reshape(-1, 6)
+        H = lambda x: np.prod([np.polyval(s[2::-1], 1 / x) / np.polyval(s[:2:-1], 1 / x) for s in S])
+        pts = [np.exp(1j * np.pi * w) for w in edges]
+    gain = max(abs(abs(H(x)) ** 2 - 0.5) for x in pts)
+    # b/a deviation recomputed by the runner from the returned b, a and z, p, k
+    b = np.array([num(v) for v in r["b"]]); a = np.array([num(v) for v in r["a"]])
+    grid = (1j * np.prod(edges) ** (1 / len(edges)) * 10 ** np.linspace(-2, 2, 64)) if analog else np.exp(1j * np.pi * (np.arange(64) + 0.5) / 64)
+    Hz = np.array([k * np.prod(x - z) / np.prod(x - p) for x in grid])
+    Hb = np.array([np.polyval(b, x) / np.polyval(a, x) if analog else np.polyval(b[::-1], 1 / x) / np.polyval(a[::-1], 1 / x) for x in grid])
+    dev = float(np.max(np.abs(Hb - Hz)) / np.max(np.abs(Hz)))
+    warned = any(w.get("code") == "W.NUMERICAL.ILL_CONDITIONED" for w in env.get("warnings") or [])
+    return [check("z, p, k vs the exact construction (sets, relative)  [T1]", err, 1e-12),
+            ("type, order, domain echo  [O-1]", r.get("type") == e["type"] and r.get("order") == req["order"] and r.get("domain") == ("analog" if analog else "digital"), None, None, f"got {r.get('type')}, {r.get('order')}, {r.get('domain')}"),
+            check("|H(cutoff)|² = 1/2 at every edge, recomputed from the returned sos (digital) / zpk (analog)  [10.24 BW-5]", gain, 1e-9),
+            ("W.NUMERICAL.ILL_CONDITIONED exactly when the b/a response deviates > 1e-8 (recomputed by the runner)  [10.24 BW-4]", warned == (dev > 1e-8), None, None, f"deviation {dev:.2e}, warned {warned}")]
+
+
+# ---------------------------------------------------------------- signal.filter.filter (parity.yaml: T1)
+def rule_filter(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = expected or case["expected"]; r = env["result"]
+    y = arr(r["y"])
+    if list(y.shape) != e["y_shape"]:
+        return [fail("y: shape of x", f"got {y.shape}, want {e['y_shape']}")]
+    yt = np.array(e["y_true"]); zf = arr(r["zf"]).ravel(); zt = np.array(e["zf_true"])
+    rad = e["max_pole_radius"]; amp = 1 / (1 - rad) if rad < 1 else len(yt)
+    scale = max(float(np.max(np.abs(yt))), np.finfo(float).tiny)
+    err = max(float(np.max(np.abs(y.ravel() - yt))), float(np.max(np.abs(zf - zt))) if zt.size else 0.0) / scale
+    out = [check("y, zf vs the exact difference equation: ≤ 1e-13·max(1, 1/(1 − r))·max|y*|  [T1]", err, 1e-13 * max(1.0, amp))]
+    if "b" in req and "zi" not in req:
+        x = np.atleast_2d(arr(req["x"])); Y = np.atleast_2d(y)
+        b = np.array(req["b"], float); a = np.array(req["a"], float); m = max(len(b), len(a))
+        b = b / a[0]; a = a / a[0]; worst = 0.0
+        for xc, yc in zip(x, Y):
+            for n_ in range(len(xc)):
+                terms = [a[i] * yc[n_ - i] for i in range(len(a)) if i <= n_] + [-b[i] * xc[n_ - i] for i in range(len(b)) if i <= n_]
+                sc = math.fsum(abs(t) for t in terms)
+                if sc:
+                    worst = max(worst, abs(math.fsum(terms)) / sc)
+        out.append(check("difference-equation residual of the returned y, recomputed by the runner  [10.25 FL-4]", worst, 10 * m * U))
+    return out
+
+
 RULES = {"signal.spectral.fft": rule_fft, "ode.ivp.solve": rule_ode, "linalg.system.solve": rule_linsolve, "interp.grid.interp1": rule_interp1,
-         "fit.poly.polyfit": rule_polyfit, "linalg.decomp.eig": rule_eig, "linalg.decomp.svd": rule_svd}
+         "fit.poly.polyfit": rule_polyfit, "linalg.decomp.eig": rule_eig, "linalg.decomp.svd": rule_svd,
+         "signal.design.butter": rule_butter, "signal.filter.filter": rule_filter}

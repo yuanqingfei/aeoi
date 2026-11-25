@@ -1,0 +1,157 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "signal.filter.filter",
+  "version": "0.4.0",
+  "title": "Apply a digital filter",
+  "description": "用 IIR/FIR 数字滤波器处理信号（= MATLAB filter；sos 形式 = sosfilt）。滤波器给 b/a（z⁻¹ 升幂，a[0] ≠ 0）或二阶节 sos（推荐，数值更稳）；x 每行一个通道；可给初始状态 zi，返回末状态 zf。检查每个样本满足差分方程，极点在单位圆上或外时警告。",
+  "category": "analysis",
+  "tags": [
+    "signal",
+    "filter",
+    "iir",
+    "fir",
+    "lfilter",
+    "sosfilt"
+  ],
+  "applicability": {
+    "preconditions": [
+      "x 为 [n] 或 [k, n]（每行一个通道）",
+      "b/a 或 sos 恰好给出一种",
+      "a[0] ≠ 0（sos 每节 a0 ≠ 0）"
+    ],
+    "not_for": [
+      "零相位滤波（filtfilt：以后的算子）",
+      "多维滤波（filter2/conv2）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "转置直接 II 型递推（同 MATLAB filter、scipy lfilter）：b、a 补齐到同长并除以 a0；sos 为各节依次的转置直接 II 型。后置条件：每个样本的差分方程残差 |Σa_i·y[n−i] − Σb_i·x[n−i]| ≤ 10·m·u·(Σ|a_i·y| + Σ|b_i·x|)，补偿算术，sos 逐节。稳定性：分母多项式的根（与 control.lti.poles_zeros 同一求根代码）",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "A. V. Oppenheim, R. W. Schafer, Discrete-Time Signal Processing, 3rd ed., Pearson 2010, §6.3–6.5（直接 II 型与转置结构）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "filter::lfilter",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {},
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_samples": 10000000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/signal.filter.filter/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.ENCODING",
+    "E.VALIDATION.OPTION_CONFLICT",
+    "E.VALIDATION.ZERO_DENOMINATOR",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.RESOURCE.CANCELLED",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.DOMAIN.UNSTABLE_SYSTEM"
+  ],
+  "mcp": {
+    "tool_name": "signal_filter_filter",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:filter:transposed-direct-form-ii",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "one_form",
+        "statement": "b/a 与 sos 恰好给出一种",
+        "enforced_by": "error:E.VALIDATION.OPTION_CONFLICT"
+      },
+      {
+        "id": "nonzero_a0",
+        "statement": "a0 ≠ 0",
+        "enforced_by": "error:E.VALIDATION.ZERO_DENOMINATOR"
+      },
+      {
+        "id": "stable",
+        "statement": "滤波器稳定（否则输出可能无界）",
+        "enforced_by": "warning:W.DOMAIN.UNSTABLE_SYSTEM"
+      },
+      {
+        "id": "channels",
+        "statement": "x 每行一个通道",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "coefficient_order",
+        "statement": "b、a 是 z⁻¹ 的升幂（MATLAB 约定）",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "difference_equation",
+      "all_finite"
+    ],
+    "coverage": {
+      "difference_equation": "full"
+    },
+    "guards": {
+      "difference_equation": [
+        "/y",
+        "/zf"
+      ]
+    }
+  }
+}

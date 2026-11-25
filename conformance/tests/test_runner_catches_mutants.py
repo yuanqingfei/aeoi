@@ -48,6 +48,10 @@ PROXY_EXPECT = {
     "eig_value_wrong": ("linalg.decomp.eig", "values vs exact eigenvalues"),
     "svd_u_sign_only": ("linalg.decomp.svd", "U·diag(s)·Vᵀ"),
     "svd_both_signs": ("linalg.decomp.svd", "sign rule"),
+    "butter_pole_wrong": ("signal.design.butter", "z, p, k vs the exact"),
+    "butter_warning_dropped": ("signal.design.butter", "exactly when the b/a"),
+    "filter_y_wrong": ("signal.filter.filter", "y, zf vs the exact"),
+    "filter_state_dropped": ("signal.filter.filter", "y, zf vs the exact"),
 }
 
 # mutant -> substring that must appear among the names of the failed checks

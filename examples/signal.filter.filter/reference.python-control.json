@@ -1,0 +1,13 @@
+{
+ "note": "y_true = mpmath 50-digit difference equation; NOT MATLAB output",
+ "request.ba.json": {
+  "y_true": [
+   0.1,
+   0.09000000000000001,
+   0.081,
+   0.0729,
+   0.06561000000000002,
+   0.05904900000000001
+  ]
+ }
+}

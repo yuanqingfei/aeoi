@@ -1,0 +1,259 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "signal.design.butter",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "z": [
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ]
+    ],
+    "p": [
+      [
+        0.850482165971763,
+        0.25530339829167303
+      ],
+      [
+        0.7398371084655967,
+        0.09199237044317198
+      ],
+      [
+        0.7398371084655967,
+        -0.09199237044317198
+      ],
+      [
+        0.850482165971763,
+        -0.25530339829167303
+      ]
+    ],
+    "k": 0.0004165992044065993,
+    "sos": {
+      "dtype": "f64",
+      "shape": [
+        2,
+        6
+      ],
+      "data": [
+        0.0004165992044065993,
+        0.0008331984088131986,
+        0.0004165992044065993,
+        1.0,
+        -1.4796742169311934,
+        0.5558215432824889,
+        1.0,
+        2.0,
+        1.0,
+        1.0,
+        -1.700964331943526,
+        0.7884997398152981
+      ]
+    },
+    "b": [
+      0.0004165992044065993,
+      0.0016663968176263973,
+      0.0024995952264395957,
+      0.0016663968176263973,
+      0.0004165992044065993
+    ],
+    "a": [
+      1.0,
+      -3.180638548874719,
+      3.8611943489942138,
+      -2.112155355110969,
+      0.4382651422619799
+    ],
+    "system": {
+      "kind": "zpk",
+      "z": [
+        [
+          -1.0,
+          0.0
+        ],
+        [
+          -1.0,
+          0.0
+        ],
+        [
+          -1.0,
+          0.0
+        ],
+        [
+          -1.0,
+          0.0
+        ]
+      ],
+      "p": [
+        [
+          0.850482165971763,
+          0.25530339829167303
+        ],
+        [
+          0.7398371084655967,
+          0.09199237044317198
+        ],
+        [
+          0.7398371084655967,
+          -0.09199237044317198
+        ],
+        [
+          0.850482165971763,
+          -0.25530339829167303
+        ]
+      ],
+      "k": 0.0004165992044065993,
+      "ts": 0.001,
+      "time_unit": "s"
+    },
+    "type": "low",
+    "order": 4,
+    "domain": "digital",
+    "cutoff": {
+      "normalized": [
+        0.1
+      ],
+      "hz": [
+        50.0
+      ]
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "edge_gain_error": 9.992007221626409e-16,
+      "sos_relative_deviation": 2.2928608714933474e-15,
+      "ba_relative_deviation": 6.116452314996082e-14,
+      "definition": "edge_gain_error = max |‖H(截止点)‖² − 1/2|；*_relative_deviation = 64 个频点上与零极点形式响应之差的最大值 / max|H|"
+    },
+    "condition": {
+      "max_pole_radius": 0.8879750783751186,
+      "note": "极点最大模（越接近 1，滤波越敏感）"
+    },
+    "error_estimate": {
+      "applicable": false
+    },
+    "checks": {
+      "stable": true,
+      "edge_gain": true,
+      "sos_consistent": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "sos_consistent_applies": true,
+      "cutoff_given_as": "cutoff_hz",
+      "prewarp": "4·tan(π·Wn/2)（fs = 2，同 scipy）"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:butter:prototype-zpk-bilinear",
+      "routine": "filter::butter",
+      "provenance": "aeoi://operators/signal.design.butter/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "spec_from_user",
+        "statement": "阶数、类型与截止频率来自用户（含单位）",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "below_nyquist",
+        "statement": "数字：截止频率低于 Nyquist",
+        "enforced_by": "error:E.DOMAIN.ABOVE_NYQUIST"
+      },
+      {
+        "id": "ba_accuracy",
+        "statement": "b/a 多项式形式未失去精度（否则用 sos 或 zpk）",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": null
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "stable": true,
+        "edge_gain": true,
+        "sos_consistent": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "stable": "full",
+        "edge_gain": "full",
+        "sos_consistent": "test_points",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:84e2e1303063b275a749cd331613a0d64d0c33a9ae6714bdc3ee2918381f2ade",
+      "result": "sha256:9e41b89624feeb4ec2f28c12223d9712aec4a51b9312f003e9b7c4b545192b58",
+      "output_hash": "sha256:b74c7af3e75b5ef97ca900ba24c5de6ada179a938990b007c301c0bae045db64",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of signal.design.butter@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:c8100d375914448215e1a760673cbee59ae9475df452d62ef40fe372207e1f55",
+    "output_hash": "sha256:b74c7af3e75b5ef97ca900ba24c5de6ada179a938990b007c301c0bae045db64",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.225129
+  }
+}

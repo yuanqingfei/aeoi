@@ -1,0 +1,189 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "signal.design.butter",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "z": [],
+    "p": [
+      [
+        -5.000000000000001,
+        8.660254037844386
+      ],
+      [
+        -10.0,
+        -0.0
+      ],
+      [
+        -5.000000000000001,
+        -8.660254037844386
+      ]
+    ],
+    "k": 1000.0,
+    "sos": null,
+    "b": [
+      1000.0
+    ],
+    "a": [
+      1.0,
+      20.0,
+      200.0,
+      999.9999999999999
+    ],
+    "system": {
+      "kind": "zpk",
+      "z": [],
+      "p": [
+        [
+          -5.000000000000001,
+          8.660254037844386
+        ],
+        [
+          -10.0,
+          -0.0
+        ],
+        [
+          -5.000000000000001,
+          -8.660254037844386
+        ]
+      ],
+      "k": 1000.0,
+      "ts": 0.0,
+      "time_unit": "s"
+    },
+    "type": "low",
+    "order": 3,
+    "domain": "analog",
+    "cutoff": {
+      "rad_s": [
+        10.0
+      ]
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "edge_gain_error": 1.6653345369377348e-16,
+      "sos_relative_deviation": null,
+      "ba_relative_deviation": 2.306595211859909e-16,
+      "definition": "edge_gain_error = max |‖H(截止点)‖² − 1/2|；*_relative_deviation = 64 个频点上与零极点形式响应之差的最大值 / max|H|"
+    },
+    "condition": {
+      "max_pole_radius": -5.000000000000001,
+      "note": "最右极点的实部"
+    },
+    "error_estimate": {
+      "applicable": false
+    },
+    "checks": {
+      "stable": true,
+      "edge_gain": true,
+      "sos_consistent": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "sos_consistent_applies": false,
+      "cutoff_given_as": "cutoff_rad_s",
+      "prewarp": "none"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:butter:prototype-zpk-bilinear",
+      "routine": "filter::butter",
+      "provenance": "aeoi://operators/signal.design.butter/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "spec_from_user",
+        "statement": "阶数、类型与截止频率来自用户（含单位）",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "below_nyquist",
+        "statement": "数字：截止频率低于 Nyquist",
+        "enforced_by": "error:E.DOMAIN.ABOVE_NYQUIST"
+      },
+      {
+        "id": "ba_accuracy",
+        "statement": "b/a 多项式形式未失去精度（否则用 sos 或 zpk）",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": null
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "stable": true,
+        "edge_gain": true,
+        "sos_consistent": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "stable": "full",
+        "edge_gain": "full",
+        "sos_consistent": "test_points",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:5245863037c8588e95eb7df2a63cc84eac9c49a0bd9df7872be32a9992530d32",
+      "result": "sha256:e42ffd3f84e7fa98785c74702c14e55863a229b3d25a343b1c669f607cbd371c",
+      "output_hash": "sha256:961e8366b94629ace2c3fb1a8df748ecf7316261eee3f992c345f27e00edf5a1",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of signal.design.butter@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:90182302d3c9d3be14052edd56b9a7efe5087059a0c59d214478ca1b7e9ef268",
+    "output_hash": "sha256:961e8366b94629ace2c3fb1a8df748ecf7316261eee3f992c345f27e00edf5a1",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.226155
+  }
+}

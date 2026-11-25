@@ -1,0 +1,19 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "signal.design.butter",
+ "operator_version": "0.4.0",
+ "case_family": "hz_without_fs",
+ "request": {
+  "order": 2,
+  "cutoff_hz": 10.0
+ },
+ "reference_env": {
+  "engine": "scipy.signal.butter / mpmath",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected_error": "E.VALIDATION.OPTION_CONFLICT"
+}

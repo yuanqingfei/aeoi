@@ -1,0 +1,164 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "signal.filter.filter",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "y": {
+      "dtype": "f64",
+      "shape": [
+        6
+      ],
+      "data": [
+        0.1,
+        0.09000000000000001,
+        0.08100000000000002,
+        0.07290000000000002,
+        0.06561000000000002,
+        0.05904900000000002
+      ]
+    },
+    "zf": {
+      "dtype": "f64",
+      "shape": [
+        1
+      ],
+      "data": [
+        0.05314410000000002
+      ]
+    },
+    "form": "ba"
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "difference_equation": 3.348775134481305e-17,
+      "threshold": 2.220446049250313e-15,
+      "definition": "max_n |Σ a_i·y[n−i] − Σ b_i·x[n−i]| / (Σ|a_i·y[n−i]| + Σ|b_i·x[n−i]|)（a、b 已除以 a0；sos 逐节检查；补偿算术；给了 zi 时前 m − 1 个样本不查）"
+    },
+    "condition": {
+      "unstable_pole_count": 0
+    },
+    "error_estimate": {
+      "applicable": false,
+      "note": "每个样本满足差分方程到舍入误差量级；极点接近单位圆时，舍入误差会沿递推放大（约 1/(1 − 最大极点模) 倍）"
+    },
+    "checks": {
+      "difference_equation": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "structure": "transposed direct form II"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:filter:transposed-direct-form-ii",
+      "routine": "filter::lfilter",
+      "provenance": "aeoi://operators/signal.filter.filter/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "one_form",
+        "statement": "b/a 与 sos 恰好给出一种",
+        "enforced_by": "error:E.VALIDATION.OPTION_CONFLICT"
+      },
+      {
+        "id": "nonzero_a0",
+        "statement": "a0 ≠ 0",
+        "enforced_by": "error:E.VALIDATION.ZERO_DENOMINATOR"
+      },
+      {
+        "id": "stable",
+        "statement": "滤波器稳定（否则输出可能无界）",
+        "enforced_by": "warning:W.DOMAIN.UNSTABLE_SYSTEM"
+      },
+      {
+        "id": "channels",
+        "statement": "x 每行一个通道",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "coefficient_order",
+        "statement": "b、a 是 z⁻¹ 的升幂（MATLAB 约定）",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": null
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "difference_equation": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "difference_equation": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:f49f985447697507142e105f35eee8f6ccd8fc6383b67f64cd0d241ef8d144ff",
+      "result": "sha256:23df74508c6a750fa757cc1013d91d955d2889d7f60e01f25d4e87a18144f54a",
+      "output_hash": "sha256:232c16cea7c8f811495882255d43a3336eb3572ee6bf2ab66e5336f4e12667db",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of signal.filter.filter@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:6ccedc6baacb6638fc5c9d041f7314378eb487d326ea59f8abc30760c2f12495",
+    "output_hash": "sha256:232c16cea7c8f811495882255d43a3336eb3572ee6bf2ab66e5336f4e12667db",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.194608
+  }
+}

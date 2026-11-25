@@ -609,6 +609,8 @@ DESC={
  "control.lti.stepinfo":{"system":SYS_D,"time":"时间网格，与 step 相同：uniform（t_final、dt，单位 s）或 auto。指标相对这个网格定义","rise_time_limits":"上升时间的低/高阈值，默认 [0.1, 0.9]（10% 到 90%）。这是指标定义，不是对象的物理参数；省略即用默认，不必询问","settling_threshold":"调节带半宽，默认 0.02（2%）。定义默认值，省略即用默认"},
  "ode.ivp.solve":{"states":"状态名列表，如 [\"x\", \"v\"]。顺序决定 y 的行序；表达式里按名字引用，不用下标","rhs":"右端表达式列表，与 states 一一对应：第 i 个是 d(states[i])/dt，如 [\"v\", \"-k*x - c*v\"]。可用 t、状态名、参数名、常数 pi、+ − * / ^（右结合，-x^2 = -(x^2)）与函数 sin cos tan asin acos atan atan2 sinh cosh tanh exp log log10 sqrt abs min max hypot sign","params":"参数名到数值，如 {\"k\": 4, \"c\": 0.5}；名字不能与状态名重复","initial":"初值，键为状态名，如 {\"x\": 1, \"v\": 0}；每个状态都要给","t_span":"[t0, tf]；tf < t0 时反向积分","t_eval":"输出时刻（在区间内、沿积分方向单调）。不给时用 n_out 个等距点","n_out":"不给 t_eval 时的输出点数，默认 101（含两端）。与 t_eval 二选一","rtol":"相对容差，默认 1e-3（与 MATLAB ode45、scipy 相同）。要更准就调小，如 1e-8","atol":"绝对容差，默认 1e-6","max_step":"最大步长（可选）","first_step":"初始步长（可选；不给时自动选择）"},
  "linalg.system.solve":{"A":"系数矩阵 [m, n]，row-major（MATLAB 是 column-major，先转置再展平）；m ≥ n。大矩阵可用 b64 或 ref 编码","b":"右端项：[m]（一个）或 [m, k]（k 个，每列一个）","refinement":"auto（缺省：用补偿残差做至多 3 步迭代精化）或 none（只做一次 LU 求解，与 MATLAB 的 A\\b 相同）。只影响方阵"},
+ "signal.design.butter":{"order":"阶数 n（由用户决定，不要代填）","type":"low、high、bandpass、bandstop；省略时一个截止频率为 low、两个为 bandpass","domain":"digital（缺省）或 analog","cutoff_hz":"截止频率（Hz）：一个数，或带通/带阻的 [下限, 上限]；数字滤波器必须同时给 sample_rate_hz","cutoff_normalized":"数字滤波器的归一化截止频率（= MATLAB 的 Wn）：0 < Wn < 1，1 = Nyquist（采样率的一半），不是 rad/sample，也不是相对采样率","cutoff_rad_s":"模拟滤波器的截止频率（rad/s）","sample_rate_hz":"采样率（Hz），与 cutoff_hz 一起用"},
+ "signal.filter.filter":{"x":"输入信号 [n]，或 [k, n]（每行一个通道）","b":"分子系数，z⁻¹ 升幂（同 MATLAB filter）","a":"分母系数，z⁻¹ 升幂，a[0] ≠ 0","sos":"二阶节 [L, 6]，每行 [b0 b1 b2 a0 a1 a2]（高阶滤波器优先用它）","zi":"初始状态（可选）：b/a 为 max(len(a), len(b)) − 1 个数；sos 为 [L, 2]；多通道可给 [k, …]"},
  "fit.poly.polyfit":{"x":"自变量 [n]","y":"观测值 [n]，与 x 一一对应","degree":"多项式次数 d（模型选择，由用户决定；不要代填）","scaling":"none（缺省：对 x 本身拟合）或 center_scale（对 (x − mean)/std 拟合，mu 随结果返回；x 远离 0 或跨度大时可显著改善条件数，但系数含义改变，须用户确认）"},
  "linalg.decomp.eig":{"A":"实方阵 [n, n]，row-major（MATLAB 是 column-major，先转置再展平；对称矩阵不受影响）","structure":"auto（缺省：A 与 Aᵀ 逐位相等时用对称算法）或 general（总用一般算法，结果为 c128）","vectors":"是否返回特征向量（缺省 true）"},
  "linalg.decomp.svd":{"A":"实矩阵 [m, n]，row-major","mode":"values（只要奇异值）、thin（缺省，= MATLAB svd(A, \"econ\")）或 full（方阵 U、V）"},
@@ -671,6 +673,42 @@ svd_out=outs("linalg.decomp.svd",{"s":dict(M,description="奇异值 [p]，降序
  "rank_tol":{"type":"number","description":"max(m, n)·eps(s_max)（eps(x) 为 x 处的浮点间距；同 MATLAB rank）"},
  "cond2":{"description":"s_max / s_min（s_min = 0 时为 \"Inf\"）"}},["s","U","V","mode","rank","rank_tol","cond2"],ver=V411)
 B3.update({"fit.poly.polyfit":(pfit,pfit_in,pfit_out),"linalg.decomp.eig":(eigm,eig_in,eig_out),"linalg.decomp.svd":(svdm,svd_in,svd_out)})
+# ---- v0.4.12: signal.design.butter, signal.filter.filter
+V412="0.4.0"
+CUT={"oneOf":[{"type":"number","exclusiveMinimum":0},{"type":"array","items":{"type":"number","exclusiveMinimum":0},"minItems":2,"maxItems":2}],"x-aeoi-provenance":"user"}
+bw_=man("signal.design.butter","Butterworth filter design","设计巴特沃斯滤波器（= MATLAB butter）：低通、高通、带通、带阻；数字（缺省，双线性变换并预畸变）或模拟。结果同时给出零极点 z/p/k、二阶节 sos（数字滤波器的推荐形式）和多项式 b/a（高阶时可能失去精度，会警告）。截止频率必须显式给出：数字滤波器用 cutoff_hz + sample_rate_hz，或 cutoff_normalized（= MATLAB 的 Wn，1 = Nyquist）；模拟滤波器用 cutoff_rad_s 或 cutoff_hz。","design",["signal","filter","butterworth","iir","butter"],
+ ["order（阶数）与截止频率由调用方给出","数字：0 < 截止频率 < Nyquist","带通/带阻：[下限, 上限]，下限 < 上限"],
+ ["其他原型（切比雪夫、椭圆、贝塞尔：以后的算子）","FIR 设计","按指标自动选阶（buttord）"],
+ "模拟原型 p_k = −exp(iπm/(2n))（m = −n+1, −n+3, …, n−1，同 scipy buttap），频率变换 lp2lp / lp2hp / lp2bp / lp2bs（零极点形式，scipy 约定）；数字：预畸变 w = 4·tan(π·Wn/2) 后做双线性变换（fs = 2），与 scipy.signal.butter、MATLAB butter 相同。b/a 由零极点展开（与 control.lti.convert 同一代码）；sos：极点组按离单位圆由远到近排列，各取最近的零点，增益放在第一节",
+ [{"type":"textbook","cite":"A. V. Oppenheim, R. W. Schafer, Discrete-Time Signal Processing, 3rd ed., Pearson 2010, §7.2（双线性变换与巴特沃斯设计）"},
+  {"type":"textbook","cite":"T. W. Parks, C. S. Burrus, Digital Filter Design, Wiley 1987, Ch. 7"}],
+ "filter::butter (prototype + zpk transforms + bilinear)","T1",{"max_order":30},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.RANGE","E.VALIDATION.OPTION_CONFLICT","E.DOMAIN.ABOVE_NYQUIST","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["W.NUMERICAL.ILL_CONDITIONED"],sparse={},ver=V412,backend=BACK_NUM("filter::butter"))
+bw_in=ins("signal.design.butter",{"order":{"type":"integer","minimum":1,"x-aeoi-provenance":"user"},
+ "type":{"enum":["low","high","bandpass","bandstop"],"x-aeoi-provenance":"user"},
+ "domain":{"enum":["digital","analog"],"default":"digital","x-aeoi-provenance":"convention"},
+ "cutoff_hz":CUT,"cutoff_normalized":CUT,"cutoff_rad_s":CUT,
+ "sample_rate_hz":{"type":"number","exclusiveMinimum":0,"x-aeoi-provenance":"user"}},["order"],ver=V412)
+bw_out=outs("signal.design.butter",{"z":{"type":"array","description":"零点 [[re, im], …]"},"p":{"type":"array","description":"极点 [[re, im], …]"},"k":{"type":"number"},
+ "sos":{"description":"二阶节 [L, 6]，每行 [b0 b1 b2 a0 a1 a2]（数字滤波器；模拟为 null）"},
+ "b":{"type":"array","description":"分子系数（数字：z⁻¹ 升幂；模拟：s 降幂）"},"a":{"type":"array","description":"分母系数，a[0] = 1"},
+ "system":{"description":"LtiSystem（zpk）：模拟滤波器 ts = 0；数字滤波器给了采样率时 ts = 1/fs；否则 null"},
+ "type":{"enum":["low","high","bandpass","bandstop"]},"order":{"type":"integer"},"domain":{"enum":["digital","analog"]},
+ "cutoff":{"type":"object","description":"回显：数字为 normalized（1 = Nyquist）与 hz（给了采样率时），模拟为 rad_s"}},
+ ["z","p","k","sos","b","a","system","type","order","domain","cutoff"],ver=V412)
+flt=man("signal.filter.filter","Apply a digital filter","用 IIR/FIR 数字滤波器处理信号（= MATLAB filter；sos 形式 = sosfilt）。滤波器给 b/a（z⁻¹ 升幂，a[0] ≠ 0）或二阶节 sos（推荐，数值更稳）；x 每行一个通道；可给初始状态 zi，返回末状态 zf。检查每个样本满足差分方程，极点在单位圆上或外时警告。","analysis",["signal","filter","iir","fir","lfilter","sosfilt"],
+ ["x 为 [n] 或 [k, n]（每行一个通道）","b/a 或 sos 恰好给出一种","a[0] ≠ 0（sos 每节 a0 ≠ 0）"],
+ ["零相位滤波（filtfilt：以后的算子）","多维滤波（filter2/conv2）"],
+ "转置直接 II 型递推（同 MATLAB filter、scipy lfilter）：b、a 补齐到同长并除以 a0；sos 为各节依次的转置直接 II 型。后置条件：每个样本的差分方程残差 |Σa_i·y[n−i] − Σb_i·x[n−i]| ≤ 10·m·u·(Σ|a_i·y| + Σ|b_i·x|)，补偿算术，sos 逐节。稳定性：分母多项式的根（与 control.lti.poles_zeros 同一求根代码）",
+ [{"type":"textbook","cite":"A. V. Oppenheim, R. W. Schafer, Discrete-Time Signal Processing, 3rd ed., Pearson 2010, §6.3–6.5（直接 II 型与转置结构）"}],
+ "filter::lfilter / sosfilt (transposed direct form II)","T1",{"max_samples":10000000},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.ENCODING","E.VALIDATION.OPTION_CONFLICT","E.VALIDATION.ZERO_DENOMINATOR","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["W.DOMAIN.UNSTABLE_SYSTEM"],sparse={},ver=V412,backend=BACK_NUM("filter::lfilter"))
+flt_in=ins("signal.filter.filter",{"x":M,"b":{"type":"array","items":{"type":"number"},"minItems":1},"a":{"type":"array","items":{"type":"number"},"minItems":1},"sos":M,"zi":M},["x"],
+ {"x-aeoi-shape-constraints":["x: [n] 或 [k, n]","sos: [L, 6]","zi: b/a 为 [max(len) − 1]（或每通道 [k, …]）；sos 为 [L, 2]（或 [k, L, 2]）"]},ver=V412)
+flt_out=outs("signal.filter.filter",{"y":dict(M,description="输出，形状同 x"),"zf":dict(M,description="末状态（形状同 zi 的约定），可作为下一段的 zi"),"form":{"enum":["ba","sos"]}},["y","zf","form"],ver=V412)
+B3.update({"signal.design.butter":(bw_,bw_in,bw_out),"signal.filter.filter":(flt,flt_in,flt_out)})
 ALL_OPS={"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2|B3
 for op,props in DESC.items():
     for (m_,i_,o_) in [ALL_OPS[op]]:
@@ -729,6 +767,10 @@ RECEIPT["signal.spectral.fft"]={"method_id":"aeoi:fft:rustfft-scalar","assumptio
    "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["parseval","dft_spot_check","all_finite"]}
 RECEIPT["linalg.system.solve"]={"method_id":"aeoi:linsolve:lu-refine-or-householder-qr","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("not_underdetermined","m ≥ n","error:E.DOMAIN.UNDERDETERMINED"),A("full_rank","A 列满秩（方阵非奇异）","error:E.NUMERICAL.SINGULAR"),A("conditioning","κ·u ≪ 1，否则解没有有效数字（前向误差 ≈ κ·η）","warning:W.NUMERICAL.ILL_CONDITIONED"),A("row_major","A 按 row-major 录入","caller")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["backward_stable","all_finite"]}
+RECEIPT["signal.design.butter"]={"method_id":"aeoi:butter:prototype-zpk-bilinear","assumptions":[A("spec_from_user","阶数、类型与截止频率来自用户（含单位）","validation"),A("below_nyquist","数字：截止频率低于 Nyquist","error:E.DOMAIN.ABOVE_NYQUIST"),A("ba_accuracy","b/a 多项式形式未失去精度（否则用 sos 或 zpk）","warning:W.NUMERICAL.ILL_CONDITIONED")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["stable","edge_gain","sos_consistent","all_finite"]}
+RECEIPT["signal.filter.filter"]={"method_id":"aeoi:filter:transposed-direct-form-ii","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("one_form","b/a 与 sos 恰好给出一种","error:E.VALIDATION.OPTION_CONFLICT"),A("nonzero_a0","a0 ≠ 0","error:E.VALIDATION.ZERO_DENOMINATOR"),A("stable","滤波器稳定（否则输出可能无界）","warning:W.DOMAIN.UNSTABLE_SYSTEM"),A("channels","x 每行一个通道","caller"),A("coefficient_order","b、a 是 z⁻¹ 的升幂（MATLAB 约定）","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["difference_equation","all_finite"]}
 RECEIPT["fit.poly.polyfit"]={"method_id":"aeoi:polyfit:vandermonde-householder-qr","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("enough_points","x 至少有 degree + 1 个不同的值","error:E.DOMAIN.UNDERDETERMINED"),A("numerical_rank","单项式基在 f64 下列满秩","error:E.NUMERICAL.SINGULAR"),A("conditioning","κ₁(R·D⁻¹) ≤ 1e10，否则数据的微小扰动会被大幅放大到系数上","warning:W.NUMERICAL.ILL_CONDITIONED"),A("model","数据确实可以用该次数的多项式描述；次数由用户选择","caller"),A("noise_model","std_errors 假设误差独立、等方差","caller")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["backward_stable","all_finite"]}
 RECEIPT["linalg.decomp.eig"]={"method_id":"aeoi:eig:symmetric-jacobi-or-schur-backsubstitution","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("square","A 为方阵","error:E.VALIDATION.SHAPE"),A("converged","Jacobi 扫描或 Schur 的 QR 迭代在上限内收敛","error:E.NUMERICAL.NO_CONVERGENCE"),A("nondefective","特征值条件数 ≤ 1e8，否则可能亏损：特征值只有约一半有效数字，特征向量接近平行","warning:W.NUMERICAL.ILL_CONDITIONED"),A("row_major","A 按 row-major 录入","caller"),A("uniqueness","特征向量只确定到规范规定的规一化；重特征值对应的特征向量只确定到子空间","validation")],
@@ -756,6 +798,8 @@ COVERAGE.update({"control.design.pid":{"formula_matches":"test_points"},"control
  "linalg.system.solve":{"backward_stable":"full"},
  "interp.grid.interp1":{"pieces_interpolate":"full","spline_c2":"full","local_bounds":"full"},
  "fit.poly.polyfit":{"backward_stable":"full"},
+ "signal.design.butter":{"stable":"full","edge_gain":"full","sos_consistent":"test_points"},
+ "signal.filter.filter":{"difference_equation":"full"},
  "linalg.decomp.eig":{"residual_small":"full","orthonormal":"full"},
  "linalg.decomp.svd":{"reconstructs":"full","orthonormal_u":"full","orthonormal_v":"full"}})
 # v0.3.6 E-13: result fields that are not usable when a post-condition fails (listed in receipt.evidence.unreliable).
@@ -767,6 +811,8 @@ GUARDS["control.lti.lsim"]={"half_step_consistent":["/y","/x"]}
 GUARDS["ode.ivp.solve"]={"tolerance_consistent":["/y"]}
 GUARDS["linalg.system.solve"]={"backward_stable":["/x"]}
 GUARDS["interp.grid.interp1"]={"pieces_interpolate":["/yq"],"spline_c2":["/yq"],"local_bounds":["/yq"]}
+GUARDS["signal.design.butter"]={"stable":["/z","/p","/k","/sos","/b","/a","/system"],"edge_gain":["/z","/p","/k","/sos","/b","/a","/system"],"sos_consistent":["/sos"]}
+GUARDS["signal.filter.filter"]={"difference_equation":["/y","/zf"]}
 GUARDS["fit.poly.polyfit"]={"backward_stable":["/p","/std_errors"]}
 GUARDS["linalg.decomp.eig"]={"residual_small":["/values","/vectors"],"orthonormal":["/vectors"]}
 GUARDS["linalg.decomp.svd"]={"reconstructs":["/s","/U","/V","/rank","/cond2"],"orthonormal_u":["/U"],"orthonormal_v":["/V"]}

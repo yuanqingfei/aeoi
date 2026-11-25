@@ -2,4 +2,5 @@
 //! kernel that operator is built on — never a second implementation and never an outside library's equivalent.
 pub mod dense;
 pub mod eig;
+pub mod filter;
 pub mod svd;

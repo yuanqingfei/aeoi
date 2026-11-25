@@ -1,0 +1,438 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok_with_warnings",
+  "dry_run": false,
+  "operator": {
+    "id": "signal.design.butter",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "z": [
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ]
+    ],
+    "p": [
+      [
+        0.997049372315512,
+        0.03123694798956213
+      ],
+      [
+        0.9922308332225374,
+        0.030320545955895808
+      ],
+      [
+        0.9876348174259366,
+        0.028675072231414456
+      ],
+      [
+        0.9833674583768611,
+        0.026349622757498702
+      ],
+      [
+        0.9795245953998578,
+        0.02340742516168
+      ],
+      [
+        0.9761903241852139,
+        0.01992377816129361
+      ],
+      [
+        0.9734359265836439,
+        0.015983992064169242
+      ],
+      [
+        0.9713191152700568,
+        0.011681386106163453
+      ],
+      [
+        0.9698835268068811,
+        0.007115372143625722
+      ],
+      [
+        0.9691584018271835,
+        0.0023896310146217423
+      ],
+      [
+        0.9691584018271835,
+        -0.0023896310146217423
+      ],
+      [
+        0.9698835268068811,
+        -0.007115372143625722
+      ],
+      [
+        0.9713191152700568,
+        -0.011681386106163453
+      ],
+      [
+        0.9734359265836439,
+        -0.015983992064169242
+      ],
+      [
+        0.9761903241852139,
+        -0.01992377816129361
+      ],
+      [
+        0.9795245953998578,
+        -0.02340742516168
+      ],
+      [
+        0.9833674583768611,
+        -0.026349622757498702
+      ],
+      [
+        0.9876348174259366,
+        -0.028675072231414456
+      ],
+      [
+        0.9922308332225374,
+        -0.030320545955895808
+      ],
+      [
+        0.997049372315512,
+        -0.03123694798956213
+      ]
+    ],
+    "k": 6.857391748906954e-37,
+    "sos": {
+      "dtype": "f64",
+      "shape": [
+        10,
+        6
+      ],
+      "data": [
+        6.857391748906954e-37,
+        1.3714783497813908e-36,
+        6.857391748906954e-37,
+        1.0,
+        -1.938316803654367,
+        0.9392737181686065,
+        1.0,
+        2.0,
+        1.0,
+        1.0,
+        -1.9397670536137621,
+        0.9407246840920963,
+        1.0,
+        2.0,
+        1.0,
+        1.0,
+        -1.9426382305401135,
+        0.9435972784703671,
+        1.0,
+        2.0,
+        1.0,
+        1.0,
+        -1.9468718531672877,
+        0.9478329911660648,
+        1.0,
+        2.0,
+        1.0,
+        1.0,
+        -1.9523806483704278,
+        0.9533445059690534,
+        1.0,
+        2.0,
+        1.0,
+        1.0,
+        -1.9590491907997156,
+        0.9600163405459547,
+        1.0,
+        2.0,
+        1.0,
+        1.0,
+        -1.9667349167537223,
+        0.9677058608140302,
+        1.0,
+        2.0,
+        1.0,
+        1.0,
+        -1.9752696348518732,
+        0.9762447923594401,
+        1.0,
+        2.0,
+        1.0,
+        1.0,
+        -1.9844616664450747,
+        0.9854413619045543,
+        1.0,
+        2.0,
+        1.0,
+        1.0,
+        -1.994098744631024,
+        0.9950831977544592
+      ]
+    },
+    "b": [
+      6.857391748906954e-37,
+      1.3714783497813908e-35,
+      1.3029044322923213e-34,
+      7.817426593753927e-34,
+      3.322406302345419e-33,
+      1.0631700167505342e-32,
+      2.6579250418763353e-32,
+      5.315850083752671e-32,
+      8.63825638609809e-32,
+      1.151767518146412e-31,
+      1.2669442699610532e-31,
+      1.151767518146412e-31,
+      8.63825638609809e-32,
+      5.315850083752671e-32,
+      2.6579250418763353e-32,
+      1.0631700167505342e-32,
+      3.322406302345419e-33,
+      7.817426593753927e-34,
+      1.3029044322923213e-34,
+      1.3714783497813908e-35,
+      6.857391748906954e-37
+    ],
+    "a": [
+      1.0,
+      -19.59958874282736,
+      182.4722842946248,
+      -1072.9608135129795,
+      4469.0768725057205,
+      -14015.937257989994,
+      34342.01532322545,
+      -67317.60494419662,
+      107217.12023257333,
+      -140118.08774138743,
+      151073.18993624503,
+      -134618.38899381322,
+      98965.64626710885,
+      -59697.89623557602,
+      29259.442633125138,
+      -11472.871393917634,
+      3514.6110976721757,
+      -810.6856686331985,
+      132.45684072460614,
+      -13.668879300438649,
+      0.6700295953902778
+    ],
+    "system": null,
+    "type": "low",
+    "order": 20,
+    "domain": "digital",
+    "cutoff": {
+      "normalized": [
+        0.01
+      ],
+      "hz": null
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "edge_gain_error": 1.4377388168895777e-14,
+      "sos_relative_deviation": 2.5995326003076927e-13,
+      "ba_relative_deviation": 1.0,
+      "definition": "edge_gain_error = max |‖H(截止点)‖² − 1/2|；*_relative_deviation = 64 个频点上与零极点形式响应之差的最大值 / max|H|"
+    },
+    "condition": {
+      "max_pole_radius": 0.9975385695573176,
+      "note": "极点最大模（越接近 1，滤波越敏感）"
+    },
+    "error_estimate": {
+      "applicable": false
+    },
+    "checks": {
+      "stable": true,
+      "edge_gain": true,
+      "sos_consistent": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "sos_consistent_applies": true,
+      "cutoff_given_as": "cutoff_normalized",
+      "prewarp": "4·tan(π·Wn/2)（fs = 2，同 scipy）"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:butter:prototype-zpk-bilinear",
+      "routine": "filter::butter",
+      "provenance": "aeoi://operators/signal.design.butter/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "spec_from_user",
+        "statement": "阶数、类型与截止频率来自用户（含单位）",
+        "enforced_by": "validation"
+      },
+      {
+        "id": "below_nyquist",
+        "statement": "数字：截止频率低于 Nyquist",
+        "enforced_by": "error:E.DOMAIN.ABOVE_NYQUIST"
+      },
+      {
+        "id": "ba_accuracy",
+        "statement": "b/a 多项式形式未失去精度（否则用 sos 或 zpk）",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": null
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "stable": true,
+        "edge_gain": true,
+        "sos_consistent": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "stable": "full",
+        "edge_gain": "full",
+        "sos_consistent": "test_points",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:5f31fe40fa431ca0d622a3de3befc970b5a9eb5f49a01ca34e70a4741c3a5e9b",
+      "result": "sha256:2a0e8b878b14e4adb6d0e87b4f1282795153590e4eddb297f3313956cd34841d",
+      "output_hash": "sha256:109a13da5054fcb5d61863a0cfc10fa9a5742eb92240b407121d9434ea931b9f",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of signal.design.butter@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [
+    {
+      "code": "W.NUMERICAL.ILL_CONDITIONED",
+      "message": "多项式形式 b/a 已失去精度：其频率响应与零极点形式相差 1.0e0（相对最大增益）。阶数较高或截止频率很低/很高时常见。请用 sos（filter 的缺省）或 zpk，不要用 b/a。",
+      "path": "/order",
+      "details": {
+        "ba_relative_deviation": 1.0,
+        "threshold": 1e-08,
+        "unreliable_fields": [
+          "/b",
+          "/a"
+        ]
+      }
+    }
+  ],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:8859fbaa18fba2092ff280cd112ed8c2af43248c618ed5a180a6d712016bc3a1",
+    "output_hash": "sha256:109a13da5054fcb5d61863a0cfc10fa9a5742eb92240b407121d9434ea931b9f",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.27270700000000003
+  }
+}

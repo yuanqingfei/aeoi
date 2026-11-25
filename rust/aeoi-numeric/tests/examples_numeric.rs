@@ -222,3 +222,54 @@ fn svd_example() {
     let e = call(op, &read(&format!("{dir}/request.error.json")));
     assert_eq!(e["error"]["code"], "E.VALIDATION.SHAPE");
 }
+
+/// v0.4.12: butter — digital low-pass from Hz + sample rate, analog low-pass (an LTI system), order 20 at
+/// Wn = 0.01 (b/a useless: warns); request.error.json gives cutoff_hz without a sample rate.
+#[test]
+fn butter_example() {
+    let op = "signal.design.butter";
+    let dir = format!("examples/{op}");
+    let rf = read(&format!("{dir}/reference.python-control.json"));
+    for (rq, rs) in [("request.json", "response.success.json"), ("request.analog.json", "response.analog.json"), ("request.ill.json", "response.ill.json")] {
+        let env = call(op, &read(&format!("{dir}/{rq}")));
+        assert!(env["status"] == "ok" || env["status"] == "ok_with_warnings", "{rq}: {}", env["error"]);
+        assert_hash_on_same_platform(&env, &read(&format!("{dir}/{rs}")), &format!("{op} {rq}: bitwise example"));
+        if rq == "request.ill.json" {
+            assert!(env["warnings"].as_array().unwrap().iter().any(|w| w["code"] == "W.NUMERICAL.ILL_CONDITIONED"));
+            continue;
+        }
+        for key in ["b", "a"] {
+            let got: Vec<f64> = env["result"][key].as_array().unwrap().iter().map(|v| v.as_f64().unwrap()).collect();
+            let want: Vec<f64> = rf[rq][format!("{key}_true")].as_array().unwrap().iter().map(|v| v.as_f64().unwrap()).collect();
+            let m = want.iter().fold(0.0f64, |m, v| m.max(v.abs()));
+            for (g, w) in got.iter().zip(&want) {
+                assert!((g - w).abs() <= 1e-13 * m, "{rq} {key}: {g} vs {w}");
+            }
+        }
+    }
+    let e = call(op, &read(&format!("{dir}/request.error.json")));
+    assert_eq!(e["error"]["code"], "E.VALIDATION.OPTION_CONFLICT");
+}
+
+/// v0.4.12: filter — a butter sos on a test signal, a first-order IIR impulse response (0.1·0.9^n), and an
+/// unstable recursion (warns); request.error.json has a0 = 0.
+#[test]
+fn filter_example() {
+    let op = "signal.filter.filter";
+    let dir = format!("examples/{op}");
+    let rf = read(&format!("{dir}/reference.python-control.json"));
+    for (rq, rs) in [("request.json", "response.success.json"), ("request.ba.json", "response.ba.json"), ("request.unstable.json", "response.unstable.json")] {
+        let env = call(op, &read(&format!("{dir}/{rq}")));
+        assert!(env["status"] == "ok" || env["status"] == "ok_with_warnings", "{rq}: {}", env["error"]);
+        assert_hash_on_same_platform(&env, &read(&format!("{dir}/{rs}")), &format!("{op} {rq}: bitwise example"));
+        assert_eq!(env["warnings"].as_array().unwrap().iter().any(|w| w["code"] == "W.DOMAIN.UNSTABLE_SYSTEM"), rq == "request.unstable.json");
+    }
+    let env = call(op, &read(&format!("{dir}/request.ba.json")));
+    let got: Vec<f64> = env["result"]["y"]["data"].as_array().unwrap().iter().map(|v| v.as_f64().unwrap()).collect();
+    let want: Vec<f64> = rf["request.ba.json"]["y_true"].as_array().unwrap().iter().map(|v| v.as_f64().unwrap()).collect();
+    for (g, w) in got.iter().zip(&want) {
+        assert!((g - w).abs() <= 1e-16, "{g} vs {w}");
+    }
+    let e = call(op, &read(&format!("{dir}/request.error.json")));
+    assert_eq!(e["error"]["code"], "E.VALIDATION.ZERO_DENOMINATOR");
+}

@@ -1,0 +1,20 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "signal.design.butter",
+ "operator_version": "0.4.0",
+ "case_family": "analog_normalized",
+ "request": {
+  "order": 2,
+  "domain": "analog",
+  "cutoff_normalized": 0.2
+ },
+ "reference_env": {
+  "engine": "scipy.signal.butter / mpmath",
+  "scipy": "1.18.1",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "note": "NOT MATLAB output"
+ },
+ "expected_error": "E.VALIDATION.OPTION_CONFLICT"
+}

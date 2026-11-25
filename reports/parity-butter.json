@@ -1,0 +1,131 @@
+{
+  "reference": "independent 50-digit mpmath construction (truth); scipy.signal.butter recorded. Not MATLAB.",
+  "cases": 33,
+  "error_cases": 13,
+  "worst_zpk_error": 7.880222251642048e-14,
+  "worst_sos_response_deviation": 2.5854248294236417e-13,
+  "worst_ba_coefficient_error": 4.635011166999415e-16,
+  "tolerance": "z, p, k ≤ 1e-12 relative (sets); sos response ≤ 1e-11·max|H| on 64 points; b/a coefficients ≤ 1e-12·max|coefficient| unless flagged ill-conditioned",
+  "cases_detail": [
+    {
+      "family": "analog_bandpass",
+      "zpk_error": 1.9537334900258663e-16,
+      "ba_deviation": 2.6185743238004556e-16,
+      "scipy_ba_deviation": 6.939208079668925e-16
+    },
+    {
+      "family": "analog_bandstop",
+      "zpk_error": 1.498324130642078e-16,
+      "ba_deviation": 3.981203302736396e-14,
+      "scipy_ba_deviation": 3.5853242643217924e-14
+    },
+    {
+      "family": "analog_high_hz",
+      "zpk_error": 1.5992830458293139e-16,
+      "ba_deviation": 4.449557262056594e-16,
+      "scipy_ba_deviation": 4.996004230443047e-16
+    },
+    {
+      "family": "analog_low",
+      "zpk_error": 5.551115123125783e-17,
+      "ba_deviation": 6.087272963323595e-16,
+      "scipy_ba_deviation": 3.7238012298709087e-16
+    },
+    {
+      "family": "bandpass_default_type",
+      "zpk_error": 1.4794041380025728e-15,
+      "ba_deviation": 1.6628979754651782e-11,
+      "scipy_ba_deviation": 2.3490596259070615e-11
+    },
+    {
+      "family": "bandpass_explicit",
+      "zpk_error": 2.801725885452579e-16,
+      "ba_deviation": 1.5167450724831806e-14,
+      "scipy_ba_deviation": 1.608913894436134e-14
+    },
+    {
+      "family": "bandpass_narrow_warns",
+      "zpk_error": 7.880222251642048e-14,
+      "ba_deviation": 1.0,
+      "scipy_ba_deviation": 1.0
+    },
+    {
+      "family": "bandstop_mains",
+      "zpk_error": 2.220446049250313e-16,
+      "ba_deviation": 1.1296917145830457e-11,
+      "scipy_ba_deviation": 1.678337305629846e-11
+    },
+    {
+      "family": "bandstop_wide",
+      "zpk_error": 3.841648151666373e-16,
+      "ba_deviation": 2.301962443978778e-14,
+      "scipy_ba_deviation": 2.2779127899212368e-14
+    },
+    {
+      "family": "high_hz",
+      "zpk_error": 2.2301825219878386e-16,
+      "ba_deviation": 7.263017274710053e-13,
+      "scipy_ba_deviation": 6.83526472067943e-13
+    },
+    {
+      "family": "high_normalized",
+      "zpk_error": 1.1443916996305594e-16,
+      "ba_deviation": 1.1145064673534462e-14,
+      "scipy_ba_deviation": 1.5825084293631383e-14
+    },
+    {
+      "family": "high_order_low_cutoff_warns",
+      "zpk_error": 3.6540378725057317e-16,
+      "ba_deviation": 1.0,
+      "scipy_ba_deviation": 1.0
+    },
+    {
+      "family": "low_hz",
+      "zpk_error": 7.807519752922952e-16,
+      "ba_deviation": 6.116452314996082e-14,
+      "scipy_ba_deviation": 1.565830547228522e-13
+    },
+    {
+      "family": "low_near_nyquist",
+      "zpk_error": 1.4319608678975042e-16,
+      "ba_deviation": 1.1543751296828871e-11,
+      "scipy_ba_deviation": 9.19906214680747e-12
+    },
+    {
+      "family": "low_normalized",
+      "zpk_error": 0.0,
+      "ba_deviation": 7.772801469818778e-16,
+      "scipy_ba_deviation": 4.443060721387817e-16
+    },
+    {
+      "family": "low_normalized",
+      "zpk_error": 1.1102230246251565e-16,
+      "ba_deviation": 1.1102230246252195e-15,
+      "scipy_ba_deviation": 8.0059320849739e-16
+    },
+    {
+      "family": "low_normalized",
+      "zpk_error": 4.537183478033381e-16,
+      "ba_deviation": 2.6523237352751493e-14,
+      "scipy_ba_deviation": 2.479180466871996e-14
+    },
+    {
+      "family": "low_normalized",
+      "zpk_error": 2.8017258854525796e-16,
+      "ba_deviation": 8.950904183497458e-16,
+      "scipy_ba_deviation": 8.163159687817545e-16
+    },
+    {
+      "family": "low_normalized",
+      "zpk_error": 1.6445791981040963e-16,
+      "ba_deviation": 4.447057724767827e-16,
+      "scipy_ba_deviation": 5.662690724996338e-16
+    },
+    {
+      "family": "low_normalized",
+      "zpk_error": 1.6776406235428134e-16,
+      "ba_deviation": 4.828193870057737e-15,
+      "scipy_ba_deviation": 6.364263309639154e-15
+    }
+  ]
+}

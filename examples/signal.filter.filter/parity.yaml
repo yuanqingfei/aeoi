@@ -1,0 +1,21 @@
+# Parity test spec — signal.filter.filter 0.4.0 (AEOI v0.4.12-draft)
+operator: signal.filter.filter
+references:
+  - {engine: scipy, version: "scipy.signal.lfilter / sosfilt", role: dev_reference, status: active,
+     generator: gen_golden_filter.py, golden_store: "golden/python-control/signal.filter.filter/0.4.0/*.json",
+     note: "NOT MATLAB output. MATLAB filter is the same transposed direct form II recursion"}
+  - {engine: mpmath, role: high_precision_reference, status: active, note: "50-digit difference equation on the stored coefficients and signal (truth for y and zf)"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_filter"
+tolerance_class: T1
+compare:
+  y, zf: {against: truth, bound: "max|Δ| ≤ 1e-13 · max(1, 1/(1 − r)) · max|y*|, r = largest pole radius (n for unstable filters)"}
+  warnings: "W.DOMAIN.UNSTABLE_SYSTEM exactly for poles on or outside the unit circle"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py (rule_filter)
+  y, zf: "shape exact; bound as above"
+  recomputed: "the runner recomputes the difference-equation residual of the returned y from the request (b/a only) with math.fsum and requires ≤ 10·m·u of the local scale"
+case_families:
+  - {name: "fir_moving_average / iir_first_order / butter4_ba / a0_not_one / b_longer_than_a / a_longer_than_b / ba_with_zi / multichannel_ba", n: 8}
+  - {name: "butter8_bandpass_sos / narrowband_sos (r = 0.9994) / sos_with_zi / multichannel_sos / long_signal_sos (10 000 samples)", n: 5}
+  - {name: "unstable_warns / marginal_integrator_warns", n: 2}
+  - {name: errors, n: 9, expect: "OPTION_CONFLICT ×2, ZERO_DENOMINATOR ×2, SHAPE ×3, NON_FINITE, SCHEMA"}

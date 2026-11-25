@@ -1,0 +1,115 @@
+{
+  "reference": "50-digit difference equation on the stored data (mpmath); scipy lfilter / sosfilt recorded. Not MATLAB.",
+  "cases": 24,
+  "error_cases": 9,
+  "worst_error_over_tolerance": 0.031039715914824777,
+  "at_least_as_accurate_as_scipy": 13,
+  "tolerance": "max|y − y*| and max|zf − zf*| ≤ 1e-13 · max(1, 1/(1 − r)) · max|y*| (r = largest pole radius; n for unstable filters)",
+  "cases_detail": [
+    {
+      "family": "a0_not_one",
+      "y_error": 1.5116353242247026e-16,
+      "scipy_error": 1.5116353242247026e-16,
+      "max_pole_radius": 0.3535533905932738,
+      "difference_equation_residual": 7.103583925007837e-17
+    },
+    {
+      "family": "a_longer_than_b",
+      "y_error": 9.234065968624964e-17,
+      "scipy_error": 9.234065968624964e-17,
+      "max_pole_radius": 0.5000000000000009,
+      "difference_equation_residual": 5.2573232977825974e-17
+    },
+    {
+      "family": "b_longer_than_a",
+      "y_error": 1.499617283441906e-16,
+      "scipy_error": 1.499617283441906e-16,
+      "max_pole_radius": 0.3,
+      "difference_equation_residual": 7.589379376364479e-17
+    },
+    {
+      "family": "ba_with_zi",
+      "y_error": 2.0496206449535624e-14,
+      "scipy_error": 2.0496206449535624e-14,
+      "max_pole_radius": 0.8879750783751339,
+      "difference_equation_residual": 7.033146376075432e-17
+    },
+    {
+      "family": "butter4_ba",
+      "y_error": 2.381058573437764e-14,
+      "scipy_error": 2.381058573437764e-14,
+      "max_pole_radius": 0.8879750783751339,
+      "difference_equation_residual": 1.0382439738279063e-16
+    },
+    {
+      "family": "butter8_bandpass_sos",
+      "y_error": 2.359383638607935e-15,
+      "scipy_error": 1.966153032173279e-15,
+      "max_pole_radius": 0.9748416548123333,
+      "difference_equation_residual": 1.2349261559786302e-16
+    },
+    {
+      "family": "fir_moving_average",
+      "y_error": 1.8106025531116962e-16,
+      "scipy_error": 1.8106025531116962e-16,
+      "max_pole_radius": 0.0,
+      "difference_equation_residual": 1.2840798907897232e-16
+    },
+    {
+      "family": "iir_first_order",
+      "y_error": 1.0639784523288975e-16,
+      "scipy_error": 1.0639784523288975e-16,
+      "max_pole_radius": 0.9,
+      "difference_equation_residual": 6.173036704259415e-17
+    },
+    {
+      "family": "long_signal_sos",
+      "y_error": 3.0967507089284365e-15,
+      "scipy_error": 5.776631130116507e-15,
+      "max_pole_radius": 0.9602992112411386,
+      "difference_equation_residual": 1.474826408558661e-16
+    },
+    {
+      "family": "marginal_integrator_warns",
+      "y_error": 0.0,
+      "scipy_error": 0.0,
+      "max_pole_radius": 1.0,
+      "difference_equation_residual": 0.0
+    },
+    {
+      "family": "multichannel_ba",
+      "y_error": 9.5298697153069e-15,
+      "scipy_error": 9.5298697153069e-15,
+      "max_pole_radius": 0.8879750783751339,
+      "difference_equation_residual": 1.1360509283482664e-16
+    },
+    {
+      "family": "multichannel_sos",
+      "y_error": 4.0317665744477805e-16,
+      "scipy_error": 5.375688765930374e-16,
+      "max_pole_radius": 0.7387308816541094,
+      "difference_equation_residual": 1.0307395698354659e-16
+    },
+    {
+      "family": "narrowband_sos",
+      "y_error": 1.284573655525868e-14,
+      "scipy_error": 1.2069639971711802e-14,
+      "max_pole_radius": 0.9994017468459497,
+      "difference_equation_residual": 1.1981364530787893e-16
+    },
+    {
+      "family": "sos_with_zi",
+      "y_error": 9.84072552046035e-17,
+      "scipy_error": 1.96814510409207e-16,
+      "max_pole_radius": 0.7387308816541094,
+      "difference_equation_residual": 9.429795885026111e-17
+    },
+    {
+      "family": "unstable_warns",
+      "y_error": 1.452242689006747e-16,
+      "scipy_error": 1.452242689006747e-16,
+      "max_pole_radius": 1.1,
+      "difference_equation_residual": 4.568731765244264e-17
+    }
+  ]
+}
