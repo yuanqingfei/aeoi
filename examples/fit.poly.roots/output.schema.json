@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/fit.poly.roots/0.4.0/output",
+  "type": "object",
+  "required": [
+    "roots",
+    "error_radius",
+    "multiplicity",
+    "degree",
+    "real_count",
+    "all_real",
+    "zero_roots",
+    "leading_zeros_removed"
+  ],
+  "properties": {
+    "roots": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "全部 n 个根，c128 [n]，实部升序、实部相同时虚部降序"
+    },
+    "error_radius": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "逐根误差半径 [n]：孤立根是包含圆盘的半径；簇内根是到同簇最远点的距离"
+    },
+    "multiplicity": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      },
+      "description": "每个根所在分支的根数：1 为孤立根，k > 1 为 k 个根组成的簇（重根或密集根）"
+    },
+    "degree": {
+      "type": "integer",
+      "description": "去掉最高次 0 系数后的次数 n"
+    },
+    "real_count": {
+      "type": "integer"
+    },
+    "all_real": {
+      "type": "boolean"
+    },
+    "zero_roots": {
+      "type": "integer",
+      "description": "末尾 0 系数给出的精确零根个数"
+    },
+    "leading_zeros_removed": {
+      "type": "integer"
+    }
+  }
+}

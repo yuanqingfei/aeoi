@@ -1,0 +1,159 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "fit.poly.roots",
+  "version": "0.4.0",
+  "title": "Polynomial roots with inclusion radii",
+  "description": "多项式的全部根（= MATLAB roots）：p 的系数从最高次到常数项。友矩阵（平衡后）的特征值再做 Newton 修正，与 control.lti.poles_zeros 用同一求根内核。根总是以 c128 返回，按实部升序、实部相同按虚部降序排列。每个根带一个包含半径（真根一定在这些圆盘的并内）；重根或密集根组成的簇单独报告：簇内各根的位置不能单独确定，簇的中心与根数可以依赖。",
+  "category": "analysis",
+  "tags": [
+    "polynomial",
+    "roots",
+    "zeros",
+    "companion"
+  ],
+  "applicability": {
+    "preconditions": [
+      "p 为 [n + 1] 实数系数，最高次在前",
+      "最高次系数为 0 的项会被去掉（警告）"
+    ],
+    "not_for": [
+      "复系数多项式（0.4.0 未支持）",
+      "只求区间内的实根（用 nonlinear.root.fzero）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "去掉最高次的 0 系数；末尾的 k 个 0 系数给出 k 个精确的零根。其余部分 q（次数 m）的根：平衡（Parlett–Reinsch，2 的幂）后的友矩阵经 kernels::schur 求特征值，每个根至多 4 步 Newton 修正（只接受使 |q(z)| 下降的步），共轭对保持精确共轭。包含半径：Braess–Hadeler（1973）/ Carstensen（1991）定理，q 的根全在 ∪ D(z_i, m·|W_i|) 内，W_i = q(z_i)/(q_0·Π_{j≠i}(z_i − z_j))，k 个圆盘连成的分支恰含 k 个根；半径计入 q(z_i)（复数 Horner，≤ γ_{4m+4}·q̃）与乘积的舍入。多于一个圆盘的分支报告为根簇（W.ACCURACY.CLUSTERED_ROOTS）。后置条件 backward_stable：逐根分量后向误差 |q(z_i)|/q̃(|z_i|) ≤ 10·m·u。",
+    "references": [
+      {
+        "type": "paper",
+        "cite": "A. Edelman, H. Murakami, Polynomial roots from companion matrix eigenvalues, Math. Comp. 64(210), 1995",
+        "doi": "10.1090/S0025-5718-1995-1262279-2"
+      },
+      {
+        "type": "paper",
+        "cite": "C. Carstensen, Inclusion of the roots of a polynomial based on Gerschgorin's theorem, Numer. Math. 59, 1991",
+        "doi": "10.1007/BF01385789"
+      },
+      {
+        "type": "paper",
+        "cite": "D. Braess, K. P. Hadeler, Simultaneous inclusion of the zeros of a polynomial, Numer. Math. 21, 1973",
+        "doi": "10.1007/BF01436624"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "poly::roots",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T2",
+  "sparse_support": {},
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_degree": 500
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/fit.poly.roots/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.RANGE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.DOMAIN.ZERO_POLYNOMIAL",
+    "E.NUMERICAL.NON_FINITE_EVALUATION",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.VALIDATION.LEADING_ZEROS_STRIPPED",
+    "W.ACCURACY.CLUSTERED_ROOTS"
+  ],
+  "mcp": {
+    "tool_name": "fit_poly_roots",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:roots:companion-eig-newton-inclusion",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "nonzero",
+        "statement": "p 不是零多项式",
+        "enforced_by": "error:E.DOMAIN.ZERO_POLYNOMIAL"
+      },
+      {
+        "id": "coefficients_exact",
+        "statement": "根与半径针对给定的 f64 系数；系数本身的误差另经根的条件数放大",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "clusters",
+        "statement": "簇内各根的位置不能单独确定",
+        "enforced_by": "warning:W.ACCURACY.CLUSTERED_ROOTS"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "rigorous"
+    },
+    "postconditions": [
+      "backward_stable",
+      "radii_finite"
+    ],
+    "guards": {
+      "backward_stable": [
+        "/roots",
+        "/error_radius"
+      ],
+      "radii_finite": [
+        "/error_radius",
+        "/multiplicity"
+      ]
+    }
+  }
+}

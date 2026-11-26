@@ -818,6 +818,41 @@ trz=man("calculus.quadrature.trapz","Trapezoidal integration of data","对离散
 trz_in=ins("calculus.quadrature.trapz",{"y":M,"x":M,"dx":{"type":"number","x-aeoi-provenance":"user"},"cumulative":{"type":"boolean","default":False,"x-aeoi-provenance":"convention"}},["y"],ver=V415)
 trz_out=outs("calculus.quadrature.trapz",{"value":{"description":"积分值（y 为 [k, n] 时 [k]）"},"cumulative":{"description":"部分和（cumulative = true 时），形状同 y；否则 null"},"spacing":{"description":"回显：\"x\" 或 {dx}"}},["value","cumulative","spacing"],ver=V415)
 B3.update({"calculus.quadrature.integral":(intg,intg_in,intg_out),"calculus.quadrature.trapz":(trz,trz_in,trz_out)})
+# ---- v0.4.20: fit.poly.polyval, fit.poly.roots (layer 2 of spec 12.3; kernel aeoi-core::poly)
+V420="0.4.0"
+COEF=dict(M,description="系数 [n + 1]，最高次在前（同 MATLAB、numpy），实数")
+pval=man("fit.poly.polyval","Polynomial evaluation with error bounds","在实数点上求多项式的值（= MATLAB polyval）：p 的系数从最高次到常数项。用补偿 Horner 算法，结果与先用二倍精度算再舍入一样准；每个点同时给出严格的误差界和条件数。可以带 polyfit（scaling = center_scale）返回的 mu，在 (x − mu[0])/mu[1] 处求值。","analysis",["polynomial","polyval","evaluation","horner"],
+ ["p 为 [n + 1] 实数系数，最高次在前","x 为 [q] 实数"],["复数点上求值（0.4.0 未支持；传递函数的频率响应用 control.lti.bode）","polyfit 的预测区间（MATLAB polyval 的 delta 输出，以后考虑）"],
+ "补偿 Horner（Graillat、Langlois、Louvet 2005）：每一步 s·x + a_i 用 TwoProduct（Dekker 拆分，不用 FMA）与 TwoSum 得到精确的舍入误差，误差另用 Horner 累加，最后加回。逐点误差界 (u|y| + γ_{2n}²·p̃(|x|))/(1 − u)·(1 + 4u)，p̃(t) = Σ|a_i|t^i，严格（不考虑下溢）。后置条件 horner_consistent：普通 Horner 的值与本结果之差不超过两者误差界之和。",
+ [{"type":"paper","cite":"S. Graillat, P. Langlois, N. Louvet, Compensated Horner scheme, Research Report RR2005-04, Université de Perpignan, 2005; Algorithms for accurate, validated and fast polynomial evaluation, Japan J. Indust. Appl. Math. 26, 2009","doi":"10.1007/BF03186531"},
+  {"type":"textbook","cite":"N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §5.1（Horner 的误差界）"}],
+ "poly::comp_horner (compensated Horner)","T1",{"max_degree":1000,"max_points":10000000},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.RANGE","E.VALIDATION.DIGEST_MISMATCH","E.VALIDATION.REF_UNSUPPORTED","E.VALIDATION.REF_FORBIDDEN","E.NUMERICAL.NON_FINITE_EVALUATION","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
+ ["W.NUMERICAL.ILL_CONDITIONED"],sparse={},ver=V420,backend=BACK_NUM("poly::comp_horner"))
+pval_in=ins("fit.poly.polyval",{"p":COEF,"x":M,"mu":{"type":"array","items":{"type":"number"},"minItems":2,"maxItems":2,"x-aeoi-provenance":"supplied"}},["p","x"],
+ {"x-aeoi-shape-constraints":["p: [n + 1]","x: [q]"]},ver=V420)
+pval_out=outs("fit.poly.polyval",{"y":dict(M,description="p 在各点的值 [q]"),"error_bound":dict(M,description="逐点严格误差界 [q]：|y − p(t)| ≤ error_bound"),
+ "condition":dict(M,description="逐点条件数 p̃(|t|)/|p(t)| [q]：系数相对扰动 ε 把 p(t) 改变至多 ε·condition 倍；p(t) = 0 处为 Inf"),
+ "degree":{"type":"integer"},"mu":{"description":"回显：[mean, std] 或 null"}},["y","error_bound","condition","degree","mu"],ver=V420)
+rts=man("fit.poly.roots","Polynomial roots with inclusion radii","多项式的全部根（= MATLAB roots）：p 的系数从最高次到常数项。友矩阵（平衡后）的特征值再做 Newton 修正，与 control.lti.poles_zeros 用同一求根内核。根总是以 c128 返回，按实部升序、实部相同按虚部降序排列。每个根带一个包含半径（真根一定在这些圆盘的并内）；重根或密集根组成的簇单独报告：簇内各根的位置不能单独确定，簇的中心与根数可以依赖。","analysis",["polynomial","roots","zeros","companion"],
+ ["p 为 [n + 1] 实数系数，最高次在前","最高次系数为 0 的项会被去掉（警告）"],["复系数多项式（0.4.0 未支持）","只求区间内的实根（用 nonlinear.root.fzero）"],
+ "去掉最高次的 0 系数；末尾的 k 个 0 系数给出 k 个精确的零根。其余部分 q（次数 m）的根：平衡（Parlett–Reinsch，2 的幂）后的友矩阵经 kernels::schur 求特征值，每个根至多 4 步 Newton 修正（只接受使 |q(z)| 下降的步），共轭对保持精确共轭。包含半径：Braess–Hadeler（1973）/ Carstensen（1991）定理，q 的根全在 ∪ D(z_i, m·|W_i|) 内，W_i = q(z_i)/(q_0·Π_{j≠i}(z_i − z_j))，k 个圆盘连成的分支恰含 k 个根；半径计入 q(z_i)（复数 Horner，≤ γ_{4m+4}·q̃）与乘积的舍入。多于一个圆盘的分支报告为根簇（W.ACCURACY.CLUSTERED_ROOTS）。后置条件 backward_stable：逐根分量后向误差 |q(z_i)|/q̃(|z_i|) ≤ 10·m·u。",
+ [{"type":"paper","cite":"A. Edelman, H. Murakami, Polynomial roots from companion matrix eigenvalues, Math. Comp. 64(210), 1995","doi":"10.1090/S0025-5718-1995-1262279-2"},
+  {"type":"paper","cite":"C. Carstensen, Inclusion of the roots of a polynomial based on Gerschgorin's theorem, Numer. Math. 59, 1991","doi":"10.1007/BF01385789"},
+  {"type":"paper","cite":"D. Braess, K. P. Hadeler, Simultaneous inclusion of the zeros of a polynomial, Numer. Math. 21, 1973","doi":"10.1007/BF01436624"}],
+ "poly::roots (balanced companion eigenvalues + Newton) + poly::inclusion_radii","T2",{"max_degree":500},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.RANGE","E.VALIDATION.DIGEST_MISMATCH","E.VALIDATION.REF_UNSUPPORTED","E.VALIDATION.REF_FORBIDDEN","E.DOMAIN.ZERO_POLYNOMIAL","E.NUMERICAL.NON_FINITE_EVALUATION","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
+ ["W.VALIDATION.LEADING_ZEROS_STRIPPED","W.ACCURACY.CLUSTERED_ROOTS"],sparse={},ver=V420,backend=BACK_NUM("poly::roots"))
+rts_in=ins("fit.poly.roots",{"p":COEF},["p"],{"x-aeoi-shape-constraints":["p: [n + 1]"]},ver=V420)
+rts_out=outs("fit.poly.roots",{"roots":dict(M,description="全部 n 个根，c128 [n]，实部升序、实部相同时虚部降序"),
+ "error_radius":dict(M,description="逐根误差半径 [n]：孤立根是包含圆盘的半径；簇内根是到同簇最远点的距离"),
+ "multiplicity":{"type":"array","items":{"type":"integer"},"description":"每个根所在分支的根数：1 为孤立根，k > 1 为 k 个根组成的簇（重根或密集根）"},
+ "degree":{"type":"integer","description":"去掉最高次 0 系数后的次数 n"},"real_count":{"type":"integer"},"all_real":{"type":"boolean"},
+ "zero_roots":{"type":"integer","description":"末尾 0 系数给出的精确零根个数"},"leading_zeros_removed":{"type":"integer"}},
+ ["roots","error_radius","multiplicity","degree","real_count","all_real","zero_roots","leading_zeros_removed"],ver=V420)
+B3.update({"fit.poly.polyval":(pval,pval_in,pval_out),"fit.poly.roots":(rts,rts_in,rts_out)})
+DESC.update({"fit.poly.polyval":{"p":"系数 [n + 1]，最高次在前（x² − 3x + 2 写成 [1, −3, 2]）","x":"求值点 [q]（单个点写成 [1]）","mu":"可选：fit.poly.polyfit（scaling = center_scale）结果里的 mu = [mean, std]，原样粘贴；给了就在 (x − mu[0])/mu[1] 处求值"},
+ "fit.poly.roots":{"p":"系数 [n + 1]，最高次在前（x² − 3x + 2 写成 [1, −3, 2]）；末尾的 0 给出零根"}})
 ALL_OPS={"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2|B3
 for op,props in DESC.items():
     for (m_,i_,o_) in [ALL_OPS[op]]:
@@ -878,6 +913,10 @@ RECEIPT["linalg.system.solve"]={"method_id":"aeoi:linsolve:lu-refine-or-househol
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["backward_stable","all_finite"]}
 RECEIPT["calculus.quadrature.integral"]={"method_id":"aeoi:integral:adaptive-gauss-kronrod-7-15","assumptions":[A("expression","被积函数是合法的 3.15 表达式","error:E.VALIDATION.EXPRESSION"),A("integrable","积分收敛（可积，无内部不可积奇点）","error:E.NUMERICAL.NO_CONVERGENCE"),A("finite_values","被积函数在求值点上有限","error:E.NUMERICAL.NON_FINITE_EVALUATION"),A("error_estimate_heuristic","误差估计是启发式的；可能漏掉区间里窄的尖峰","check:refinement_consistent")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["tolerance_met","refinement_consistent","all_finite"]}
+RECEIPT["fit.poly.polyval"]={"method_id":"aeoi:polyval:compensated-horner","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("no_overflow","求值过程不溢出","error:E.NUMERICAL.NON_FINITE_EVALUATION"),A("no_underflow","误差界不考虑下溢（结果的量级在 1e-290 以上时成立）","caller"),A("coefficients_exact","误差界针对给定的 f64 系数；系数本身的误差经 condition 放大","caller")],
+   "exactness":{"class":"approximate","bound_kind":"rigorous"},"postconditions":["horner_consistent"]}
+RECEIPT["fit.poly.roots"]={"method_id":"aeoi:roots:companion-eig-newton-inclusion","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("nonzero","p 不是零多项式","error:E.DOMAIN.ZERO_POLYNOMIAL"),A("coefficients_exact","根与半径针对给定的 f64 系数；系数本身的误差另经根的条件数放大","caller"),A("clusters","簇内各根的位置不能单独确定","warning:W.ACCURACY.CLUSTERED_ROOTS")],
+   "exactness":{"class":"approximate","bound_kind":"rigorous"},"postconditions":["backward_stable","radii_finite"]}
 RECEIPT["calculus.quadrature.trapz"]={"method_id":"aeoi:trapz:compensated","assumptions":[A("spacing","采样位置（x 或 dx）由调用方显式给出","error:E.VALIDATION.OPTION_CONFLICT"),A("sampling","数据采样足以描述被积函数（梯形公式对数据精确，对真实函数的误差算子无法估计）","caller"),A("channels","y 每行一个通道","caller")],
    "exactness":{"class":"approximate","bound_kind":"none"},"postconditions":["all_finite"]}
 RECEIPT["optim.linear.linprog"]={"method_id":"aeoi:linprog:two-phase-simplex-bland","assumptions":[A("finite","所有数据有限","error:E.VALIDATION.NON_FINITE"),A("feasible","约束有可行解","error:E.DOMAIN.INFEASIBLE"),A("bounded","目标在可行域上有下界","error:E.DOMAIN.UNBOUNDED"),A("default_bounds","变量缺省没有界（MATLAB 约定，与 scipy 不同）","validation"),A("unique","最优解可能不唯一；给出的是一个最优顶点","caller")],
@@ -938,6 +977,8 @@ GUARDS["ode.ivp.solve"]={"tolerance_consistent":["/y"]}
 GUARDS["linalg.system.solve"]={"backward_stable":["/x"]}
 GUARDS["interp.grid.interp1"]={"pieces_interpolate":["/yq"],"spline_c2":["/yq"],"local_bounds":["/yq"]}
 GUARDS["signal.design.butter"]={"stable":["/z","/p","/k","/sos","/b","/a","/system"],"edge_gain":["/z","/p","/k","/sos","/b","/a","/system"],"sos_consistent":["/sos"]}
+GUARDS["fit.poly.polyval"]={"horner_consistent":["/y","/error_bound"]}
+GUARDS["fit.poly.roots"]={"backward_stable":["/roots","/error_radius"],"radii_finite":["/error_radius","/multiplicity"]}
 GUARDS["calculus.quadrature.integral"]={"tolerance_met":["/value","/error_estimate"],"refinement_consistent":["/value","/error_estimate"]}
 GUARDS["optim.linear.linprog"]={"kkt":["/x","/fval","/lambda"]}
 GUARDS["optim.local.fmincon"]={"kkt":["/x","/solution","/fval","/lambda"]}

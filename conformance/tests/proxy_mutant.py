@@ -170,6 +170,30 @@ def m_polyfit_mu_wrong(r):                  # centering mean shifted by 1e-9 of 
         r["mu"][0] = r["mu"][0] * (1 + 1e-9) + 1e-12
 
 
+def m_polyval_value_wrong(r):               # every value off by 1e-12 (relative)
+    r["y"]["data"] = [v * (1 + 1e-12) + 1e-300 if isinstance(v, float) else v for v in r["y"]["data"]]
+
+
+def m_polyval_bound_zeroed(r):              # claims an error bound of 0 everywhere
+    r["error_bound"]["data"] = [0.0 for _ in r["error_bound"]["data"]]
+
+
+def m_roots_value_wrong(r):                 # first root off by 1e-9 (relative)
+    d = r["roots"]["data"]
+    if d:
+        d[0][0] = d[0][0] * (1 + 1e-9) + 1e-12
+
+
+def m_roots_radius_understated(r):          # error radii a million times too small
+    r["error_radius"]["data"] = [v / 1e6 if isinstance(v, float) else v for v in r["error_radius"]["data"]]
+
+
+def m_roots_unsorted(r):                    # roots in reverse order (radii and multiplicities follow)
+    for k in ("roots", "error_radius"):
+        r[k]["data"] = r[k]["data"][::-1]
+    r["multiplicity"] = r["multiplicity"][::-1]
+
+
 def m_eig_vectors_swapped(r):               # eigenvector columns 0 and 1 exchanged (labels no longer match)
     v = r.get("vectors")
     if v and v["shape"][0] > 1:
@@ -309,6 +333,11 @@ MUTANTS = {
     "interp1_count_wrong": ("interp.grid.interp1", m_interp1_count_wrong),
     "polyfit_coef_wrong": ("fit.poly.polyfit", m_polyfit_coef_wrong),
     "polyfit_mu_wrong": ("fit.poly.polyfit", m_polyfit_mu_wrong),
+    "polyval_value_wrong": ("fit.poly.polyval", m_polyval_value_wrong),
+    "polyval_bound_zeroed": ("fit.poly.polyval", m_polyval_bound_zeroed),
+    "roots_value_wrong": ("fit.poly.roots", m_roots_value_wrong),
+    "roots_radius_understated": ("fit.poly.roots", m_roots_radius_understated),
+    "roots_unsorted": ("fit.poly.roots", m_roots_unsorted),
     "eig_vectors_swapped": ("linalg.decomp.eig", m_eig_vectors_swapped),
     "eig_pair_order": ("linalg.decomp.eig", m_eig_pair_order),
     "eig_value_wrong": ("linalg.decomp.eig", m_eig_value_wrong),

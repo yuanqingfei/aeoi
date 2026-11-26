@@ -1,0 +1,162 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "fit.poly.polyval",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "y": {
+      "dtype": "f64",
+      "shape": [
+        4
+      ],
+      "data": [
+        -6.0,
+        -1.875,
+        0.375,
+        6.0
+      ]
+    },
+    "error_bound": {
+      "dtype": "f64",
+      "shape": [
+        4
+      ],
+      "data": [
+        6.66133814775097e-16,
+        2.081668171172228e-16,
+        4.163336342346087e-17,
+        6.661338147751875e-16
+      ]
+    },
+    "condition": {
+      "dtype": "f64",
+      "shape": [
+        4
+      ],
+      "data": [
+        1.0,
+        7.0,
+        105.0,
+        35.0
+      ]
+    },
+    "degree": 3,
+    "mu": null
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "error_estimate": {
+      "abs_max": 6.661338147751875e-16,
+      "rel_max": 1.1102230246256232e-16,
+      "basis": "逐点严格界 |y − p(t)| ≤ (u|y| + γ_{2n}²·p̃(|t|))/(1 − u)·(1 + 4u)（Graillat–Langlois–Louvet 2005 定理），p̃(|t|) = Σ|a_i||t|^i；t = x，或给了 mu 时 t = (x − mu[0])/mu[1]（t 本身在 f64 里算出，界针对这个 t）。不考虑下溢。"
+    },
+    "condition": {
+      "definition": "cond(p, t) = p̃(|t|)/|p(t)|：系数的相对扰动 ε 至多把 p(t) 改变 ε·cond 倍（逐点值见 result.condition）"
+    },
+    "checks": {
+      "horner_consistent": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "algorithm": "compensated Horner (TwoProduct + TwoSum, no FMA)",
+      "points_below_8_digits": 0
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:polyval:compensated-horner",
+      "routine": "poly::comp_horner",
+      "provenance": "aeoi://operators/fit.poly.polyval/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "no_overflow",
+        "statement": "求值过程不溢出",
+        "enforced_by": "error:E.NUMERICAL.NON_FINITE_EVALUATION"
+      },
+      {
+        "id": "no_underflow",
+        "statement": "误差界不考虑下溢（结果的量级在 1e-290 以上时成立）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "coefficients_exact",
+        "statement": "误差界针对给定的 f64 系数；系数本身的误差经 condition 放大",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "rigorous",
+      "bound": {
+        "abs_max": 6.661338147751875e-16,
+        "rel_max": 1.1102230246256232e-16
+      },
+      "basis": "逐点严格界 |y − p(t)| ≤ (u|y| + γ_{2n}²·p̃(|t|))/(1 − u)·(1 + 4u)（Graillat–Langlois–Louvet 2005 定理），p̃(|t|) = Σ|a_i||t|^i；t = x，或给了 mu 时 t = (x − mu[0])/mu[1]（t 本身在 f64 里算出，界针对这个 t）。不考虑下溢。"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "horner_consistent": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null
+    },
+    "fingerprint": {
+      "request": "sha256:36e65db29ae908c8bb9ed9a1b8fbbb80d2486a14a94b4a2840f6510b925aabfc",
+      "result": "sha256:6f490496f22a087cb44eb9320ff33363f600197ecb4c7af9a48f29d7e2867ab6",
+      "output_hash": "sha256:8bdbf8fd146ce66eb220b1b4520e5d1d4e8ce3a22a37f77db22482e6a33f9e13",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of fit.poly.polyval@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:7e9c614cfee1d9481a96ca2edf6cec010ce85f585c212011a957e8d04794c481",
+    "output_hash": "sha256:8bdbf8fd146ce66eb220b1b4520e5d1d4e8ce3a22a37f77db22482e6a33f9e13",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.16350800000000001
+  }
+}

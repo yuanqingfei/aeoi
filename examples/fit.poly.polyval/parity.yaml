@@ -1,0 +1,25 @@
+# Parity test spec — fit.poly.polyval 0.4.0 (AEOI v0.4.20-draft)
+operator: fit.poly.polyval
+references:
+  - {engine: numpy, version: "numpy.polyval (plain Horner)", role: dev_reference, status: active,
+     generator: gen_golden_poly.py, golden_store: "golden/python-control/fit.poly.polyval/0.4.0/*.json",
+     note: "NOT MATLAB output. MATLAB polyval is plain Horner too"}
+  - {engine: fractions, role: high_precision_reference, status: active,
+     note: "the EXACT value of the polynomial at the stored f64 point (Python rational arithmetic); with mu the point is t = (x − mu[0])/mu[1] rounded once in f64"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_poly"
+tolerance_class: T1
+compare:
+  y: {against: exact value, bound: "|y − p(t)| ≤ 2u|p(t)| + 2γ_{2n}²·p̃(|t|) (compensated-Horner accuracy, suite-defined)"}
+  error_bound: "claim check: |y − p(t)| ≤ error_bound at every point (exact value rounded once: + u|p(t)|)"
+  numpy: "never less accurate than numpy.polyval at any point"
+  warnings: "W.NUMERICAL.ILL_CONDITIONED exactly where expect_warning says (predicted by the generator from the true value: p(t) ≠ 0 and γ_{2n}²·p̃ > 1e-8·|p(t)|)"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py (rule_polyval)
+  y: "the runner recomputes p(t) from the request in exact rational arithmetic and requires the suite bound above"
+  error_bound: "the runner checks the claim |y − p(t)| ≤ error_bound + u|p(t)| at every point"
+  echoed: "degree, mu"
+case_families:
+  - {name: "cubic_grid / exact_roots_zero / constant / leading_zeros_kept", n: 4}
+  - {name: "near_multiple_root_6 / near_multiple_root_10_warns", n: 2, note: "(x − 1)^6 and (x − 1)^10 expanded: numpy has no correct digit; compensated Horner is exact to ~1e-28 absolute"}
+  - {name: "chebyshev_T20 / wide_range / random_degree15 / large_degree_200 / with_mu_from_polyfit", n: 5}
+  - {name: errors, n: 9, expect: "NON_FINITE_EVALUATION (overflow), DTYPE (complex x), NON_FINITE, SHAPE ×2, RANGE ×2 (mu std 0, degree > 1000), SCHEMA ×2"}

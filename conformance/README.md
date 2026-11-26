@@ -2,17 +2,17 @@
 
 规范 9.4（CF-1 – CF-12）的实现。标题里的 v0.3 是套件格式的版本，规范本身已到 v0.4.17-draft。
 
-**状态（2026-11-25，规范 v0.4.19-draft）**
+**状态（2026-11-26，规范 v0.4.20-draft）**
 
-- 24 / 37 个算子（65%）有数值规则：
+- 26 / 39 个算子（67%）有数值规则：
   - 控制：`lyap`、`poles_zeros`、`bode`、`step`、`lqr`、`c2d`、`lsim`、`pidtune`
   - 信号：`fft`、`butter`、`filter`
   - 线性代数：`linalg.system.solve`、`linalg.decomp.eig`、`linalg.decomp.svd`
-  - 插值与拟合：`interp1`、`polyfit`
+  - 插值、拟合与多项式：`interp1`、`polyfit`、`polyval`、`roots`
   - 微积分与 ODE：`ode.ivp.solve`、`integral`、`trapz`
   - 非线性方程与优化：`fzero`、`fsolve`、`linprog`、`fmincon`、`fminsearch`
-- 参考实现（Rust）：1111 通过 / 0 失败 / 291 跳过。
-- 变异测试：第二实现 8 种缺陷、参考实现 45 种改写，全部被抓住。
+- 参考实现（Rust）：1153 通过 / 0 失败 / 291 跳过。
+- 变异测试：第二实现 8 种缺陷、参考实现 50 种改写，全部被抓住。
 - Python 第二实现做 5 个算子：`lyap`，以及 v0.4.19 只读规范写成的 `fft`、`linalg.system.solve`、`interp1`、`integral`。233 通过 / 0 失败 / 0 跳过。写它的过程找出 32 处规范问题，见 `impls/python_scipy/SPEC_FINDINGS.md`。
 
 ## 内容
@@ -24,7 +24,7 @@
 | `rules_numeric.py` | 控制以外的 16 个算子：`fft`（规范 v0.4.7，含运行器从请求的 x 与返回的 X 独立重算 Parseval）；`ode.ivp.solve`（规范 v0.4.8：对照精确解而不是参考求解器的步长序列；运行器用精确解检查 `tolerance_consistent = true` 的声明是否属实）；`linalg.system.solve`（规范 v0.4.10：运行器用有理数精确重算后向误差，并检查 `backward_stable = true` 的声明是否属实）；`interp.grid.interp1`（规范 v0.4.10：节点处必须精确、范围外点数由运行器重数）；`fit.poly.polyfit`、`linalg.decomp.eig`、`linalg.decomp.svd`（规范 v0.4.11：特征向量、奇异向量不唯一，只比较不变量——特征值最近匹配、运行器从请求重算残差、正交性与规一化规则）；`butter`、`filter`（v0.4.12：零极点按集合对照精确构造，运行器从返回的 sos / zpk 重算截止点增益与 b/a 偏差，并从请求重算差分方程残差）；`fzero`、`fsolve`（v0.4.13：运行器用自己的表达式求值器重算残差与变号）；`linprog`、`fmincon`、`fminsearch`（v0.4.14：对照独立核对过的最优点，运行器从请求重算可行性与乘子的 KKT 条件）；`integral`、`trapz`（v0.4.15：对照 50 位真值并核查误差估计是否覆盖真实误差，`trapz` 对照精确有理数求和） |
 | `rules_control.py` | `poles_zeros`、`bode`、`step`、`lqr`、`c2d` 的数值规则（v0.2），`lsim`（规范 v0.4.5）、`pidtune`（规范 v0.4.6，含运行器用返回的控制器重算 L(jωc)）；`lyap` 的规则在运行器里 |
 | `impls/python_scipy/` | 第二实现：Python + numpy/scipy，线级（MCP stdio）。`server.py` 提供 5 个工具；共享层 `aeoi_common.py`（信封、收据、指纹、method_policy、数组编码）、表达式语言 `aeoi_expr.py`、每个算子一个 `op_*.py`；`SPEC_FINDINGS.md` 是只读规范时发现的问题及处理结果 |
-| `tests/test_runner_catches_mutants.py` | 证明规则既不太松也不太严：对第二实现注入 8 种缺陷，再经 `proxy_mutant.py` 对参考实现做 45 种改写（v0.4.8 加了 `ode_y_wrong`、`ode_states_reordered`、`ode_overclaims`；v0.4.10 加了 `linsolve_x_wrong`、`linsolve_overclaims`、`interp1_one_ulp`、`interp1_count_wrong`；v0.4.11 加了 `polyfit_coef_wrong`、`polyfit_mu_wrong`、`eig_vectors_swapped`、`eig_pair_order`、`eig_value_wrong`、`svd_u_sign_only`、`svd_both_signs`；v0.4.12 加了 `butter_pole_wrong`、`butter_warning_dropped`、`filter_y_wrong`、`filter_state_dropped`；v0.4.13 加了 `fzero_x_wrong`、`fzero_warning_dropped`、`fsolve_x_wrong`、`fsolve_residual_zeroed`；v0.4.14 加了 `linprog_lambda_sign`、`fmincon_x_wrong`、`fmincon_lambda_dropped`、`fminsearch_x_shifted`；v0.4.15 加了 `integral_value_wrong`、`integral_error_understated`、`trapz_value_ulps`），错误答案（含相位整体加 360°）必须失败，等价答案（换极点顺序、相似变换、tf 分子分母同乘常数）必须通过 |
+| `tests/test_runner_catches_mutants.py` | 证明规则既不太松也不太严：对第二实现注入 8 种缺陷，再经 `proxy_mutant.py` 对参考实现做 50 种改写（v0.4.8 加了 `ode_y_wrong`、`ode_states_reordered`、`ode_overclaims`；v0.4.10 加了 `linsolve_x_wrong`、`linsolve_overclaims`、`interp1_one_ulp`、`interp1_count_wrong`；v0.4.11 加了 `polyfit_coef_wrong`、`polyfit_mu_wrong`、`eig_vectors_swapped`、`eig_pair_order`、`eig_value_wrong`、`svd_u_sign_only`、`svd_both_signs`；v0.4.12 加了 `butter_pole_wrong`、`butter_warning_dropped`、`filter_y_wrong`、`filter_state_dropped`；v0.4.13 加了 `fzero_x_wrong`、`fzero_warning_dropped`、`fsolve_x_wrong`、`fsolve_residual_zeroed`；v0.4.14 加了 `linprog_lambda_sign`、`fmincon_x_wrong`、`fmincon_lambda_dropped`、`fminsearch_x_shifted`；v0.4.15 加了 `integral_value_wrong`、`integral_error_understated`、`trapz_value_ulps`），错误答案（含相位整体加 360°）必须失败，等价答案（换极点顺序、相似变换、tf 分子分母同乘常数）必须通过 |
 | `tests/proxy_mutant.py` | 包住参考实现的 MCP 代理，按 `$AEOI_MUTANT` 改写一个算子的结果并重算 `output_hash` |
 
 ## 运行
@@ -58,15 +58,15 @@ python3 conformance/tests/test_runner_catches_mutants.py
 
 ## 结果
 
-参考实现：`rust/target/release/aeoi-mcp`，规范 v0.4.17-draft，在云容器 x86_64-linux（glibc 2.39）上运行。结果是 1111 通过 / 0 失败 / 291 跳过，共 1402 个用例：
+参考实现：`rust/target/release/aeoi-mcp`，规范 v0.4.20-draft，在云容器 x86_64-linux（glibc 2.39）上运行。结果是 1153 通过 / 0 失败 / 291 跳过，共 1444 个用例：
 
-- 1132 个来自 `golden/python-control`（参考值出自 python-control / numpy / scipy）；
+- 1172 个来自 `golden/python-control`（参考值出自 python-control / numpy / scipy）；
 - 54 个来自 `golden/mpmath`（高精度真值）；
-- 216 个由运行器派生，其中 179 个默认值用例、37 个方法选择用例（每个算子 1 个）。
+- 218 个由运行器派生，其中 179 个默认值用例、39 个方法选择用例（每个算子 1 个）。
 
 参考实现在 5 个平台上逐位相同（发布流水线比较 `output_hash`），在 wasm 上也与原生版逐位相同，所以这个结果不随平台变化。
 
-有数值规则的 24 个算子，golden 成功用例数：
+有数值规则的 26 个算子，golden 用例通过数（含错误用例）：
 
 | 算子 | 通过 | 算子 | 通过 |
 |---|---|---|---|
@@ -82,6 +82,7 @@ python3 conformance/tests/test_runner_catches_mutants.py
 | `calculus.quadrature.integral` | 19 | `nonlinear.system.fsolve` | 18 |
 | `optim.linear.linprog` | 16 | `optim.local.fmincon` | 13 |
 | `calculus.quadrature.trapz` | 12 | `optim.local.fminsearch` | 10 |
+| `fit.poly.polyval` | 20 | `fit.poly.roots` | 20 |
 
 跳过的 291 个用例，是其余 13 个算子的 golden 成功用例，以及少数只对某种模式适用的默认值用例（F-8，例如 PID 的 `Ti`/`Td`、离散系统上的 `interpolation`）。没有数值规则的算子，错误码、警告、指纹、收据照样检查。
 

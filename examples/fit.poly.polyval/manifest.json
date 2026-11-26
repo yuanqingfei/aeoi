@@ -1,0 +1,147 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "fit.poly.polyval",
+  "version": "0.4.0",
+  "title": "Polynomial evaluation with error bounds",
+  "description": "在实数点上求多项式的值（= MATLAB polyval）：p 的系数从最高次到常数项。用补偿 Horner 算法，结果与先用二倍精度算再舍入一样准；每个点同时给出严格的误差界和条件数。可以带 polyfit（scaling = center_scale）返回的 mu，在 (x − mu[0])/mu[1] 处求值。",
+  "category": "analysis",
+  "tags": [
+    "polynomial",
+    "polyval",
+    "evaluation",
+    "horner"
+  ],
+  "applicability": {
+    "preconditions": [
+      "p 为 [n + 1] 实数系数，最高次在前",
+      "x 为 [q] 实数"
+    ],
+    "not_for": [
+      "复数点上求值（0.4.0 未支持；传递函数的频率响应用 control.lti.bode）",
+      "polyfit 的预测区间（MATLAB polyval 的 delta 输出，以后考虑）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "补偿 Horner（Graillat、Langlois、Louvet 2005）：每一步 s·x + a_i 用 TwoProduct（Dekker 拆分，不用 FMA）与 TwoSum 得到精确的舍入误差，误差另用 Horner 累加，最后加回。逐点误差界 (u|y| + γ_{2n}²·p̃(|x|))/(1 − u)·(1 + 4u)，p̃(t) = Σ|a_i|t^i，严格（不考虑下溢）。后置条件 horner_consistent：普通 Horner 的值与本结果之差不超过两者误差界之和。",
+    "references": [
+      {
+        "type": "paper",
+        "cite": "S. Graillat, P. Langlois, N. Louvet, Compensated Horner scheme, Research Report RR2005-04, Université de Perpignan, 2005; Algorithms for accurate, validated and fast polynomial evaluation, Japan J. Indust. Appl. Math. 26, 2009",
+        "doi": "10.1007/BF03186531"
+      },
+      {
+        "type": "textbook",
+        "cite": "N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §5.1（Horner 的误差界）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "poly::comp_horner",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {},
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_degree": 1000,
+    "max_points": 10000000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/fit.poly.polyval/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.RANGE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.NUMERICAL.NON_FINITE_EVALUATION",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.NUMERICAL.ILL_CONDITIONED"
+  ],
+  "mcp": {
+    "tool_name": "fit_poly_polyval",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:polyval:compensated-horner",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "no_overflow",
+        "statement": "求值过程不溢出",
+        "enforced_by": "error:E.NUMERICAL.NON_FINITE_EVALUATION"
+      },
+      {
+        "id": "no_underflow",
+        "statement": "误差界不考虑下溢（结果的量级在 1e-290 以上时成立）",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "coefficients_exact",
+        "statement": "误差界针对给定的 f64 系数；系数本身的误差经 condition 放大",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "rigorous"
+    },
+    "postconditions": [
+      "horner_consistent"
+    ],
+    "guards": {
+      "horner_consistent": [
+        "/y",
+        "/error_bound"
+      ]
+    }
+  }
+}

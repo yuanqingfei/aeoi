@@ -1,0 +1,38 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "fit.poly.roots",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.DOMAIN.ZERO_POLYNOMIAL",
+    "category": "domain",
+    "retryable": true,
+    "message": "p 的系数全为 0：零多项式处处为 0，根不确定。",
+    "agent_hint": "检查系数是否传错（例如全被舍入成了 0）。",
+    "details": {
+      "path": "/p"
+    },
+    "remediation": [
+      {
+        "id": "coefficients",
+        "kind": "ask_user",
+        "description": "多项式的系数是什么？",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.064329
+  }
+}

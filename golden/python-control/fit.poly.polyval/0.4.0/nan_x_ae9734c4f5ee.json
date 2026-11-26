@@ -1,0 +1,36 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "fit.poly.polyval",
+ "operator_version": "0.4.0",
+ "case_family": "nan_x",
+ "request": {
+  "p": {
+   "dtype": "f64",
+   "shape": [
+    2
+   ],
+   "data": [
+    1.0,
+    1.0
+   ]
+  },
+  "x": {
+   "dtype": "f64",
+   "shape": [
+    2
+   ],
+   "data": [
+    1.0,
+    "NaN"
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "numpy.polyval / exact rational arithmetic (fractions)",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261126,
+  "note": "NOT MATLAB output"
+ },
+ "expected_error": "E.VALIDATION.NON_FINITE"
+}

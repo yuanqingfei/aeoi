@@ -1,0 +1,35 @@
+{
+ "note": "roots_true = mpmath.polyroots at 60 digits on the stored coefficients; NOT MATLAB output",
+ "request.json": {
+  "roots_true": [
+   [
+    1.0,
+    0.0
+   ],
+   [
+    2.0,
+    0.0
+   ],
+   [
+    3.0,
+    0.0
+   ]
+  ]
+ },
+ "request.cluster.json": {
+  "roots_true": [
+   [
+    -2.0,
+    0.0
+   ],
+   [
+    1.0,
+    0.0
+   ],
+   [
+    1.0,
+    0.0
+   ]
+  ]
+ }
+}

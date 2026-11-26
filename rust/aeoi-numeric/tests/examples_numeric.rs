@@ -343,3 +343,49 @@ fn quad_examples() {
     assert_eq!(env["result"]["cumulative"]["shape"], serde_json::json!([11]));
     assert_eq!(call(op, &read(&format!("examples/{op}/request.error.json")))["error"]["code"], "E.VALIDATION.OPTION_CONFLICT");
 }
+
+/// v0.4.20: polyval — request.json (cubic at four points), request.ill.json ((x − 1)⁶ expanded, near the
+/// sixfold root: compensated Horner is exact to the last bit where numpy loses every digit), request.error.json
+/// (complex x → DTYPE).
+#[test]
+fn polyval_example() {
+    let op = "fit.poly.polyval";
+    let dir = format!("examples/{op}");
+    let rf = read(&format!("{dir}/reference.python-control.json"));
+    for (rq, rs) in [("request.json", "response.success.json"), ("request.ill.json", "response.ill.json")] {
+        let env = call(op, &read(&format!("{dir}/{rq}")));
+        assert_eq!(env["status"], "ok", "{rq}: {env}");
+        assert_hash_on_same_platform(&env, &read(&format!("{dir}/{rs}")), &format!("{op} {rq}: bitwise example"));
+        let y = env["result"]["y"]["data"].as_array().unwrap();
+        let b = env["result"]["error_bound"]["data"].as_array().unwrap();
+        for (k, t) in rf[rq]["y_true"].as_array().unwrap().iter().enumerate() {
+            let (y, b, t) = (y[k].as_f64().unwrap(), b[k].as_f64().unwrap(), t.as_f64().unwrap());
+            assert!((y - t).abs() <= b + f64::EPSILON * t.abs(), "{rq}[{k}]: {y} vs {t}");
+        }
+    }
+    let e = call(op, &read(&format!("{dir}/request.error.json")));
+    assert_eq!(e["error"]["code"], "E.VALIDATION.DTYPE");
+}
+
+/// v0.4.20: roots — request.json (x³ − 6x² + 11x − 6: roots 1, 2, 3), request.cluster.json ((x − 1)²(x + 2):
+/// the double root is reported as a cluster), request.error.json (zero polynomial).
+#[test]
+fn roots_example() {
+    let op = "fit.poly.roots";
+    let dir = format!("examples/{op}");
+    let rf = read(&format!("{dir}/reference.python-control.json"));
+    for (rq, rs) in [("request.json", "response.success.json"), ("request.cluster.json", "response.cluster.json")] {
+        let env = call(op, &read(&format!("{dir}/{rq}")));
+        assert!(env["status"] == "ok" || env["status"] == "ok_with_warnings", "{rq}: {}", env["error"]);
+        assert_hash_on_same_platform(&env, &read(&format!("{dir}/{rs}")), &format!("{op} {rq}: bitwise example"));
+        let got = env["result"]["roots"]["data"].as_array().unwrap();
+        let rad = env["result"]["error_radius"]["data"].as_array().unwrap();
+        for t in rf[rq]["roots_true"].as_array().unwrap() {
+            let (tr, ti) = (t[0].as_f64().unwrap(), t[1].as_f64().unwrap());
+            assert!(got.iter().zip(rad).any(|(z, r)| (z[0].as_f64().unwrap() - tr).hypot(z[1].as_f64().unwrap() - ti) <= r.as_f64().unwrap()), "{rq}: {t}");
+        }
+        assert_eq!(env["warnings"].as_array().unwrap().iter().any(|w| w["code"] == "W.ACCURACY.CLUSTERED_ROOTS"), rq == "request.cluster.json", "{rq}");
+    }
+    let e = call(op, &read(&format!("{dir}/request.error.json")));
+    assert_eq!(e["error"]["code"], "E.DOMAIN.ZERO_POLYNOMIAL");
+}

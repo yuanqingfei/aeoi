@@ -1,7 +1,7 @@
 """Numeric comparison rules (spec 9.4 CF-6) for operators outside control: signal.spectral.fft (v0.4.7),
 ode.ivp.solve (v0.4.8), linalg.system.solve and interp.grid.interp1 (v0.4.10), fit.poly.polyfit,
 linalg.decomp.eig and linalg.decomp.svd (v0.4.11), signal.design.butter and signal.filter.filter (v0.4.12), nonlinear.root.fzero and nonlinear.system.fsolve (v0.4.13), optim.linear.linprog, optim.local.fmincon and
-optim.local.fminsearch (v0.4.14), calculus.quadrature.integral and calculus.quadrature.trapz (v0.4.15).
+optim.local.fminsearch (v0.4.14), calculus.quadrature.integral and calculus.quadrature.trapz (v0.4.15), fit.poly.polyval and fit.poly.roots (v0.4.20).
 
 Same ground rules as rules_control.py: tolerances from the suite (parity.yaml), every scale computed here from
 the reference request or values, nothing the implementation reports is used.
@@ -492,9 +492,61 @@ def rule_trapz(case, env, manifest, req=None, expected=None):
     return [check("value vs the exact rational trapezoidal sum, recomputed by the runner: ≤ 2 roundings  [10.32 TZ-3]", err, 2.0)]
 
 
+# ---------------------------------------------------------------- fit.poly.polyval (parity.yaml: T1)
+def _gam(k):
+    return k * U / (1 - k * U)
+
+
+def rule_polyval(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; r = env["result"]
+    p = [float(v) for v in arr(req["p"]).ravel()]; x = [float(v) for v in arr(req["x"]).ravel()]
+    n = len(p) - 1
+    y = arr(r["y"]).ravel(); b = arr(r["error_bound"]).ravel()
+    if y.shape != (len(x),) or b.shape != (len(x),):
+        return [fail("y, error_bound: shape [q]", f"got {y.shape}, {b.shape}")]
+    mu = req.get("mu")
+    worst_acc = worst_claim = 0.0
+    for k, xv in enumerate(x):
+        t = (xv - float(mu[0])) / float(mu[1]) if mu else xv
+        tf = Fraction(t); acc = Fraction(0); pt = Fraction(0)
+        for a in p:                                   # exact value and p̃(|t|), recomputed by the runner
+            acc = acc * tf + Fraction(a); pt = pt * abs(tf) + abs(Fraction(a))
+        exact = float(acc); err = abs(Fraction(float(y[k])) - acc)
+        tol = 2 * U * abs(exact) + 2 * _gam(2 * n) ** 2 * float(pt) + np.finfo(float).tiny
+        worst_acc = max(worst_acc, float(err) / tol)
+        worst_claim = max(worst_claim, float(err) / (float(b[k]) + U * abs(exact) + np.finfo(float).tiny))
+    return [check("y vs the exact value p(t), recomputed in rational arithmetic: |Δ| ≤ 2u|p(t)| + 2γ_{2n}²·p̃(|t|)  [10.33 PV-2]", worst_acc, 1.0),
+            check("claim: |y − p(t)| ≤ error_bound at every point  [10.33 PV-3, E-11]", worst_claim, 1.0),
+            ("degree and mu echo the request  [O-1]", r.get("degree") == n and (r.get("mu") == ([float(mu[0]), float(mu[1])] if mu else None)), None, None, f"got {r.get('degree')}, {r.get('mu')}")]
+
+
+# ---------------------------------------------------------------- fit.poly.roots (parity.yaml: T2)
+def rule_roots(case, env, manifest, req=None, expected=None):
+    e = expected or case["expected"]; r = env["result"]
+    got = arr(r["roots"]).astype(complex).ravel() if r["roots"]["shape"][0] else np.zeros(0, complex)
+    rad = arr(r["error_radius"]).ravel().astype(float)
+    truth = [complex(z[0], z[1]) for z in e["roots_true"]]
+    if got.shape != (len(truth),):
+        return [fail("roots: degree n roots", f"got {got.shape}, reference {len(truth)}")]
+    order_ok = all(a.real < b.real or (a.real == b.real and a.imag >= b.imag) for a, b in zip(got, got[1:]))
+    out = [("roots sorted: real part ascending, ties by imaginary part descending  [10.34 RT-3]", order_ok, None, None, f"got {got.tolist()}"),
+           ("degree and zero_roots equal the reference  [O-1]", r.get("degree") == e["degree"] and r.get("zero_roots") == e["zero_roots"], None, None, f"got {r.get('degree')}, {r.get('zero_roots')}")]
+    miss = sum(1 for t in truth if not any(abs(z - t) <= q for z, q in zip(got, rad)))
+    out.append(check("claim: every true root lies within error_radius of a reported root  [10.34 RT-4]", float(miss), 0.0))
+    worst = 0.0
+    for t, c in zip(truth, e["cond_abs"]):
+        if c is None or not len(got):
+            continue
+        err = float(np.min(np.abs(got - t)))
+        worst = max(worst, err / (32 * U * c + 2 * U * abs(t) + np.finfo(float).tiny))
+    out.append(check("simple roots vs mpmath truth: |Δ| ≤ 32u·q̃(|r|)/|q'(r)| + 2u|r|  [T2]", worst, 1.0))
+    return out
+
+
 RULES = {"signal.spectral.fft": rule_fft, "ode.ivp.solve": rule_ode, "linalg.system.solve": rule_linsolve, "interp.grid.interp1": rule_interp1,
          "fit.poly.polyfit": rule_polyfit, "linalg.decomp.eig": rule_eig, "linalg.decomp.svd": rule_svd,
          "signal.design.butter": rule_butter, "signal.filter.filter": rule_filter,
          "nonlinear.root.fzero": rule_fzero, "nonlinear.system.fsolve": rule_fsolve,
          "optim.linear.linprog": rule_linprog, "optim.local.fmincon": rule_fmincon, "optim.local.fminsearch": rule_fminsearch,
-         "calculus.quadrature.integral": rule_integral, "calculus.quadrature.trapz": rule_trapz}
+         "calculus.quadrature.integral": rule_integral, "calculus.quadrature.trapz": rule_trapz,
+         "fit.poly.polyval": rule_polyval, "fit.poly.roots": rule_roots}

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/fit.poly.polyval/0.4.0/output",
+  "type": "object",
+  "required": [
+    "y",
+    "error_bound",
+    "condition",
+    "degree",
+    "mu"
+  ],
+  "properties": {
+    "y": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "p 在各点的值 [q]"
+    },
+    "error_bound": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "逐点严格误差界 [q]：|y − p(t)| ≤ error_bound"
+    },
+    "condition": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "逐点条件数 p̃(|t|)/|p(t)| [q]：系数相对扰动 ε 把 p(t) 改变至多 ε·condition 倍；p(t) = 0 处为 Inf"
+    },
+    "degree": {
+      "type": "integer"
+    },
+    "mu": {
+      "description": "回显：[mean, std] 或 null"
+    }
+  }
+}

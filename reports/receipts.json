@@ -1,7 +1,7 @@
 {
   "generated_by": "rust/aeoi-control/tests/receipt.rs",
-  "golden_successes": 990,
-  "golden_errors": 196,
+  "golden_successes": 1016,
+  "golden_errors": 210,
   "claims_by_operator": {
     "calculus.quadrature.integral": {
       "verified": 13
@@ -74,6 +74,12 @@
     },
     "fit.poly.polyfit": {
       "verified": 14
+    },
+    "fit.poly.polyval": {
+      "verified": 11
+    },
+    "fit.poly.roots": {
+      "verified": 15
     },
     "interp.grid.interp1": {
       "verified": 44

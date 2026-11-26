@@ -1,0 +1,38 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "fit.poly.polyval",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.VALIDATION.DTYPE",
+    "category": "validation",
+    "retryable": true,
+    "message": "x 是复数（c128）；fit.poly.polyval 0.4.0 只在实数点求值（误差界是对实数补偿 Horner 证明的）。",
+    "agent_hint": "实数点照常调用；要在 jω 上求传递函数的频率响应，用 control.lti.bode。",
+    "details": {
+      "path": "/x/dtype"
+    },
+    "remediation": [
+      {
+        "id": "ask",
+        "kind": "ask_user",
+        "description": "向用户确认输入与建模假设",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.094304
+  }
+}

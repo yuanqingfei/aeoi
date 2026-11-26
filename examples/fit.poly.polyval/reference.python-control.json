@@ -1,0 +1,29 @@
+{
+ "note": "y_true = exact rational value at the stored points; y_numpy = numpy.polyval; NOT MATLAB output",
+ "request.json": {
+  "y_true": [
+   -6.0,
+   -1.875,
+   0.375,
+   6.0
+  ],
+  "y_numpy": [
+   -6.0,
+   -1.875,
+   0.375,
+   6.0
+  ]
+ },
+ "request.ill.json": {
+  "y_true": [
+   1.0000000000000053e-18,
+   9.999999999993393e-19,
+   6.400000000000034e-17
+  ],
+  "y_numpy": [
+   -2.220446049250313e-15,
+   -6.661338147750939e-16,
+   -6.661338147750939e-16
+  ]
+ }
+}

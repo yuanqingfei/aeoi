@@ -2,6 +2,51 @@
 
 > 从规范第 13 章移出（v0.4.18）。每个版本：起因、规范改动、已做的改动、开发中发现的问题、结果。最新的在前。
 
+## v0.4.20-draft（2026-11-26）
+
+起因：按 12.3 的依赖层自底向上加算子，第一批是作者选定的 `polyval` + `roots`。两者都建在已有的 `aeoi-core::poly` 内核上（`roots` 用的求根代码与 `poles_zeros`、`filter` 相同），算子本身很薄；工作量在于把精度如实报告出来。
+
+作者的决定（2026-11-26）：
+
+- `roots` 的根按实部升序、实部相同按虚部降序，与 `poles_zeros` 相同。
+- 根总是以 c128 返回。
+- 每个根带误差半径；有重根或密集根时发簇警告，簇内的根标为不可单独依赖。
+- `polyval` 用补偿 Horner，每个点带严格误差界。
+
+**规范改动**
+
+| # | 位置 | 改动 | 理由 |
+|---|---|---|---|
+| 1 | `profiles/10.33-polyval.md`（新） | PV-1 – PV-8 | 重根附近普通 Horner 一位也不剩（(x − 1)⁶ 在 1.001 处，numpy 给出 −2.2e-15，真值 1e-18） |
+| 2 | `profiles/10.34-roots.md`（新） | RT-1 – RT-8 | MATLAB 的根顺序不可复现；重根精度只有 u^(1/m)，要告诉调用方哪些根不能单独相信 |
+| 3 | 5.1 | 新码 `E.DOMAIN.ZERO_POLYNOMIAL`、`W.ACCURACY.CLUSTERED_ROOTS` | — |
+| 4 | 第 10 章索引 | 加 10.33、10.34 | — |
+
+**已做的改动**
+
+| 位置 | 改动 |
+|---|---|
+| `aeoi-core::poly` | `comp_horner`（补偿 Horner 与严格误差界）、`inclusion_radii`（Braess–Hadeler / Carstensen 包含半径，含重合近似值的处理）、`disc_components`、`gamma`；单元测试 |
+| `aeoi-numeric/src/polynomial.rs`（新） | `fit.poly.polyval`、`fit.poly.roots` |
+| `gen_golden_poly.py`（新） | 各 20 个 golden；polyval 的真值用有理数精确计算，roots 的真值用 mpmath 60 位；生成时独立核对包含定理 |
+| `parity_poly.rs`、`examples_numeric.rs` | parity 与示例测试 |
+| `conformance/rules_numeric.py` | `rule_polyval`（运行器用有理数重算真值，并核查误差界是否属实）、`rule_roots`（顺序、真根是否都在半径内、单根精度）；5 个代理改写 |
+| `roadmap/targets.py` | polyval、roots 标为已完成：102 个里 43 个（42%） |
+
+**开发中发现的问题**
+
+| # | 问题 | 处理 |
+|---|---|---|
+| 1 | Newton 修正把二重根的两个近似值推到同一个 f64（都是 1.0），包含定理不能用，半径成了 ∞ | 先把重合的 k 个值放到半径 max(|c|, 1)·u^(1/k) 的小圆上，再用定理，半径加上放开的距离（RT-4） |
+| 2 | 第一版 polyval 警告规则“误差界 ≥ |y|”在每个精确根上都会触发（y = 0，界 1e-29），没有信息量；第二版加了 u·p̃ 的下限，结果次数 < 4800 时永远不会触发 | 定为 y ≠ 0 且误差界 > 1e-8·|y|；算得恰为 0 的点不警告，界本身就是回答（PV-4）。golden 生成脚本按真值独立预测哪些用例该警告 |
+| 3 | 单元测试在 x = 1 + 2⁻¹⁰ 上比较补偿与普通 Horner：二进位的点上普通 Horner 本身就是精确的 | 改用非二进位的点 |
+
+**结果**
+
+- polyval：177 个求值点都在套件容差内（最坏 2.7e-3），都在报告的误差界内；157 个点比 numpy 准，没有一个点不如 numpy。
+- roots：75 个单根都在容差内（最坏 1.7e-2）；每个真根都在报告的半径内；7 个真重根都在报告的簇里。
+- 一致性：有数值规则的算子 26 / 39；代理改写 50 种，全部被抓住。
+
 ## v0.4.19-draft（2026-11-25）
 
 起因：作者同意用只读规范的第二实现检验规范。一个只能读核心协议、对应 profile、schemas 和 golden 请求的子 agent，用 Python 写了 `fft`、`linalg.system.solve`、`interp1`、`integral`。它不能读 Rust 代码、golden 生成脚本、一致性规则和参考实现说明，manifest 也要自己写。凡是规范没说清楚的地方，它都记成一条发现，而不是去反推参考实现。结果：四个算子都通过了一致性套件，同时找出 32 处规范问题（`conformance/impls/python_scipy/SPEC_FINDINGS.md`）。其中 3 处只读 profile 就会写错。

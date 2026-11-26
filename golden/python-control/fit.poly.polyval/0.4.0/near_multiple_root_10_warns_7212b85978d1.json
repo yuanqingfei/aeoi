@@ -1,0 +1,78 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "fit.poly.polyval",
+ "operator_version": "0.4.0",
+ "case_family": "near_multiple_root_10_warns",
+ "request": {
+  "p": {
+   "dtype": "f64",
+   "shape": [
+    11
+   ],
+   "data": [
+    1.0,
+    -10.0,
+    45.0,
+    -120.0,
+    210.0,
+    -252.0,
+    210.0,
+    -120.0,
+    45.0,
+    -10.0,
+    1.0
+   ]
+  },
+  "x": {
+   "dtype": "f64",
+   "shape": [
+    3
+   ],
+   "data": [
+    1.001,
+    1.002,
+    0.997
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "numpy.polyval / exact rational arithmetic (fractions)",
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261126,
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "t": [
+   1.001,
+   1.002,
+   0.997
+  ],
+  "y_true": [
+   9.999999999988987e-31,
+   1.024000000000009e-27,
+   5.904900000000052e-26
+  ],
+  "y_numpy": [
+   6.439293542825908e-15,
+   -2.4424906541753444e-15,
+   6.439293542825908e-15
+  ],
+  "ptilde": [
+   1029.1315353734476,
+   1034.2862030952983,
+   1008.7432663666829
+  ],
+  "numpy_abs_error": [
+   6.439293542825907e-15,
+   2.4424906541763683e-15,
+   6.4392935427668585e-15
+  ],
+  "warn_points": [
+   0,
+   1,
+   2
+  ]
+ },
+ "expect_warning": "W.NUMERICAL.ILL_CONDITIONED"
+}

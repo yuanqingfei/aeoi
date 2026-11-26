@@ -1,0 +1,195 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok_with_warnings",
+  "dry_run": false,
+  "operator": {
+    "id": "fit.poly.roots",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "roots": {
+      "dtype": "c128",
+      "shape": [
+        3
+      ],
+      "data": [
+        [
+          -2.0,
+          0.0
+        ],
+        [
+          1.0,
+          3.867484073256605e-09
+        ],
+        [
+          1.0,
+          -3.867484073256605e-09
+        ]
+      ]
+    },
+    "error_radius": {
+      "dtype": "f64",
+      "shape": [
+        3
+      ],
+      "data": [
+        9.473903143468045e-15,
+        1.3856515716177317e-06,
+        1.3856515716177317e-06
+      ]
+    },
+    "multiplicity": [
+      1,
+      2,
+      2
+    ],
+    "degree": 3,
+    "real_count": 1,
+    "all_real": false,
+    "zero_roots": 0,
+    "leading_zeros_removed": 0
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "backward_error": 0.0,
+      "threshold": 3.3306690738754696e-15,
+      "definition": "max_i |q(z_i)|/q̃(|z_i|)：每个根是系数相对扰动不超过该值的多项式的精确根（逐根分量后向误差，q 为去掉零根后的多项式，q̃(t) = Σ|a_k|t^k）"
+    },
+    "error_estimate": {
+      "abs_max": 1.3856515716177317e-06,
+      "rel_to_max_root": 6.928257858088659e-07,
+      "basis": "包含定理（Braess–Hadeler 1973，Carstensen 1991）：q 的根全在 ∪ D(z_i, m·|W_i|) 内，W_i = q(z_i)/(q_0·Π_{j≠i}(z_i − z_j))，k 个圆盘连成的分支恰含 k 个根；半径计入 q(z_i) 与乘积的舍入。孤立根的 error_radius 是它的圆盘半径，簇内根是到同簇最远点的距离"
+    },
+    "checks": {
+      "backward_stable": true,
+      "radii_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "algorithm": "eigenvalues of the balanced companion matrix (kernels::schur), ≤ 4 Newton polishing steps",
+      "clusters": 1
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:roots:companion-eig-newton-inclusion",
+      "routine": "poly::roots",
+      "provenance": "aeoi://operators/fit.poly.roots/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "nonzero",
+        "statement": "p 不是零多项式",
+        "enforced_by": "error:E.DOMAIN.ZERO_POLYNOMIAL"
+      },
+      {
+        "id": "coefficients_exact",
+        "statement": "根与半径针对给定的 f64 系数；系数本身的误差另经根的条件数放大",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "clusters",
+        "statement": "簇内各根的位置不能单独确定",
+        "enforced_by": "warning:W.ACCURACY.CLUSTERED_ROOTS"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "rigorous",
+      "bound": {
+        "abs_max": 1.3856515716177317e-06,
+        "rel_to_max_root": 6.928257858088659e-07
+      },
+      "basis": "包含定理（Braess–Hadeler 1973，Carstensen 1991）：q 的根全在 ∪ D(z_i, m·|W_i|) 内，W_i = q(z_i)/(q_0·Π_{j≠i}(z_i − z_j))，k 个圆盘连成的分支恰含 k 个根；半径计入 q(z_i) 与乘积的舍入。孤立根的 error_radius 是它的圆盘半径，簇内根是到同簇最远点的距离"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "backward_stable": true,
+        "radii_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null
+    },
+    "fingerprint": {
+      "request": "sha256:64153abc62b351bf4790ea10a35342017ff688ad421d37e68fe117bbcecb71b4",
+      "result": "sha256:02211a95cb79f89a25d2fbb342863da9819d3584d762be3a2ba6b4b3d2a36b04",
+      "output_hash": "sha256:349f25d47d1852374640266c86e98eb25b7d00f2fb8d1f16afd88240210be1f5",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of fit.poly.roots@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [
+    {
+      "code": "W.ACCURACY.CLUSTERED_ROOTS",
+      "message": "1 个根簇（重根或密集根）：簇内各根的位置不能单独确定（m 重根只有约 u^(1/m) 的精度），簇的中心、半径与根数可以依赖。各根的 error_radius 是到同簇最远点的距离。",
+      "path": "/p",
+      "details": {
+        "clusters": [
+          {
+            "indices": [
+              1,
+              2
+            ],
+            "multiplicity": 2,
+            "center": [
+              1.0,
+              0.0
+            ],
+            "radius": 1.3817840875444751e-06
+          }
+        ],
+        "unreliable_roots": [
+          "/roots/data/1",
+          "/roots/data/2"
+        ]
+      }
+    }
+  ],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:d462006eb7432fd39d5a62e4343ee3a358dca5ddee892975c147bddc966a025c",
+    "output_hash": "sha256:349f25d47d1852374640266c86e98eb25b7d00f2fb8d1f16afd88240210be1f5",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.2029
+  }
+}

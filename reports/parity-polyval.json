@@ -1,0 +1,67 @@
+{
+  "reference": "exact rational value at the stored f64 points (Python fractions); numpy.polyval for comparison. Not MATLAB.",
+  "cases": 20,
+  "error_cases": 9,
+  "points": 177,
+  "worst_error_over_tolerance": 0.0026604549600083324,
+  "more_accurate_than_numpy": 157,
+  "less_accurate_than_numpy": 0,
+  "tolerance": "|y − p(t)| ≤ 2u|p(t)| + 2γ_{2n}²·p̃(|t|) (suite), and |y − p(t)| ≤ reported error_bound (claim)",
+  "cases_detail": [
+    {
+      "family": "chebyshev_T20",
+      "points": 50,
+      "worst_error_over_tolerance": 0.0
+    },
+    {
+      "family": "constant",
+      "points": 3,
+      "worst_error_over_tolerance": 0.0
+    },
+    {
+      "family": "cubic_grid",
+      "points": 9,
+      "worst_error_over_tolerance": 0.0
+    },
+    {
+      "family": "exact_roots_zero",
+      "points": 3,
+      "worst_error_over_tolerance": 0.0
+    },
+    {
+      "family": "large_degree_200",
+      "points": 20,
+      "worst_error_over_tolerance": 0.0
+    },
+    {
+      "family": "leading_zeros_kept",
+      "points": 2,
+      "worst_error_over_tolerance": 0.0
+    },
+    {
+      "family": "near_multiple_root_10_warns",
+      "points": 3,
+      "worst_error_over_tolerance": 0.00004441437056783197
+    },
+    {
+      "family": "near_multiple_root_6",
+      "points": 11,
+      "worst_error_over_tolerance": 0.0026604549600083324
+    },
+    {
+      "family": "random_degree15",
+      "points": 40,
+      "worst_error_over_tolerance": 0.0
+    },
+    {
+      "family": "wide_range",
+      "points": 5,
+      "worst_error_over_tolerance": 0.0
+    },
+    {
+      "family": "with_mu_from_polyfit",
+      "points": 31,
+      "worst_error_over_tolerance": 0.0
+    }
+  ]
+}

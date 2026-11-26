@@ -1,0 +1,60 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "fit.poly.roots",
+ "operator_version": "0.4.0",
+ "case_family": "double_root",
+ "request": {
+  "p": {
+   "dtype": "f64",
+   "shape": [
+    3
+   ],
+   "data": [
+    1.0,
+    -2.0,
+    1.0
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "numpy.roots / mpmath.polyroots (60 digits)",
+  "numpy": "2.5.3",
+  "mpmath": "1.4.1",
+  "python": "3.13.18",
+  "seed": 20261126,
+  "note": "NOT MATLAB output"
+ },
+ "expected": {
+  "roots_true": [
+   [
+    1.0,
+    0.0
+   ],
+   [
+    1.0,
+    0.0
+   ]
+  ],
+  "multiplicity_true": [
+   2,
+   2
+  ],
+  "cond_abs": [
+   null,
+   null
+  ],
+  "roots_numpy": [
+   [
+    1.0,
+    0.0
+   ],
+   [
+    1.0,
+    0.0
+   ]
+  ],
+  "degree": 2,
+  "zero_roots": 0
+ },
+ "expect_warning": "W.ACCURACY.CLUSTERED_ROOTS"
+}

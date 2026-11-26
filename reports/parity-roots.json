@@ -1,0 +1,116 @@
+{
+  "reference": "mpmath.polyroots at 60 digits on the stored f64 coefficients; numpy.roots for comparison. Not MATLAB.",
+  "cases": 20,
+  "error_cases": 5,
+  "simple_roots": 75,
+  "worst_simple_root_error_over_tolerance": 0.01658547992949126,
+  "multiple_roots_in_clusters": 7,
+  "tolerance": "simple roots: |z − r| ≤ 32u·q̃(|r|)/|q'(r)| + 2u|r| (suite); every true root within the reported error_radius of a reported root (claim)",
+  "cases_detail": [
+    {
+      "family": "chebyshev_T12",
+      "degree": 12,
+      "worst_simple_root_error_over_tolerance": 0.01498616983505767,
+      "max_error_radius": 2.2429787006628247e-11,
+      "backward_error": 2.775123854071765e-17
+    },
+    {
+      "family": "close_pair",
+      "degree": 2,
+      "worst_simple_root_error_over_tolerance": 0.0015815291829854412,
+      "max_error_radius": 1.0652948580218154e-8,
+      "backward_error": 0.0
+    },
+    {
+      "family": "complex_pair",
+      "degree": 2,
+      "worst_simple_root_error_over_tolerance": 0.0,
+      "max_error_radius": 9.6403791316477e-15,
+      "backward_error": 0.0
+    },
+    {
+      "family": "constant_no_roots",
+      "degree": 0,
+      "worst_simple_root_error_over_tolerance": 0.0,
+      "max_error_radius": 0.0,
+      "backward_error": 0.0
+    },
+    {
+      "family": "cubic_distinct",
+      "degree": 3,
+      "worst_simple_root_error_over_tolerance": 0.0,
+      "max_error_radius": 3.197442310920465e-13,
+      "backward_error": 0.0
+    },
+    {
+      "family": "double_plus_simple",
+      "degree": 3,
+      "worst_simple_root_error_over_tolerance": 0.0,
+      "max_error_radius": 1.3856515716177317e-6,
+      "backward_error": 0.0
+    },
+    {
+      "family": "double_root",
+      "degree": 2,
+      "worst_simple_root_error_over_tolerance": 0.0,
+      "max_error_radius": 5.268356097128577e-7,
+      "backward_error": 0.0
+    },
+    {
+      "family": "leading_zeros",
+      "degree": 2,
+      "worst_simple_root_error_over_tolerance": 0.0,
+      "max_error_radius": 3.197442310920463e-14,
+      "backward_error": 0.0
+    },
+    {
+      "family": "linear",
+      "degree": 1,
+      "worst_simple_root_error_over_tolerance": 0.0,
+      "max_error_radius": 2.6645352591003828e-15,
+      "backward_error": 0.0
+    },
+    {
+      "family": "random_degree30",
+      "degree": 30,
+      "worst_simple_root_error_over_tolerance": 0.01658547992949126,
+      "max_error_radius": 7.425094264564545e-12,
+      "backward_error": 2.9580967559950444e-16
+    },
+    {
+      "family": "scale_disparity",
+      "degree": 2,
+      "worst_simple_root_error_over_tolerance": 0.0,
+      "max_error_radius": 5.427093742077725e-7,
+      "backward_error": 2.450580596923828e-17
+    },
+    {
+      "family": "trailing_zeros",
+      "degree": 4,
+      "worst_simple_root_error_over_tolerance": 0.0,
+      "max_error_radius": 9.6403791316477e-15,
+      "backward_error": 0.0
+    },
+    {
+      "family": "triple_root",
+      "degree": 3,
+      "worst_simple_root_error_over_tolerance": 0.0,
+      "max_error_radius": 0.0014388633638886426,
+      "backward_error": 1.3877897034018187e-17
+    },
+    {
+      "family": "unit_roots_8",
+      "degree": 8,
+      "worst_simple_root_error_over_tolerance": 0.0,
+      "max_error_radius": 8.215650382226231e-15,
+      "backward_error": 1.1102230246251565e-16
+    },
+    {
+      "family": "wilkinson10",
+      "degree": 10,
+      "worst_simple_root_error_over_tolerance": 0.00465057553502662,
+      "max_error_radius": 7.988626440106149e-7,
+      "backward_error": 1.0953180479213722e-17
+    }
+  ]
+}

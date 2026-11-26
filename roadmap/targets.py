@@ -33,7 +33,7 @@ KERNELS = [
     ("eig",      "done",    ["schur", "cdense"],      "kernels::eig：对称 Jacobi、复 Schur、一般特征向量"),
     ("fft",      "done",    ["libm"],                 "kernels::fft：基 2 / 混合基 / Bluestein"),
     ("expr",     "done",    ["libm"],                 "aeoi-numeric::expr：表达式求值与自动微分"),
-    ("poly",     "done",    ["eig"],                  "aeoi-core::poly：Horner、乘法、求导、友矩阵求根"),
+    ("poly",     "done",    ["eig", "sum"],           "aeoi-core::poly：Horner 与补偿 Horner、乘法、求导、友矩阵求根、包含半径"),
     ("filter",   "done",    [],                       "kernels::filter：直接 II 转置型、SOS 级联"),
     ("lp",       "done",    ["dense"],                "kernels::lp：单纯形"),
     ("qp",       "done",    ["lp", "dense"],          "kernels::qp：有效集 QP"),
@@ -141,8 +141,8 @@ add("信号", [
 ])
 add("多项式、插值、拟合", [
     ("polyfit",   "fit.poly.polyfit",          "done", ["dense", "svd"]),
-    ("polyval",   "fit.poly.polyval",          "todo", ["poly", "sum"]),
-    ("roots",     "fit.poly.roots",            "todo", ["poly"]),
+    ("polyval",   "fit.poly.polyval",          "done", ["poly", "sum"]),
+    ("roots",     "fit.poly.roots",            "done", ["poly"]),
     ("deconv",    "fit.poly.deconv",           "todo", ["poly"]),
     ("interp1",   "interp.grid.interp1",       "done", ["spline"]),
     ("spline/pchip","interp.grid.spline",      "todo", ["spline"]),

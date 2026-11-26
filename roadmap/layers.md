@@ -1,4 +1,4 @@
-目标共 102 个 MATLAB 函数，已覆盖 41 个（40%），由 37 个 AEOI 算子提供。共享内核 33 个：已有 25，待从算子中抽出 0，待新写 8。层号 = 1 + 依赖中最大的层号（无依赖为 0）；由 `roadmap/targets.py` 生成，改清单只改那个文件。
+目标共 102 个 MATLAB 函数，已覆盖 43 个（42%），由 39 个 AEOI 算子提供。共享内核 33 个：已有 25，待从算子中抽出 0，待新写 8。层号 = 1 + 依赖中最大的层号（无依赖为 0）；由 `roadmap/targets.py` 生成，改清单只改那个文件。
 
 **共享内核**
 
@@ -31,7 +31,7 @@
 | 3 | `qp` | 已有 | `lp`, `dense` | kernels::qp：有效集 QP |
 | 3 | `stiff` | 待新写 | `newton`, `dense` | 刚性 ODE：NDF / BDF，带 Jacobian 复用 |
 | 4 | `lyap` | 已有 | `eig`, `cdense`, `sum` | sysalg：Bartels–Stewart Lyapunov / Stein，双倍精度残差精化 |
-| 4 | `poly` | 已有 | `eig` | aeoi-core::poly：Horner、乘法、求导、友矩阵求根 |
+| 4 | `poly` | 已有 | `eig`, `sum` | aeoi-core::poly：Horner 与补偿 Horner、乘法、求导、友矩阵求根、包含半径 |
 | 5 | `iir` | 已有 | `poly` | kernels::iir：Butterworth 原型、频率变换、双线性变换、zpk→tf/sos、设计流程 |
 | 5 | `lti` | 已有 | `poly`, `eig`, `dense` | aeoi-core lti/sysalg：tf/ss/zpk 表示与互转、不变零点 |
 | 5 | `riccati` | 已有 | `schur`, `svd`, `lyap` | kernels::riccati：CARE 符号函数 + Newton–Kleinman，DARE 的 SDA + Newton–Hewer |
@@ -104,10 +104,10 @@
 | 4 | 非线性方程与优化 | quadprog | `optim.quadratic.quadprog` | 待做 | `qp` |
 | 4 | 非线性方程与优化 | lsqnonlin | `optim.lsq.lsqnonlin` | 待做 | `lsq`, `expr` |
 | 4 | 非线性方程与优化 | lsqlin | `optim.lsq.lsqlin` | 待做 | `qp`, `dense` |
+| 5 | 多项式、插值、拟合 | polyval | `fit.poly.polyval` | 已有 | `poly`, `sum` |
+| 5 | 多项式、插值、拟合 | roots | `fit.poly.roots` | 已有 | `poly` |
 | 5 | 控制 | lyap | `control.math.lyap` | 已有 | `lyap` |
 | 5 | 信号 | freqz | `signal.design.freqz` | 待做 | `poly`, `fft` |
-| 5 | 多项式、插值、拟合 | polyval | `fit.poly.polyval` | 待做 | `poly`, `sum` |
-| 5 | 多项式、插值、拟合 | roots | `fit.poly.roots` | 待做 | `poly` |
 | 5 | 多项式、插值、拟合 | deconv | `fit.poly.deconv` | 待做 | `poly` |
 | 5 | 控制 | balreal | `control.lti.balreal` | 待做 | `lyap`, `svd` |
 | 5 | 控制 | dlyap | `control.math.dlyap` | 待做 | `lyap` |
@@ -150,8 +150,8 @@
 | 控制 | 35 | 24 |
 | 线性代数 | 15 | 3 |
 | 信号 | 15 | 3 |
-| 多项式、插值、拟合 | 9 | 2 |
+| 多项式、插值、拟合 | 9 | 4 |
 | 微积分与 ODE | 10 | 4 |
 | 非线性方程与优化 | 10 | 5 |
 | 统计 | 8 | 0 |
-| 合计 | 102 | 41（40%） |
+| 合计 | 102 | 43（42%） |

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/fit.poly.roots/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "p"
+  ],
+  "properties": {
+    "p": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "系数 [n + 1]，最高次在前（x² − 3x + 2 写成 [1, −3, 2]）；末尾的 0 给出零根"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  },
+  "x-aeoi-shape-constraints": [
+    "p: [n + 1]"
+  ]
+}

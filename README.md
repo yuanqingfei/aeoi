@@ -1,6 +1,6 @@
 # AEOI — AI Engineering Operator Interface
 
-面向 AI Agent 的工程计算算子接口规范（v0.4.18-draft）及其 Rust 参考实现，以一个 MCP stdio 服务器提供。每个结果都带容差类、后置条件检查、不可依赖字段的标注、带修复补丁的结构化错误，以及可重放的收据。改动历史见 `CHANGELOG.md`；给 AI agent 的入口见 `AGENTS.md`。
+面向 AI Agent 的工程计算算子接口规范（v0.4.20-draft）及其 Rust 参考实现，以一个 MCP stdio 服务器提供。每个结果都带容差类、后置条件检查、不可依赖字段的标注、带修复补丁的结构化错误，以及可重放的收据。改动历史见 `CHANGELOG.md`；给 AI agent 的入口见 `AGENTS.md`。
 
 ## 目标与进度
 
@@ -11,18 +11,18 @@
 | 控制 | 35 | 24 |
 | 线性代数 | 15 | 3 |
 | 信号 | 15 | 3 |
-| 多项式、插值、拟合 | 9 | 2 |
+| 多项式、插值、拟合 | 9 | 4 |
 | 微积分与 ODE | 10 | 4 |
 | 非线性方程与优化 | 10 | 5 |
 | 统计 | 8 | 0 |
-| 合计 | 102 | 41（40%） |
+| 合计 | 102 | 43（42%） |
 
-这 41 个函数由 37 个 AEOI 算子提供：
+这 43 个函数由 39 个 AEOI 算子提供：
 
 - 控制（21 个）：`control.lti.{convert, step, impulse, lsim, bode, poles_zeros, c2d, pade, series, parallel, feedback, stepinfo}`、`control.analysis.{margin, ctrb_obsv, loopsens}`、`control.design.{lqr, dlqr, place, pid, pidtune}`、`control.math.lyap`
 - 信号：`signal.spectral.fft`、`signal.design.butter`、`signal.filter.filter`
 - 线性代数：`linalg.system.solve`、`linalg.decomp.eig`、`linalg.decomp.svd`
-- 插值与拟合：`interp.grid.interp1`、`fit.poly.polyfit`
+- 插值、拟合与多项式：`interp.grid.interp1`、`fit.poly.polyfit`、`fit.poly.polyval`、`fit.poly.roots`
 - 微积分与 ODE：`ode.ivp.solve`、`calculus.quadrature.integral`、`calculus.quadrature.trapz`
 - 非线性方程与优化：`nonlinear.root.fzero`、`nonlinear.system.fsolve`、`optim.linear.linprog`、`optim.local.fmincon`、`optim.local.fminsearch`
 
@@ -83,7 +83,7 @@ cargo test --workspace --release                                  # 含全部 pa
 
 ## LLM 端到端测试台（`aeoi-web`）
 
-一个本地网页：云端 LLM（默认 Gemini）通过函数调用使用全部 37 个 AEOI 算子。左侧是中文对话，右侧是调用轨迹：模型选了哪个工具、请求 JSON、AEOI 响应（result / trust / warnings / error + remediation）、耗时与 token 用量；bode、step、impulse 的结果会自动画图（Plotly basic，已内置在仓库里，不走 CDN；加载失败时退回内置的简易 SVG 图）。没有 key 时可以选 `mock:demo` 模型，看一段脚本化的演示（含一次报错 → 按 remediation 自我纠错）。
+一个本地网页：云端 LLM（默认 Gemini）通过函数调用使用全部 39 个 AEOI 算子。左侧是中文对话，右侧是调用轨迹：模型选了哪个工具、请求 JSON、AEOI 响应（result / trust / warnings / error + remediation）、耗时与 token 用量；bode、step、impulse 的结果会自动画图（Plotly basic，已内置在仓库里，不走 CDN；加载失败时退回内置的简易 SVG 图）。没有 key 时可以选 `mock:demo` 模型，看一段脚本化的演示（含一次报错 → 按 remediation 自我纠错）。
 
 纯 Rust（axum + tokio + reqwest/rustls-ring），静态页面编译进二进制，不需要 npm，也不依赖 Linux 专有库，Windows 应可直接构建：已在 Linux 上交叉编译 `x86_64-pc-windows-gnu` 通过（得到 `aeoi-web.exe`），但还没在真 Windows 机器上运行过，MSVC 工具链未验证。
 
@@ -160,7 +160,7 @@ cargo run --release -p aeoi-web -- design --model openrouter:nvidia/nemotron-3-u
 
 ### 浏览器版（GitHub Pages）
 
-不想装 Rust 时可以直接打开 **https://yuanqingfei.github.io/aeoi/** （会跳转到账号的自定义域名 https://yuanqingfei.me/aeoi/ ）：全部 37 个算子与工具桥编译成 WebAssembly 在浏览器里运行，Agent 循环也在页面里，没有任何服务器。
+不想装 Rust 时可以直接打开 **https://yuanqingfei.github.io/aeoi/** （会跳转到账号的自定义域名 https://yuanqingfei.me/aeoi/ ）：全部 39 个算子与工具桥编译成 WebAssembly 在浏览器里运行，Agent 循环也在页面里，没有任何服务器。
 
 - 不填 key：选 `mock:demo`，离线演示（4 次工具调用，含一次自我纠错，带 Plotly 图）。
 - 用真实模型：点右上角"API key"填自己的 Gemini 或 OpenRouter key。key **只保存在这个浏览器的 localStorage**，由页面直接发给 Google / OpenRouter（两家都允许跨域调用），不经过 AEOI 的任何服务器，也不在仓库里；"忘记 key"按钮会清除它。公用电脑上请不要保存。
