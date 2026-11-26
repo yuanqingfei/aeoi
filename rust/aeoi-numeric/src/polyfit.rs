@@ -12,7 +12,7 @@
 use crate::interp1::vec1;
 use aeoi_core::kernels::dense::{at_r_dd, inv_norm1_estimate, norm2, qr_factor, residual_dd};
 use aeoi_core::error::{ask_user, modify_input, OpError, Warning};
-use aeoi_core::sysalg::Dot2;
+use aeoi_core::kernels::sum::Dot2;
 use aeoi_core::{num, ExecCtx, HostCtx, Operator, Output};
 use serde_json::{json, Value};
 

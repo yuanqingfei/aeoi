@@ -11,7 +11,7 @@
 use crate::expr::{check_name, eval, expr_err, parse, parse_params, Node};
 use crate::interp1::vec1;
 use aeoi_core::error::{ask_user, modify_input, OpError, Warning};
-use aeoi_core::sysalg::Dot2;
+use aeoi_core::kernels::sum::Dot2;
 use aeoi_core::{num, ExecCtx, HostCtx, Operator, Output};
 use serde_json::{json, Value};
 

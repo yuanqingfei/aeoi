@@ -1,6 +1,6 @@
 //! Dense LU / Householder QR / 1-norm condition estimate / compensated residuals. Shared by every operator
 //! that needs them (spec 11, RI-1): linalg.system.solve is the operator built directly on these kernels.
-use crate::sysalg::Dot2;
+use crate::kernels::sum::Dot2;
 
 
 // ------------------------------------------------------------------ LU with partial pivoting

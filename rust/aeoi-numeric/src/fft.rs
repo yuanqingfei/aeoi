@@ -4,6 +4,7 @@
 //! backward (s = 1, s' = 1/n; MATLAB and numpy), ortho (1/√n both) or forward (s = 1/n, s' = 1).
 //! The transform itself is aeoi-core kernels::fft (own radix-2 / mixed-radix / Bluestein; v0.4.16, was rustfft).
 //! Post-conditions: Parseval (all outputs) and a direct O(n) compensated DFT at 8 fixed bins (sampled).
+use aeoi_core::kernels::sum::{neumaier, Neumaier};
 use aeoi_core::error::{modify_input, OpError, Warning};
 use aeoi_core::matrix::{parse_array, to_real_matrix, Array, Elems};
 use aeoi_core::{num, ExecCtx, HostCtx, Operator, Output};
@@ -66,31 +67,16 @@ pub fn spot_bins(n: usize, n_out: usize) -> Vec<usize> {
 fn direct_bin(x: &[C], k: usize, inverse: bool) -> C {
     let n = x.len();
     let sign = if inverse { 1.0 } else { -1.0 };
-    let (mut sr, mut cr, mut si, mut ci) = (0.0f64, 0.0f64, 0.0f64, 0.0f64);
-    let add = |s: &mut f64, c: &mut f64, v: f64| {
-        let t = *s + v;
-        *c += if s.abs() >= v.abs() { (*s - t) + v } else { (v - t) + *s };
-        *s = t;
-    };
+    let (mut re, mut im) = (Neumaier::default(), Neumaier::default());
     for (j, xj) in x.iter().enumerate() {
         let r = ((j as u128 * k as u128) % n as u128) as f64;
         let ang = sign * 2.0 * std::f64::consts::PI * r / n as f64;
         let w = C::new(ang.cos(), ang.sin());
         let p = xj * w;
-        add(&mut sr, &mut cr, p.re);
-        add(&mut si, &mut ci, p.im);
+        re.add(p.re);
+        im.add(p.im);
     }
-    C::new(sr + cr, si + ci)
-}
-
-fn neumaier(v: impl Iterator<Item = f64>) -> f64 {
-    let (mut s, mut c) = (0.0f64, 0.0f64);
-    for x in v {
-        let t = s + x;
-        c += if s.abs() >= x.abs() { (s - t) + x } else { (x - t) + s };
-        s = t;
-    }
-    s + c
+    C::new(re.value(), im.value())
 }
 
 fn complex_dense(shape: &[usize], v: &[C]) -> Value {

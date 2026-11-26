@@ -10,3 +10,4 @@ pub mod qp;
 pub mod schur;
 pub mod nalg;
 pub mod svd;
+pub mod sum;

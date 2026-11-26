@@ -2,7 +2,8 @@
 //! correction with compensated residuals; scale-independent (balanced) imaginary-axis test (spec 10.3).
 use aeoi_core::error::{ask_user, modify_input, OpError, Warning};
 use aeoi_core::linalg::{cond2, lyap_operator, norm1, rel_asym, sort_poles, symmetrize};
-use aeoi_core::sysalg::{lyap_bs, pbh, Dot2, LyapKind};
+use aeoi_core::kernels::sum::Dot2;
+use aeoi_core::sysalg::{lyap_bs, pbh, LyapKind};
 use aeoi_core::lti::{eigenvalues, C64};
 use aeoi_core::matrix::{complex_vector, dense_real, parse_array, to_real_matrix};
 use aeoi_core::{num, opt_num, ExecCtx, HostCtx, Operator, OperatorMeta, Output};

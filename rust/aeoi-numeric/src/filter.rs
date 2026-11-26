@@ -4,7 +4,7 @@
 //! designs with); stability via crate::poly::roots (the same root finder as control.lti.poles_zeros).
 use crate::interp1::vec1;
 use aeoi_core::error::{modify_input, OpError, Warning};
-use aeoi_core::sysalg::Dot2;
+use aeoi_core::kernels::sum::Dot2;
 use aeoi_core::kernels::filter::{lfilter, sosfilt};
 use aeoi_core::{num, ExecCtx, HostCtx, Operator, Output};
 use serde_json::{json, Value};
