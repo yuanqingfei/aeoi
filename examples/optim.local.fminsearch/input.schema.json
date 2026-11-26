@@ -34,7 +34,7 @@
       "additionalProperties": {
         "type": "number"
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "参数名 → 数值"
     },
     "x0": {
@@ -42,7 +42,7 @@
       "items": {
         "type": "number"
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "初值"
     },
     "tol_x": {

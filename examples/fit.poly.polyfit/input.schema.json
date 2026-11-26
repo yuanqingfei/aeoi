@@ -21,7 +21,7 @@
       "type": "integer",
       "minimum": 0,
       "description": "多项式次数 d（模型选择，由用户决定；不要代填）",
-      "x-aeoi-provenance": "user"
+      "x-aeoi-provenance": "supplied"
     },
     "scaling": {
       "enum": [

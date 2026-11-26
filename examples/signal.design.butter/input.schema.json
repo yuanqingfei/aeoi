@@ -10,7 +10,7 @@
     "order": {
       "type": "integer",
       "minimum": 1,
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "阶数 n（由用户决定，不要代填）"
     },
     "type": {
@@ -20,7 +20,7 @@
         "bandpass",
         "bandstop"
       ],
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "low、high、bandpass、bandstop；省略时一个截止频率为 low、两个为 bandpass"
     },
     "domain": {

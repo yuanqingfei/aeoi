@@ -18,7 +18,7 @@
       "type": "string",
       "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
       "default": "x",
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "convention",
       "description": "积分变量名（缺省 x）"
     },
     "params": {
@@ -29,7 +29,7 @@
       "additionalProperties": {
         "type": "number"
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "参数名 → 数值"
     },
     "limits": {
@@ -49,7 +49,7 @@
       },
       "minItems": 2,
       "maxItems": 2,
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "[a, b]，可以是 \"Inf\" / \"-Inf\"；a > b 时结果取负"
     },
     "rel_tol": {

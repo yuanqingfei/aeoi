@@ -12,7 +12,7 @@
       "items": {
         "type": "number"
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "目标系数 [n]（求最小；求最大时取负）"
     },
     "A": {
@@ -23,7 +23,7 @@
           "type": "number"
         }
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "不等式约束矩阵，每行一个约束 A·x ≤ b"
     },
     "b": {
@@ -31,7 +31,7 @@
       "items": {
         "type": "number"
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "不等式右端"
     },
     "Aeq": {
@@ -42,7 +42,7 @@
           "type": "number"
         }
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "等式约束矩阵"
     },
     "beq": {
@@ -50,7 +50,7 @@
       "items": {
         "type": "number"
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "等式右端"
     },
     "lb": {
@@ -68,7 +68,7 @@
           }
         ]
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "下界 [n]，无界写 \"-Inf\"；缺省全部无下界（同 MATLAB，scipy 缺省是 0）"
     },
     "ub": {
@@ -86,7 +86,7 @@
           }
         ]
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "上界 [n]，无界写 \"Inf\""
     },
     "exec": {

@@ -34,7 +34,19 @@ import rules_numeric as RN  # noqa: E402
 
 RUNNER_VERSION = "0.3.0"
 CLASS_RTOL = {"T0": 0.0, "T1": 1e-12, "T2": 1e-10, "T3": 1e-9, "T4": 1e-6, "T5": 1e-6}   # spec 7.2
-ENGINE_LIBS = {"python-control": ("python-control", "scipy", "slycot"), "mpmath": ("mpmath",), "MATLAB": ("matlab",)}
+# CF-11: a golden case is "same backend" when a library routine named in its reference_env.engine also appears
+# in the implementation's backend (library or routine) as a whole token. Engine names that stand for a family
+# expand to the routines they are built on.
+ENGINE_FAMILY = {"python-control": ("python-control", "scipy.linalg", "slycot"), "matlab": ("matlab",)}
+
+
+def same_backend(engine, backend):
+    text = " ".join(str(backend.get(k, "")) for k in ("library", "routine")).lower()
+    tokens = set()
+    for t in re.findall(r"[a-z][a-z0-9_-]*(?:\.[a-z][a-z0-9_]*)*", str(engine).lower()):
+        tokens.update(ENGINE_FAMILY.get(t, (t,)))
+    tokens = {t for t in tokens if "." in t or t in ("python-control", "slycot", "mpmath", "matlab", "octave")}
+    return any(re.search(r"(?<![a-z0-9_.-])" + re.escape(t) + r"(?![a-z0-9_])", text) for t in tokens)
 BITWISE = ("bitwise", "platform_bitwise", "seeded")                                      # M-7
 TIMEOUT_S = 60
 DEFAULT_VARIANTS = 3                                                                     # per (operator, field, direction)
@@ -263,6 +275,7 @@ def main():
 
     reg, docs = load_registry(a.schemas)
     env_validator = Draft202012Validator(docs["aeoi://schemas/envelope/0.4"], registry=reg)
+    man_validator = Draft202012Validator(docs["aeoi://schemas/manifest/0.4"], registry=reg)
     deviations = {d["case_id"]: d for d in json.load(open(a.known_deviations, encoding="utf-8"))} if a.known_deviations else {}
 
     files = sorted(f for f in glob.glob(os.path.join(a.golden, "*", "*", "*", "*.json")) if not f.endswith("INDEX.json"))
@@ -299,7 +312,11 @@ def main():
         m = json.loads(resp["result"]["contents"][0]["text"]); manifests[op] = m
         validators[op] = {"envelope": env_validator}
         bad = bad_refs([m.get("input_schema"), m.get("output_schema")], reg)
-        if bad:
+        man_errs = sorted(man_validator.iter_errors(m), key=lambda e: list(e.absolute_path))
+        if man_errs:                                                           # CF-8: the manifest itself must validate
+            e0 = man_errs[0]
+            ref_problems[op] = f"manifest does not validate against manifest.schema.json ({len(man_errs)} error(s)); first at /{'/'.join(map(str, e0.absolute_path))}: {e0.message[:160]}"
+        elif bad:
             ref_problems[op] = "3.9 J-1: $ref not resolvable by standard JSON Schema 2020-12: " + ", ".join(bad[:5])
         if m.get("output_schema") and "$ref" not in m["output_schema"] and not bad:
             validators[op]["output"] = Draft202012Validator(m["output_schema"], registry=reg)
@@ -340,6 +357,7 @@ def main():
             res = "pass_with_deviation"
         errs = [x[2] for x in checks if x[2] is not None and x[0] in ("X",)]
         results.append({"case_id": c["_id"], "operator": op, "engine": c["_engine"], "result": res,
+                        "engine_detail": (c.get("reference_env") or {}).get("engine"),
                         "method": (env.get("receipt") or {}).get("method", {}).get("id"),
                         "max_error": max(errs) if errs else None, "tolerance": next((x[3] for x in checks if x[3]), None),
                         "failed_checks": [{"check": x[0], "detail": x[4]} for x in failed],
@@ -409,9 +427,10 @@ def main():
         g = groups.setdefault(key, {"pass": 0, "pass_with_deviation": 0, "fail": 0, "skip": 0, "by_engine": {}})
         g[x["result"]] += 1
         if x["engine"] != "conformance" and x["result"] in ("pass", "pass_with_deviation"):
-            lib = manifests.get(x["operator"], {}).get("backend", {}).get("library", "").lower()
-            e = g["by_engine"].setdefault(x["engine"], {"n": 0, "same_backend": any(k in lib for k in ENGINE_LIBS.get(x["engine"], (x["engine"].lower(),)))})
+            be = manifests.get(x["operator"], {}).get("backend", {})
+            e = g["by_engine"].setdefault(x["engine"], {"n": 0, "same_backend": False})
             e["n"] += 1
+            e["same_backend"] = e["same_backend"] or same_backend(x.get("engine_detail") or x["engine"], be)
     report = {"runner_version": RUNNER_VERSION, "suite": "golden", "suite_hash": suite_hash,
               "impl": {"command": a.impl, "serverInfo": info, "form": "wire"},
               "results": [{"operator": k[0], "version": k[1], "method": k[2], **v} for k, v in groups.items()],

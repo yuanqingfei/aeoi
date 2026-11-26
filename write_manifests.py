@@ -482,7 +482,7 @@ fft=man("signal.spectral.fft","Discrete Fourier transform","计算离散傅里�
   {"type":"paper","cite":"L. Bluestein, A linear filtering approach to the computation of discrete Fourier transform, IEEE Trans. Audio Electroacoust. 18(4), 1970","doi":"10.1109/TAU.1970.1162132"},
   {"type":"textbook","cite":"N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §24（FFT 的舍入误差界）"}],
  "fft::transform (aeoi-core kernels::fft)","T1",{"max_input_elements":10000000,"max_output_values":10000000,"dft_spot_check_bins":8},
- ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.OPTION_CONFLICT","E.VALIDATION.ENCODING","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.OUTPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.OPTION_CONFLICT","E.VALIDATION.DIGEST_MISMATCH","E.VALIDATION.REF_UNSUPPORTED","E.VALIDATION.REF_FORBIDDEN","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.OUTPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
  ["W.PERFORMANCE.SPARSE_DENSIFIED"],
  sparse={"/x":{"policy":"densify","max_dense_elements":10000000}},ver=V47,backend=BACK_NUM("fft::transform"," + aeoi-core kernels::fft"))
 fft_in=ins("signal.spectral.fft",{"x":M,"n":{"type":"integer","minimum":1},
@@ -508,7 +508,7 @@ ode=man("ode.ivp.solve","Initial value problem for ODEs","求解常微分方程�
   {"type":"paper","cite":"L. F. Shampine, Some practical Runge-Kutta formulas, Math. Comp. 46(173), 1986","doi":"10.1090/S0025-5718-1986-0815836-3"},
   {"type":"textbook","cite":"E. Hairer, S. P. Nørsett, G. Wanner, Solving Ordinary Differential Equations I: Nonstiff Problems, 2nd ed., Springer 1993, §II.4（步长控制、初始步长）与 §IV.2（DOPRI5 刚性检测）"}],
  "ode::dopri54 (explicit Runge-Kutta, adaptive)","T4",{"max_states":1000,"max_steps":1000000,"max_output_points":100000,"max_output_values":1000000,"global_error_refinement":10,"tolerance_consistency_factor":100},
- ["E.VALIDATION.SCHEMA","E.VALIDATION.EXPRESSION","E.VALIDATION.SHAPE","E.VALIDATION.RANGE","E.VALIDATION.GRID","E.VALIDATION.OPTION_CONFLICT","E.VALIDATION.NON_FINITE","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.STEP_SIZE_TOO_SMALL","E.RESOURCE.COMPUTE_LIMIT","E.RESOURCE.OUTPUT_TOO_LARGE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.EXPRESSION","E.VALIDATION.SHAPE","E.VALIDATION.RANGE","E.VALIDATION.GRID","E.VALIDATION.OPTION_CONFLICT","E.VALIDATION.NON_FINITE","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.STEP_SIZE_TOO_SMALL","E.RESOURCE.COMPUTE_LIMIT","E.RESOURCE.OUTPUT_TOO_LARGE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
  ["W.NUMERICAL.STIFF_PROBLEM"],sparse={},ver=V48,backend=BACK_NUM("ode::dopri54"))
 ode_in=ins("ode.ivp.solve",{"states":{"type":"array","items":NAME,"minItems":1,"maxItems":1000,"uniqueItems":True},
  "rhs":{"type":"array","items":EXPR,"minItems":1,"maxItems":1000},
@@ -537,7 +537,7 @@ lsol=man("linalg.system.solve","Solve a linear system","解线性方程组 A·X 
   {"type":"paper","cite":"N. J. Higham, FORTRAN codes for estimating the one-norm of a real or complex matrix, ACM TOMS 14(4), 1988","doi":"10.1145/50063.214386"},
   {"type":"paper","cite":"T. Ogita, S. M. Rump, S. Oishi, Accurate sum and dot product, SIAM J. Sci. Comput. 26(6), 2005","doi":"10.1137/030601818"}],
  "linsolve::solve (LU partial pivoting + refinement / Householder QR)","T1",{"max_dimension":2000,"max_rhs":1000,"max_refinement_steps":3},
- ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.ENCODING","E.DOMAIN.UNDERDETERMINED","E.NUMERICAL.SINGULAR","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.DIGEST_MISMATCH","E.VALIDATION.REF_UNSUPPORTED","E.VALIDATION.REF_FORBIDDEN","E.DOMAIN.UNDERDETERMINED","E.NUMERICAL.SINGULAR","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
  ["W.NUMERICAL.ILL_CONDITIONED","W.PERFORMANCE.SPARSE_DENSIFIED"],
  sparse={"/A":{"policy":"densify","max_dense_elements":4000000}},ver=V410,backend=BACK_NUM("linsolve::solve"))
 lsol_in=ins("linalg.system.solve",{"A":M,"b":M,"refinement":{"enum":["auto","none"],"default":"auto","x-aeoi-provenance":"convention"}},["A","b"],
@@ -556,7 +556,7 @@ itp=man("interp.grid.interp1","1-D interpolation","一维插值：给定严格�
   {"type":"textbook","cite":"C. de Boor, A Practical Guide to Splines, rev. ed., Springer 2001, Ch. IV（not-a-knot 端点条件）"},
   {"type":"textbook","cite":"C. Moler, Numerical Computing with MATLAB, SIAM 2004, §3（pchip、spline）"}],
  "interp1::eval (piecewise linear / cubic Hermite / not-a-knot spline)","T1",{"max_points":10000000,"max_output_values":10000000},
- ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.GRID","E.VALIDATION.ENCODING","E.DOMAIN.EXTRAPOLATION_REQUIRED","E.NUMERICAL.SINGULAR","E.RESOURCE.OUTPUT_TOO_LARGE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.GRID","E.VALIDATION.DIGEST_MISMATCH","E.VALIDATION.REF_UNSUPPORTED","E.VALIDATION.REF_FORBIDDEN","E.DOMAIN.EXTRAPOLATION_REQUIRED","E.NUMERICAL.SINGULAR","E.RESOURCE.OUTPUT_TOO_LARGE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
  ["W.ACCURACY.EXTRAPOLATED"],sparse={},ver=V410,backend=BACK_NUM("interp1::eval"))
 itp_in=ins("interp.grid.interp1",{"x":M,"y":M,"xq":M,
  "method":{"enum":["linear","nearest","previous","next","pchip","spline"],"default":"linear","x-aeoi-provenance":"convention"},
@@ -637,9 +637,9 @@ pfit=man("fit.poly.polyfit","Polynomial least-squares fit","最小二乘多项�
  [{"type":"textbook","cite":"N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §19–20（QR 与最小二乘）、§22（Vandermonde 系统）"},
   {"type":"textbook","cite":"G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., JHU Press 2013, §5.3（最小二乘的敏感性）"}],
  "polyfit::fit (Vandermonde + Householder QR)","T1",{"max_degree":30,"max_points":1000000},
- ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.RANGE","E.VALIDATION.OPTION_CONFLICT","E.VALIDATION.ENCODING","E.DOMAIN.UNDERDETERMINED","E.NUMERICAL.SINGULAR","E.NUMERICAL.NON_FINITE_EVALUATION","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.RANGE","E.VALIDATION.OPTION_CONFLICT","E.VALIDATION.DIGEST_MISMATCH","E.VALIDATION.REF_UNSUPPORTED","E.VALIDATION.REF_FORBIDDEN","E.DOMAIN.UNDERDETERMINED","E.NUMERICAL.SINGULAR","E.NUMERICAL.NON_FINITE_EVALUATION","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
  ["W.NUMERICAL.ILL_CONDITIONED"],sparse={},ver=V411,backend=BACK_NUM("polyfit::fit"))
-pfit_in=ins("fit.poly.polyfit",{"x":M,"y":M,"degree":{"type":"integer","minimum":0,"description":"多项式次数 d","x-aeoi-provenance":"user"},
+pfit_in=ins("fit.poly.polyfit",{"x":M,"y":M,"degree":{"type":"integer","minimum":0,"description":"多项式次数 d","x-aeoi-provenance":"supplied"},
  "scaling":{"enum":["none","center_scale"],"default":"none","x-aeoi-provenance":"convention"}},["x","y","degree"],
  {"x-aeoi-shape-constraints":["x: [n]","y: [n]"]},ver=V411)
 pfit_out=outs("fit.poly.polyfit",{"p":dict(M,description="系数 [d + 1]，最高次在前；scaling = center_scale 时是对 t = (x − mu[0])/mu[1] 的多项式"),
@@ -655,7 +655,7 @@ eigm=man("linalg.decomp.eig","Eigenvalues and eigenvectors","实方阵的特征�
   {"type":"textbook","cite":"J. W. Demmel, Applied Numerical Linear Algebra, SIAM 1997, §4.3、§5.2（扰动理论）"},
   {"type":"textbook","cite":"E. Anderson et al., LAPACK Users' Guide, 3rd ed., SIAM 1999, §4.8（特征问题的误差界）"}],
  "eig::eig (symmetric Jacobi / real Schur + complex triangular back-substitution)","T2",{"max_dimension":500},
- ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.ENCODING","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.DIGEST_MISMATCH","E.VALIDATION.REF_UNSUPPORTED","E.VALIDATION.REF_FORBIDDEN","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
  ["W.NUMERICAL.ILL_CONDITIONED","W.PERFORMANCE.SPARSE_DENSIFIED"],sparse={"/A":{"policy":"densify","max_dense_elements":250000}},ver=V411,backend=BACK_NUM("eig::eig"))
 eig_in=ins("linalg.decomp.eig",{"A":M,"structure":{"enum":["auto","general"],"default":"auto","x-aeoi-provenance":"convention"},
  "vectors":{"type":"boolean","default":True,"x-aeoi-provenance":"convention"}},["A"],{"x-aeoi-shape-constraints":["A: [n, n]"]},ver=V411)
@@ -670,7 +670,7 @@ svdm=man("linalg.decomp.svd","Singular value decomposition","实矩阵的奇异�
   {"type":"paper","cite":"J. Demmel, K. Veselić, Jacobi's method is more accurate than QR, SIAM J. Matrix Anal. Appl. 13(4), 1992","doi":"10.1137/0613074"},
   {"type":"textbook","cite":"J. W. Demmel, Applied Numerical Linear Algebra, SIAM 1997, §5.2（奇异值的扰动）"}],
  "svd::svd (one-sided Jacobi)","T1",{"max_dimension":500},
- ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.ENCODING","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.DIGEST_MISMATCH","E.VALIDATION.REF_UNSUPPORTED","E.VALIDATION.REF_FORBIDDEN","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
  ["W.PERFORMANCE.SPARSE_DENSIFIED"],sparse={"/A":{"policy":"densify","max_dense_elements":250000}},ver=V411,backend=BACK_NUM("svd::svd"))
 svd_in=ins("linalg.decomp.svd",{"A":M,"mode":{"enum":["values","thin","full"],"default":"thin","x-aeoi-provenance":"convention"}},["A"],{"x-aeoi-shape-constraints":["A: [m, n]"]},ver=V411)
 svd_out=outs("linalg.decomp.svd",{"s":dict(M,description="奇异值 [p]，降序，p = min(m, n)"),
@@ -690,10 +690,10 @@ bw_=man("signal.design.butter","Butterworth filter design","设计巴特沃斯�
  [{"type":"textbook","cite":"A. V. Oppenheim, R. W. Schafer, Discrete-Time Signal Processing, 3rd ed., Pearson 2010, §7.2（双线性变换与巴特沃斯设计）"},
   {"type":"textbook","cite":"T. W. Parks, C. S. Burrus, Digital Filter Design, Wiley 1987, Ch. 7"}],
  "filter::butter (prototype + zpk transforms + bilinear)","T1",{"max_order":30},
- ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.RANGE","E.VALIDATION.OPTION_CONFLICT","E.DOMAIN.ABOVE_NYQUIST","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.RANGE","E.VALIDATION.OPTION_CONFLICT","E.DOMAIN.ABOVE_NYQUIST","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
  ["W.NUMERICAL.ILL_CONDITIONED"],sparse={},ver=V412,backend=BACK_NUM("filter::butter"))
-bw_in=ins("signal.design.butter",{"order":{"type":"integer","minimum":1,"x-aeoi-provenance":"user"},
- "type":{"enum":["low","high","bandpass","bandstop"],"x-aeoi-provenance":"user"},
+bw_in=ins("signal.design.butter",{"order":{"type":"integer","minimum":1,"x-aeoi-provenance":"supplied"},
+ "type":{"enum":["low","high","bandpass","bandstop"],"x-aeoi-provenance":"supplied"},
  "domain":{"enum":["digital","analog"],"default":"digital","x-aeoi-provenance":"convention"},
  "cutoff_hz":CUT,"cutoff_normalized":CUT,"cutoff_rad_s":CUT,
  "sample_rate_hz":{"type":"number","exclusiveMinimum":0,"x-aeoi-provenance":"user"}},["order"],ver=V412)
@@ -710,7 +710,7 @@ flt=man("signal.filter.filter","Apply a digital filter","用 IIR/FIR 数字滤�
  "转置直接 II 型递推（同 MATLAB filter、scipy lfilter）：b、a 补齐到同长并除以 a0；sos 为各节依次的转置直接 II 型。后置条件：每个样本的差分方程残差 |Σa_i·y[n−i] − Σb_i·x[n−i]| ≤ 10·m·u·(Σ|a_i·y| + Σ|b_i·x|)，补偿算术，sos 逐节。稳定性：分母多项式的根（与 control.lti.poles_zeros 同一求根代码）",
  [{"type":"textbook","cite":"A. V. Oppenheim, R. W. Schafer, Discrete-Time Signal Processing, 3rd ed., Pearson 2010, §6.3–6.5（直接 II 型与转置结构）"}],
  "filter::lfilter / sosfilt (transposed direct form II)","T1",{"max_samples":10000000},
- ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.ENCODING","E.VALIDATION.OPTION_CONFLICT","E.VALIDATION.ZERO_DENOMINATOR","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.DIGEST_MISMATCH","E.VALIDATION.REF_UNSUPPORTED","E.VALIDATION.REF_FORBIDDEN","E.VALIDATION.OPTION_CONFLICT","E.VALIDATION.ZERO_DENOMINATOR","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
  ["W.DOMAIN.UNSTABLE_SYSTEM"],sparse={},ver=V412,backend=BACK_NUM("filter::lfilter"))
 flt_in=ins("signal.filter.filter",{"x":M,"b":{"type":"array","items":{"type":"number"},"minItems":1},"a":{"type":"array","items":{"type":"number"},"minItems":1},"sos":M,"zi":M},["x"],
  {"x-aeoi-shape-constraints":["x: [n] 或 [k, n]","sos: [L, 6]","zi: b/a 为 [max(len) − 1]（或每通道 [k, …]）；sos 为 [L, 2]（或 [k, L, 2]）"]},ver=V412)
@@ -718,18 +718,18 @@ flt_out=outs("signal.filter.filter",{"y":dict(M,description="输出，形状同 
 B3.update({"signal.design.butter":(bw_,bw_in,bw_out),"signal.filter.filter":(flt,flt_in,flt_out)})
 # ---- v0.4.13: nonlinear.root.fzero, nonlinear.system.fsolve
 V413="0.4.0"
-PARAMS={"type":"object","propertyNames":{"pattern":"^[A-Za-z_][A-Za-z0-9_]*$"},"additionalProperties":{"type":"number"},"x-aeoi-provenance":"user"}
+PARAMS={"type":"object","propertyNames":{"pattern":"^[A-Za-z_][A-Za-z0-9_]*$"},"additionalProperties":{"type":"number"},"x-aeoi-provenance":"supplied"}
 fz=man("nonlinear.root.fzero","Scalar root finding","求单变量方程 f(x) = 0 的根（= MATLAB fzero）：f 用 3.15 的表达式语言写。优先给变号区间 bracket = [a, b]（根被夹在区间内）；只给初值 x0 时按 MATLAB 的方式向外搜索变号区间，结果回显搜到的区间并警告它不一定是想要的根。Brent 方法（zeroin），结果带最终区间作为误差界，并检查变号点不是极点。","analysis",["root","fzero","nonlinear","equation","brent"],
  ["f 在区间上连续","bracket 两端 f 异号，或给出 x0"],["多项式全部根（roots）","方程组（nonlinear.system.fsolve）","不变号的偶重根"],
  "Brent 方法（Brent 1973 zeroin，MATLAB fzero 的算法）：逆二次插值 / 割线 / 二分，区间半宽 ≤ 2ε|x| + xtol/2 停止。只给 x0 时：dx = |x0|/50（x0 = 0 时 1/50），交替试 x0 − dx、x0 + dx，dx ×√2，直到变号（同 MATLAB）。后置条件：最终区间两端变号；|f(x)| ≤ max(|f(a₀)|, |f(b₀)|)（变号点不是极点）",
  [{"type":"textbook","cite":"R. P. Brent, Algorithms for Minimization without Derivatives, Prentice-Hall 1973, Ch. 4"},
   {"type":"textbook","cite":"G. E. Forsythe, M. A. Malcolm, C. B. Moler, Computer Methods for Mathematical Computations, Prentice-Hall 1977, §7.2（zeroin）"}],
  "roots::fzero (Brent zeroin)","T1",{"max_evaluations":5000,"max_expression_length":4096},
- ["E.VALIDATION.SCHEMA","E.VALIDATION.RANGE","E.VALIDATION.OPTION_CONFLICT","E.VALIDATION.EXPRESSION","E.DOMAIN.NO_SIGN_CHANGE","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.RANGE","E.VALIDATION.OPTION_CONFLICT","E.VALIDATION.EXPRESSION","E.DOMAIN.NO_SIGN_CHANGE","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
  ["W.DOMAIN.BRACKET_SEARCHED"],sparse={},ver=V413,backend=BACK_NUM("roots::fzero"))
-fz_in=ins("nonlinear.root.fzero",{"expression":EXPR,"variable":dict(NAME,default="x",**{"x-aeoi-provenance":"user"}),"params":PARAMS,
- "bracket":{"type":"array","items":{"type":"number"},"minItems":2,"maxItems":2,"x-aeoi-provenance":"user"},
- "x0":{"type":"number","x-aeoi-provenance":"user"},"xtol":{"type":"number","minimum":0,"default":0,"x-aeoi-provenance":"convention"}},["expression"],ver=V413)
+fz_in=ins("nonlinear.root.fzero",{"expression":EXPR,"variable":dict(NAME,default="x",**{"x-aeoi-provenance":"convention"}),"params":PARAMS,
+ "bracket":{"type":"array","items":{"type":"number"},"minItems":2,"maxItems":2,"x-aeoi-provenance":"supplied"},
+ "x0":{"type":"number","x-aeoi-provenance":"supplied"},"xtol":{"type":"number","minimum":0,"default":0,"x-aeoi-provenance":"convention"}},["expression"],ver=V413)
 fz_out=outs("nonlinear.root.fzero",{"x":{"type":["number","string"]},"fx":{"type":["number","string"]},
  "bracket":{"type":"object","description":"initial（给定或搜到的区间）、source（given / searched_from_x0）、final（夹住根的最终区间）"},
  "iterations":{"type":"integer"},"evaluations":{"type":"integer"}},["x","fx","bracket","iterations","evaluations"],ver=V413)
@@ -739,27 +739,27 @@ fs=man("nonlinear.system.fsolve","Solve a system of nonlinear equations","解 n 
  [{"type":"textbook","cite":"J. Nocedal, S. J. Wright, Numerical Optimization, 2nd ed., Springer 2006, §4.1（dogleg）、§11（非线性方程组）"},
   {"type":"textbook","cite":"A. Griewank, A. Walther, Evaluating Derivatives, 2nd ed., SIAM 2008, Ch. 3（前向自动微分）"}],
  "roots::fsolve (dogleg + AD Jacobian + LU kernel)","T1",{"max_unknowns":200,"max_iterations":400,"max_expression_length":4096},
- ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.EXPRESSION","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.NO_CONVERGENCE","E.NUMERICAL.LOCAL_MINIMUM","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.EXPRESSION","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.NO_CONVERGENCE","E.NUMERICAL.LOCAL_MINIMUM","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
  ["W.NUMERICAL.ILL_CONDITIONED"],sparse={},ver=V413,backend=BACK_NUM("roots::fsolve"))
 fs_in=ins("nonlinear.system.fsolve",{"unknowns":{"type":"array","items":NAME,"minItems":1,"maxItems":200,"uniqueItems":True},
  "equations":{"type":"array","items":EXPR,"minItems":1,"maxItems":200},"params":PARAMS,
- "x0":{"type":"array","items":{"type":"number"},"minItems":1,"maxItems":200,"x-aeoi-provenance":"user"}},["unknowns","equations","x0"],ver=V413)
+ "x0":{"type":"array","items":{"type":"number"},"minItems":1,"maxItems":200,"x-aeoi-provenance":"supplied"}},["unknowns","equations","x0"],ver=V413)
 fs_out=outs("nonlinear.system.fsolve",{"x":{"type":"array","description":"解，按 unknowns 的顺序"},"solution":{"type":"object","description":"未知量名 → 值"},
  "residual":{"type":"array","description":"F(x)"},"iterations":{"type":"integer"},"evaluations":{"type":"integer"},"jacobian":{"const":"automatic_differentiation"}},
  ["x","solution","residual","iterations","evaluations","jacobian"],ver=V413)
 B3.update({"nonlinear.root.fzero":(fz,fz_in,fz_out),"nonlinear.system.fsolve":(fs,fs_in,fs_out)})
 # ---- v0.4.14: optim.linear.linprog, optim.local.fmincon, optim.local.fminsearch
 V414="0.4.0"
-BND={"type":"array","items":{"oneOf":[{"type":"number"},{"enum":["Inf","-Inf"]}]},"x-aeoi-provenance":"user"}
-ROWS={"type":"array","items":{"type":"array","items":{"type":"number"}},"x-aeoi-provenance":"user"}
-VEC={"type":"array","items":{"type":"number"},"x-aeoi-provenance":"user"}
+BND={"type":"array","items":{"oneOf":[{"type":"number"},{"enum":["Inf","-Inf"]}]},"x-aeoi-provenance":"supplied"}
+ROWS={"type":"array","items":{"type":"array","items":{"type":"number"}},"x-aeoi-provenance":"supplied"}
+VEC={"type":"array","items":{"type":"number"},"x-aeoi-provenance":"supplied"}
 LAM_D="乘子（MATLAB 约定）：∇f + Σλ∇g + Σν∇h = 0；ineq*、lower、upper ≥ 0"
 lpm=man("optim.linear.linprog","Linear programming","线性规划（= MATLAB linprog）：min cᵀx，s.t. A·x ≤ b、Aeq·x = beq、lb ≤ x ≤ ub。两阶段单纯形（Bland 规则），给出最优顶点与全部乘子（ineqlin、eqlin、lower、upper，MATLAB 的符号约定），并用 KKT 残差验证。注意：与 MATLAB 一样，变量缺省没有界（scipy 缺省 x ≥ 0）；无解报 E.DOMAIN.INFEASIBLE，无界报 E.DOMAIN.UNBOUNDED。","design",["optimization","linear-programming","linprog","simplex"],
  ["系数有限","变量个数 ≤ max_variables（稠密单纯形）"],["整数规划（intlinprog）","大规模稀疏问题（内点法，以后的方法）"],
  "标准形转换（有限下界平移、只有上界的变量反射、自由变量拆成两个非负变量、上下界都有限时加边界行、不等式加松弛），右端非负化；两阶段稠密单纯形表，Bland 规则选入基与出基变量（不循环）；第一阶段剩余 > 1e-9·max(1, ‖rhs‖∞) 即不可行；入基列无正元即无界。最优基上用 LU 内核重算基解与对偶变量；乘子按 c + Aᵀλ_ineq + Aeqᵀλ_eq − λ_lower + λ_upper = 0 映射。后置条件 kkt：原始可行、对偶可行、互补、驻定残差都 ≤ 1e-9（相对数据尺度）",
  [{"type":"textbook","cite":"V. Chvátal, Linear Programming, Freeman 1983, Ch. 2–3、8（两阶段单纯形与 Bland 规则）"}],
  "lp::solve (two-phase simplex, Bland)","T1",{"max_variables":500,"max_iterations":100000},
- ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.NON_FINITE","E.DOMAIN.INFEASIBLE","E.DOMAIN.UNBOUNDED","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.NON_FINITE","E.DOMAIN.INFEASIBLE","E.DOMAIN.UNBOUNDED","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
  [],sparse={},ver=V414,backend=BACK_NUM("lp::solve"))
 lp_in=ins("optim.linear.linprog",{"c":VEC,"A":ROWS,"b":VEC,"Aeq":ROWS,"beq":VEC,"lb":BND,"ub":BND},["c"],ver=V414)
 lp_out=outs("optim.linear.linprog",{"x":{"type":"array"},"fval":{"type":["number","string"]},"lambda":{"type":"object","description":LAM_D},"iterations":{"type":"integer"},
@@ -770,7 +770,7 @@ fmc=man("optim.local.fmincon","Constrained nonlinear minimization","带约束的
  [{"type":"textbook","cite":"J. Nocedal, S. J. Wright, Numerical Optimization, 2nd ed., Springer 2006, §16.5（有效集 QP）、§18（SQP）"},
   {"type":"paper","cite":"M. J. D. Powell, A fast algorithm for nonlinearly constrained optimization calculations, Numerical Analysis Dundee 1977, LNM 630","doi":"10.1007/BFb0067703"}],
  "optim::fmincon (SQP + QP kernel + AD gradients)","T2",{"max_unknowns":100,"max_iterations":500,"max_expression_length":4096},
- ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.NON_FINITE","E.VALIDATION.EXPRESSION","E.DOMAIN.INFEASIBLE","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.NON_FINITE","E.VALIDATION.EXPRESSION","E.DOMAIN.INFEASIBLE","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
  [],sparse={},ver=V414,backend=BACK_NUM("optim::fmincon"))
 fmc_in=ins("optim.local.fmincon",{"unknowns":{"type":"array","items":NAME,"minItems":1,"maxItems":100,"uniqueItems":True},"objective":EXPR,"params":PARAMS,
  "x0":VEC,"nonlinear_ineq":{"type":"array","items":EXPR},"nonlinear_eq":{"type":"array","items":EXPR},"A":ROWS,"b":VEC,"Aeq":ROWS,"beq":VEC,"lb":BND,"ub":BND,
@@ -784,7 +784,7 @@ fms=man("optim.local.fminsearch","Derivative-free minimization (Nelder–Mead)",
  "Nelder–Mead（Lagarias, Reeds, Wright, Wright 1998；同 MATLAB）：反射 1、扩展 2、收缩 1/2、压缩 1/2；初始单纯形为 x0 各坐标加 5%（为 0 的坐标取 0.00025）；顶点按 f 排序，相等按原下标。停止：单纯形直径 ≤ tol_x 且函数值极差 ≤ tol_fun。后置条件 probe_local_minimum：f(x) ≤ f(x ± h·e_j) + tol_fun，h = tol_x·max(1, |x_j|)",
  [{"type":"paper","cite":"J. C. Lagarias, J. A. Reeds, M. H. Wright, P. E. Wright, Convergence properties of the Nelder–Mead simplex method in low dimensions, SIAM J. Optim. 9(1), 1998","doi":"10.1137/S1052623496303470"}],
  "optim::fminsearch (Nelder–Mead)","T3",{"max_unknowns":50,"max_expression_length":4096},
- ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.NON_FINITE","E.VALIDATION.EXPRESSION","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.NON_FINITE","E.VALIDATION.EXPRESSION","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
  [],sparse={},ver=V414,backend=BACK_NUM("optim::fminsearch"))
 fms_in=ins("optim.local.fminsearch",{"unknowns":{"type":"array","items":NAME,"minItems":1,"maxItems":50,"uniqueItems":True},"objective":EXPR,"params":PARAMS,"x0":VEC,
  "tol_x":{"type":"number","exclusiveMinimum":0,"default":1e-4,"x-aeoi-provenance":"convention"},"tol_fun":{"type":"number","exclusiveMinimum":0,"default":1e-4,"x-aeoi-provenance":"convention"},
@@ -801,10 +801,10 @@ intg=man("calculus.quadrature.integral","Adaptive numerical integration","数值
  [{"type":"textbook","cite":"R. Piessens, E. de Doncker-Kapenga, C. W. Überhuber, D. K. Kahaner, QUADPACK, Springer 1983（qk15、qag）"},
   {"type":"paper","cite":"L. F. Shampine, Vectorized adaptive quadrature in MATLAB, J. Comput. Appl. Math. 211(2), 2008","doi":"10.1016/j.cam.2006.11.021"}],
  "quad::integral (adaptive Gauss–Kronrod 7–15)","T1",{"max_intervals":650,"max_expression_length":4096},
- ["E.VALIDATION.SCHEMA","E.VALIDATION.RANGE","E.VALIDATION.EXPRESSION","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.RANGE","E.VALIDATION.EXPRESSION","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
  [],sparse={},ver=V415,backend=BACK_NUM("quad::integral"))
-intg_in=ins("calculus.quadrature.integral",{"expression":EXPR,"variable":dict(NAME,default="x",**{"x-aeoi-provenance":"user"}),"params":PARAMS,
- "limits":{"type":"array","items":LIM,"minItems":2,"maxItems":2,"x-aeoi-provenance":"user"},
+intg_in=ins("calculus.quadrature.integral",{"expression":EXPR,"variable":dict(NAME,default="x",**{"x-aeoi-provenance":"convention"}),"params":PARAMS,
+ "limits":{"type":"array","items":LIM,"minItems":2,"maxItems":2,"x-aeoi-provenance":"supplied"},
  "rel_tol":{"type":"number","minimum":0,"default":1e-10,"x-aeoi-provenance":"convention"},"abs_tol":{"type":"number","minimum":0,"default":1e-12,"x-aeoi-provenance":"convention"}},["expression","limits"],ver=V415)
 intg_out=outs("calculus.quadrature.integral",{"value":{"type":["number","string"]},"error_estimate":{"type":["number","string"]},"tolerances":{"type":"object"},"limits":{"type":"array"},
  "intervals":{"type":"integer"},"evaluations":{"type":"integer"}},["value","error_estimate","tolerances","limits","intervals","evaluations"],ver=V415)
@@ -813,7 +813,7 @@ trz=man("calculus.quadrature.trapz","Trapezoidal integration of data","对离散
  "Σ (x_{k+1} − x_k)·(y_k + y_{k+1})/2，每项拆成两个乘积用补偿算术（Dot2）累加；cumulative 时给出部分和",
  [{"type":"paper","cite":"T. Ogita, S. M. Rump, S. Oishi, Accurate sum and dot product, SIAM J. Sci. Comput. 26(6), 2005","doi":"10.1137/030601818"}],
  "quad::trapz (compensated trapezoidal sum)","T1",{"max_points":10000000},
- ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.ENCODING","E.VALIDATION.OPTION_CONFLICT","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.DIGEST_MISMATCH","E.VALIDATION.REF_UNSUPPORTED","E.VALIDATION.REF_FORBIDDEN","E.VALIDATION.OPTION_CONFLICT","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
  [],sparse={},ver=V415,backend=BACK_NUM("quad::trapz"))
 trz_in=ins("calculus.quadrature.trapz",{"y":M,"x":M,"dx":{"type":"number","x-aeoi-provenance":"user"},"cumulative":{"type":"boolean","default":False,"x-aeoi-provenance":"convention"}},["y"],ver=V415)
 trz_out=outs("calculus.quadrature.trapz",{"value":{"description":"积分值（y 为 [k, n] 时 [k]）"},"cumulative":{"description":"部分和（cumulative = true 时），形状同 y；否则 null"},"spacing":{"description":"回显：\"x\" 或 {dx}"}},["value","cumulative","spacing"],ver=V415)

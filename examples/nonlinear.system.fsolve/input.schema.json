@@ -40,7 +40,7 @@
       "additionalProperties": {
         "type": "number"
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "参数名 → 数值"
     },
     "x0": {
@@ -50,7 +50,7 @@
       },
       "minItems": 1,
       "maxItems": 200,
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "初值，按 unknowns 的顺序（由用户给出；不同初值可能收敛到不同的解）"
     },
     "exec": {

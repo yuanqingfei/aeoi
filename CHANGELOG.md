@@ -2,6 +2,44 @@
 
 > 从规范第 13 章移出（v0.4.18）。每个版本：起因、规范改动、已做的改动、开发中发现的问题、结果。最新的在前。
 
+## v0.4.19-draft（2026-11-25）
+
+起因：作者同意用只读规范的第二实现检验规范。一个只能读核心协议、对应 profile、schemas 和 golden 请求的子 agent，用 Python 写了 `fft`、`linalg.system.solve`、`interp1`、`integral`。它不能读 Rust 代码、golden 生成脚本、一致性规则和参考实现说明，manifest 也要自己写。凡是规范没说清楚的地方，它都记成一条发现，而不是去反推参考实现。结果：四个算子都通过了一致性套件，同时找出 32 处规范问题（`conformance/impls/python_scipy/SPEC_FINDINGS.md`）。其中 3 处只读 profile 就会写错。
+
+**规范改动**
+
+| # | 位置 | 改动 | 发现 |
+|---|---|---|---|
+| 1 | 第 10 章、全部 profile | 开头写明算子版本与容差类（版本号进入 `fingerprint.request`） | PY-1、PY-2（阻塞） |
+| 2 | 10.20 IP-1 | n < 2 报 `SHAPE`（参考实现与 golden 一直如此，profile 写成了 `GRID`） | PY-21（阻塞） |
+| 3 | 10.31 IN-1 | 同一个无穷大报 `RANGE`；有限 a = b 结果为 0 | PY-26（阻塞） |
+| 4 | 10.31 IN-2、IN-3、IN-5 | 二分哪个子区间、650 怎么数、变量替换的 t 范围、初始等分在 t 上、容差都为 0 的行为、溢出的报法 | PY-24、25、29 |
+| 5 | 10.17 FT-4、FT-6 | 逆变换的频率轴；sc 的定义；抽查只取输出范围内的频点 | PY-16、17 |
+| 6 | 10.19 LS-2、LS-6 | 精化的停止与计步写成算法；补偿算术是精度下限；`refinement` 的回显位置；`residual_norm` 编码；复数 b | PY-18、19、20 |
+| 7 | 10.20 IP-2、IP-3、IP-5 | previous / next 的定义；引用改为 X-6；两种尺度的公式 | PY-22、23 |
+| 8 | 3.15 EX-5 | 嵌套深度按语言结构定义 | PY-12 |
+| 9 | 3.11 F-7 | `user` 只留测量值；问题给定的数是 `supplied`；有缺省的字段不能是 `user` | PY-28 |
+| 10 | 2.1 M-6、7.3、8.1 | `binding` 的语言无关定义；没有凭证的实现报 C 或 U；`outputSchema` 允许 null | PY-4、3、7 |
+| 11 | 4.1 E-11a（新） | profile 点名的后置条件是最小集合 | PY-32 |
+| 12 | 9.4 CF-8、CF-11 | 运行器校验 manifest；同源的机械判定 | PY-31、30 |
+| 13 | 12.1 | 新开放问题 28（7 处小的未规定细节）、29（放宽补丁掩盖发散）、30（估计常数写成先验界） | PY-5 等、27、15 |
+
+**已做的改动**
+
+| 位置 | 改动 |
+|---|---|
+| `conformance/impls/python_scipy/` | 第二实现从 1 个算子扩到 5 个：共享层 `aeoi_common.py`、表达式语言 `aeoi_expr.py`、每个算子一个模块；新算子的 manifest 是自己写的 |
+| `conformance/tests/mutant_server.py` | 按新结构重写，8 种注入缺陷不变 |
+| `conformance/aeoi_conformance.py` | CF-8 校验 manifest；CF-11 同源判定改为机械规则 |
+| `rust/aeoi-numeric/src/expr.rs` | 嵌套深度按 EX-5 的新定义计（原先约 40 层括号就报 `too_deep`），加单元测试 |
+| `write_manifests.py` | 13 处 `x-aeoi-provenance` 改为 `supplied` 或 `convention`；去掉从未发出的 `ENCODING`、`CANCELLED`，改为声明核心实际会发的 `DIGEST_MISMATCH`、`REF_UNSUPPORTED`、`REF_FORBIDDEN` |
+
+**结果**
+
+- 第二实现（Python）：5 个算子 233 通过 / 0 失败 / 0 跳过。fft、linsolve、interp1 第一次运行就全部通过。
+- 同源判定改用机械规则以后，第二实现的 fft、linsolve、interp1、integral 都算独立通过，只有 lyap（scipy LAPACK，与 python-control 同族）仍算同源。
+- 参考实现：示例输出逐位不变；一致性 1111 / 0 / 291；54 个变异检查全部通过。
+
 ## v0.4.18-draft（2026-11-25）
 
 起因：规范源稿 3400 行，生成后 16000 行、819 KB（168 处把示例响应与 parity.yaml 整段内联），AI agent 和第二实现者都很难读完；版本历史、测量记录和参考实现细节混在规范性条款里。作者同意拆分，并同意把 Changelog 移成独立文件。没有条款被删除或改变含义。

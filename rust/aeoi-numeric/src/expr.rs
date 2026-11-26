@@ -157,20 +157,20 @@ impl Parser<'_> {
     }
     fn sum(&mut self, d: usize) -> Result<Node, ExprError> {
         self.depth(d)?;
-        let mut l = self.product(d + 1)?;
+        let mut l = self.product(d)?;
         while let Tok::Op(c @ ('+' | '-')) = *self.peek() {
             self.bump()?;
-            let r = self.product(d + 1)?;
+            let r = self.product(d)?;
             l = if c == '+' { Node::Add(l.into(), r.into()) } else { Node::Sub(l.into(), r.into()) };
         }
         Ok(l)
     }
     fn product(&mut self, d: usize) -> Result<Node, ExprError> {
         self.depth(d)?;
-        let mut l = self.unary(d + 1)?;
+        let mut l = self.unary(d)?;
         while let Tok::Op(c @ ('*' | '/')) = *self.peek() {
             self.bump()?;
-            let r = self.unary(d + 1)?;
+            let r = self.unary(d)?;
             l = if c == '*' { Node::Mul(l.into(), r.into()) } else { Node::Div(l.into(), r.into()) };
         }
         Ok(l)
@@ -186,12 +186,12 @@ impl Parser<'_> {
                 self.bump()?;
                 self.unary(d + 1)
             }
-            _ => self.power(d + 1),
+            _ => self.power(d),
         }
     }
     fn power(&mut self, d: usize) -> Result<Node, ExprError> {
         self.depth(d)?;
-        let base = self.primary(d + 1)?;
+        let base = self.primary(d)?;
         if *self.peek() == Tok::Op('^') {
             self.bump()?;
             let e = self.unary(d + 1)?; // right-associative, and allows 2^-1
@@ -381,6 +381,12 @@ mod tests {
         assert_eq!(e.kind, "syntax");
         let deep = "(".repeat(300) + "1" + &")".repeat(300);
         assert_eq!(parse(&deep, &[]).unwrap_err().kind, "too_deep");
+        // EX-5: depth counts parentheses, function calls, unary signs and exponents — 200 is allowed, 201 is not,
+        // and a long flat chain (x + x + … + x) has depth 0
+        assert!(parse(&("(".repeat(200) + "1" + &")".repeat(200)), &[]).is_ok());
+        assert_eq!(parse(&("(".repeat(201) + "1" + &")".repeat(201)), &[]).unwrap_err().kind, "too_deep");
+        assert_eq!(parse(&("-".repeat(201) + "1"), &[]).unwrap_err().kind, "too_deep");
+        assert!(parse(&vec!["x"; 1000].join("+"), &n(&["x"])).is_ok());
         assert_eq!(parse("1e999", &[]).unwrap_err().kind, "not_finite");
         assert!(check_ode_name("t").is_err() && check_name("t").is_ok() && check_name("sin").is_err() && check_name("2x").is_err() && check_name("x_1").is_ok());
     }

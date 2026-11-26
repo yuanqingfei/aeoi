@@ -34,7 +34,7 @@
       "additionalProperties": {
         "type": "number"
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "参数名 → 数值"
     },
     "x0": {
@@ -42,7 +42,7 @@
       "items": {
         "type": "number"
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "初值（由用户给出；不同初值可能得到不同的局部最优）"
     },
     "nonlinear_ineq": {
@@ -73,7 +73,7 @@
           "type": "number"
         }
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "线性不等式 A·x ≤ b"
     },
     "b": {
@@ -81,7 +81,7 @@
       "items": {
         "type": "number"
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "线性不等式右端"
     },
     "Aeq": {
@@ -92,7 +92,7 @@
           "type": "number"
         }
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "线性等式 Aeq·x = beq"
     },
     "beq": {
@@ -100,7 +100,7 @@
       "items": {
         "type": "number"
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "线性等式右端"
     },
     "lb": {
@@ -118,7 +118,7 @@
           }
         ]
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "下界，无界写 \"-Inf\""
     },
     "ub": {
@@ -136,7 +136,7 @@
           }
         ]
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "上界，无界写 \"Inf\""
     },
     "optimality_tolerance": {

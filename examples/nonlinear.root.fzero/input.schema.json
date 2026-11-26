@@ -17,7 +17,7 @@
       "type": "string",
       "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
       "default": "x",
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "convention",
       "description": "自变量名（缺省 x）"
     },
     "params": {
@@ -28,7 +28,7 @@
       "additionalProperties": {
         "type": "number"
       },
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "参数名 → 数值"
     },
     "bracket": {
@@ -38,12 +38,12 @@
       },
       "minItems": 2,
       "maxItems": 2,
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "变号区间 [a, b]，a < b，f(a)·f(b) ≤ 0（推荐）"
     },
     "x0": {
       "type": "number",
-      "x-aeoi-provenance": "user",
+      "x-aeoi-provenance": "supplied",
       "description": "初值（没有区间时用；算子向外搜索变号区间，找到的根不一定是想要的那个）"
     },
     "xtol": {

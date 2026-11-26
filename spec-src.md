@@ -1,6 +1,6 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.18-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.19-draft
 
-> 状态：Draft v0.4.18 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot、Claude）
+> 状态：Draft v0.4.19 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot、Claude）
 >
 > SPDX-License-Identifier: CC-BY-4.0 · © 2026 Qingfei Yuan。规范文本按 CC-BY-4.0 许可（`LICENSE-CC-BY-4.0`）；规范中的代码片段、JSON Schema 与参考实现按 MIT OR Apache-2.0 许可（`LICENSE-MIT`、`LICENSE-APACHE`）。
 >
@@ -65,7 +65,7 @@ CLI / 其他语言绑定 ──────────┘   参考实现：Rust
 - M-3 `version` MUST 遵循 SemVer 2.0（见 9.2 的破坏性变更定义）。
 - M-4 `applicability.preconditions` MUST 列出所有数学前提（如"R 对称正定"）。凡是可以机器检查的前提，`validate()` MUST 检查并在违反时返回对应 `E.VALIDATION.*` 或 `E.DOMAIN.*`。
 - M-5 `provenance.references` MUST 至少一条可查证的公开文献（论文 SHOULD 带 DOI）。`provenance.algorithm` MUST 用一句话说明实际采用的算法（而非"调用某库"）。
-- M-6 `backend` MUST 写明库名、例程名、版本、`binding`（`native` | `ffi`）与 SPDX 许可证。纯 Rust 实现写 `binding: "native"`，`routine` 写实现函数名（如 `lqr::solve_care`）。许可证 MUST 与平台分发方式兼容。
+- M-6 `backend` MUST 写明库名、例程名、版本、`binding`（`native` | `ffi`）与 SPDX 许可证。`binding`：算子的数值代码与实现用同一种语言写成并在同一进程内运行时写 `native`（纯 Rust、纯 Python 或 numpy 的逐元素运算都算），数值核心调用另一种语言编译的库（LAPACK、FFTW 等）时写 `ffi`。纯 Rust 实现写 `binding: "native"`，`routine` 写实现函数名（如 `lqr::solve_care`）。许可证 MUST 与平台分发方式兼容。
 - M-7 `determinism` MUST 取以下之一：
 
 | 值 | 含义 | 允许的场景 |
@@ -268,7 +268,7 @@ CLI / 其他语言绑定 ──────────┘   参考实现：Rust
   - (d) 这一检查只能拦住"没有来源的数值"，拦不住模型从用户原话里错误地摘取数值；评测（8.4）对此单独设陷阱题。
 - F-6 绑定层把算子暴露给 LLM 时 MAY 收窄输入面（只保留 `DenseMatrix` 编码，隐藏 `exec`、`time_unit`、`*_names` 等宿主侧或可选字段），MUST 公开有损映射清单（8.4），算子 MUST 仍按完整 input schema 校验。回传给模型的结果 MAY 对长数组抽样并用 `_downsampled` 标注原始形状与保留的下标；展示给用户的信封 MUST 保持原样（B-1）。
 - F-7 **三种来源，不要都当成“必须引用用户原话”。** `x-aeoi-provenance` 取下列之一；缺省（不写该关键字）表示普通必填或可选字段，绑定层不附加 `_user_quote`。
-  - `"user"`：测量值，没有安全默认。规则即 F-5（引用核对、缺失只给 `ask_user`）。v0.3.5 仍只有 `control.lti.c2d` 的 `ts`。
+  - `"user"`：测量值，没有安全默认。规则即 F-5（引用核对、缺失只给 `ask_user`）。现在的 `user` 字段：`c2d` 的 `ts`、`fft` 与 `butter` 的 `sample_rate_hz`、`butter` 的截止频率、`pidtune` 的 `wc_rad_s`、`trapz` 的 `dx`。问题里给定、但不是测量值的数（积分限、求根区间、初值、参数、优化的约束数据、阶数）是 `supplied`；有缺省值的字段 MUST NOT 是 `user`（F-5(a)），积分变量名之类是 `convention`。
   - `"convention"`：指标或互联的**定义参数**，规范给出默认值，默认值是算子语义的一部分。省略时用默认，MUST 在结果里回显实际使用的值；覆盖时回显覆盖值。绑定层 MUST NOT 要求 `_user_quote`，系统提示词 MUST NOT 把用默认值说成“假设了用户没给的物理量”。v0.3.5：`feedback.sign` 默认 −1，`stepinfo.rise_time_limits` 默认 `[0.1, 0.9]`，`stepinfo.settling_threshold` 默认 `0.02`，PID 的 `form` 默认 `parallel`，`Ki`/`Kd`/`Td`/`Tf` 默认 0（该项不出现）。
   - `"supplied"`：没有安全默认、但**不是**必须从用户原话逐字摘出的数。调用方必须给出；缺失是 schema 错误，remediation 只有 `ask_user`。绑定层 MUST NOT 加 `_user_quote`：这个数可以是设计选择（PID 的 `Kp`、Padé 的 `order`），也可以是从题目里别的数算出来的（Padé 的 `delay`，例如由 t2−τ 得到，原话里没有这个数）。系统提示词 MUST 写明：不得填“常用值”；用户和题目都没给出、也推不出来时先问。设计评测没有用户可问时，评测提示词 MAY 宣布一个回退（例如“order 没写就用 10 并在说明里声明”）；这个回退写在提示词里，MUST NOT 写进算子的默认值。
 
@@ -385,7 +385,7 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 
   定义域外的值（如 `log(-1)`、`sqrt(-1)`）按 IEEE 给 NaN 或 ±Inf，解析时不报错。表达式不知道这些值会用在哪里，是否出错由算子决定（ODE 见 OD-6）。
 - EX-4 **求值顺序**。值等于把语法树按 binary64 逐节点计算的结果：从左到右，MUST NOT 重结合（`a + b + c` 就是 `(a + b) + c`），MUST NOT 合并为 FMA，MUST NOT 做会改变结果位的代数化简。常量子表达式可以预先算好，因为位相同。数字字面量按最近舍入转成 binary64；超出范围的字面量（`1e999`）报 `not_finite`。`+ − * /` 和 `sqrt` 是正确舍入的；其余初等函数取自实现所用的数学库，它属于 2.1 的“平台”描述。参考实现自 v0.4.9 起把纯 Rust `libm` 编入二进制（M-7a），各平台用同一套函数。
-- EX-5 **规模上限**：每个表达式最多 10 000 个字符、10 000 个语法树节点，嵌套深度不超过 200。超出时分别报 `too_long`、`too_many_nodes`、`too_deep`。深度有上限，所以递归下降解析器不会因栈溢出而崩溃（X-3）。
+- EX-5 **规模上限**：每个表达式最多 10 000 个字符、10 000 个语法树节点，嵌套深度不超过 200。深度按语言结构计：每进入一层括号、一个函数调用的参数、一个一元正负号、一个 `^` 的指数，深度加 1；同一层里连写的 `+ − * /`（如 `x + x + … + x`）不增加深度。超出时分别报 `too_long`、`too_many_nodes`、`too_deep`。深度有上限，所以递归下降解析器不会因栈溢出而崩溃（X-3）。
 - EX-6 **错误**。静态错误一律报 `E.VALIDATION.EXPRESSION`（新码）。`details` 包含：`path`（指向出错表达式的 JSON Pointer，如 `/rhs/1`）、`expression`（原文）、`position`（从 0 起算的字符偏移）、`kind`（取值为 `syntax`、`unknown_name`、`arity`、`non_ascii`、`too_long`、`too_many_nodes`、`too_deep`、`not_finite`、`bad_name`、`duplicate_name`）。`message` 的最后一行是原文加一个指向错误位置的 `^`。所有表达式都先通过检查，然后才开始求值，不会出现算到一半才发现第三个表达式写错的情况。remediation 是 `modify_input`（改写该表达式）和 `ask_user`。
 - EX-7 实现 MUST NOT 借用宿主语言的 `eval` 或任何能执行代码的机制，也 MUST NOT 接受本节以外的语法或函数（不提供“方便的扩展”）。两个实现只要都遵守本节，对同一个表达式就有相同的语义；golden 里的右端由 Python 实现求值，参考实现与它的差别只来自 libm。
 - EX-8 **自动微分**（作者决定）：需要导数的算子（`fsolve`，以后的 `fmincon`、`ode15s`）MUST 对表达式做前向自动微分，得到精确到舍入误差的导数，MUST NOT 用有限差分。
@@ -422,6 +422,7 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 - E-10 **输出编码**：见 L-5。
 - E-11 **没有证据，不声称成功**：成功信封的 `receipt.evidence.claim` 只能是 `verified`（manifest `receipt.postconditions` 列出的 `trust.checks` 全部为 true）、`spot_checked`（全部为 true，但至少一个只是抽样检查，E-12，v0.3.6 新增）、`unchecked`（算子没有声明后置条件）或 `unverified`。任何声明的后置条件为 false 或缺失时，框架 MUST 追加 `W.EVIDENCE.POSTCONDITION_FAILED`（于是 `status` 为 `ok_with_warnings`），claim 为 `unverified`。`ok` 本身只表示"算子完成了计算"；只有 `verified` 才能被下游（含 LLM）表述为"已验证"。只描述问题性质的检查（如 `asymptotically_stable`、对称化之前的不对称度）MUST NOT 列为后置条件，否则合法结果会被误判。
 - E-7a **框架级码**：由框架而不是算子产生的码（目前只有 `W.EVIDENCE.POSTCONDITION_FAILED`）在 5.1 统一登记，不要求在每个 manifest 的 `warnings[]` 中重复声明；E-7 的"MUST 声明"只约束算子自己产生的码。
+- E-11a **算子契约点名的后置条件是最小集合。** profile（第 10 章）里点名的后置条件（如 FT-6 的 `parseval`、`dft_spot_check`），每个实现 MUST 在 manifest 的 `receipt.postconditions` 里声明，并以同样的 `coverage` 报告；实现 MAY 另加。否则一个实现少列一项检查，就能更容易地声称 `verified`。
 - E-12 **抽样的检查只是抽查。** manifest 的 `receipt.coverage` 为每个后置条件声明它覆盖了多少结果：`full`（在整个结果上求值；缺省）、`test_points`（一个结果必须处处满足的恒等式，在算子事先固定、与结果无关的若干点上核对；结果本身由有限次精确形式的运算得到，例如组合算子的 I-9）、`sampled`（只在结果的子集、网格或压缩副本上求值，例如 `margin` 在频率网格上复查有没有漏掉穿越点）。所有后置条件为 true 但其中有 `sampled` 时，claim MUST 是 `spot_checked`，不是 `verified`。收据 `evidence.coverage` 抄录完整的映射（未声明者写 `full`）；没有声明 coverage 的算子 MUST NOT 出现这个字段（已发布收据字节不变）。绑定层抽样后的视图（F-6 的 `_downsampled`）、模型自己写的摘要都不是证据：MUST NOT 在它们上面计算任何后置条件。v0.3.6 声明 `sampled` 的有：`margin.grid_audit_clean`、`loopsens.sub_operator_checks`（因为裕度来自 `margin`）；声明 `test_points` 的有 `series`/`parallel`/`feedback`/`convert` 的 `response_consistent`、`pid.formula_matches`、`loopsens.closed_loop_identity`。
 - E-13 **失败的检查要指出哪些字段不能用。** EngDesign 的 XG_02 是 7 阶系统：Krylov 可控性矩阵的数值秩是 4，PBH 检验认为满秩，`pbh_agrees_ctrb` 为 false，claim 正确地为 `unverified`；但信封没有说哪些字段因此不能用，模型看到的又是被抽样的矩阵，`rank`、`full_rank`、`minimal` 看起来和正常结果一样。manifest 的 `receipt.guards` 把后置条件映射到它保护的结果字段（JSON Pointer）；某个检查失败时，收据 `evidence.unreliable` MUST 列出这些字段（排序去重），`W.EVIDENCE.POSTCONDITION_FAILED` 的消息与 `details.unreliable` 写出同一列表，绑定层 MUST 把它作为 `unreliable_fields` 告诉模型，系统提示词 MUST 要求“不得引用、不得作为下一步的依据”。v0.3.6：`ctrb_obsv` 的 `pbh_agrees_ctrb` → `/ctrb/rank`、`/ctrb/full_rank`、`/minimal`（obsv 同理）；组合算子的 `response_consistent` → `/system`；`loopsens` 见其 manifest。
 
@@ -594,7 +595,7 @@ v0.4 新增码：`METHOD_UNAVAILABLE` 由算子返回（3.14 MS-6）：`exec.met
 | C | 只有不变量/自洽性检查 |
 | U | 未验证（实验性）；生产注册表 MUST NOT 默认暴露 U 级算子 |
 
-v0.3.5 参考实现的 18 个算子当前均为 **B 级**（python-control / mpmath parity + 解析解单元测试 + 不变量），目标 A 级。v0.3.5 的 6 个新算子没有 MATLAB 对照，等级同样是 B。
+等级要有凭证（7.4）支撑。没有凭证的实现（例如刚写成的第二实现）MUST 报 C 或 U，即使它已通过一致性套件：一致性证明的是与参考实现等价，不是等级本身。参考实现的算子当前都是 B 级，目标 A 级。
 
 ### 7.4 凭证记录
 
@@ -613,7 +614,7 @@ v0.3.5 参考实现的 18 个算子当前均为 **B 级**（python-control / mpm
 | `title` | `manifest.title` | |
 | `description` | `description` + 精度等级 + 容差类 + 确定性 | 面向模型写 |
 | `inputSchema` | `manifest.input_schema`（`$ref` 全部内联） | MUST 完全展开 `$ref`，因部分客户端不解析外部引用 |
-| `outputSchema` | 信封 schema，`result` 替换为 `output_schema` | |
+| `outputSchema` | 信封 schema，`result` 替换为 `oneOf [null, output_schema]` | 错误信封的 `result` 是 null，所以 MUST 允许 null |
 | `annotations` | `readOnlyHint: true`、`idempotentHint: true`、`openWorldHint: false` | 纯计算算子 |
 | `_meta` | `aeoi/id`、`aeoi/version`、`aeoi/grade`、`aeoi/spec`、`aeoi/manifest` | 保留原始 id |
 
@@ -735,14 +736,14 @@ v0.3.5 参考实现的 18 个算子当前均为 **B 级**（python-control / mpm
   - 4.3 R-5 的 `verify` 用 ‖·‖∞ 做重放比较，`parity.yaml` 用 `rel_fro`；两种范数并存，一致性套件用后者（12.1 第 14 项）。
 - CF-7 **验收容差与自报误差界。** 验收容差由套件决定（CF-6），是“合规下限”。被测实现的收据里 `exactness.bound_kind` 为 `rigorous` 或 `a_priori` 且 `bound` 是数值时，`bound` MUST 不大于该用例的验收容差，否则声明本身不合规；`a_posteriori_heuristic` 与 `none` 只作信息记录，通过与否只看实际偏差。个别用例上确有理由的更宽偏差 MUST 登记在声明的 `known_deviations`（用例、实际偏差、原因），记为“带偏差通过”，不计入“完全通过”。典型情形：病态问题上，没有精化的后向稳定算法的前向误差超出 κ 缩放容差，而运行器独立复核的后向误差（如 `lqr` 的 CARE 残差）合格（12.1 第 23 项）。运行器用 `--known-deviations` 读入；只有数值偏差可以登记，结构性失败（形状、错误码、指纹）不行。
 - CF-8 **收据与 manifest 的机械核查。** 运行器不采信自报：
-  - manifest 通过 `schemas/manifest.schema.json`，`provenance.clean_room.declared` 为 true（第 0 章）；响应通过 envelope schema 与该算子的 output schema（`parity.yaml` 的 `pass_rule`）。
+  - manifest 通过 `schemas/manifest.schema.json`（运行器逐个校验；不通过时该算子的全部用例判失败），`provenance.clean_room.declared` 为 true（第 0 章）；响应通过 envelope schema 与该算子的 output schema（`parity.yaml` 的 `pass_rule`）。
   - 响应里出现的每个 `E.*`、`W.*` 码 MUST 在该 manifest 中声明（E-7、5.1；框架级码见 E-7a）。
   - `receipt.evidence.claim` 由运行器按 E-11、E-12，用 manifest 的 `receipt.postconditions` 与 `coverage`、响应的 `trust.checks` 重新推出，MUST 与响应一致：后置条件为 false 时不能声称 `verified`。
   - 收据的 `method.id` MUST 属于 manifest 允许的方法集合（MS-1）。
   - （推荐）对 `lyap`、`lqr`、`place`、`poles_zeros` 等，运行器用与被测实现不同的代码路径独立复核后置条件（残差、闭环极点位置），做法参照 `validate_examples.py` 对 E-12、E-13 的独立核对。v0.4.2 已对 `lqr` 做了：由返回的 S、K 重算 CARE 残差、K 与 S 的一致性、S 的对称性、A − BK 的稳定性。残差按各项大小归一（后向误差形式），不对 R 求逆：否则 cond(R) 到 1e12 时运行器自身的舍入就会造成误判。
 - CF-9 **错误、边界与 remediation。** 套件除正常路径外 MUST 包含：manifest 声明的每个错误码至少一个触发用例（`parity.yaml` 的 `expect`）；保护性拒绝（如 `series` 的相对阶上限，I-7）；带 `modify_input` remediation 的错误，运行器把补丁套到请求上重新调用，结果 MUST 通过校验（X-9）。
 - CF-10 **方法用例。** 对 manifest 里每个已登记的方法（MS-1），运行器 MUST 以 `exec.method_policy = {"require": ["<该方法 id>"]}` 跑该算子的全部用例，每个方法单独计数（MS-3）；声明了方法却没被检验的实现不能通过。方法选择另有用例：缺省选 `default`；`require` 已登记的方法成功且 `method_selection.used` 相符；`require` 未登记的 id、无解的 `constraints` 返回 `E.VALIDATION.METHOD_UNAVAILABLE` 且 `details` 列出可用方法；含 `method_policy` 的请求发给不支持它的实现得到 `E.VALIDATION.SCHEMA`（MS-8）。只有一个方法的算子只需通过缺省、`require` 未登记 id、`require` 该唯一方法这三项。这些用例用 golden 同样的文件格式，`request.exec` 带 `method_policy`；**不同方法的结果都 MUST 落在同一个验收容差内**，这正是对“换方法不改变结果”的检验。
-- CF-11 **声明与报告。** 运行器产生报告，实现发布机器可读的声明，至少包含：实现名称、版本、形态（线级或内核级）；套件版本与 `suite_hash`；逐（算子、版本、方法 id）的结果（`pass`、`pass_with_deviation`、`fail`、`skip`）；`known_deviations`；通过用例按 `reference_env.engine` 的计数，以及该引擎是否与被测方法的 `backend.library`（M-6）同源；所用内核与数值库及其版本。同源的参考值只能证明套件可移植，不能证明实现可替换，所以声明 MUST 把“同源通过”和“独立通过”（mpmath、解析解，V-1 ②）分开列出。
+- CF-11 **声明与报告。** 运行器产生报告，实现发布机器可读的声明，至少包含：实现名称、版本、形态（线级或内核级）；套件版本与 `suite_hash`；逐（算子、版本、方法 id）的结果（`pass`、`pass_with_deviation`、`fail`、`skip`）；`known_deviations`；通过用例按 `reference_env.engine` 的计数，以及该引擎是否与被测方法的 `backend`（M-6）同源。同源的判定是机械的：用例 `reference_env.engine` 里出现的库例程名（带点的名字，如 `numpy.fft`、`scipy.integrate`；`python-control` 展开为 `python-control`、`scipy.linalg`、`slycot`；以及 `mpmath`、`matlab`），只要有一个作为完整词出现在被测方法的 `backend.library` 或 `backend.routine` 里，就算同源。因此实现 MUST 在 `backend` 里如实写出数值核心所用的库例程；所用内核与数值库及其版本。同源的参考值只能证明套件可移植，不能证明实现可替换，所以声明 MUST 把“同源通过”和“独立通过”（mpmath、解析解，V-1 ②）分开列出。
 
   ```json
   { "suite_version": "…", "suite_hash": "sha256:…",
@@ -757,7 +758,7 @@ v0.3.5 参考实现的 18 个算子当前均为 **B 级**（python-control / mpm
 
 ## 10. 算子契约
 
-每个算子的语义、约定、规范性条款（如 FT-1、OD-1）、示例与 parity 规格各占一个文件，放在 `profiles/`。它们与本文同样是规范性的；条款编号在全规范内唯一，正文里写“10.17 FT-3”指 `profiles/10.17-fft.md` 的 FT-3。新算子接入时新增一个文件（9.3）。
+每个算子的语义、约定、规范性条款（如 FT-1、OD-1）、示例与 parity 规格各占一个文件，放在 `profiles/`。它们与本文同样是规范性的；条款编号在全规范内唯一，正文里写“10.17 FT-3”指 `profiles/10.17-fft.md` 的 FT-3。新算子接入时新增一个文件（9.3）。每个 profile MUST 在开头写明所含算子的版本号与容差类：版本号是线上契约的一部分（`fingerprint.request` 含版本号，4.3 R-3），只读规范的实现要能写出与参考实现相同的指纹。
 
 `bode` 与 `step` 使用同一被控对象，`lqr` 使用经典双积分器；v0.3 新增算子（10.4–10.12）的示例尽量复用同一被控对象，并都给出可手算核对的值。
 
@@ -829,11 +830,14 @@ Rust 参考实现的结构、运行方式、已知限制与内核复用规则（
 25. **（v0.4.9 新，发布流水线证实全平台逐位相同后）`platform_bitwise` 升为 `bitwise`**：参考实现已在 5 个平台上对全部 golden 逐位相同（2.1、M-7a），但 manifest 仍声明较弱的 `platform_bitwise`。改声明是新的承诺（G-2 MINOR），23 个算子要一起升版本、重新生成 manifest 与示例；还要决定 `aeoi_verify` 在 `bitwise` 下遇到跨平台差异时的判定（现在跨平台只给 `tolerance_match`）。建议随下一批算子升版本时一并处理。
 26. **（v0.4.10 新）只对部分方法有意义的后置条件**：`interp1` 的 `spline_c2` 只适用于 spline，`local_bounds` 不适用于 spline。E-11 把缺失的后置条件算作不成立，所以现在只能按空真报告（IP-6）。可选做法：manifest 的 `receipt.postconditions` 允许按 `method` 条件列出，或在 `trust.checks` 里允许 `null` 表示“不适用”。两种都改核心 schema（MINOR），留到第二个有此需要的算子出现时再定。v0.4.11 出现了第二个实例：`eig` 的 `orthonormal` 只对对称算法有意义（EG-5）；v0.4.12 出现了第三个：`butter` 的 `sos_consistent` 不适用于模拟滤波器（BW-5）。暂时都按空真处理，等作者决定。
 27. **（v0.4.11 新）警告附修复建议**：5.1 的 warning 没有 `remediation` 字段。`polyfit` 的病态警告把一个与错误 remediation 同形的对象放在 `details.suggested_remediation`（PF-4）。可选做法：给 warning 增加可选的 `remediation` 数组（核心 schema MINOR），或维持放在 `details` 的约定。
+28. **（v0.4.19 新，第二实现发现）尚未规定的细节**：见 `conformance/impls/python_scipy/SPEC_FINDINGS.md`。未处理的有：未配置 data root 时拒绝 `ref` 的码（PY-5，参考实现用 `REF_FORBIDDEN` / `REF_UNSUPPORTED`）；缺必填字段时违规 path 指向哪里（PY-6）；各 `DOMAIN` 码的 `retryable`（PY-8）；dry-run 信封的 `status` 等字段（PY-9）；manifest 的 `bound_kind: none` 与收据 `none_reported` 的关系（PY-10）；一般语法错误给不出补丁时 EX-6 与 X-5 的冲突（PY-13）；`variable`/`params` 的名字错误该填哪个 path 与 position（PY-14）。
+29. **（v0.4.19 新，PY-27）放宽容差的补丁可能掩盖发散**：IN-5 的“放宽到 1e-6”补丁套到发散积分（1/x 在 [1, ∞)）上，结果“收敛”为 36.62，只靠 `refinement_consistent` 不成立把 claim 降为 `unverified`。CF-9 只要求套用补丁后通过校验，套件会接受。可选：没有奇点证据时不给放宽补丁；或规定套用放宽补丁后 MUST 检查 `refinement_consistent`。
+30. **（v0.4.19 新，PY-15）用估计常数写成的“先验界”**：FT-6 把 c = 10 的估计归为 `bound_kind = a_priori`，强于实际（对 Bluestein 与混合基没有证明）。可选：改为 `a_posteriori_heuristic`，或给出有证明的常数。
 
 ### 12.2 下一步
 
 1. 按 12.3 的依赖层自底向上实现目标函数；同一层内按 MATLAB 使用频率排。
-2. 用只读规范的第二实现（`conformance/impls/python_scipy/`）检验规范是否足以定义行为，从 `fft`、`interp1`、`linalg.system.solve`、`integral` 开始。
+2. 用只读规范的第二实现（`conformance/impls/python_scipy/`）检验规范是否足以定义行为。v0.4.19 已做 `fft`、`interp1`、`linalg.system.solve`、`integral`（另有 `lyap`）；下一批 `bode`、`step`。
 3. 一致性套件（9.4）：有数值规则的算子不低于全部算子的 30%（v0.4.17：24 / 37）。
 4. 发布：102 个目标函数全部完成后发布 v0.5（作者决定 2026-11-25）；在此之前不打 tag。
 5. 在有授权的机器上运行 `matlab/` 下的 golden 脚本；PyO3 与 C ABI 绑定（8.3）。
