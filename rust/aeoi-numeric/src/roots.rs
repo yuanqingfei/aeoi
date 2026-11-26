@@ -10,14 +10,15 @@
 //! decision): E.NUMERICAL.NO_CONVERGENCE, or E.NUMERICAL.LOCAL_MINIMUM when ‖F‖ stalls above zero.
 use crate::expr::{check_name, eval, eval_grad, expr_err, parse, parse_params, Node};
 use aeoi_core::error::{ask_user, modify_input, OpError, Warning};
-use aeoi_core::kernels::dense::{inv_norm1_estimate, lu_factor, norm_inf};
+use aeoi_core::kernels::bracket::{zeroin, Stop, ZeroinErr};
+use aeoi_core::kernels::dense::norm_inf;
+use aeoi_core::kernels::newton::{aposteriori, dogleg};
 use aeoi_core::{num, ExecCtx, HostCtx, Operator, Output};
 use serde_json::{json, Value};
 
 operator_struct!(Fzero, "nonlinear.root.fzero");
 operator_struct!(Fsolve, "nonlinear.system.fsolve");
 
-const EPS: f64 = f64::EPSILON;
 const U: f64 = f64::EPSILON / 2.0;
 /// Jacobian condition above which the root is reported as possibly multiple (≈ u^(-1/2)).
 pub const COND_WARN: f64 = 1e8;
@@ -148,80 +149,28 @@ impl Operator for Fzero {
             warnings.push(Warning::new("W.DOMAIN.BRACKET_SEARCHED", format!("只给了初值 x0 = {x0}，算子向外搜索到变号区间 [{a:e}, {b:e}]，求的是这个区间里的根。它不一定是离 x0 最近的根，也不一定是你想要的那个。"), ).path("/x0").details(json!({"bracket": [num(a), num(b)]})));
         }
         let (a0, b0, fa0, fb0) = (a, b, fa, fb);
-        // Brent (zeroin)
-        let (mut cc, mut fc) = (a, fa);
-        let (mut d, mut e) = (b - a, b - a);
-        let mut iters = 0usize;
-        let x = if fa == 0.0 {
-            cc = a;
-            a
-        } else if fb == 0.0 {
-            cc = b;
-            b
-        } else {
-            loop {
-                if (fb > 0.0) == (fc > 0.0) {
-                    cc = a;
-                    fc = fa;
-                    d = b - a;
-                    e = d;
-                }
-                if fc.abs() < fb.abs() {
-                    a = b;
-                    b = cc;
-                    cc = a;
-                    fa = fb;
-                    fb = fc;
-                    fc = fa;
-                }
-                let tol1 = 2.0 * EPS * b.abs() + 0.5 * i.xtol + f64::MIN_POSITIVE;
-                let xm = 0.5 * (cc - b);
-                if xm.abs() <= tol1 || fb == 0.0 {
-                    break b;
-                }
-                if e.abs() >= tol1 && fa.abs() > fb.abs() {
-                    let s = fb / fa;
-                    let (mut p, mut q);
-                    if a == cc {
-                        p = 2.0 * xm * s;
-                        q = 1.0 - s;
-                    } else {
-                        let qq = fa / fc;
-                        let r = fb / fc;
-                        p = s * (2.0 * xm * qq * (qq - r) - (b - a) * (r - 1.0));
-                        q = (qq - 1.0) * (r - 1.0) * (s - 1.0);
-                    }
-                    if p > 0.0 {
-                        q = -q;
-                    } else {
-                        p = -p;
-                    }
-                    if 2.0 * p < (3.0 * xm * q - (tol1 * q).abs()).min((e * q).abs()) {
-                        e = d;
-                        d = p / q;
-                    } else {
-                        d = xm;
-                        e = d;
-                    }
+        // Brent (zeroin), shared kernel
+        let max_evals = i.max_evals;
+        let z = zeroin(
+            &mut |x| {
+                let v = c.f(x);
+                if !v.is_finite() {
+                    Err(Stop::NonFinite(x))
+                } else if c.evals > max_evals {
+                    Err(Stop::Budget)
                 } else {
-                    d = xm;
-                    e = d;
+                    Ok(v)
                 }
-                a = b;
-                fa = fb;
-                b += if d.abs() > tol1 { d } else { tol1.copysign(xm) };
-                fb = c.f(b);
-                iters += 1;
-                if !fb.is_finite() {
-                    return Err(non_finite("f ", b, "/expression"));
-                }
-                if c.evals > i.max_evals {
-                    return Err(OpError::new("E.NUMERICAL.NO_CONVERGENCE", format!("{} 次求值后仍未收敛（当前区间 [{}, {}]）。", c.evals, b.min(cc), b.max(cc)), "放宽 xtol，或检查 f 是否在区间内剧烈振荡。").path("/expression").detail("best", json!(num(b))));
-                }
-                if iters % 64 == 0 {
-                    ctx.check()?;
-                }
+            },
+            a, b, fa, fb, i.xtol, &|| ctx.check(),
+        );
+        let (x, cc, iters) = match z {
+            Ok(z) => (z.x, z.other, z.iters),
+            Err(ZeroinErr { stop: Stop::NonFinite(at), .. }) => return Err(non_finite("f ", at, "/expression")),
+            Err(ZeroinErr { stop: Stop::Budget, b, c: cc }) => {
+                return Err(OpError::new("E.NUMERICAL.NO_CONVERGENCE", format!("{} 次求值后仍未收敛（当前区间 [{}, {}]）。", c.evals, b.min(cc), b.max(cc)), "放宽 xtol，或检查 f 是否在区间内剧烈振荡。").path("/expression").detail("best", json!(num(b))))
             }
+            Err(ZeroinErr { stop: Stop::Abort(e), .. }) => return Err(e),
         };
         let (lo, hi) = (x.min(cc), x.max(cc));
         let (flo, fhi) = (c.f(lo), c.f(hi));
@@ -266,19 +215,6 @@ fn eval_fj(eqs: &[Node], vars: &[f64], n: usize) -> (Vec<f64>, Vec<f64>) {
     }
     (f, j)
 }
-fn half_sq(f: &[f64]) -> f64 {
-    0.5 * f.iter().map(|v| v * v).sum::<f64>()
-}
-fn n2(v: &[f64]) -> f64 {
-    v.iter().map(|x| x * x).sum::<f64>().sqrt()
-}
-fn matvec(j: &[f64], v: &[f64], n: usize) -> Vec<f64> {
-    (0..n).map(|r| (0..n).map(|c| j[r * n + c] * v[c]).sum()).collect()
-}
-fn matvec_t(j: &[f64], v: &[f64], n: usize) -> Vec<f64> {
-    (0..n).map(|c| (0..n).map(|r| j[r * n + c] * v[r]).sum()).collect()
-}
-
 impl Operator for Fsolve {
     type Input = InS;
     fn meta(&self) -> &aeoi_core::OperatorMeta {
@@ -321,110 +257,24 @@ impl Operator for Fsolve {
     fn execute(&self, i: InS, ctx: &ExecCtx) -> Result<Output, OpError> {
         let n = i.unknowns.len();
         let mut vars = i.vars0.clone();
-        let (mut f, mut j) = eval_fj(&i.eqs, &vars, n);
+        let (f, j) = eval_fj(&i.eqs, &vars, n);
         if f.iter().chain(j.iter()).any(|v| !v.is_finite()) {
             let k = f.iter().position(|v| !v.is_finite()).unwrap_or(0);
             return Err(OpError::new("E.NUMERICAL.NON_FINITE_EVALUATION", format!("方程（或其导数）在 x0 处不是有限值（第 {k} 个方程附近）。"), "检查方程在初值处是否有除零、log 或 sqrt 的负参数；换一个初值。").path("/x0"));
         }
-        let mut evals = 1usize;
-        let mut phi = half_sq(&f);
-        let mut delta = n2(&vars[..n]).max(1.0);
-        let mut iters = 0usize;
-        let mut converged = false;
-        let mut stalled = false;
-        let mut newton_norms: Vec<f64> = Vec::new();
-        let mut phi_hist: Vec<f64> = vec![phi];
-        while iters < i.max_iter {
-            if phi == 0.0 {
-                converged = true;
-                break;
-            }
-            iters += 1;
-            let x = vars[..n].to_vec();
-            let g = matvec_t(&j, &f, n);
-            let lu = lu_factor(&j, n);
-            let pn: Option<Vec<f64>> = if lu.zero_pivot.is_none() {
-                let s: Vec<f64> = lu.solve(&f).iter().map(|v| -v).collect();
-                if s.iter().all(|v| v.is_finite()) { Some(s) } else { None }
-            } else {
-                None
-            };
-            let gn = n2(&g);
-            let jg = matvec(&j, &g, n);
-            let pc: Vec<f64> = if gn == 0.0 { vec![0.0; n] } else { let alpha = gn * gn / jg.iter().map(|v| v * v).sum::<f64>(); g.iter().map(|v| -alpha * v).collect() };
-            if let Some(p) = &pn {
-                newton_norms.push(norm_inf(p));
-            }
-            // full Newton step tiny ⇒ converged
-            if let Some(p) = &pn {
-                if norm_inf(p) <= 4.0 * U * norm_inf(&x) {
-                    converged = true;
-                    break;
-                }
-            }
-            if pn.is_none() && gn == 0.0 {
-                stalled = true;
-                break;
-            }
-            let mut accepted = false;
-            for _ in 0..60 {
-                let (step, full) = match &pn {
-                    Some(p) if n2(p) <= delta => (p.clone(), true),
-                    _ => {
-                        let pcn = n2(&pc);
-                        if pn.is_none() || pcn >= delta {
-                            (if gn == 0.0 { vec![0.0; n] } else { g.iter().map(|v| -delta * v / gn).collect() }, false)
-                        } else {
-                            let p = pn.as_ref().unwrap();
-                            let dvec: Vec<f64> = p.iter().zip(&pc).map(|(a, b)| a - b).collect();
-                            let (aa, bb, cc) = (dvec.iter().map(|v| v * v).sum::<f64>(), 2.0 * pc.iter().zip(&dvec).map(|(a, b)| a * b).sum::<f64>(), pcn * pcn - delta * delta);
-                            let tau = (-bb + (bb * bb - 4.0 * aa * cc).sqrt()) / (2.0 * aa);
-                            (pc.iter().zip(&dvec).map(|(a, b)| a + tau * b).collect(), false)
-                        }
-                    }
-                };
-                let pnorm = n2(&step);
-                if pnorm <= 4.0 * U * n2(&x) {
-                    break;
-                }
-                let lin: Vec<f64> = f.iter().zip(matvec(&j, &step, n)).map(|(a, b)| a + b).collect();
-                let pred = phi - half_sq(&lin);
-                let mut trial = vars.clone();
-                for k in 0..n {
-                    trial[k] = x[k] + step[k];
-                }
-                let (ft, jt) = eval_fj(&i.eqs, &trial, n);
-                evals += 1;
-                let ok = ft.iter().chain(jt.iter()).all(|v| v.is_finite());
-                let phit = if ok { half_sq(&ft) } else { f64::INFINITY };
-                let rho = if pred > 0.0 { (phi - phit) / pred } else { -1.0 };
-                if rho < 0.25 {
-                    delta = 0.25 * pnorm;
-                } else if rho > 0.75 && (full || (pnorm - delta).abs() <= 1e-12 * delta) {
-                    delta = (2.0 * pnorm).max(delta);
-                }
-                if ok && rho > 1e-4 && phit < phi {
-                    vars = trial;
-                    f = ft;
-                    j = jt;
-                    phi = phit;
-                    accepted = true;
-                    break;
-                }
-            }
-            if !accepted {
-                stalled = true;
-                break;
-            }
-            // no real progress over the last 10 accepted steps (MINPACK-style test): stalled
-            phi_hist.push(phi);
-            let h = phi_hist.len();
-            if h > 10 && phi > (1.0 - 1e-3) * phi_hist[h - 11] {
-                stalled = true;
-                break;
-            }
-            ctx.check()?;
-        }
+        let params = vars[n..].to_vec();
+        let eqs = &i.eqs;
+        let dl = dogleg(
+            &mut |x: &[f64]| {
+                let mut v = x.to_vec();
+                v.extend_from_slice(&params);
+                eval_fj(eqs, &v, n)
+            },
+            vars[..n].to_vec(), f, j, i.max_iter, &|| ctx.check(),
+        )?;
+        let (iters, converged, stalled, newton_norms, evals) = (dl.iters, dl.converged, dl.stalled, dl.newton_norms, 1 + dl.evals);
+        vars[..n].copy_from_slice(&dl.x);
+        let (f, j) = (dl.f, dl.j);
         let x: Vec<f64> = vars[..n].to_vec();
         let fnorm = norm_inf(&f);
         let best = json!({"x": x.iter().map(|v| num(*v)).collect::<Vec<_>>(), "residual_inf": num(fnorm), "iterations": iters});
@@ -433,15 +283,7 @@ impl Operator for Fsolve {
             return Err(OpError::new(code, why, "换一个初值 x0（details.best 是目前最好的点）；或检查方程组是否真的有实根。").path("/x0").detail("best", best).remedy(ask_user("better_x0", "能否给一个更接近解的初值，或说明解大概在什么范围？")));
         }
         // a posteriori: next Newton correction and Jacobian condition at the solution
-        let lu = lu_factor(&j, n);
-        let (delta_next, kappa) = if lu.zero_pivot.is_none() {
-            let d = lu.solve(&f);
-            let inv1 = inv_norm1_estimate(n, &|v| lu.solve(v), &|v| lu.solve_t(v));
-            let jn1 = (0..n).map(|c| (0..n).map(|r| j[r * n + c].abs()).sum::<f64>()).fold(0.0, f64::max);
-            (norm_inf(&d), jn1 * inv1)
-        } else {
-            (f64::INFINITY, f64::INFINITY)
-        };
+        let (delta_next, kappa) = aposteriori(&f, &j, n);
         let mut warnings = Vec::new();
         // linear convergence of the last Newton steps (ratio ≥ 1/4 three times) also signals a singular Jacobian
         // at the root — the only signal for n = 1, where κ(J) is always 1

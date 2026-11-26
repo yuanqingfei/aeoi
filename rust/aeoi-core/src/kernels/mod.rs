@@ -11,3 +11,5 @@ pub mod schur;
 pub mod nalg;
 pub mod svd;
 pub mod sum;
+pub mod bracket;
+pub mod newton;
