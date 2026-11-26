@@ -1,6 +1,6 @@
 //! linalg.decomp.eig (spec v0.4.11, 10.22) against the exact eigenvalues, eigenvectors and condition numbers
 //! of the stored matrix (mpmath, 50 digits); numpy (LAPACK) values recorded. Golden:
-//! golden/python-control/linalg.decomp.eig/0.4.0 (gen_golden_eig.py). Not MATLAB.
+//! golden/python-control/linalg.decomp.eig/0.4.0 (scripts/golden/gen_golden_eig.py). Not MATLAB.
 use aeoi_core::HostCtx;
 use serde_json::{json, Value};
 use std::path::PathBuf;

@@ -1,5 +1,5 @@
 //! signal.design.butter (spec v0.4.12, 10.24) against an independent 50-digit mpmath construction (truth) and
-//! scipy.signal.butter. Golden: golden/python-control/signal.design.butter/0.4.0 (gen_golden_butter.py). Not MATLAB.
+//! scipy.signal.butter. Golden: golden/python-control/signal.design.butter/0.4.0 (scripts/golden/gen_golden_butter.py). Not MATLAB.
 use aeoi_core::HostCtx;
 use serde_json::{json, Value};
 use std::path::PathBuf;

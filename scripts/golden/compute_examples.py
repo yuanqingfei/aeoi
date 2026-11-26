@@ -31,4 +31,4 @@ A2=np.array([[1.,0.],[0.,-1.]]);B2=np.array([[0.],[1.]])
 sv=np.linalg.svd(ct.ctrb(A2,B2),compute_uv=False)
 out["lqr_err"]={"ctrb_sv":sv.tolist(),"uncontrollable_eig":1.0}
 print(json.dumps(out,indent=1))
-json.dump(out,open("ai-operator-spec/computed_values.json","w"),indent=1)
+json.dump(out,open("golden/computed_values.json","w"),indent=1)

@@ -138,14 +138,14 @@ cargo test --release -p aeoi-control --test parity_hp                  # lqr / l
 cargo build --release
 ./target/release/aeoi-call control.lti.bode ../examples/control.lti.bode/request.json
 ./target/release/aeoi-mcp [--data-root DIR] [--namespace control.lti]   # MCP stdio server
-cd .. && python3 mcp_session_demo.py      # 脚本化 MCP 会话，记录到 reports/mcp-session.jsonl
-python3 regen_examples.py                 # 用 Rust 输出重新生成 examples/*/response*.json
-python3 gen_golden_pycontrol.py           # 重新生成 v0.2 算子的 python-control golden（需 python-control/scipy）
-python3 gen_golden_pycontrol_b2.py        # v0.3 算子的 golden（seed 20261122）
-python3 gen_golden_mpmath.py              # lqr 0.3.0 / lyap 0.4.0 的高精度 golden（mpmath 50 位，seed 20261123）
-python3 make_examples_b2.py               # v0.3 算子的示例请求、python-control 参考值与 parity.yaml
-python3 build_spec.py                     # spec-src.md → spec-v0.4.md（内联示例文件）
-python3 validate_examples.py              # 独立的 Python jsonschema 校验
+cd .. && python3 scripts/mcp_session_demo.py      # 脚本化 MCP 会话，记录到 reports/mcp-session.jsonl
+python3 scripts/regen_examples.py                 # 用 Rust 输出重新生成 examples/*/response*.json
+python3 scripts/golden/gen_golden_pycontrol.py           # 重新生成 v0.2 算子的 python-control golden（需 python-control/scipy）
+python3 scripts/golden/gen_golden_pycontrol_b2.py        # v0.3 算子的 golden（seed 20261122）
+python3 scripts/golden/gen_golden_mpmath.py              # lqr 0.3.0 / lyap 0.4.0 的高精度 golden（mpmath 50 位，seed 20261123）
+python3 scripts/golden/make_examples_b2.py               # v0.3 算子的示例请求、python-control 参考值与 parity.yaml
+python3 scripts/build_spec.py                     # spec-src.md → spec-v0.4.md（内联示例文件）
+python3 scripts/validate_examples.py              # 独立的 Python jsonschema 校验
 cd rust && cargo run --release -p aeoi-web                              # 网页测试台 http://127.0.0.1:8787/（需 GEMINI_API_KEY）
 cargo run --release -p aeoi-web -- eval --model gemini:gemini-2.5-flash  # LLM 评测，写 reports/eval-<model>.json
 cargo run --release -p aeoi-web -- design --model mock:design --engdesign ZC_02  # 设计评测，离线；见 8.4

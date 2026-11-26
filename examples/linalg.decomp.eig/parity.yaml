@@ -2,7 +2,7 @@
 operator: linalg.decomp.eig
 references:
   - {engine: numpy, version: "numpy.linalg.eigvalsh / eigvals (LAPACK dsyevd / dgeev)", role: dev_reference, status: active,
-     generator: gen_golden_eig.py, golden_store: "golden/python-control/linalg.decomp.eig/0.4.0/*.json",
+     generator: scripts/golden/gen_golden_eig.py, golden_store: "golden/python-control/linalg.decomp.eig/0.4.0/*.json",
      note: "NOT MATLAB output. Neither numpy nor MATLAB sorts general eigenvalues; the reference is sorted by the AEOI rule"}
   - {engine: mpmath, role: high_precision_reference, status: active,
      note: "exact eigenvalues, unit eigenvectors and eigenvalue condition numbers of the stored f64 matrix (50 digits; eigsy / eig with left and right vectors)"}

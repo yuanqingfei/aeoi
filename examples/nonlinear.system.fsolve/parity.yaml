@@ -1,7 +1,7 @@
 # Parity test spec — nonlinear.system.fsolve 0.4.0 (AEOI v0.4.13-draft)
 operator: nonlinear.system.fsolve
 references:
-  - {engine: scipy, version: "scipy.optimize.fsolve (MINPACK hybrd)", role: dev_reference, status: active, generator: gen_golden_roots.py,
+  - {engine: scipy, version: "scipy.optimize.fsolve (MINPACK hybrd)", role: dev_reference, status: active, generator: scripts/golden/gen_golden_roots.py,
      golden_store: "golden/python-control/nonlinear.system.fsolve/0.4.0/*.json", note: "NOT MATLAB output. MATLAB fsolve's default is trust-region dogleg with finite-difference Jacobians"}
   - {engine: mpmath, role: high_precision_reference, status: active, note: "findroot at 40+ digits started from the reference (or a known) root"}
   - {engine: MATLAB, role: ground_truth, status: planned}

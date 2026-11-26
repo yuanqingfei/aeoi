@@ -1,6 +1,6 @@
 //! fit.poly.polyval and fit.poly.roots (spec v0.4.20, 10.33, 10.34) against numpy and independent truth:
 //! polyval against the exact rational value at the stored points; roots against mpmath.polyroots at 60
-//! digits. Golden: golden/python-control/fit.poly.{polyval,roots}/0.4.0 (gen_golden_poly.py). Not MATLAB.
+//! digits. Golden: golden/python-control/fit.poly.{polyval,roots}/0.4.0 (scripts/golden/gen_golden_poly.py). Not MATLAB.
 use aeoi_core::HostCtx;
 use serde_json::{json, Value};
 use std::path::PathBuf;

@@ -2,7 +2,7 @@
 operator: fit.poly.polyfit
 references:
   - {engine: numpy, version: "numpy.polyfit (LAPACK dgelsd on the column-scaled Vandermonde matrix)", role: dev_reference, status: active,
-     generator: gen_golden_polyfit.py, golden_store: "golden/python-control/fit.poly.polyfit/0.4.0/*.json",
+     generator: scripts/golden/gen_golden_polyfit.py, golden_store: "golden/python-control/fit.poly.polyfit/0.4.0/*.json",
      note: "NOT MATLAB output. MATLAB polyfit: Householder QR of the unscaled Vandermonde matrix, no refinement"}
   - {engine: mpmath, role: high_precision_reference, status: active,
      note: "exact least-squares answer for the stored f64 data: 60-digit normal equations; mean/std exact for center_scale"}

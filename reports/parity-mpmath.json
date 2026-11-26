@@ -1,5 +1,5 @@
 {
-  "reference": "mpmath 50-digit (gen_golden_mpmath.py); NOT MATLAB, NOT python-control",
+  "reference": "mpmath 50-digit (scripts/golden/gen_golden_mpmath.py); NOT MATLAB, NOT python-control",
   "tolerances": {
     "S_K_X_rel_fro": 1e-12,
     "closed_loop_poles_rel": "max(1e-10, 1e2·ε·‖A − B K_ref‖_F)",

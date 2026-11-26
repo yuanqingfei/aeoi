@@ -2,7 +2,7 @@
 operator: interp.grid.interp1
 references:
   - {engine: scipy, version: "numpy.interp; scipy.interpolate interp1d (nearest-up, previous, next, linear extrapolation), PchipInterpolator, CubicSpline(not-a-knot)", role: dev_reference, status: active,
-     generator: gen_golden_interp1.py, golden_store: "golden/python-control/interp.grid.interp1/0.4.0/*.json",
+     generator: scripts/golden/gen_golden_interp1.py, golden_store: "golden/python-control/interp.grid.interp1/0.4.0/*.json",
      note: "NOT MATLAB output. Same definitions as MATLAB interp1 for these methods; MATLAB's default outside the data range (NaN or extrapolation, by method) is not AEOI's default (error)"}
   - {engine: exact, role: high_precision_reference, status: active, note: "spline on cubic data and every cubic/linear method on a straight line reproduce the function exactly"}
   - {engine: MATLAB, role: ground_truth, status: planned}

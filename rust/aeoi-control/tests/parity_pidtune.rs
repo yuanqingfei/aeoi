@@ -1,6 +1,6 @@
 //! control.design.pidtune (spec v0.4.6, 10.16) against an independent numpy implementation of the spec's
 //! frequency-point design, each result verified with python-control 0.10.2 (stability_margins, poles).
-//! Golden: golden/python-control/control.design.pidtune/0.4.0 (gen_golden_pidtune.py). Not MATLAB.
+//! Golden: golden/python-control/control.design.pidtune/0.4.0 (scripts/golden/gen_golden_pidtune.py). Not MATLAB.
 mod common;
 use aeoi_core::HostCtx;
 use common::*;

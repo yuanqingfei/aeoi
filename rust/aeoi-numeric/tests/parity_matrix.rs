@@ -1,6 +1,6 @@
 //! linalg.matrix.inv and linalg.matrix.det (spec v0.4.22, 10.35, 10.36) against the truth for the stored data
 //! (mpmath, 80 digits; exact rationals for n ≤ 8) with numpy.linalg (LAPACK) recorded for comparison.
-//! Golden: golden/mpmath/linalg.matrix.{inv,det}/0.4.0 (gen_golden_matrix.py). Not MATLAB.
+//! Golden: golden/mpmath/linalg.matrix.{inv,det}/0.4.0 (scripts/golden/gen_golden_matrix.py). Not MATLAB.
 use aeoi_core::HostCtx;
 use serde_json::{json, Value};
 use std::path::PathBuf;

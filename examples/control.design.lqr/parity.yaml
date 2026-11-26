@@ -2,9 +2,9 @@
 operator: control.design.lqr
 references:
   - {engine: python-control, version: "0.10.2 → scipy.linalg.solve_continuous_are 1.18.1 (无 slycot)", role: dev_reference, status: active,
-     generator: gen_golden_pycontrol.py, golden_store: "golden/python-control/control.design.lqr/0.2.0/*.json",
+     generator: scripts/golden/gen_golden_pycontrol.py, golden_store: "golden/python-control/control.design.lqr/0.2.0/*.json",
      note: "NOT MATLAB output"}
-  - {engine: mpmath, version: "50 digits", role: high_precision_reference, status: active, generator: gen_golden_mpmath.py,
+  - {engine: mpmath, version: "50 digits", role: high_precision_reference, status: active, generator: scripts/golden/gen_golden_mpmath.py,
      golden_store: "golden/mpmath/control.design.lqr/0.3.0/*.json", runner: "cargo test --release -p aeoi-control --test parity_hp",
      compare: "S, K rel_fro ≤ 1e-12（不放宽）；闭环极点 ≤ max(1e-10, 1e2·ε·‖A−BK‖_F)（特征值后向误差下限）",
      note: "tpt-control 交叉验证发现的病态族（cond(R) 至 1e12、误报 HAMILTONIAN_IMAG_AXIS_EIG 的复现例）；NOT MATLAB, NOT python-control"}

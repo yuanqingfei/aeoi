@@ -169,7 +169,7 @@ save("u_nonfinite", {"system": G2, "u": {"dtype": "f64", "shape": [3], "data": [
 print("lsim golden:", n, "cases →", D)
 
 # ---- published examples (examples/control.lti.lsim): requests + scipy reference values; responses come from
-# regen_examples.py (the Rust implementation)
+# scripts/regen_examples.py (the Rust implementation)
 E = f"examples/{OP}"
 t_ex = np.arange(201) * 0.05
 u_ex = np.sin(2 * t_ex)

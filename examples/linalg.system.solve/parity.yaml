@@ -2,7 +2,7 @@
 operator: linalg.system.solve
 references:
   - {engine: numpy, version: "numpy.linalg.solve (LAPACK dgesv) / numpy.linalg.lstsq (LAPACK dgelsd)", role: dev_reference, status: active,
-     generator: gen_golden_linsolve.py, golden_store: "golden/python-control/linalg.system.solve/0.4.0/*.json",
+     generator: scripts/golden/gen_golden_linsolve.py, golden_store: "golden/python-control/linalg.system.solve/0.4.0/*.json",
      note: "NOT MATLAB output. MATLAB A\\b: dgesv for square, Householder QR for overdetermined (no refinement)"}
   - {engine: mpmath, role: high_precision_reference, status: active,
      note: "exact answer for the stored f64 data: 60-digit LU (square) or normal equations (least squares)"}

@@ -2,7 +2,7 @@
 operator: signal.design.butter
 references:
   - {engine: scipy, version: "scipy.signal.butter (output zpk / ba / sos)", role: dev_reference, status: active,
-     generator: gen_golden_butter.py, golden_store: "golden/python-control/signal.design.butter/0.4.0/*.json",
+     generator: scripts/golden/gen_golden_butter.py, golden_store: "golden/python-control/signal.design.butter/0.4.0/*.json",
      note: "NOT MATLAB output. MATLAB butter uses the same prototype / transform / prewarped bilinear construction"}
   - {engine: mpmath, role: high_precision_reference, status: active, note: "independent 50-digit implementation of the construction (truth for z, p, k, b, a)"}
   - {engine: MATLAB, role: ground_truth, status: planned}

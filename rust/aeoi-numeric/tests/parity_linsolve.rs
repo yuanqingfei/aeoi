@@ -1,6 +1,6 @@
 //! linalg.system.solve (spec v0.4.10, 10.19) against numpy.linalg (LAPACK dgesv / dgelsd) and the exact
 //! answer for the stored data (mpmath, 60 digits). Golden: golden/python-control/linalg.system.solve/0.4.0
-//! (gen_golden_linsolve.py). Not MATLAB.
+//! (scripts/golden/gen_golden_linsolve.py). Not MATLAB.
 use aeoi_core::HostCtx;
 use serde_json::{json, Value};
 use std::path::PathBuf;

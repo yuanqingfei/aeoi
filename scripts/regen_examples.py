@@ -3,7 +3,7 @@
 Replaces build_examples.py (v0.1, retired). Values are Rust aeoi-control outputs; parity vs
 python-control is checked by `cargo test` (tests/examples.rs, tests/parity.rs). NOT MATLAB output."""
 import json, subprocess, pathlib, glob
-root = pathlib.Path(__file__).resolve().parent
+root = pathlib.Path(__file__).resolve().parents[1]
 bin_ = root / "rust/target/release/aeoi-call"
 subprocess.check_call(["cargo", "build", "--release", "-q", "--bin", "aeoi-call"], cwd=root / "rust")
 

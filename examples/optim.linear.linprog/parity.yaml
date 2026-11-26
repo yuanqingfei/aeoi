@@ -2,7 +2,7 @@
 operator: optim.linear.linprog
 references:
   - {engine: scipy, version: "scipy.optimize (linprog, HiGHS)", role: dev_reference, status: active,
-     generator: gen_golden_optim.py, golden_store: "golden/python-control/optim.linear.linprog/0.4.0/*.json", note: "NOT MATLAB output"}
+     generator: scripts/golden/gen_golden_optim.py, golden_store: "golden/python-control/optim.linear.linprog/0.4.0/*.json", note: "NOT MATLAB output"}
   - {engine: analytic, role: high_precision_reference, status: active, note: "hand-derived optima, each cross-checked in the generator against an independent tight solve (AGENTS.md rule 6)"}
   - {engine: MATLAB, role: ground_truth, status: planned}
 runner: "cargo test --release -p aeoi-numeric --test parity_optim"

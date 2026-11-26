@@ -11,10 +11,10 @@ AEOI（AI Engineering Operator Interface Spec）是叠加在 MCP 之上的工程
 
 ## 必须遵守
 1. **提交、推送不必等作者确认（作者 2026-11-25 授权），但每个里程碑都要提交并推送，不留未推送的提交。打 tag / 正式发布（GitHub Release、MCP 目录）仍要作者当次同意。**
-2. 每个新算子同时带：schema（经 `write_manifests.py`）、Rust 实现、golden（`gen_golden_<op>.py`）、示例与 `parity.yaml`、一致性规则与代理变异；它逼出的规范问题写进规范和 Changelog。一次 1–2 个算子。
+2. 每个新算子同时带：schema（经 `scripts/write_manifests.py`）、Rust 实现、golden（`scripts/golden/gen_golden_<op>.py`）、示例与 `parity.yaml`、一致性规则与代理变异；它逼出的规范问题写进规范和 Changelog。一次 1–2 个算子。
 3. 一致性容差来自套件，不来自被测实现自报的值（CF-6）。有数值规则的算子 ≥ 全部算子的 30%。
 4. 验证一律看**退出码**，不要只看输出的最后一行。
-5. `write_manifests.py` 是 manifest 与 I/O schema 的唯一来源；不要手改 `examples/*/manifest.json`、`*.schema.json`。
+5. `scripts/write_manifests.py` 是 manifest 与 I/O schema 的唯一来源；不要手改 `examples/*/manifest.json`、`*.schema.json`。
 6. 手写的解析解（golden 的真值）要用独立的高精度方法交叉核对。
 7. 推送后查看 CI 结果（`gh api repos/yuanqingfei/aeoi/actions/runs`）。Pages 的冒烟测试曾连续失败 5 次没人发现。
 8. 不要引入依赖系统数学库或按 CPU 分派内核的计算路径（规范 2.1 M-7a）：超越函数经 `aeoi-libm` 走编入的 Rust `libm`，矩阵乘法用 `rust/vendor/matrixmultiply` 的通用内核。
@@ -24,11 +24,11 @@ AEOI（AI Engineering Operator Interface Spec）是叠加在 MCP 之上的工程
 ## 验证
 ```bash
 cd rust && cargo test --workspace --release && cargo build --release -p aeoi-mcp -p aeoi-ops && cd ..
-python3 write_manifests.py && git status          # 不应有意外改动
-python3 validate_examples.py; echo $?             # 0
+python3 scripts/write_manifests.py && git status          # 不应有意外改动
+python3 scripts/validate_examples.py; echo $?             # 0
 python3 -I conformance/aeoi_conformance.py run --impl rust/target/release/aeoi-mcp --report /tmp/c.json; echo $?
 python3 -I conformance/tests/test_runner_catches_mutants.py; echo $?
-python3 build_spec.py && grep -c '{{' spec-v0.4.md   # 0
+python3 scripts/build_spec.py && grep -c '{{' spec-v0.4.md   # 0
 git checkout reports/parity-python-control*.json  # 测试会改写它们
 ```
 

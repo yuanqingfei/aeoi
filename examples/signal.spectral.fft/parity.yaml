@@ -2,7 +2,7 @@
 operator: signal.spectral.fft
 references:
   - {engine: numpy, version: "numpy 2.5.3 (pocketfft)", role: dev_reference, status: active,
-     generator: gen_golden_fft.py, golden_store: "golden/python-control/signal.spectral.fft/0.4.0/*.json",
+     generator: scripts/golden/gen_golden_fft.py, golden_store: "golden/python-control/signal.spectral.fft/0.4.0/*.json",
      note: "NOT MATLAB output. numpy.fft.fft/ifft (norm=backward|ortho|forward), rfft for sides = one, fftfreq/rfftfreq. An independent FFT implementation"}
   - {engine: mpmath, version: "mpmath 1.4.1, 50 digits", role: high_precision_reference, status: active,
      golden_store: "golden/mpmath/signal.spectral.fft/0.4.0/*.json", note: "direct DFT with exact j·k mod n reduction: the exact answer rounded to f64 (n ≤ 31)"}

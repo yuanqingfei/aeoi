@@ -1,6 +1,6 @@
 //! linalg.decomp.svd (spec v0.4.11, 10.23) against the exact singular values and vectors of the stored matrix
 //! (mpmath 50 digits); numpy (LAPACK dgesdd) values recorded. Golden: golden/python-control/linalg.decomp.svd/0.4.0
-//! (gen_golden_svd.py). Not MATLAB.
+//! (scripts/golden/gen_golden_svd.py). Not MATLAB.
 use aeoi_core::HostCtx;
 use serde_json::{json, Value};
 use std::path::PathBuf;

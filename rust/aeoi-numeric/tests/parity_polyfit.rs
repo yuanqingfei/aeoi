@@ -1,5 +1,5 @@
 //! fit.poly.polyfit (spec v0.4.11, 10.21) against numpy.polyfit and the exact least-squares answer for the
-//! stored data (mpmath, 60 digits). Golden: golden/python-control/fit.poly.polyfit/0.4.0 (gen_golden_polyfit.py).
+//! stored data (mpmath, 60 digits). Golden: golden/python-control/fit.poly.polyfit/0.4.0 (scripts/golden/gen_golden_polyfit.py).
 //! Not MATLAB.
 use aeoi_core::HostCtx;
 use serde_json::{json, Value};

@@ -1,7 +1,7 @@
 # Parity test spec — linalg.matrix.inv 0.4.0 (AEOI v0.4.22-draft)
 operator: linalg.matrix.inv
 references:
-  - {engine: mpmath, role: high_precision_reference, status: active, generator: gen_golden_matrix.py,
+  - {engine: mpmath, role: high_precision_reference, status: active, generator: scripts/golden/gen_golden_matrix.py,
      golden_store: "golden/mpmath/linalg.matrix.inv/0.4.0/*.json",
      note: "inverse of the stored f64 matrix at 80 digits; exact rationals for n ≤ 8 (asserted equal). NOT MATLAB output"}
   - {engine: numpy, version: "numpy.linalg.inv (LAPACK dgetrf + dgetri)", role: dev_reference, status: active,

@@ -1,5 +1,5 @@
 //! signal.spectral.fft (spec v0.4.7, 10.17) against numpy.fft (pocketfft) and a 50-digit mpmath direct DFT.
-//! Golden: golden/{python-control,mpmath}/signal.spectral.fft/0.4.0 (gen_golden_fft.py). Not MATLAB.
+//! Golden: golden/{python-control,mpmath}/signal.spectral.fft/0.4.0 (scripts/golden/gen_golden_fft.py). Not MATLAB.
 use aeoi_core::HostCtx;
 use nalgebra::Complex;
 use serde_json::{json, Value};

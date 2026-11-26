@@ -77,7 +77,7 @@ fn parity_mpmath_high_precision() {
         }
         report.insert(op.into(), json!({"operator_version": ver, "golden_store": format!("golden/mpmath/{op}/{ver}"), "families": fam}));
     }
-    let out = json!({"reference": "mpmath 50-digit (gen_golden_mpmath.py); NOT MATLAB, NOT python-control",
+    let out = json!({"reference": "mpmath 50-digit (scripts/golden/gen_golden_mpmath.py); NOT MATLAB, NOT python-control",
                      "tolerances": {"S_K_X_rel_fro": TOL_X, "closed_loop_poles_rel": "max(1e-10, 1e2·ε·‖A − B K_ref‖_F)", "relaxation": "poles only: eigenvalue backward-error floor of A − BK"},
                      "operators": report, "failures": failures});
     std::fs::write(spec_root().join("reports/parity-mpmath.json"), serde_json::to_string_pretty(&out).unwrap()).unwrap();

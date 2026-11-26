@@ -1,6 +1,6 @@
 //! control.analysis.loopsens (spec v0.3.6, K-4/K-5) against python-control 0.10.2: the one-shot loop
 //! analysis must equal the chained primitives series → feedback → stability_margins → bandwidth →
-//! step_info. Golden: golden/python-control/control.analysis.loopsens/0.4.0 (gen_golden_loopsens.py). Not MATLAB.
+//! step_info. Golden: golden/python-control/control.analysis.loopsens/0.4.0 (scripts/golden/gen_golden_loopsens.py). Not MATLAB.
 mod common;
 use aeoi_core::HostCtx;
 use common::*;

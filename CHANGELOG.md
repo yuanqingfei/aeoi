@@ -2,6 +2,21 @@
 
 > 从规范第 13 章移出（v0.4.18）。每个版本：起因、规范改动、已做的改动、开发中发现的问题、结果。最新的在前。
 
+## 仓库整理（2026-11-26，规范内容不变）
+
+作者要求清理仓库。
+
+| 改动 | 说明 |
+|---|---|
+| 删除 `spec-v0.1.md`、`spec-v0.2.md`、`spec-v0.3.md` | 已被 v0.4 取代；仍可在 tag [`v0.4.9`](https://github.com/yuanqingfei/aeoi/tree/v0.4.9) 中查看 |
+| 删除 `legacy/` | v0.1 的构建脚本与源稿 |
+| 删除 `reports/receipts-wasm-verify.json` | 只被 v0.3 规范引用，没有程序再生成它 |
+| 根目录的 Python 脚本移到 `scripts/` | `write_manifests.py`、`regen_examples.py`、`validate_examples.py`、`build_spec.py`、`mcp_session_demo.py`；都从仓库根目录运行，例如 `python3 scripts/write_manifests.py` |
+| golden 生成脚本移到 `scripts/golden/` | 22 个 `gen_golden_*.py`、`make_examples_b2.py`、`compute_examples.py` |
+| `computed_values.json` 移到 `golden/` | v0.1 示例的 python-control 数值，`aeoi-control/tests/examples.rs` 使用 |
+
+规范、AGENTS.md、skill、README、`docs/reference-impl.md`、各 `parity.yaml` 与测试注释里的路径已同步更新；本文件中更早的条目保留当时的文件名。全套验证结果不变（1278 / 0 / 217）。
+
 ## v0.4.22-draft（2026-11-26）
 
 起因：按 12.3 的依赖层自底向上加算子，第二批是 `inv` + `det`。两者都建在 `kernels::dense` 的 LU 上，与 `linalg.system.solve` 同一内核（RI-1）。

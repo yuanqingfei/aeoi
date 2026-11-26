@@ -17,7 +17,7 @@ into the binaries we build. Regenerate the crate table with `python3 tools/gen_t
 | Item | Use | License |
 |---|---|---|
 | python-control 0.10.2, scipy, numpy | generate `golden/python-control/` reference values (`gen_golden_pycontrol*.py`); values only, no code copied | BSD-3-Clause |
-| mpmath | 50-digit reference values in `golden/mpmath/` (`gen_golden_mpmath.py`) | BSD-3-Clause |
+| mpmath | 50-digit reference values in `golden/mpmath/` (`scripts/golden/gen_golden_mpmath.py`) | BSD-3-Clause |
 | tpt-control (rev 10e4320, © TPT Solutions) | `tools/xcheck-tpt/` cross-check harness, referenced by git rev; no source copied | MIT OR Apache-2.0 |
 | EngDesign (commit c8ec338, © 2025 EngDesign Benchmark Team) | 10 control/DSP task prompts, rubrics and reference solutions vendored verbatim in `eval/design/engdesign.json` (`tools/vendor_engdesign.py`); scoring re-implemented, no evaluator code copied | MIT — `eval/design/LICENSE-EngDesign` |
 | ControlEval (EnvCommons/ControlEval; data from ControlAgent/ControlAgent) | design tasks downloaded at run time by `eval/design/fetch_controleval.py` into the gitignored `eval/design/upstream/`; nothing vendored, prompts and scoring are our own | none declared (not redistributed) |

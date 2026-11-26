@@ -2,7 +2,7 @@
 operator: ode.ivp.solve
 references:
   - {engine: scipy, version: "scipy 1.18.1 solve_ivp(method = RK45)", role: dev_reference, status: active,
-     generator: gen_golden_ode.py, golden_store: "golden/python-control/ode.ivp.solve/0.4.0/*.json",
+     generator: scripts/golden/gen_golden_ode.py, golden_store: "golden/python-control/ode.ivp.solve/0.4.0/*.json",
      note: "NOT MATLAB output. Same Dormand–Prince 5(4) pair, error norm and step-size controller as the operator (spec 10.18 OD-2); the right-hand sides are evaluated by an independent Python parser of spec 3.15"}
   - {engine: truth, role: high_precision_reference, status: active,
      note: "analytic solution where one exists (cross-checked against DOP853 rtol 1e-13 by the generator), otherwise scipy DOP853 at rtol 1e-13, atol 1e-14"}

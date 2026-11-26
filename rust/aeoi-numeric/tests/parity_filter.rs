@@ -1,6 +1,6 @@
 //! signal.filter.filter (spec v0.4.12, 10.25) against the 50-digit difference equation on the stored data
 //! (mpmath) and scipy lfilter / sosfilt. Golden: golden/python-control/signal.filter.filter/0.4.0
-//! (gen_golden_filter.py). Not MATLAB.
+//! (scripts/golden/gen_golden_filter.py). Not MATLAB.
 use aeoi_core::HostCtx;
 use serde_json::{json, Value};
 use std::path::PathBuf;

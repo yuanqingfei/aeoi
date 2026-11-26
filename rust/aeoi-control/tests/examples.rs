@@ -1,5 +1,5 @@
 //! Example requests (examples/<op>/request*.json) must reproduce the published responses and the
-//! python-control values in computed_values.json within the operator's tolerance class (NOT MATLAB values).
+//! python-control values in golden/computed_values.json within the operator's tolerance class (NOT MATLAB values).
 //! Also: envelopes validate against envelope+output schema; transport encodings (json/b64/ref/sparse) give
 //! identical results and identical input_hash; dry_run; output_encoding=b64.
 mod common;
@@ -30,7 +30,7 @@ fn maxabs(a: &[f64], b: &[f64]) -> f64 {
 fn bode_example() {
     let h = HostCtx::default();
     let env = call("control.lti.bode", &read("examples/control.lti.bode/request.json"), &h);
-    let cv = read("computed_values.json");
+    let cv = read("golden/computed_values.json");
     let mag = fvec(&env["result"]["magnitude"]["value"]["data"]);
     let ph = fvec(&env["result"]["phase"]["value"]["data"]);
     let em = maxabs(&mag, &fvec(&cv["bode"]["mag_db"]));
@@ -50,7 +50,7 @@ fn bode_example() {
 fn step_example() {
     let h = HostCtx::default();
     let env = call("control.lti.step", &read("examples/control.lti.step/request.json"), &h);
-    let cv = read("computed_values.json");
+    let cv = read("golden/computed_values.json");
     let y = fvec(&env["result"]["y"]["value"]["data"]);
     let ey = maxabs(&y, &fvec(&cv["step"]["y"]));
     println!("step example vs python-control: y {ey:.3e} (tol 1e-10·max|y|)");
@@ -80,7 +80,7 @@ fn lqr_example() {
     let e = maxabs(&k, &analytic) / fro(&analytic);
     println!("lqr example vs analytic K=[1,√3]: {e:.3e} (tol 1e-10)");
     assert!(e <= 1e-10);
-    let cv = read("computed_values.json");
+    let cv = read("golden/computed_values.json");
     let ek: Vec<f64> = cv["lqr"]["K"][0].as_array().unwrap().iter().map(f).collect();
     assert!(maxabs(&k, &ek) / fro(&ek) <= 1e-10);
     let err = call("control.design.lqr", &read("examples/control.design.lqr/request.error.json"), &h);

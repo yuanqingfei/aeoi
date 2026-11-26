@@ -2,7 +2,7 @@
 operator: control.design.pidtune
 references:
   - {engine: "numpy (spec 10.16 formulas) + python-control", version: "python-control 0.10.2, numpy 2.5.3", role: dev_reference, status: active,
-     generator: gen_golden_pidtune.py, golden_store: "golden/python-control/control.design.pidtune/0.4.0/*.json",
+     generator: scripts/golden/gen_golden_pidtune.py, golden_store: "golden/python-control/control.design.pidtune/0.4.0/*.json",
      note: "NOT MATLAB output. Independent Python implementation of PT-2 – PT-4 (PI closed form, PID scan + bisection); every success case verified with python-control: |L(jωc)| = 1 (1e-9), ∠L(jωc) = −180° + PM (1e-7°), stability_margins, closed-loop poles"}
   - {engine: MATLAB, role: none,
      note: "MATLAB pidtune chooses ωc itself and balances robustness/performance with an unpublished objective; it is not a reference for this operator (A-4)"}

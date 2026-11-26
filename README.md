@@ -30,13 +30,14 @@
 
 ## 仓库内容
 
-- `spec-v0.4.md`：核心协议（约定、manifest、类型、信封与收据、错误、可复现性、凭证、绑定、治理与一致性）。源稿是 `spec-src.md`，用 `python3 build_spec.py` 生成；`spec-v0.3.md`、`spec-v0.2.md`、`spec-v0.1.md` 是历史版本。
+- `spec-v0.4.md`：核心协议（约定、manifest、类型、信封与收据、错误、可复现性、凭证、绑定、治理与一致性）。源稿是 `spec-src.md`，用 `python3 scripts/build_spec.py` 生成。历史版本 v0.1 – v0.3 见 tag [`v0.4.9`](https://github.com/yuanqingfei/aeoi/tree/v0.4.9)（`spec-v0.1.md` – `spec-v0.3.md`）。
 - `profiles/`：算子契约（规范第 10 章），每个算子一个文件，与核心协议同样是规范性的。
 - `docs/reference-impl.md`：Rust 参考实现说明（结构、内核复用规则、各绑定的实现、评测结果）。
 - `CHANGELOG.md`：每个版本的起因、改动与结果。
 - `schemas/`：JSON Schema（common / manifest / envelope / error）。
-- `examples/`：每个算子一个目录，含 manifest、输入输出 schema（由 `write_manifests.py` 生成）、示例请求与响应、`parity.yaml`。
-- `golden/`：对照参考用例，共 1188 个。`python-control/` 下的参考值来自 python-control / numpy / scipy，`mpmath/` 下的是高精度真值。**参考值都不是 MATLAB 算的。** 生成脚本是仓库根目录的 `gen_golden_*.py`。
+- `examples/`：每个算子一个目录，含 manifest、输入输出 schema（由 `scripts/write_manifests.py` 生成）、示例请求与响应、`parity.yaml`。
+- `golden/`：对照参考用例，共 1272 个。`python-control/` 下的参考值来自 python-control / numpy / scipy，`mpmath/` 下的是高精度真值。**参考值都不是 MATLAB 算的。** 生成脚本在 `scripts/golden/`。
+- `scripts/`：`write_manifests.py`（manifest 与 schema 的唯一来源）、`regen_examples.py`、`validate_examples.py`、`build_spec.py`；`scripts/golden/` 是 golden 与示例请求的生成脚本。都从仓库根目录运行。
 - `roadmap/`：102 个目标函数与内核的清单和依赖层。
 - `rust/`：cargo workspace。
   - `aeoi-core`：信封、校验、收据，以及共享内核 `kernels`。

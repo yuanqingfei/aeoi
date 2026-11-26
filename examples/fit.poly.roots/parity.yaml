@@ -2,7 +2,7 @@
 operator: fit.poly.roots
 references:
   - {engine: numpy, version: "numpy.roots (LAPACK eigenvalues of the unbalanced companion matrix)", role: dev_reference, status: active,
-     generator: gen_golden_poly.py, golden_store: "golden/python-control/fit.poly.roots/0.4.0/*.json",
+     generator: scripts/golden/gen_golden_poly.py, golden_store: "golden/python-control/fit.poly.roots/0.4.0/*.json",
      note: "NOT MATLAB output. MATLAB roots: eigenvalues of the companion matrix, order as returned by eig"}
   - {engine: mpmath, role: high_precision_reference, status: active,
      note: "mpmath.polyroots at 60 digits on the stored f64 coefficients; every truth root verified by its residual (≤ 1e-40 relative); the inclusion theorem checked on numpy's approximations"}

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Batch-2 (spec v0.3) example requests + python-control/scipy reference values + parity.yaml.
 Writes examples/<op>/{request.json, request.error.json, request.nonsymmetric.json, reference.python-control.json, parity.yaml}.
-Responses are generated separately by regen_examples.py from the Rust implementation.
+Responses are generated separately by scripts/regen_examples.py from the Rust implementation.
 Reference values are python-control/scipy outputs computed on the Grok Bot box — NOT MATLAB output."""
 import json, glob, pathlib, collections
 import numpy as np, scipy, scipy.linalg as sla, scipy.signal as sig, control as ct
 
-root = pathlib.Path(__file__).resolve().parent
+root = pathlib.Path(__file__).resolve().parents[2]
 ENV = {"engine": "python-control", "python_control": ct.__version__, "scipy": scipy.__version__, "numpy": np.__version__,
        "note": "python-control/scipy reference values (NOT MATLAB output)"}
 
@@ -152,9 +152,9 @@ for op, (cls, cmp) in TOL.items():
     hp = sorted(glob.glob(str(root / f"golden/mpmath/{op}/{ver}/*.json")))
     lines = [f"# Parity test spec — {op} {ver} (AEOI v0.3-draft)" + (f"; python-control golden store generated for 0.3.0 and reused unchanged (V-3a)" if ver != "0.3.0" else ""), f"operator: {op}", "references:",
              '  - {engine: python-control, version: "0.10.2 (scipy 1.18.1, numpy 2.5.5)", role: dev_reference, status: active,',
-             f'     generator: gen_golden_pycontrol_b2.py, golden_store: "golden/python-control/{op}/0.3.0/*.json",',
+             f'     generator: scripts/golden/gen_golden_pycontrol_b2.py, golden_store: "golden/python-control/{op}/0.3.0/*.json",',
              '     note: "python-control/scipy reference values, NOT MATLAB output"}',
-             *([f'  - {{engine: mpmath, version: "50 digits", role: high_precision_reference, status: active, generator: gen_golden_mpmath.py,',
+             *([f'  - {{engine: mpmath, version: "50 digits", role: high_precision_reference, status: active, generator: scripts/golden/gen_golden_mpmath.py,',
                 f'     golden_store: "golden/mpmath/{op}/{ver}/*.json", runner: "cargo test --release -p aeoi-control --test parity_hp",',
                 '     compare: "rel_fro ≤ 1e-12, no relaxation", note: "ill-conditioned families from the tpt-control cross-check; NOT MATLAB, NOT python-control"}'] if hp else []),
              '  - {engine: MATLAB, role: ground_truth, status: planned, note: "no generator script yet for batch 2"}',

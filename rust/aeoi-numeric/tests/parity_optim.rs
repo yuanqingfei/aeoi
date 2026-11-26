@@ -1,6 +1,6 @@
 //! optim.linear.linprog / optim.local.fmincon / optim.local.fminsearch (spec v0.4.14, 10.28–10.30) against
 //! scipy (HiGHS, SLSQP, Nelder–Mead) and analytic optima. Golden: golden/python-control/optim.*/0.4.0
-//! (gen_golden_optim.py). Not MATLAB.
+//! (scripts/golden/gen_golden_optim.py). Not MATLAB.
 use aeoi_core::HostCtx;
 use serde_json::{json, Value};
 use std::path::PathBuf;

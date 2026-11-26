@@ -1,6 +1,6 @@
 //! nonlinear.root.fzero / nonlinear.system.fsolve (spec v0.4.13, 10.26–10.27) against mpmath.findroot at 50
 //! digits; scipy brentq / fsolve recorded. Golden: golden/python-control/nonlinear.*/0.4.0
-//! (gen_golden_roots.py). Not MATLAB.
+//! (scripts/golden/gen_golden_roots.py). Not MATLAB.
 use aeoi_core::HostCtx;
 use serde_json::{json, Value};
 use std::path::PathBuf;

@@ -1,6 +1,6 @@
 //! ode.ivp.solve (spec v0.4.8, 10.18) against scipy.integrate.solve_ivp(RK45) with the same settings
 //! (the spec copies RK45's formulas) and against the truth (analytic, or DOP853 at rtol 1e-13).
-//! Golden: golden/python-control/ode.ivp.solve/0.4.0 (gen_golden_ode.py; right-hand sides evaluated by an
+//! Golden: golden/python-control/ode.ivp.solve/0.4.0 (scripts/golden/gen_golden_ode.py; right-hand sides evaluated by an
 //! independent Python parser of 3.15). Not MATLAB.
 use aeoi_core::HostCtx;
 use serde_json::{json, Value};

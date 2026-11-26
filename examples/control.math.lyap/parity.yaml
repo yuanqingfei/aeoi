@@ -2,9 +2,9 @@
 operator: control.math.lyap
 references:
   - {engine: python-control, version: "0.10.2 (scipy 1.18.1, numpy 2.5.5)", role: dev_reference, status: active,
-     generator: gen_golden_pycontrol_b2.py, golden_store: "golden/python-control/control.math.lyap/0.3.0/*.json",
+     generator: scripts/golden/gen_golden_pycontrol_b2.py, golden_store: "golden/python-control/control.math.lyap/0.3.0/*.json",
      note: "python-control/scipy reference values, NOT MATLAB output"}
-  - {engine: mpmath, version: "50 digits", role: high_precision_reference, status: active, generator: gen_golden_mpmath.py,
+  - {engine: mpmath, version: "50 digits", role: high_precision_reference, status: active, generator: scripts/golden/gen_golden_mpmath.py,
      golden_store: "golden/mpmath/control.math.lyap/0.4.0/*.json", runner: "cargo test --release -p aeoi-control --test parity_hp",
      compare: "rel_fro ≤ 1e-12, no relaxation", note: "ill-conditioned families from the tpt-control cross-check; NOT MATLAB, NOT python-control"}
   - {engine: MATLAB, role: ground_truth, status: planned, note: "no generator script yet for batch 2"}
@@ -25,6 +25,3 @@ case_families_high_precision:   # golden/mpmath, n = cases
   - {name: discrete_rho_near_1, n: 8}
   - {name: discrete_rho_near_1_nonsymmetric_Q, n: 1}
 pass_rule: "all cases within tolerance; expected-error cases return the same code; expected warnings present; every emitted code declared in the manifest; outputs validate against envelope+output schema"
-conformance_compare:   # spec 9.4 CF-6; rule_lyap in conformance/aeoi_conformance.py
-  X: "rel_fro ≤ 1e-10·max(1, κ/100), κ = cond of the Lyapunov operator (I⊗A + A⊗I, or A⊗A − I) of the reference request; class T2 from this file, not from the implementation's manifest. No trust.error_estimate (CF-6)"
-  mpmath: "same rule (spec 12.1 item 23). 'rel_fro ≤ 1e-12, no relaxation' above is the reference implementation's target (it refines; ≤ 7e-15 measured); plain Bartels–Stewart (SciPy, the Python second implementation) reaches 7.5e-9 at κ ≈ 1.6e8, which is backward-stable behaviour, not a defect"

@@ -1,6 +1,6 @@
 //! control.lti.lsim (spec v0.4.5, 10.15) against scipy.signal.lsim / dlsim (foh cases cross-checked with
 //! python-control forced_response by the generator). Golden: golden/python-control/control.lti.lsim/0.4.0
-//! (gen_golden_lsim.py). Not MATLAB.
+//! (scripts/golden/gen_golden_lsim.py). Not MATLAB.
 mod common;
 use aeoi_core::HostCtx;
 use common::*;

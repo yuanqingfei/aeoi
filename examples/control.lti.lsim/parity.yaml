@@ -2,7 +2,7 @@
 operator: control.lti.lsim
 references:
   - {engine: scipy, version: "scipy 1.18.1, numpy 2.5.3", role: dev_reference, status: active,
-     generator: gen_golden_lsim.py, golden_store: "golden/python-control/control.lti.lsim/0.4.0/*.json",
+     generator: scripts/golden/gen_golden_lsim.py, golden_store: "golden/python-control/control.lti.lsim/0.4.0/*.json",
      note: "NOT MATLAB output. scipy.signal.lsim (interp=True: foh, interp=False: zoh) and dlsim; every continuous foh case cross-checked with python-control 0.10.2 forced_response (≤ 1e-11 relative, generator asserts)"}
   - {engine: MATLAB, role: ground_truth, status: planned,
      note: "MATLAB lsim picks foh/zoh automatically from the input's smoothness when 'method' is omitted; AEOI has a fixed default (foh). Compare with an explicit method"}

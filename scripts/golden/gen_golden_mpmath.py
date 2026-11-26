@@ -4,10 +4,10 @@ families of control.design.lqr 0.3.0 and control.math.lyap 0.4.0, added after th
 (reports/parity-tpt-control.md). Reference values are mpmath 50-digit solutions (Kronecker-form Lyapunov solves,
 Newton–Kleinman on the Riccati equation started from scipy), rounded to f64 — NOT MATLAB and NOT python-control.
 Layout (V-3): golden/mpmath/<op>/<op_version>/<sha256>.json, matrices row-major.
-usage: /workspace/.venv-ctrl/bin/python gen_golden_mpmath.py"""
+usage: /workspace/.venv-ctrl/bin/python scripts/golden/gen_golden_mpmath.py"""
 import hashlib, json, os, platform, sys
 import numpy as np, scipy, scipy.linalg as sla, mpmath as mp
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools", "xcheck-tpt"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "tools", "xcheck-tpt"))
 import analyze as an  # 50-digit helpers shared with the cross-check
 
 mp.mp.dps = 50

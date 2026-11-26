@@ -4,7 +4,7 @@
 {{jsonc:path}} inlines a JSON file re-indented, with numeric arrays longer than 16 elements shortened
                for readability (marked "…(+N)…"; the full content is in the file)."""
 import json, re, pathlib
-root = pathlib.Path(__file__).resolve().parent
+root = pathlib.Path(__file__).resolve().parents[1]
 
 def compact(v, ind=0):
     pad = "  " * ind

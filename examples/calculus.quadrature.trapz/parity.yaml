@@ -1,7 +1,7 @@
 # Parity test spec — calculus.quadrature.trapz 0.4.0 (AEOI v0.4.15-draft)
 operator: calculus.quadrature.trapz
 references:
-  - {engine: numpy, version: "numpy.trapezoid", role: dev_reference, status: active, generator: gen_golden_quad.py,
+  - {engine: numpy, version: "numpy.trapezoid", role: dev_reference, status: active, generator: scripts/golden/gen_golden_quad.py,
      golden_store: "golden/python-control/calculus.quadrature.trapz/0.4.0/*.json", note: "NOT MATLAB output"}
   - {engine: exact, role: high_precision_reference, status: active, note: "rational arithmetic on the stored data"}
   - {engine: MATLAB, role: ground_truth, status: planned}

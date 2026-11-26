@@ -2,7 +2,7 @@
 operator: linalg.decomp.svd
 references:
   - {engine: numpy, version: "numpy.linalg.svd (LAPACK dgesdd)", role: dev_reference, status: active,
-     generator: gen_golden_svd.py, golden_store: "golden/python-control/linalg.decomp.svd/0.4.0/*.json",
+     generator: scripts/golden/gen_golden_svd.py, golden_store: "golden/python-control/linalg.decomp.svd/0.4.0/*.json",
      note: "NOT MATLAB output"}
   - {engine: mpmath, role: high_precision_reference, status: active, note: "exact singular values and vectors of the stored f64 matrix (50 digits, svd_r)"}
   - {engine: MATLAB, role: ground_truth, status: planned}

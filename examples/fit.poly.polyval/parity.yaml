@@ -2,7 +2,7 @@
 operator: fit.poly.polyval
 references:
   - {engine: numpy, version: "numpy.polyval (plain Horner)", role: dev_reference, status: active,
-     generator: gen_golden_poly.py, golden_store: "golden/python-control/fit.poly.polyval/0.4.0/*.json",
+     generator: scripts/golden/gen_golden_poly.py, golden_store: "golden/python-control/fit.poly.polyval/0.4.0/*.json",
      note: "NOT MATLAB output. MATLAB polyval is plain Horner too"}
   - {engine: fractions, role: high_precision_reference, status: active,
      note: "the EXACT value of the polynomial at the stored f64 point (Python rational arithmetic); with mu the point is t = (x − mu[0])/mu[1] rounded once in f64"}

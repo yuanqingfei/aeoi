@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Scripted MCP stdio session against rust/target/release/aeoi-mcp; writes reports/mcp-session.jsonl."""
 import json, subprocess, pathlib
-root = pathlib.Path(__file__).resolve().parent
+root = pathlib.Path(__file__).resolve().parents[1]
 p = subprocess.Popen([str(root / "rust/target/release/aeoi-mcp")], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
 log = []
 def send(msg, expect=True):

@@ -2,7 +2,7 @@
 operator: signal.filter.filter
 references:
   - {engine: scipy, version: "scipy.signal.lfilter / sosfilt", role: dev_reference, status: active,
-     generator: gen_golden_filter.py, golden_store: "golden/python-control/signal.filter.filter/0.4.0/*.json",
+     generator: scripts/golden/gen_golden_filter.py, golden_store: "golden/python-control/signal.filter.filter/0.4.0/*.json",
      note: "NOT MATLAB output. MATLAB filter is the same transposed direct form II recursion"}
   - {engine: mpmath, role: high_precision_reference, status: active, note: "50-digit difference equation on the stored coefficients and signal (truth for y and zf)"}
   - {engine: MATLAB, role: ground_truth, status: planned}
