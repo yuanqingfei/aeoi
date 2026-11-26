@@ -2631,25 +2631,20 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 7. 一致性套件（9.4）：v0.4.15 有 24 个算子的数值规则（24 / 37 = 65%；作者定的下限是 30%，以后提高），参考实现 1111 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 45 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
 8. 根据以上反馈修订，冻结 v1.0
 
-### 12.3 目标算子清单（v0.4.11，作者决定 2026-11-25）
+### 12.3 目标算子清单与依赖（v0.4.11 定目标，v0.4.16 细化）
 
 本项目的目标，是覆盖工程计算中最常用的约 100 个 MATLAB 函数。逐元素运算（`sin`、`sum` 之类）、绘图、文件读写、字符串和数据结构不在其中，它们不需要 AEOI 的信任信息。清单是作者与 Claude 的判断，不是统计结果；以后可以用公开 MATLAB 代码的调用频率修正。
 
-| 类别 | 目标函数 | 约数 | v0.4.11 已覆盖 |
-|---|---|---|---|
-| 控制 | tf/ss/zpk 转换、step、impulse、lsim、bode、nyquist、nichols、margin、rlocus、pole、zero、feedback、series、parallel、c2d、d2c、lqr、dlqr、kalman/lqe、place、acker、ctrb、obsv、lyap/dlyap、pid、pidtune、stepinfo、pade、minreal、balreal | 32 | 25 |
-| 线性代数 | `\`/linsolve、eig、svd、inv、det、rank、cond、norm、chol、lu、qr、pinv、null、orth、expm | 15 | 3（rank、cond 可从 svd 结果读出） |
-| 信号 | fft/ifft、filter、filtfilt、butter、cheby1、freqz、conv、xcorr、pwelch、spectrogram、resample、decimate、hilbert、findpeaks | 14 | 4（v0.4.12 加了 butter、filter） |
-| 多项式、插值、拟合 | polyfit、polyval、roots、conv/deconv、interp1（含 spline、pchip）、interp2、griddata、lsqcurvefit | 11 | 4 |
-| 微积分与 ODE | ode45、ode23、ode15s、integral、integral2、trapz、cumtrapz、bvp4c、pdepe、gradient | 10 | 4（v0.4.15 加了 integral、trapz、cumtrapz） |
-| 非线性方程与优化 | fzero、fsolve、fminsearch、fminbnd、fminunc、fmincon、linprog、quadprog、lsqnonlin | 9 | 5（v0.4.13、v0.4.14；quadprog 只差一层算子外壳，QP 内核已有） |
-| 统计 | regress/fitlm、corrcoef、histcounts、mean/std 的稳健版本等 | 8 | 0 |
-| 合计 | | 约 100 | 约 45（45%） |
+v0.4.16 把清单细化到每个 MATLAB 函数，并给出每个函数依赖的共享内核（11.5）。实现顺序按依赖层自底向上：先把“待抽出”的内核从现有算子里移到 `aeoi-core::kernels`，再写下一层的内核和算子。
+
+{{file:roadmap/layers.md}}
+
+内核依赖图（Mermaid 源）：`roadmap/deps.mmd`。
 
 顺序：
 1. ~~剩下的四批~~（v0.4.12 – v0.4.15 完成）。
 2. ~~控制算子迁移到共享内核（11.5 RI-3）~~（v0.4.16 完成）。
-3. 列出约 100 个目标算子与共享内核的完整清单和依赖图，按依赖从底层往上实现；同一层内按 MATLAB 使用频率排。
+3. 按 12.3 的依赖层自底向上实现：先抽出 10 个“待抽出”内核，再逐层做内核和算子；同一层内按 MATLAB 使用频率排（清单待作者确认）。
 4. polyval/roots、inv/det/norm、ode15s、filtfilt/freqz/pwelch、nyquist/rlocus、interp2/spline、lsqcurvefit。
 5. 其余。
 
@@ -2665,7 +2660,7 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 |---|---|---|---|
 | 1 | 11.5 RI-3 | 迁移完成；写明仍在用的外部数值代码（nalgebra 只作容器与矩阵乘法，`libm`）和检查办法 | 让以后的审计可以机械地做 |
 | 2 | 10.x FT-5、2.1 | 参考实现的 FFT 改为 `kernels::fft`；rustfft 补丁副本删除 | — |
-| 3 | 12.2 | 下一步：先列 100 个目标算子与内核的依赖图，再自底向上实现 | 作者建议 |
+| 3 | 12.2、12.3 | 12.3 改为逐函数清单（102 个 MATLAB 函数、33 个共享内核、依赖层），由 `roadmap/targets.py` 生成；下一步自底向上实现 | 作者建议：按依赖图从底层开始 |
 
 **已做的改动**
 

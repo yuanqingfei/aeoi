@@ -1,0 +1,83 @@
+graph BT
+  libm["libm"]:::done
+  sum["sum"]:::extract
+  dense["dense"]:::done
+  dense --> sum
+  cdense["cdense"]:::done
+  cdense --> dense
+  svd["svd"]:::done
+  svd --> dense
+  schur["schur"]:::done
+  schur --> dense
+  eig["eig"]:::done
+  eig --> schur
+  eig --> cdense
+  fft["fft"]:::done
+  fft --> libm
+  expr["expr"]:::done
+  expr --> libm
+  poly["poly"]:::done
+  poly --> eig
+  filter["filter"]:::done
+  lp["lp"]:::done
+  lp --> dense
+  qp["qp"]:::done
+  qp --> lp
+  qp --> dense
+  expm["expm"]:::done
+  expm --> dense
+  logm["logm"]:::new
+  logm --> schur
+  logm --> expm
+  lti["lti"]:::done
+  lti --> poly
+  lti --> eig
+  lti --> dense
+  lyap["lyap"]:::done
+  lyap --> eig
+  lyap --> cdense
+  lyap --> sum
+  riccati["riccati"]:::extract
+  riccati --> schur
+  riccati --> svd
+  riccati --> lyap
+  freqresp["freqresp"]:::extract
+  freqresp --> lti
+  freqresp --> cdense
+  timeresp["timeresp"]:::extract
+  timeresp --> lti
+  timeresp --> expm
+  bracket["bracket"]:::extract
+  newton["newton"]:::extract
+  newton --> dense
+  newton --> expr
+  quad["quad"]:::extract
+  quad --> expr
+  rk["rk"]:::extract
+  rk --> expr
+  spline["spline"]:::extract
+  spline --> dense
+  iir["iir"]:::extract
+  iir --> poly
+  iir --> lti
+  lsq["lsq"]:::new
+  lsq --> dense
+  lsq --> svd
+  lsq --> expr
+  quasi["quasi"]:::new
+  quasi --> dense
+  quasi --> expr
+  stiff["stiff"]:::new
+  stiff --> newton
+  stiff --> dense
+  bvp["bvp"]:::new
+  bvp --> newton
+  bvp --> dense
+  window["window"]:::new
+  window --> libm
+  stats["stats"]:::new
+  stats --> sum
+  delaunay["delaunay"]:::new
+  classDef done fill:#d4edda,stroke:#2e7d32
+  classDef extract fill:#fff3cd,stroke:#b8860b
+  classDef new fill:#f8d7da,stroke:#b71c1c
