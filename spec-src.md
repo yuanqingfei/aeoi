@@ -1,6 +1,6 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.22-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.23-draft
 
-> 状态：Draft v0.4.22 · 2026-11-26 · 作者：Qingfei Yuan（草拟协助：Grok Bot、Claude）
+> 状态：Draft v0.4.23 · 2026-11-26 · 作者：Qingfei Yuan（草拟协助：Grok Bot、Claude）
 >
 > SPDX-License-Identifier: CC-BY-4.0 · © 2026 Qingfei Yuan。规范文本按 CC-BY-4.0 许可（`LICENSE-CC-BY-4.0`）；规范中的代码片段、JSON Schema 与参考实现按 MIT OR Apache-2.0 许可（`LICENSE-MIT`、`LICENSE-APACHE`）。
 >
@@ -802,6 +802,11 @@ v0.4 新增码：`METHOD_UNAVAILABLE` 由算子返回（3.14 MS-6）：`exec.met
 | 10.34 | `fit.poly.roots`：多项式求根（包含半径、根簇） | [`profiles/10.34-roots.md`](profiles/10.34-roots.md) |
 | 10.35 | `linalg.matrix.inv`：逆矩阵（逐列精化、条件数、无有效数字时标为不可依赖） | [`profiles/10.35-inv.md`](profiles/10.35-inv.md) |
 | 10.36 | `linalg.matrix.det`：行列式（不溢出的 log/符号、误差估计、与零不可区分） | [`profiles/10.36-det.md`](profiles/10.36-det.md) |
+| 10.37 | `linalg.subspace.rank`：数值秩（阈值、秩不明确） | [`profiles/10.37-rank.md`](profiles/10.37-rank.md) |
+| 10.38 | `linalg.subspace.basis`：值域与零空间的标准正交基（orth、null） | [`profiles/10.38-basis.md`](profiles/10.38-basis.md) |
+| 10.39 | `linalg.matrix.pinv`：Moore–Penrose 伪逆 | [`profiles/10.39-pinv.md`](profiles/10.39-pinv.md) |
+| 10.40 | `linalg.matrix.norm`：向量与矩阵范数 | [`profiles/10.40-norm.md`](profiles/10.40-norm.md) |
+| 10.41 | `linalg.matrix.cond`：条件数 | [`profiles/10.41-cond.md`](profiles/10.41-cond.md) |
 
 ## 11. 参考实现
 

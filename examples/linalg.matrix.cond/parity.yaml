@@ -1,0 +1,20 @@
+# Parity test spec — linalg.matrix.cond 0.4.0 (AEOI v0.4.23-draft)
+operator: linalg.matrix.cond
+references:
+  - {engine: mpmath, role: high_precision_reference, status: active, generator: scripts/golden/gen_golden_subspace.py,
+     golden_store: "golden/mpmath/linalg.matrix.cond/0.4.0/*.json",
+     note: "truth for the stored f64 data at 50 digits (SVD / inverse / p-norms); NOT MATLAB output"}
+  - {engine: numpy, version: "numpy.linalg (LAPACK gesdd / getrf)", role: dev_reference, status: active, note: "recorded for comparison only"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_subspace"
+tolerance_class: T2
+compare:
+  cond: "|Δ|/cond_true ≤ 64·max(m, n)·u·cond_true (σ_min and A⁻¹ have only absolute accuracy); exact zero pivot: \"Inf\""
+  warnings: "exactly the predicted set; predictions use the true singular values and only cases at least a factor 2 from every threshold edge are written"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py. No trust.* value of the implementation is used as a tolerance
+  cond: "same bound as compare"
+  recomputed: "rcond = 1/cond of the returned value (0 for Inf)"
+case_families:
+  - {name: "6×6 with p ∈ {2, 1, inf, fro}, rectangular p = 2, Hilbert 6 (p = 2 and 1), diagonal graded", n: 8}
+  - {name: "hilbert_13_ill (cond 5e18) / singular_zero_pivot_inf", n: 2, expect_warning: W.NUMERICAL.ILL_CONDITIONED}
+  - {name: errors, n: 3, expect: "SHAPE ×2 (rectangular with p = 1, 1-D), SCHEMA (p = 3)"}

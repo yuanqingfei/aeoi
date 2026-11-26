@@ -1,0 +1,179 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.subspace.basis",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "rank": 2,
+    "tol": 1.0658141036401503e-14,
+    "tol_source": "default",
+    "s": {
+      "dtype": "f64",
+      "shape": [
+        3
+      ],
+      "data": [
+        16.848103352614213,
+        1.0683695145547087,
+        1.473048158783726e-16
+      ]
+    },
+    "smallest_kept": 1.0683695145547087,
+    "largest_dropped": 1.473048158783726e-16,
+    "orth": {
+      "dtype": "f64",
+      "shape": [
+        3,
+        2
+      ],
+      "data": [
+        0.21483723836839622,
+        0.8872306883463704,
+        0.520587389464737,
+        0.2496439529882981,
+        0.826337540561078,
+        -0.3879427823697744
+      ]
+    },
+    "null": {
+      "dtype": "f64",
+      "shape": [
+        3,
+        1
+      ],
+      "data": [
+        0.408248290463863,
+        -0.8164965809277261,
+        0.40824829046386313
+      ]
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "svd_reconstruction": 6.21530087301273e-16,
+      "svd_orthonormality": 4.440892098500626e-16,
+      "threshold": 3.3306690738754696e-14,
+      "definition": "‖A − U·diag(s)·Vᵀ‖_F/‖A‖_F 与 max(‖UᵀU − I‖, ‖VᵀV − I‖)，同 linalg.decomp.svd SV-5",
+      "null_residual_fro": 4.440892098500626e-16,
+      "null_residual_threshold": 5.729397961440607e-13,
+      "basis_orthonormality": 2.220446049250313e-16
+    },
+    "error_estimate": {
+      "singular_value_abs": 2.5456757327302236e-14,
+      "basis": "|Δσ_k| ≲ ‖A‖_F·重构残差 + 2σ_max·正交性误差（Weyl；小奇异值只有绝对精度）"
+    },
+    "checks": {
+      "svd_reconstructs": true,
+      "rank_well_separated": true,
+      "orthonormal": true,
+      "null_residual": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:basis:jacobi-svd",
+      "routine": "subspace::basis",
+      "provenance": "aeoi://operators/linalg.subspace.basis/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "rank_threshold",
+        "statement": "秩取决于阈值 tol；缺省阈值只区分舍入噪声，数据本身的噪声水平要由调用方给出",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "separated",
+        "statement": "阈值附近没有奇异值",
+        "enforced_by": "warning:W.NUMERICAL.RANK_AMBIGUOUS"
+      },
+      {
+        "id": "non_unique",
+        "statement": "基不唯一：只有张成的子空间有意义",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "singular_value_abs": 2.5456757327302236e-14
+      },
+      "basis": "|Δσ_k| ≲ ‖A‖_F·重构残差 + 2σ_max·正交性误差（Weyl；小奇异值只有绝对精度）"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "svd_reconstructs": true,
+        "rank_well_separated": true,
+        "orthonormal": true,
+        "null_residual": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "svd_reconstructs": "full",
+        "rank_well_separated": "full",
+        "orthonormal": "full",
+        "null_residual": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:86ecf7d981a2942a9144c992554a68dad8b66d019ad825d78a2ac225e0a28be7",
+      "result": "sha256:7b72a1b4700132d88febe32c530dcc9574ba05b40e88df289797ee4fd03850ce",
+      "output_hash": "sha256:b5e63bccdebd98bff0cc18f23a1bb3c816a567104c833b2aba47082bc3e7e067",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.subspace.basis@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:2b78545dd3a632707eafc6c264976bcf94f9e5c36ecc7f81a9b7bc281e3cb0fa",
+    "output_hash": "sha256:b5e63bccdebd98bff0cc18f23a1bb3c816a567104c833b2aba47082bc3e7e067",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.2069
+  }
+}

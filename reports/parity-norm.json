@@ -1,0 +1,90 @@
+{
+  "operator": "linalg.matrix.norm",
+  "reference": "truth for the stored data: mpmath 50 digits (exact rationals for the 1-, inf-, Frobenius norms). Not MATLAB.",
+  "cases": 20,
+  "error_cases": 4,
+  "worst_error_over_tolerance": 0.017789541423178828,
+  "tolerance": "|Δ|/|norm_true| ≤ 4·(N + 6)·u (N = number of elements; direct formulas) or 32·max(m, n)·u (matrix 2-norm by SVD)",
+  "cases_detail": [
+    {
+      "rel_error": 3.7920688292229334e-16,
+      "relative_error_bound_reported": 2.650144917509385e-15,
+      "family": "matrix_lowrank_2"
+    },
+    {
+      "rel_error": 0.0,
+      "relative_error_bound_reported": 3.3306690738754696e-16,
+      "family": "matrix_p_1"
+    },
+    {
+      "rel_error": 3.6737239722702174e-16,
+      "relative_error_bound_reported": 3.6486656899574135e-15,
+      "family": "matrix_p_None"
+    },
+    {
+      "rel_error": 1.4829905026491935e-16,
+      "relative_error_bound_reported": 4.107825191113079e-15,
+      "family": "matrix_p_fro"
+    },
+    {
+      "rel_error": 0.0,
+      "relative_error_bound_reported": 3.3306690738754696e-16,
+      "family": "matrix_p_inf"
+    },
+    {
+      "rel_error": 0.0,
+      "relative_error_bound_reported": 5.551115123125783e-16,
+      "family": "vector_huge_no_overflow"
+    },
+    {
+      "rel_error": 0.0,
+      "relative_error_bound_reported": 0.0,
+      "family": "vector_p_-inf"
+    },
+    {
+      "rel_error": 0.0,
+      "relative_error_bound_reported": 6.217248937900877e-15,
+      "family": "vector_p_1.5"
+    },
+    {
+      "rel_error": 0.0,
+      "relative_error_bound_reported": 6.217248937900877e-15,
+      "family": "vector_p_10"
+    },
+    {
+      "rel_error": 0.0,
+      "relative_error_bound_reported": 3.3306690738754696e-16,
+      "family": "vector_p_1"
+    },
+    {
+      "rel_error": 0.0,
+      "relative_error_bound_reported": 6.217248937900877e-15,
+      "family": "vector_p_3"
+    },
+    {
+      "rel_error": 1.3195987492006803e-16,
+      "relative_error_bound_reported": 5.773159728050814e-15,
+      "family": "vector_p_None"
+    },
+    {
+      "rel_error": 1.3195987492006803e-16,
+      "relative_error_bound_reported": 5.773159728050814e-15,
+      "family": "vector_p_fro"
+    },
+    {
+      "rel_error": 0.0,
+      "relative_error_bound_reported": 0.0,
+      "family": "vector_p_inf"
+    },
+    {
+      "rel_error": 0.0,
+      "relative_error_bound_reported": 3.3306690738754696e-16,
+      "family": "vector_row_matrix_p1"
+    },
+    {
+      "rel_error": 0.0,
+      "relative_error_bound_reported": 4.440892098500626e-16,
+      "family": "vector_tiny_no_underflow"
+    }
+  ]
+}

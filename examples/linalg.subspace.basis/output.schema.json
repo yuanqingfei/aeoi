@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.subspace.basis/0.4.0/output",
+  "type": "object",
+  "required": [
+    "rank",
+    "tol",
+    "tol_source",
+    "s",
+    "smallest_kept",
+    "largest_dropped",
+    "orth",
+    "null"
+  ],
+  "properties": {
+    "rank": {
+      "type": "integer"
+    },
+    "tol": {
+      "type": "number",
+      "description": "实际使用的阈值"
+    },
+    "tol_source": {
+      "enum": [
+        "default",
+        "supplied"
+      ]
+    },
+    "s": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "全部奇异值 [min(m, n)]，降序"
+    },
+    "smallest_kept": {
+      "description": "阈值以上最小的奇异值（秩为 0 时为 null）"
+    },
+    "largest_dropped": {
+      "description": "阈值以下最大的奇异值（秩满时为 null）"
+    },
+    "orth": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "值域的标准正交基 [m, r]（r = 0 时 shape [m, 0]）"
+    },
+    "null": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "零空间的标准正交基 [n, n − r]（满列秩时 shape [n, 0]）"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.matrix.pinv/0.4.0/output",
+  "type": "object",
+  "required": [
+    "X",
+    "rank",
+    "tol",
+    "tol_source",
+    "cond_r"
+  ],
+  "properties": {
+    "X": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "伪逆 [n, m]"
+    },
+    "rank": {
+      "type": "integer"
+    },
+    "tol": {
+      "type": "number"
+    },
+    "tol_source": {
+      "enum": [
+        "default",
+        "supplied"
+      ]
+    },
+    "cond_r": {
+      "description": "σ_1/σ_r：伪逆对 A 的扰动的敏感度（秩为 0 时为 null）"
+    }
+  }
+}

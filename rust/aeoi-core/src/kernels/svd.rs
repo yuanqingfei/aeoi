@@ -148,7 +148,11 @@ pub fn svd_thin(a: &[f64], m: usize, n: usize, check: &dyn Fn() -> Result<(), Op
     let mut order: Vec<usize> = (0..p).collect();
     order.sort_by(|&x, &y| sig[y].partial_cmp(&sig[x]).unwrap().then(x.cmp(&y)));
     let s: Vec<f64> = order.iter().map(|&k| sig[k]).collect();
-    let nz = s.iter().filter(|&&x| x > 0.0).count();
+    // Columns whose σ is at the numerical-zero level (≤ max(m, n)·ε·σ_max, v0.4.23) are not normalised: their
+    // inner products may underflow (σ ≈ 1e-172 passed the rotation test with exact zeros), so g_k/σ_k need not be
+    // orthogonal to the others. Their singular vectors come from the orthonormal completion, like σ = 0.
+    let zero_level = rows.max(cols) as f64 * f64::EPSILON * s.first().copied().unwrap_or(0.0);
+    let nz = s.iter().filter(|&&x| x > 0.0 && x > zero_level).count();
     let mut left: Vec<Vec<f64>> = order[..nz].iter().map(|&k| g[k].iter().map(|x| x / sig[k]).collect()).collect();
     if nz < p {
         left = complete(&left, rows)[..p].to_vec();
@@ -169,4 +173,29 @@ pub fn svd_thin(a: &[f64], m: usize, n: usize, check: &dyn Fn() -> Result<(), Op
         v.push(vk);
     }
     Ok(Some(Svd { s, u, v }))
+}
+
+/// Numerical rank decision shared by linalg.decomp.svd (SV-4), linalg.subspace.rank, linalg.subspace.basis and
+/// linalg.matrix.pinv (spec 10.37 RK-2, RK-3). `tol` = the caller's tolerance, or MATLAB's default
+/// max(m, n)·eps(s_max). rank = #{s_k > tol}. The rank is ambiguous when a singular value lies in the band
+/// (tol/10, 100·tol]: above it a value is clearly signal, below it it is at the rounding-noise level of a
+/// backward-stable SVD of an exactly rank-deficient matrix (≈ u·s_max ≪ tol/10 for the default tolerance).
+pub struct RankDecision {
+    pub tol: f64,
+    pub supplied: bool,
+    pub rank: usize,
+    pub ambiguous: bool,
+    pub smallest_kept: Option<f64>,
+    pub largest_dropped: Option<f64>,
+}
+
+pub fn rank_decision(s: &[f64], m: usize, n: usize, tol: Option<f64>) -> RankDecision {
+    let smax = s.first().copied().unwrap_or(0.0);
+    let (tol, supplied) = match tol {
+        Some(t) => (t, true),
+        None => (m.max(n) as f64 * eps_of(smax), false),
+    };
+    let rank = s.iter().filter(|&&v| v > tol).count();
+    let ambiguous = s.iter().any(|&v| v > tol / 10.0 && v <= 100.0 * tol);
+    RankDecision { tol, supplied, rank, ambiguous, smallest_kept: if rank > 0 { Some(s[rank - 1]) } else { None }, largest_dropped: s.get(rank).copied() }
 }

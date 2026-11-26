@@ -1,0 +1,183 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok_with_warnings",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.matrix.pinv",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "X": {
+      "dtype": "f64",
+      "shape": [
+        2,
+        2
+      ],
+      "data": [
+        1.0,
+        0.0,
+        0.0,
+        450359962737049.6
+      ]
+    },
+    "rank": 2,
+    "tol": 4.440892098500626e-16,
+    "tol_source": "default",
+    "cond_r": 450359962737049.6
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "svd_reconstruction": 0.0,
+      "svd_orthonormality": 0.0,
+      "threshold": 2.220446049250313e-14,
+      "definition": "‖A − U·diag(s)·Vᵀ‖_F/‖A‖_F 与 max(‖UᵀU − I‖, ‖VᵀV − I‖)，同 linalg.decomp.svd SV-5",
+      "penrose_axa": 0.0,
+      "penrose_xax": 0.0,
+      "penrose_threshold": 10.0,
+      "penrose_axa_threshold": 10.0,
+      "penrose_definition": "‖A·X·A − A‖_F/‖A‖_F 与 ‖X·A·X − X‖_F/‖X‖_F，阈值 100·max(m, n)·u·max(1, σ_1/σ_r)；前者另加被舍去奇异值的 ‖σ_{r+1..}‖₂/‖A‖_F"
+    },
+    "error_estimate": {
+      "singular_value_abs": 0.0,
+      "basis": "|Δσ_k| ≲ ‖A‖_F·重构残差 + 2σ_max·正交性误差（Weyl；小奇异值只有绝对精度）"
+    },
+    "checks": {
+      "svd_reconstructs": true,
+      "rank_well_separated": false,
+      "penrose": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:pinv:jacobi-svd",
+      "routine": "subspace::pinv",
+      "provenance": "aeoi://operators/linalg.matrix.pinv/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "rank_threshold",
+        "statement": "秩取决于阈值 tol；缺省阈值只区分舍入噪声，数据本身的噪声水平要由调用方给出",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "separated",
+        "statement": "阈值附近没有奇异值",
+        "enforced_by": "warning:W.NUMERICAL.RANK_AMBIGUOUS"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "singular_value_abs": 0.0
+      },
+      "basis": "|Δσ_k| ≲ ‖A‖_F·重构残差 + 2σ_max·正交性误差（Weyl；小奇异值只有绝对精度）"
+    },
+    "evidence": {
+      "claim": "unverified",
+      "postconditions": {
+        "svd_reconstructs": true,
+        "rank_well_separated": false,
+        "penrose": true
+      },
+      "failed": [
+        "rank_well_separated"
+      ],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null,
+      "coverage": {
+        "svd_reconstructs": "full",
+        "rank_well_separated": "full",
+        "penrose": "full"
+      },
+      "unreliable": [
+        "/X",
+        "/rank"
+      ]
+    },
+    "fingerprint": {
+      "request": "sha256:4c8f1cabcd98e0c9806852e7733c9a3f915a50205bb9d23410175554841a6de7",
+      "result": "sha256:2705376a93617c661f6b5e363b9a021fe89bc59375de7145f23ec98894109074",
+      "output_hash": "sha256:d520f7b991a3568dd2b7823ffc8631b3784b15f84d4726b64053c6ec2c144a77",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.matrix.pinv@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [
+    {
+      "code": "W.NUMERICAL.RANK_AMBIGUOUS",
+      "message": "有奇异值落在阈值 tol = 4.441e-16 附近 (tol/10, 100·tol]：数值秩 2 取决于舍入与阈值的选择，rank 与伪逆 X 不可依赖。数据本身有噪声时，应按噪声水平给出 tol。",
+      "path": "/A",
+      "details": {
+        "tol": 4.440892098500626e-16,
+        "rank": 2,
+        "smallest_kept": 2.220446049250313e-15,
+        "largest_dropped": null
+      }
+    },
+    {
+      "code": "W.EVIDENCE.POSTCONDITION_FAILED",
+      "message": "后置条件未满足或未给出：rank_well_separated；结果不能视为已验证；不可依赖的结果字段：/X, /rank",
+      "details": {
+        "failed": [
+          "rank_well_separated"
+        ],
+        "postconditions": {
+          "svd_reconstructs": true,
+          "rank_well_separated": false,
+          "penrose": true
+        },
+        "unreliable": [
+          "/X",
+          "/rank"
+        ]
+      }
+    }
+  ],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:5a52b715453cc015a9484309d85c448915fdd982cfef94aaba1d5a1a43aa5e44",
+    "output_hash": "sha256:d520f7b991a3568dd2b7823ffc8631b3784b15f84d4726b64053c6ec2c144a77",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.19633699999999998
+  }
+}

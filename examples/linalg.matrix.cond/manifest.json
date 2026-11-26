@@ -1,0 +1,141 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "linalg.matrix.cond",
+  "version": "0.4.0",
+  "title": "Condition number",
+  "description": "矩阵的条件数（= MATLAB cond）。p = 2（缺省）：σ_max/σ_min，矩形矩阵也可以；p = 1、\"inf\"、\"fro\"：‖A‖_p·‖A⁻¹‖_p，只用于方阵，A⁻¹ 与 linalg.matrix.inv 同一算法。奇异时为 \"Inf\"。同时给出相对误差估计：σ_min 只有绝对精度，条件数越大越不准（大到 1/u 量级时只有量级有意义）。",
+  "category": "analysis",
+  "tags": [
+    "linalg",
+    "cond",
+    "condition-number"
+  ],
+  "applicability": {
+    "preconditions": [
+      "A 为 [m, n] 实数矩阵（p ≠ 2 时为方阵）"
+    ],
+    "not_for": [
+      "条件数估计（大矩阵用 linalg.system.solve 的 rcond，它只要 O(n²)）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "p = 2：单边 Jacobi SVD（与 linalg.decomp.svd 同一内核），cond = σ_1/σ_min，σ_min = 0 时为 Inf。p = 1/inf/fro：LU（部分选主元）逐列求 A⁻¹ 并精化（与 linalg.matrix.inv 同一内核），cond = ‖A‖_p·‖A⁻¹‖_p；主元为 0 时为 Inf。相对误差估计：p = 2 为 Weyl 界 / σ_min；其余为 κ·η（η 为求逆的后向误差）。rcond < ε 时 W.NUMERICAL.ILL_CONDITIONED",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., Johns Hopkins 2013, §2.4（SVD、数值秩）、§5.5（秩亏最小二乘与伪逆）"
+      },
+      {
+        "type": "paper",
+        "cite": "J. Demmel, K. Veselić, Jacobi's method is more accurate than QR, SIMAX 13(4), 1992",
+        "doi": "10.1137/0613074"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "subspace::cond",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T2",
+  "sparse_support": {
+    "/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_dimension": 1000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/linalg.matrix.cond/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.NUMERICAL.ILL_CONDITIONED",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "linalg_matrix_cond",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:cond:svd-or-lu-inverse",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "accuracy",
+        "statement": "cond 很大时（接近 1/u）只有量级有意义",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "decomposition_checked"
+    ],
+    "coverage": {
+      "decomposition_checked": "full"
+    },
+    "guards": {
+      "decomposition_checked": [
+        "/cond",
+        "/rcond"
+      ]
+    }
+  }
+}

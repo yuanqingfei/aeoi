@@ -1,0 +1,117 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.matrix.cond",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "cond": 14951058.642530058,
+    "rcond": 6.688489583977562e-08,
+    "p": 2.0,
+    "relative_error_estimate": 3.700452135271197e-08
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "svd_reconstruction": 6.909517939486123e-16,
+      "svd_orthonormality": 8.881784197001252e-16,
+      "threshold": 6.661338147750939e-14
+    },
+    "error_estimate": {
+      "cond_rel": 3.700452135271197e-08,
+      "basis": "Weyl 界 e/σ_min + e/σ_max，e = ‖A‖_F·重构残差 + 2σ_max·正交性误差（启发式）"
+    },
+    "checks": {
+      "decomposition_checked": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:cond:svd-or-lu-inverse",
+      "routine": "subspace::cond",
+      "provenance": "aeoi://operators/linalg.matrix.cond/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "accuracy",
+        "statement": "cond 很大时（接近 1/u）只有量级有意义",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "cond_rel": 3.700452135271197e-08
+      },
+      "basis": "Weyl 界 e/σ_min + e/σ_max，e = ‖A‖_F·重构残差 + 2σ_max·正交性误差（启发式）"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "decomposition_checked": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null,
+      "coverage": {
+        "decomposition_checked": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:9d79ce9bcad9899c721d3a2a32af88787432c1b4195804e5a0dd23064a640f04",
+      "result": "sha256:7b3eb47120a6fe83040c3b104bd84263237c9c19b53acabd4014f0fc87e4a8a9",
+      "output_hash": "sha256:fb7aeb669ff5ca36d2159a9ca98b8f5621f58c043ccdbae96b3b1f131ca709b5",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.matrix.cond@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:24e2fdc9738659ec16b8aa0ee38a2f323e7281c28fd788512b3da5e438533420",
+    "output_hash": "sha256:fb7aeb669ff5ca36d2159a9ca98b8f5621f58c043ccdbae96b3b1f131ca709b5",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.16558799999999999
+  }
+}

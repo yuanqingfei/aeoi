@@ -1,0 +1,77 @@
+{
+  "operator": "linalg.matrix.cond",
+  "reference": "truth for the stored data: mpmath 50 digits (exact rationals for the 1-, inf-, Frobenius norms). Not MATLAB.",
+  "cases": 13,
+  "error_cases": 3,
+  "worst_error_over_tolerance": 0.001026618458981722,
+  "tolerance": "|Δ|/cond_true ≤ 64·max(m, n)·u·cond_true (σ_min and A⁻¹ have only absolute accuracy); singular (exact zero pivot): \"Inf\"",
+  "cases_detail": [
+    {
+      "rel_error": 0.0,
+      "cond_true": 1000000.0,
+      "relative_error_estimate": 0.0,
+      "estimate_covers": true,
+      "family": "diag_graded"
+    },
+    {
+      "rel_error": 0.35807891265684066,
+      "cond_true": 2.1717026570526833e+18,
+      "relative_error_estimate": 12947.451993168503,
+      "estimate_covers": true,
+      "family": "hilbert_13_ill"
+    },
+    {
+      "rel_error": 8.245514391959757e-11,
+      "cond_true": 14951058.641297266,
+      "relative_error_estimate": 3.700452135271197e-8,
+      "estimate_covers": true,
+      "family": "hilbert_6"
+    },
+    {
+      "rel_error": 2.5629546232906367e-16,
+      "cond_true": 29070279.002278455,
+      "relative_error_estimate": 1.9766126518450772e-10,
+      "estimate_covers": true,
+      "family": "hilbert_6_p1"
+    },
+    {
+      "rel_error": 1.1383209859219297e-16,
+      "cond_true": 1.9506326218276357,
+      "relative_error_estimate": 4.766417442930774e-15,
+      "estimate_covers": true,
+      "family": "rectangular_p2"
+    },
+    {
+      "cond": "Inf",
+      "family": "singular_zero_pivot_inf"
+    },
+    {
+      "rel_error": 1.11414772601202e-16,
+      "cond_true": 63.77455333534778,
+      "relative_error_estimate": 1.6803579314348612e-15,
+      "estimate_covers": true,
+      "family": "square_p_1"
+    },
+    {
+      "rel_error": 7.852325498099321e-16,
+      "cond_true": 36.19527672061425,
+      "relative_error_estimate": 1.0505101824394385e-13,
+      "estimate_covers": true,
+      "family": "square_p_None"
+    },
+    {
+      "rel_error": 4.01449980648312e-16,
+      "cond_true": 53.09822667914639,
+      "relative_error_estimate": 1.3990537240811426e-15,
+      "estimate_covers": true,
+      "family": "square_p_fro"
+    },
+    {
+      "rel_error": 1.4214053552065974e-16,
+      "cond_true": 99.97749525248197,
+      "relative_error_estimate": 2.6342478045923764e-15,
+      "estimate_covers": true,
+      "family": "square_p_inf"
+    }
+  ]
+}

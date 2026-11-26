@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.matrix.norm/0.4.0/output",
+  "type": "object",
+  "required": [
+    "norm",
+    "p",
+    "treated_as",
+    "relative_error_bound"
+  ],
+  "properties": {
+    "norm": {
+      "type": "number"
+    },
+    "p": {
+      "description": "回显实际使用的 p"
+    },
+    "treated_as": {
+      "enum": [
+        "vector",
+        "matrix"
+      ]
+    },
+    "relative_error_bound": {
+      "type": "number",
+      "description": "相对误差估计"
+    }
+  }
+}

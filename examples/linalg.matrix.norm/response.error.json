@@ -1,0 +1,45 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.matrix.norm",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.VALIDATION.RANGE",
+    "category": "validation",
+    "retryable": true,
+    "message": "矩阵（2×2）的 p 只能是 1、2、\"inf\"、\"fro\"，收到 3.0。一般 p 的矩阵范数没有可靠的算法（NP 难）。",
+    "agent_hint": "改用 p = 2（谱范数，缺省）或其他支持的范数；要的是向量范数时，把 x 写成一维。",
+    "details": {
+      "path": "/p"
+    },
+    "remediation": [
+      {
+        "id": "use_p2",
+        "kind": "modify_input",
+        "description": "改用矩阵 2-范数（最大奇异值）",
+        "confidence": "medium",
+        "requires_user_confirmation": true,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/p",
+            "value": 2
+          }
+        ]
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.07042
+  }
+}

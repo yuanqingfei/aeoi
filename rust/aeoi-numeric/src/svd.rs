@@ -89,8 +89,8 @@ impl Operator for Svd {
         let threshold = 100.0 * m.max(n) as f64 * U;
         let smax = s.first().copied().unwrap_or(0.0);
         let smin = s.last().copied().unwrap_or(0.0);
-        let rank_tol = m.max(n) as f64 * eps_of(smax);
-        let rank = s.iter().filter(|&&v| v > rank_tol).count();
+        let rd = rank_decision(&s, m, n, None);
+        let (rank_tol, rank) = (rd.tol, rd.rank);
         let cond2 = if smin > 0.0 { smax / smin } else { f64::INFINITY };
         let finite = s.iter().all(|v| v.is_finite()) && uout.iter().chain(vout.iter()).flatten().all(|v| v.is_finite());
         let e_abs = recon * afro + (ou + ov) * smax;

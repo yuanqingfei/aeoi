@@ -1,0 +1,127 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok_with_warnings",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.matrix.cond",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "cond": 1.3940617310012867e+18,
+    "rcond": 7.173283490694123e-19,
+    "p": 2.0,
+    "relative_error_estimate": 12947.451993168503
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "svd_reconstruction": 1.2636255711679178e-15,
+      "svd_orthonormality": 3.9968028886505635e-15,
+      "threshold": 1.4432899320127035e-13
+    },
+    "error_estimate": {
+      "cond_rel": 12947.451993168503,
+      "basis": "Weyl 界 e/σ_min + e/σ_max，e = ‖A‖_F·重构残差 + 2σ_max·正交性误差（启发式）"
+    },
+    "checks": {
+      "decomposition_checked": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:cond:svd-or-lu-inverse",
+      "routine": "subspace::cond",
+      "provenance": "aeoi://operators/linalg.matrix.cond/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "accuracy",
+        "statement": "cond 很大时（接近 1/u）只有量级有意义",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "cond_rel": 12947.451993168503
+      },
+      "basis": "Weyl 界 e/σ_min + e/σ_max，e = ‖A‖_F·重构残差 + 2σ_max·正交性误差（启发式）"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "decomposition_checked": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null,
+      "coverage": {
+        "decomposition_checked": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:2642cbc91c64798ae172298607846ea6e8006aa345d91f11d180fd5fb76405e6",
+      "result": "sha256:ea4df593939cb546b8ad200a705f403ce289cc6c5140eb0ccba022a75129457b",
+      "output_hash": "sha256:778aaa15f2ea94b2719a39e21468a4f885ea943572bd0036c87ed2143aff172c",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.matrix.cond@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [
+    {
+      "code": "W.NUMERICAL.ILL_CONDITIONED",
+      "message": "cond = 1.394e18 > 1/ε：A 在舍入意义下奇异；只有量级有意义（相对误差估计 1.3e4）。",
+      "path": "/A",
+      "details": {
+        "cond": 1.3940617310012867e+18,
+        "rcond": 7.173283490694123e-19
+      }
+    }
+  ],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:5f7711cf34b53a8f296005cfd6e7707f158add4145c08ac23c1d2227e9f0bb46",
+    "output_hash": "sha256:778aaa15f2ea94b2719a39e21468a4f885ea943572bd0036c87ed2143aff172c",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.236703
+  }
+}

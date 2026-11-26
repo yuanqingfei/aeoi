@@ -1,0 +1,45 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.matrix.cond",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.VALIDATION.SHAPE",
+    "category": "validation",
+    "retryable": true,
+    "message": "p = 1.0 的条件数要用 A⁻¹，只对方阵有定义；A 是 2×3。",
+    "agent_hint": "矩形矩阵用 p = 2（σ_max/σ_min）。",
+    "details": {
+      "path": "/A/shape"
+    },
+    "remediation": [
+      {
+        "id": "use_p2",
+        "kind": "modify_input",
+        "description": "改用 2-范数条件数（矩形矩阵也有定义）",
+        "confidence": "high",
+        "requires_user_confirmation": true,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/p",
+            "value": 2
+          }
+        ]
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.11854300000000001
+  }
+}

@@ -29,7 +29,7 @@
       "data": [
         0.21483723836839622,
         0.8872306883463704,
-        -0.4082482904638631,
+        -0.4082482904638635,
         0.520587389464737,
         0.2496439529882981,
         0.8164965809277261,
@@ -47,13 +47,13 @@
       "data": [
         0.4796711778777718,
         -0.7766909903215593,
-        -0.408248290463863,
+        0.408248290463863,
         0.5723677939720625,
         -0.0756864701045585,
-        0.8164965809277261,
+        -0.8164965809277261,
         0.665064410066353,
         0.6253180501124426,
-        -0.40824829046386313
+        0.40824829046386313
       ]
     },
     "mode": "full",
@@ -69,7 +69,7 @@
       "backward_error": 6.21530087301273e-16,
       "threshold": 3.3306690738754696e-14,
       "definition": "‖A − U·diag(s)·Vᵀ‖_F / ‖A‖_F（p 个奇异三元组）",
-      "orthonormality_u": 2.220446049250313e-16,
+      "orthonormality_u": 4.440892098500626e-16,
       "orthonormality_v": 4.440892098500626e-16
     },
     "condition": {
@@ -77,11 +77,11 @@
       "note": "奇异值本身是良态的：|Δs_k| ≤ ‖ΔA‖₂（Weyl）"
     },
     "error_estimate": {
-      "value_abs": 2.1715726874634916e-14,
+      "value_abs": 2.5456757327302236e-14,
       "vector_angle": [
-        1.3761782738222272e-15,
-        2.032604504227728e-14,
-        2.032604504227728e-14
+        1.6132564458028117e-15,
+        2.3827671026267062e-14,
+        2.3827671026267062e-14
       ],
       "basis": "|Δs_k| ≲ ‖A‖_F·残差 + s_max·(正交性误差)（Weyl；小奇异值只有绝对精度）；奇异向量夹角 ≲ 该界 / gap_k（Wedin；重奇异值时 gap = 0，向量只确定到子空间）"
     },
@@ -135,7 +135,7 @@
       "class": "approximate",
       "bound_kind": "a_posteriori_heuristic",
       "bound": {
-        "value_abs": 2.1715726874634916e-14
+        "value_abs": 2.5456757327302236e-14
       },
       "basis": "|Δs_k| ≲ ‖A‖_F·残差 + s_max·(正交性误差)（Weyl；小奇异值只有绝对精度）；奇异向量夹角 ≲ 该界 / gap_k（Wedin；重奇异值时 gap = 0，向量只确定到子空间）"
     },
@@ -161,8 +161,8 @@
     },
     "fingerprint": {
       "request": "sha256:81cc2f9cbdcfcca7d8487a8596f8f4db47714874a8b0ec658cbf2c24e55f0beb",
-      "result": "sha256:46349de94c34df78840efa042346855921ffa1a7d17f1be2b46358c66049f42b",
-      "output_hash": "sha256:d1f339d7557e1cfbab23892e2b97dfc93afb960cc4fe5a867b32521fcd51f3ab",
+      "result": "sha256:177761aee95a75184a48b0d1dc3f8e972de5c4f1dac10a85897f878012fa1719",
+      "output_hash": "sha256:1a6f2a1f0e8e82495e2741358a453a17ce7617bc7f4348e4dfaeb224c86af370",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of linalg.decomp.svd@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -183,7 +183,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T1",
     "input_hash": "sha256:dc5c06844bc89d512d18c8546eb5c2f83b22c798682d3a90ff00e4ca9a7e389c",
-    "output_hash": "sha256:d1f339d7557e1cfbab23892e2b97dfc93afb960cc4fe5a867b32521fcd51f3ab",
+    "output_hash": "sha256:1a6f2a1f0e8e82495e2741358a453a17ce7617bc7f4348e4dfaeb224c86af370",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -197,6 +197,6 @@
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.19065400000000002
+    "wall_ms": 0.23083399999999998
   }
 }

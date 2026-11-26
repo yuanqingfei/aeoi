@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.subspace.rank/0.4.0/output",
+  "type": "object",
+  "required": [
+    "rank",
+    "tol",
+    "tol_source",
+    "s",
+    "smallest_kept",
+    "largest_dropped"
+  ],
+  "properties": {
+    "rank": {
+      "type": "integer"
+    },
+    "tol": {
+      "type": "number",
+      "description": "实际使用的阈值"
+    },
+    "tol_source": {
+      "enum": [
+        "default",
+        "supplied"
+      ]
+    },
+    "s": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "全部奇异值 [min(m, n)]，降序"
+    },
+    "smallest_kept": {
+      "description": "阈值以上最小的奇异值（秩为 0 时为 null）"
+    },
+    "largest_dropped": {
+      "description": "阈值以下最大的奇异值（秩满时为 null）"
+    }
+  }
+}

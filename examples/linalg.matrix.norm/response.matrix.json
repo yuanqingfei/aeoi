@@ -1,0 +1,121 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.matrix.norm",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "norm": 7.0,
+    "p": "inf",
+    "treated_as": "matrix",
+    "relative_error_bound": 3.3306690738754696e-16
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "applicable": false
+    },
+    "error_estimate": {
+      "norm_rel": 3.3306690738754696e-16,
+      "basis": "补偿求和与缩放平方和的舍入界（约 n·u 或 3u）；矩阵 2-范数为 Weyl 界 / σ_max"
+    },
+    "checks": {
+      "decomposition_checked": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "decomposition": "无（直接公式；decomposition_checked 恒为 true）"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:norm:compensated-or-svd",
+      "routine": "subspace::norm",
+      "provenance": "aeoi://operators/linalg.matrix.norm/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "representable",
+        "statement": "范数不超出 f64 范围",
+        "enforced_by": "error:E.NUMERICAL.NON_FINITE_EVALUATION"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "norm_rel": 3.3306690738754696e-16
+      },
+      "basis": "补偿求和与缩放平方和的舍入界（约 n·u 或 3u）；矩阵 2-范数为 Weyl 界 / σ_max"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "decomposition_checked": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "decomposition_checked": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:8b1dc05bed04cd8de77ac2307d899176c9806a0ccecb0aef0f2f714df51ba87b",
+      "result": "sha256:5551eb75a30161574f6c1825764ff8c639a5545e66f47eeac22a402f025f91ef",
+      "output_hash": "sha256:446543c1bd5c7725b28ec049e1b665d28315406297f7d2b011e87e280530521a",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.matrix.norm@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:999a9bdc03ee8baf0440244ae75a10830485b8329fcd9ed761bbeb6024136caa",
+    "output_hash": "sha256:446543c1bd5c7725b28ec049e1b665d28315406297f7d2b011e87e280530521a",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.177547
+  }
+}

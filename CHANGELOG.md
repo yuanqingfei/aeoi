@@ -2,6 +2,54 @@
 
 > 从规范第 13 章移出（v0.4.18）。每个版本：起因、规范改动、已做的改动、开发中发现的问题、结果。最新的在前。
 
+## v0.4.23-draft（2026-11-26）
+
+起因：第三批，SVD 之上的五个函数：`rank`、`null`/`orth`、`pinv`、`norm`、`cond`。
+
+作者的决定（2026-11-26）：
+
+- 秩阈值缺省用 MATLAB 的 max(m, n)·eps(σ_max)，调用方可以给出 `tol`；有奇异值落在阈值附近时发 `W.NUMERICAL.RANK_AMBIGUOUS`。
+- 秩不明确时，依赖秩的结果（rank、orth、null、pinv 的 X）标为不可依赖。
+- `norm` 与 `cond` 分成两个算子。
+- `null` 与 `orth` 合成一个算子 `linalg.subspace.basis`，一次给出两者。
+
+**规范改动**
+
+| # | 位置 | 改动 | 理由 |
+|---|---|---|---|
+| 1 | `profiles/10.37-rank.md`（新） | RK-1 – RK-5；秩不明确的区间 (tol/10, 100·tol]，后置条件 `rank_well_separated` | 数值秩取决于阈值；pinv 在阈值处不连续 |
+| 2 | `profiles/10.38-basis.md`（新） | BS-1 – BS-5；基按投影矩阵比较；`orthonormal`、`null_residual` | 基不唯一 |
+| 3 | `profiles/10.39-pinv.md`（新） | PI-1 – PI-5；Penrose 条件作后置条件，含被舍去部分 | — |
+| 4 | `profiles/10.40-norm.md`（新） | NM-1 – NM-5；[1, n]、[n, 1] 按向量（同 MATLAB）；矩阵一般 p 报 RANGE | — |
+| 5 | `profiles/10.41-cond.md`（新） | CN-1 – CN-6；p ≠ 2 用与 inv 同一的求逆 | σ_min 只有绝对精度，cond 的相对误差约 u·cond |
+| 6 | `profiles/10.23-svd.md` SV-2 | σ_k ≤ max(m, n)·ε·σ_max 的奇异向量改由正交补全给出 | 见下面“开发中发现的问题”第 1 条 |
+| 7 | 第 10 章索引 | 加 10.37 – 10.41 | — |
+
+区间不对称（作者选的是“阈值附近 100 倍内”）的原因：精确秩亏矩阵算出的“零”奇异值约为缺省 tol 的 1/(2·max(m, n))，下沿取 tol/100 会把每个秩亏矩阵都报成秩不明确；golden 上的噪声全部低于 tol/10。
+
+**已做的改动**
+
+| 位置 | 改动 |
+|---|---|
+| `kernels::svd` | 新增 `rank_decision`（svd、rank、basis、pinv 共用）；数值零奇异值的处理（上表第 6 条） |
+| `kernels::dense` | 新增 `inverse_refined`（inv 与 cond 共用；inv 的结果逐位不变） |
+| `aeoi-numeric/src/subspace.rs`（新） | 五个算子 |
+| `scripts/golden/gen_golden_subspace.py`（新） | 真值：mpmath 50 位 SVD（核对重构残差 < 1e-40）、求逆、p-范数；1、inf 范数与 Frobenius 平方另用有理数；警告只按真值预测，只收离每个阈值边沿至少 2 倍的用例 |
+| `conformance/rules_numeric.py` | `rule_rank`、`rule_basis`、`rule_pinv`、`rule_norm`、`rule_cond`；运行器重算缺省 tol 与秩、基的正交性与 ‖A·N‖、Penrose 条件、rcond |
+| 代理变异 | `rank_off_by_one`、`rank_overclaims`、`basis_null_scaled`、`pinv_scaled`、`norm_rel_1e12`、`cond_reciprocal`（共 63 种） |
+| `examples/linalg.decomp.svd/response.full.json` | 第三个奇异值 1.5e-16 属于数值零，u₃ 改由补全给出（张成同一子空间） |
+
+**开发中发现的问题**
+
+1. **SVD 内核的缺陷。** 4×9 的秩 1 整数矩阵，Jacobi 留下 σ₂ = 1.8e-172 的“残余列”：它与其他列的内积下溢为 0，旋转判据被“满足”，归一化后与第一个奇异向量平行。`linalg.decomp.svd` 的后置条件 `orthonormal_v` 如实失败（所以从未被当作已验证），但结果是错的。新算子的 parity 测试首先撞上它。
+2. pinv 的 Penrose 阈值最初没有算上被舍去的奇异值：调用方给出较大的 `tol` 时 ‖AXA − A‖ 本来就等于被舍去部分。
+3. 生成脚本里 eps(0) 先下溢成 0，零矩阵的缺省 tol 与实现不一致；改用 `math.ldexp(1, −1074)`。
+
+**结果**
+
+- 82 个新 golden 用例（65 个成功、17 个错误），全部通过；最坏用掉容差：rank 2.3e-2、basis 2.3e-2、pinv 6e-3、norm 1.8e-2、cond 1e-3。
+- 目标进度 49 / 102（48%），46 个算子。
+
 ## 仓库整理（2026-11-26，规范内容不变）
 
 作者要求清理仓库。

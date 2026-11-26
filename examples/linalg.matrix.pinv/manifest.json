@@ -1,0 +1,160 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "linalg.matrix.pinv",
+  "version": "0.4.0",
+  "title": "Moore–Penrose pseudoinverse",
+  "description": "Moore–Penrose 伪逆（= MATLAB pinv）：X = V_r·diag(1/σ_1 … 1/σ_r)·U_rᵀ，r 为数值秩（阈值同 linalg.subspace.rank）。伪逆在秩的阈值处不连续（一个 1e-17 的奇异值被保留，伪逆里就多出 1e17 的分量），所以秩不明确时 X 标为不可依赖。求最小二乘/最小范数解时，直接解比先求伪逆更准。",
+  "category": "analysis",
+  "tags": [
+    "linalg",
+    "pinv",
+    "pseudoinverse",
+    "least-squares"
+  ],
+  "applicability": {
+    "preconditions": [
+      "A 为 [m, n] 实数矩阵"
+    ],
+    "not_for": [
+      "满秩方阵求逆（用 linalg.matrix.inv）",
+      "解最小二乘问题（用 linalg.system.solve；秩亏时以后的最小范数解方法）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "单边 Jacobi SVD（与 linalg.decomp.svd 同一内核）；秩 = #{σ_k > tol}，tol 缺省 max(m, n)·eps(σ_max)（同 MATLAB rank/null/orth/pinv）。有奇异值落在 (tol/10, 100·tol] 内时秩不明确：W.NUMERICAL.RANK_AMBIGUOUS，后置条件 rank_well_separated 不成立；X = Σ_{k ≤ r} v_k·u_kᵀ/σ_k。Penrose 条件 ‖A·X·A − A‖_F/‖A‖_F 与 ‖X·A·X − X‖_F/‖X‖_F 作为残差",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., Johns Hopkins 2013, §2.4（SVD、数值秩）、§5.5（秩亏最小二乘与伪逆）"
+      },
+      {
+        "type": "paper",
+        "cite": "J. Demmel, K. Veselić, Jacobi's method is more accurate than QR, SIMAX 13(4), 1992",
+        "doi": "10.1137/0613074"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "subspace::pinv",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T2",
+  "sparse_support": {
+    "/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_dimension": 1000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/linalg.matrix.pinv/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.NUMERICAL.RANK_AMBIGUOUS",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "linalg_matrix_pinv",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:pinv:jacobi-svd",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "rank_threshold",
+        "statement": "秩取决于阈值 tol；缺省阈值只区分舍入噪声，数据本身的噪声水平要由调用方给出",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "separated",
+        "statement": "阈值附近没有奇异值",
+        "enforced_by": "warning:W.NUMERICAL.RANK_AMBIGUOUS"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "svd_reconstructs",
+      "rank_well_separated",
+      "penrose"
+    ],
+    "coverage": {
+      "svd_reconstructs": "full",
+      "rank_well_separated": "full",
+      "penrose": "full"
+    },
+    "guards": {
+      "svd_reconstructs": [
+        "/X",
+        "/rank",
+        "/cond_r"
+      ],
+      "rank_well_separated": [
+        "/X",
+        "/rank"
+      ],
+      "penrose": [
+        "/X"
+      ]
+    }
+  }
+}

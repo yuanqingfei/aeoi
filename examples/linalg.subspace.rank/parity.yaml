@@ -1,0 +1,25 @@
+# Parity test spec — linalg.subspace.rank 0.4.0 (AEOI v0.4.23-draft)
+operator: linalg.subspace.rank
+references:
+  - {engine: mpmath, role: high_precision_reference, status: active, generator: scripts/golden/gen_golden_subspace.py,
+     golden_store: "golden/mpmath/linalg.subspace.rank/0.4.0/*.json",
+     note: "truth for the stored f64 data at 50 digits (SVD / inverse / p-norms); NOT MATLAB output"}
+  - {engine: numpy, version: "numpy.linalg (LAPACK gesdd / getrf)", role: dev_reference, status: active, note: "recorded for comparison only"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_subspace"
+tolerance_class: T1
+compare:
+  rank: exact
+  s: "|Δσ_k| ≤ 32·max(m, n)·u·σ_max (absolute, Weyl)"
+  tol: "default: within a factor 2 of max(m, n)·eps(σ_max_true); supplied: echoed"
+  warnings: "exactly the predicted set; predictions use the true singular values and only cases at least a factor 2 from every threshold edge are written"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py. No trust.* value of the implementation is used as a tolerance
+  rank: "equal to the truth (non-flagged cases)"
+  s: "|Δσ_k| ≤ 32·max(m, n)·u·σ_max"
+  recomputed: "default tol = max(m, n)·spacing(s_1) of the returned s, and rank = #{s_k > tol}, recomputed by the runner"
+  claim: "rank_well_separated = true on a case whose true singular values lie in (tol/10, 100·tol] is a false claim"
+case_families:
+  - {name: "random square / tall / wide, exact low rank (6×5 r2, 8×8 r4, 4×9 r1, 3×3 r2), zero, graded (σ down to 1e-10), Hilbert 8, single column", n: 11}
+  - {name: "noisy low rank with supplied tol 1e-6 / with the default tol (full rank 8)", n: 2}
+  - {name: ambiguous_near_threshold, n: 1, expect: "W.NUMERICAL.RANK_AMBIGUOUS, rank_well_separated = false"}
+  - {name: errors, n: 4, expect: "SHAPE, DTYPE, NON_FINITE, SCHEMA"}

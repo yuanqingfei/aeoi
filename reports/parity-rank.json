@@ -1,0 +1,94 @@
+{
+  "operator": "linalg.subspace.rank",
+  "reference": "truth for the stored data: mpmath 50 digits (exact rationals for the 1-, inf-, Frobenius norms). Not MATLAB.",
+  "cases": 18,
+  "error_cases": 4,
+  "worst_error_over_tolerance": 0.02303296290190663,
+  "tolerance": "rank exact; |Δσ_k| ≤ 32·max(m, n)·u·σ_max (absolute, Weyl)",
+  "cases_detail": [
+    {
+      "max_abs_sigma_error": 0.0,
+      "sigma_max": 1.0,
+      "rank": 2,
+      "family": "ambiguous_near_threshold"
+    },
+    {
+      "max_abs_sigma_error": 0.0,
+      "sigma_max": 1.0,
+      "rank": 3,
+      "family": "graded_kept"
+    },
+    {
+      "max_abs_sigma_error": 1.1102230246251565e-15,
+      "sigma_max": 1.6959389969219494,
+      "rank": 8,
+      "family": "hilbert_8"
+    },
+    {
+      "max_abs_sigma_error": 7.105427357601002e-15,
+      "sigma_max": 30.0,
+      "rank": 1,
+      "family": "lowrank_4x9_r1"
+    },
+    {
+      "max_abs_sigma_error": 3.426479457373281e-15,
+      "sigma_max": 58.855715351780745,
+      "rank": 2,
+      "family": "lowrank_6x5_r2"
+    },
+    {
+      "max_abs_sigma_error": 2.842170943040401e-14,
+      "sigma_max": 77.1329741521536,
+      "rank": 4,
+      "family": "lowrank_8x8_r4"
+    },
+    {
+      "max_abs_sigma_error": 3.552713678800501e-15,
+      "sigma_max": 16.84810335261421,
+      "rank": 2,
+      "family": "magic3_like_r2"
+    },
+    {
+      "max_abs_sigma_error": 5.684341886080802e-14,
+      "sigma_max": 91.65210341552061,
+      "rank": 8,
+      "family": "noisy_lowrank_default_tol"
+    },
+    {
+      "max_abs_sigma_error": 5.684341886080802e-14,
+      "sigma_max": 91.65210341552061,
+      "rank": 3,
+      "family": "noisy_lowrank_supplied_tol"
+    },
+    {
+      "max_abs_sigma_error": 8.881784197001252e-16,
+      "sigma_max": 4.433904164757056,
+      "rank": 6,
+      "family": "random_square"
+    },
+    {
+      "max_abs_sigma_error": 1.3322676295501878e-15,
+      "sigma_max": 3.6511922084874704,
+      "rank": 4,
+      "family": "random_tall"
+    },
+    {
+      "max_abs_sigma_error": 8.881784197001252e-16,
+      "sigma_max": 3.3169722529444514,
+      "rank": 3,
+      "family": "random_wide"
+    },
+    {
+      "max_abs_sigma_error": 4.440892098500626e-16,
+      "sigma_max": 3.8985507443578364,
+      "rank": 1,
+      "family": "single_column"
+    },
+    {
+      "max_abs_sigma_error": 0.0,
+      "sigma_max": 0.0,
+      "rank": 0,
+      "family": "zero"
+    }
+  ]
+}

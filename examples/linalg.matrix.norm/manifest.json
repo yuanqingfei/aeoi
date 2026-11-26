@@ -1,0 +1,146 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "linalg.matrix.norm",
+  "version": "0.4.0",
+  "title": "Vector and matrix norms",
+  "description": "向量或矩阵的范数（= MATLAB norm）。向量（shape [n]、[1, n] 或 [n, 1]，与 MATLAB 相同）：p ≥ 1 的 p-范数、\"inf\"（max|x_i|）、\"-inf\"（min|x_i|）、\"fro\"（同 2）。矩阵：p = 1（最大列和）、2（最大奇异值，缺省）、\"inf\"（最大行和）、\"fro\"（Frobenius）。求和用补偿算术，2-范数与 p-范数先按最大元缩放，不会中途溢出。",
+  "category": "analysis",
+  "tags": [
+    "linalg",
+    "norm",
+    "vector",
+    "matrix"
+  ],
+  "applicability": {
+    "preconditions": [
+      "x 为 [n] 向量或 [m, n] 矩阵"
+    ],
+    "not_for": [
+      "矩阵的一般 p-范数（p ∉ {1, 2, inf, fro}；NP 难）",
+      "矩阵的核范数等（以后考虑）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "向量：p = 1 与矩阵的 1、inf 范数用补偿求和（Neumaier）；2 与 fro 用缩放的平方和（同 LAPACK dnrm2 思路）；一般 p：max|x_i|·(Σ(|x_i|/max)^p)^(1/p)，幂与开方经编入的 libm。矩阵 2-范数 = 单边 Jacobi SVD 的 σ_max（与 linalg.decomp.svd 同一内核）",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., Johns Hopkins 2013, §2.4（SVD、数值秩）、§5.5（秩亏最小二乘与伪逆）"
+      },
+      {
+        "type": "paper",
+        "cite": "J. Demmel, K. Veselić, Jacobi's method is more accurate than QR, SIMAX 13(4), 1992",
+        "doi": "10.1137/0613074"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "subspace::norm",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {
+    "/x": {
+      "policy": "densify",
+      "max_dense_elements": 10000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_dimension": 1000,
+    "max_elements": 10000000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/linalg.matrix.norm/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.VALIDATION.RANGE",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.NUMERICAL.NON_FINITE_EVALUATION",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "linalg_matrix_norm",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:norm:compensated-or-svd",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "representable",
+        "statement": "范数不超出 f64 范围",
+        "enforced_by": "error:E.NUMERICAL.NON_FINITE_EVALUATION"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "decomposition_checked",
+      "all_finite"
+    ],
+    "coverage": {
+      "decomposition_checked": "full",
+      "all_finite": "full"
+    },
+    "guards": {
+      "decomposition_checked": [
+        "/norm"
+      ]
+    }
+  }
+}

@@ -1,0 +1,170 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok_with_warnings",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.subspace.rank",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "rank": 2,
+    "tol": 4.440892098500626e-16,
+    "tol_source": "default",
+    "s": {
+      "dtype": "f64",
+      "shape": [
+        2
+      ],
+      "data": [
+        1.0,
+        2.220446049250313e-15
+      ]
+    },
+    "smallest_kept": 2.220446049250313e-15,
+    "largest_dropped": null
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "svd_reconstruction": 0.0,
+      "svd_orthonormality": 0.0,
+      "threshold": 2.220446049250313e-14,
+      "definition": "‖A − U·diag(s)·Vᵀ‖_F/‖A‖_F 与 max(‖UᵀU − I‖, ‖VᵀV − I‖)，同 linalg.decomp.svd SV-5"
+    },
+    "error_estimate": {
+      "singular_value_abs": 0.0,
+      "basis": "|Δσ_k| ≲ ‖A‖_F·重构残差 + 2σ_max·正交性误差（Weyl；小奇异值只有绝对精度）"
+    },
+    "checks": {
+      "svd_reconstructs": true,
+      "rank_well_separated": false
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:rank:jacobi-svd",
+      "routine": "subspace::rank",
+      "provenance": "aeoi://operators/linalg.subspace.rank/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "rank_threshold",
+        "statement": "秩取决于阈值 tol；缺省阈值只区分舍入噪声，数据本身的噪声水平要由调用方给出",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "separated",
+        "statement": "阈值附近没有奇异值",
+        "enforced_by": "warning:W.NUMERICAL.RANK_AMBIGUOUS"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "singular_value_abs": 0.0
+      },
+      "basis": "|Δσ_k| ≲ ‖A‖_F·重构残差 + 2σ_max·正交性误差（Weyl；小奇异值只有绝对精度）"
+    },
+    "evidence": {
+      "claim": "unverified",
+      "postconditions": {
+        "svd_reconstructs": true,
+        "rank_well_separated": false
+      },
+      "failed": [
+        "rank_well_separated"
+      ],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "svd_reconstructs": "full",
+        "rank_well_separated": "full"
+      },
+      "unreliable": [
+        "/rank"
+      ]
+    },
+    "fingerprint": {
+      "request": "sha256:7a4e0274ac7e3558101654be9400409da8ac719fd98274a175eb4e3843679572",
+      "result": "sha256:65d412aa961aafa668f303d9a0737a6933b4f11aa2d75157be54504db2c55813",
+      "output_hash": "sha256:55c286ba4300a5d76581c4fe9a5b93d339453d19676715c7740194ade770844d",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.subspace.rank@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [
+    {
+      "code": "W.NUMERICAL.RANK_AMBIGUOUS",
+      "message": "有奇异值落在阈值 tol = 4.441e-16 附近 (tol/10, 100·tol]：数值秩 2 取决于舍入与阈值的选择，rank 不可依赖。数据本身有噪声时，应按噪声水平给出 tol。",
+      "path": "/A",
+      "details": {
+        "tol": 4.440892098500626e-16,
+        "rank": 2,
+        "smallest_kept": 2.220446049250313e-15,
+        "largest_dropped": null
+      }
+    },
+    {
+      "code": "W.EVIDENCE.POSTCONDITION_FAILED",
+      "message": "后置条件未满足或未给出：rank_well_separated；结果不能视为已验证；不可依赖的结果字段：/rank",
+      "details": {
+        "failed": [
+          "rank_well_separated"
+        ],
+        "postconditions": {
+          "svd_reconstructs": true,
+          "rank_well_separated": false
+        },
+        "unreliable": [
+          "/rank"
+        ]
+      }
+    }
+  ],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:5a52b715453cc015a9484309d85c448915fdd982cfef94aaba1d5a1a43aa5e44",
+    "output_hash": "sha256:55c286ba4300a5d76581c4fe9a5b93d339453d19676715c7740194ade770844d",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.28010399999999996
+  }
+}

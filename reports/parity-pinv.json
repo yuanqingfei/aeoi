@@ -1,0 +1,69 @@
+{
+  "operator": "linalg.matrix.pinv",
+  "reference": "truth for the stored data: mpmath 50 digits (exact rationals for the 1-, inf-, Frobenius norms). Not MATLAB.",
+  "cases": 15,
+  "error_cases": 3,
+  "worst_error_over_tolerance": 0.005995336657102575,
+  "tolerance": "rank exact; ‖X − X_true‖_F/‖X_true‖_F ≤ 64·max(m, n)·u·max(1, κ_r) (κ_r = σ_1/σ_r of the truth); flagged cases: the failed post-condition only",
+  "cases_detail": [
+    {
+      "flagged": true,
+      "family": "ambiguous_near_threshold"
+    },
+    {
+      "rel_error": 0.0,
+      "cond_r_true": 10000000000.0,
+      "family": "graded_kept"
+    },
+    {
+      "rel_error": 2.7599281500300734e-16,
+      "cond_r_true": 1.0,
+      "family": "lowrank_4x9_r1"
+    },
+    {
+      "rel_error": 4.026599362057496e-16,
+      "cond_r_true": 5.611550596848377,
+      "family": "lowrank_6x5_r2"
+    },
+    {
+      "rel_error": 7.211836513451578e-16,
+      "cond_r_true": 4.808680158469791,
+      "family": "lowrank_8x8_r4"
+    },
+    {
+      "rel_error": 3.619192402453804e-16,
+      "cond_r_true": 15.76992147668723,
+      "family": "magic3_like_r2"
+    },
+    {
+      "rel_error": 5.731187363821225e-16,
+      "cond_r_true": 1.7967848700321507,
+      "family": "noisy_lowrank_supplied_tol"
+    },
+    {
+      "rel_error": 7.780123329947319e-16,
+      "cond_r_true": 71.83694277328789,
+      "family": "random_square"
+    },
+    {
+      "rel_error": 3.214129239434067e-16,
+      "cond_r_true": 2.3181313146674523,
+      "family": "random_tall"
+    },
+    {
+      "rel_error": 4.86852163780201e-16,
+      "cond_r_true": 1.6326582439848651,
+      "family": "random_wide"
+    },
+    {
+      "rel_error": 1.3525831508043345e-16,
+      "cond_r_true": 1.0,
+      "family": "single_column"
+    },
+    {
+      "rel_error": 0.0,
+      "cond_r_true": 1.0,
+      "family": "zero"
+    }
+  ]
+}

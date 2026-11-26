@@ -1,0 +1,64 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "linalg.matrix.pinv",
+ "operator_version": "0.4.0",
+ "case_family": "graded_kept",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    3,
+    3
+   ],
+   "data": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0001,
+    0.0,
+    0.0,
+    0.0,
+    1e-10
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "mpmath",
+  "mpmath": "1.4.1",
+  "dps": 50,
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261128,
+  "method": "SVD (mpmath svd_r), inverse and p-norms of the stored f64 data at 50 digits; 1-, inf- and squared Frobenius norms also exact with fractions",
+  "note": "high-precision truth; numpy.linalg recorded for comparison; NOT MATLAB output"
+ },
+ "expected": {
+  "X_true": [
+   1.0,
+   0.0,
+   0.0,
+   0.0,
+   10000.0,
+   0.0,
+   0.0,
+   0.0,
+   10000000000.0
+  ],
+  "rank_true": 3,
+  "m": 3,
+  "n": 3,
+  "cond_r_true": 10000000000.0,
+  "numpy_X": [
+   1.0,
+   0.0,
+   0.0,
+   0.0,
+   10000.0,
+   0.0,
+   0.0,
+   0.0,
+   10000000000.0
+  ]
+ }
+}

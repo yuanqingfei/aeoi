@@ -891,6 +891,60 @@ mdet_out=outs("linalg.matrix.det",{"det":dict(EXTNUM,description="行列式；�
 B3.update({"linalg.matrix.inv":(minv,minv_in,minv_out),"linalg.matrix.det":(mdet,mdet_in,mdet_out)})
 DESC.update({"linalg.matrix.inv":{"A":"方阵 [n, n]，row-major（MATLAB 是 column-major，先转置再展平）","refinement":"auto（缺省：每列用补偿残差做至多 3 步迭代精化）或 none（每列只解一次，与 MATLAB inv 相近）"},
  "linalg.matrix.det":{"A":"方阵 [n, n]，row-major（行列式对转置不变，所以录入顺序不影响结果）"}})
+
+# ---- v0.4.23: linalg.subspace.rank, linalg.subspace.basis, linalg.matrix.pinv, linalg.matrix.norm, linalg.matrix.cond (kernel svd)
+V423="0.4.0"
+SVD_REFS=[{"type":"textbook","cite":"G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., Johns Hopkins 2013, §2.4（SVD、数值秩）、§5.5（秩亏最小二乘与伪逆）"},
+  {"type":"paper","cite":"J. Demmel, K. Veselić, Jacobi's method is more accurate than QR, SIMAX 13(4), 1992","doi":"10.1137/0613074"}]
+TOL={"type":"number","minimum":0,"x-aeoi-provenance":"supplied","description":"秩判定阈值：奇异值 > tol 的个数为秩。省略时用 MATLAB 的缺省 max(m, n)·eps(σ_max)"}
+RANK_ALGO="单边 Jacobi SVD（与 linalg.decomp.svd 同一内核）；秩 = #{σ_k > tol}，tol 缺省 max(m, n)·eps(σ_max)（同 MATLAB rank/null/orth/pinv）。有奇异值落在 (tol/10, 100·tol] 内时秩不明确：W.NUMERICAL.RANK_AMBIGUOUS，后置条件 rank_well_separated 不成立"
+RK_ERR=MAT_ERR[:4]+["E.VALIDATION.DIGEST_MISMATCH","E.VALIDATION.REF_UNSUPPORTED","E.VALIDATION.REF_FORBIDDEN","E.NUMERICAL.NO_CONVERGENCE"]+TAIL_ERR
+rk=man("linalg.subspace.rank","Numerical rank","矩阵的数值秩（= MATLAB rank）：奇异值大于阈值 tol 的个数。tol 缺省为 MATLAB 的 max(m, n)·eps(σ_max)，也可由调用方给出。结果同时给出阈值两侧最近的奇异值；有奇异值落在阈值附近 (tol/10, 100·tol] 时，秩取决于舍入与阈值的选择，发 W.NUMERICAL.RANK_AMBIGUOUS 并把 rank 标为不可依赖。","analysis",["linalg","rank","svd","subspace"],
+ ["A 为 [m, n] 实数矩阵"],["符号秩或有理数矩阵的精确秩（这里是浮点数据的数值秩）","大型稀疏矩阵（需要秩揭示 QR 或迭代法）"],RANK_ALGO,SVD_REFS,
+ "subspace::rank (one-sided Jacobi SVD)","T1",{"max_dimension":1000},RK_ERR,["W.NUMERICAL.RANK_AMBIGUOUS","W.PERFORMANCE.SPARSE_DENSIFIED"],
+ sparse={"/A":{"policy":"densify","max_dense_elements":1000000}},ver=V423,backend=BACK_NUM("subspace::rank"))
+rk_in=ins("linalg.subspace.rank",{"A":M,"tol":TOL},["A"],{"x-aeoi-shape-constraints":["A: [m, n]"]},ver=V423)
+RK_OUT={"rank":{"type":"integer"},"tol":{"type":"number","description":"实际使用的阈值"},"tol_source":{"enum":["default","supplied"]},
+ "s":dict(M,description="全部奇异值 [min(m, n)]，降序"),
+ "smallest_kept":{"description":"阈值以上最小的奇异值（秩为 0 时为 null）"},"largest_dropped":{"description":"阈值以下最大的奇异值（秩满时为 null）"}}
+rk_out=outs("linalg.subspace.rank",RK_OUT,["rank","tol","tol_source","s","smallest_kept","largest_dropped"],ver=V423)
+bs=man("linalg.subspace.basis","Orthonormal bases of range and null space","值域与零空间的标准正交基（= MATLAB orth 与 null，一次给出）：orth 为 U 的前 r 列 [m, r]，null 为 V 的后 n − r 列 [n, n − r]，r 为数值秩（阈值同 linalg.subspace.rank）。基不唯一，比较时应比较张成的子空间（投影矩阵）。秩不明确时两组基都标为不可依赖。","analysis",["linalg","null","orth","subspace","kernel","range"],
+ ["A 为 [m, n] 实数矩阵"],["有理数基（MATLAB null(A, 'r')）","大型稀疏矩阵"],RANK_ALGO+"；orth = U[:, :r]，null = V[:, r:]（V 由薄 SVD 的 V 补全为 n 阶正交矩阵，补全用 Householder QR）。符号约定同 linalg.decomp.svd SV-3",SVD_REFS,
+ "subspace::basis (one-sided Jacobi SVD)","T1",{"max_dimension":1000},RK_ERR,["W.NUMERICAL.RANK_AMBIGUOUS","W.PERFORMANCE.SPARSE_DENSIFIED"],
+ sparse={"/A":{"policy":"densify","max_dense_elements":1000000}},ver=V423,backend=BACK_NUM("subspace::basis"))
+bs_in=ins("linalg.subspace.basis",{"A":M,"tol":TOL},["A"],{"x-aeoi-shape-constraints":["A: [m, n]"]},ver=V423)
+bs_out=outs("linalg.subspace.basis",dict(RK_OUT,orth=dict(M,description="值域的标准正交基 [m, r]（r = 0 时 shape [m, 0]）"),null=dict(M,description="零空间的标准正交基 [n, n − r]（满列秩时 shape [n, 0]）")),
+ ["rank","tol","tol_source","s","smallest_kept","largest_dropped","orth","null"],ver=V423)
+pv=man("linalg.matrix.pinv","Moore–Penrose pseudoinverse","Moore–Penrose 伪逆（= MATLAB pinv）：X = V_r·diag(1/σ_1 … 1/σ_r)·U_rᵀ，r 为数值秩（阈值同 linalg.subspace.rank）。伪逆在秩的阈值处不连续（一个 1e-17 的奇异值被保留，伪逆里就多出 1e17 的分量），所以秩不明确时 X 标为不可依赖。求最小二乘/最小范数解时，直接解比先求伪逆更准。","analysis",["linalg","pinv","pseudoinverse","least-squares"],
+ ["A 为 [m, n] 实数矩阵"],["满秩方阵求逆（用 linalg.matrix.inv）","解最小二乘问题（用 linalg.system.solve；秩亏时以后的最小范数解方法）"],RANK_ALGO+"；X = Σ_{k ≤ r} v_k·u_kᵀ/σ_k。Penrose 条件 ‖A·X·A − A‖_F/‖A‖_F 与 ‖X·A·X − X‖_F/‖X‖_F 作为残差",SVD_REFS,
+ "subspace::pinv (one-sided Jacobi SVD)","T2",{"max_dimension":1000},RK_ERR,["W.NUMERICAL.RANK_AMBIGUOUS","W.PERFORMANCE.SPARSE_DENSIFIED"],
+ sparse={"/A":{"policy":"densify","max_dense_elements":1000000}},ver=V423,backend=BACK_NUM("subspace::pinv"))
+pv_in=ins("linalg.matrix.pinv",{"A":M,"tol":TOL},["A"],{"x-aeoi-shape-constraints":["A: [m, n]"]},ver=V423)
+pv_out=outs("linalg.matrix.pinv",{"X":dict(M,description="伪逆 [n, m]"),"rank":{"type":"integer"},"tol":{"type":"number"},"tol_source":{"enum":["default","supplied"]},
+ "cond_r":{"description":"σ_1/σ_r：伪逆对 A 的扰动的敏感度（秩为 0 时为 null）"}},["X","rank","tol","tol_source","cond_r"],ver=V423)
+PNORM={"oneOf":[{"type":"number","minimum":1},{"enum":["inf","-inf","fro"]}],"default":2,"x-aeoi-provenance":"convention"}
+nm=man("linalg.matrix.norm","Vector and matrix norms","向量或矩阵的范数（= MATLAB norm）。向量（shape [n]、[1, n] 或 [n, 1]，与 MATLAB 相同）：p ≥ 1 的 p-范数、\"inf\"（max|x_i|）、\"-inf\"（min|x_i|）、\"fro\"（同 2）。矩阵：p = 1（最大列和）、2（最大奇异值，缺省）、\"inf\"（最大行和）、\"fro\"（Frobenius）。求和用补偿算术，2-范数与 p-范数先按最大元缩放，不会中途溢出。","analysis",["linalg","norm","vector","matrix"],
+ ["x 为 [n] 向量或 [m, n] 矩阵"],["矩阵的一般 p-范数（p ∉ {1, 2, inf, fro}；NP 难）","矩阵的核范数等（以后考虑）"],
+ "向量：p = 1 与矩阵的 1、inf 范数用补偿求和（Neumaier）；2 与 fro 用缩放的平方和（同 LAPACK dnrm2 思路）；一般 p：max|x_i|·(Σ(|x_i|/max)^p)^(1/p)，幂与开方经编入的 libm。矩阵 2-范数 = 单边 Jacobi SVD 的 σ_max（与 linalg.decomp.svd 同一内核）",SVD_REFS,
+ "subspace::norm (compensated sums / Jacobi SVD)","T1",{"max_dimension":1000,"max_elements":10000000},
+ MAT_ERR[:4]+["E.VALIDATION.DIGEST_MISMATCH","E.VALIDATION.REF_UNSUPPORTED","E.VALIDATION.REF_FORBIDDEN","E.VALIDATION.RANGE","E.NUMERICAL.NO_CONVERGENCE","E.NUMERICAL.NON_FINITE_EVALUATION"]+TAIL_ERR,["W.PERFORMANCE.SPARSE_DENSIFIED"],
+ sparse={"/x":{"policy":"densify","max_dense_elements":10000000}},ver=V423,backend=BACK_NUM("subspace::norm"))
+nm_in=ins("linalg.matrix.norm",{"x":M,"p":PNORM},["x"],{"x-aeoi-shape-constraints":["x: [n]、[1, n]、[n, 1]（向量）或 [m, n]（矩阵）"]},ver=V423)
+nm_out=outs("linalg.matrix.norm",{"norm":{"type":"number"},"p":{"description":"回显实际使用的 p"},"treated_as":{"enum":["vector","matrix"]},"relative_error_bound":{"type":"number","description":"相对误差估计"}},["norm","p","treated_as","relative_error_bound"],ver=V423)
+EXTNUM2={"oneOf":[{"type":"number"},{"$ref":C+"NonFinite"}]}
+cd_=man("linalg.matrix.cond","Condition number","矩阵的条件数（= MATLAB cond）。p = 2（缺省）：σ_max/σ_min，矩形矩阵也可以；p = 1、\"inf\"、\"fro\"：‖A‖_p·‖A⁻¹‖_p，只用于方阵，A⁻¹ 与 linalg.matrix.inv 同一算法。奇异时为 \"Inf\"。同时给出相对误差估计：σ_min 只有绝对精度，条件数越大越不准（大到 1/u 量级时只有量级有意义）。","analysis",["linalg","cond","condition-number"],
+ ["A 为 [m, n] 实数矩阵（p ≠ 2 时为方阵）"],["条件数估计（大矩阵用 linalg.system.solve 的 rcond，它只要 O(n²)）"],
+ "p = 2：单边 Jacobi SVD（与 linalg.decomp.svd 同一内核），cond = σ_1/σ_min，σ_min = 0 时为 Inf。p = 1/inf/fro：LU（部分选主元）逐列求 A⁻¹ 并精化（与 linalg.matrix.inv 同一内核），cond = ‖A‖_p·‖A⁻¹‖_p；主元为 0 时为 Inf。相对误差估计：p = 2 为 Weyl 界 / σ_min；其余为 κ·η（η 为求逆的后向误差）。rcond < ε 时 W.NUMERICAL.ILL_CONDITIONED",SVD_REFS,
+ "subspace::cond (Jacobi SVD / LU inverse)","T2",{"max_dimension":1000},
+ MAT_ERR[:4]+["E.VALIDATION.DIGEST_MISMATCH","E.VALIDATION.REF_UNSUPPORTED","E.VALIDATION.REF_FORBIDDEN","E.NUMERICAL.NO_CONVERGENCE"]+TAIL_ERR,["W.NUMERICAL.ILL_CONDITIONED","W.PERFORMANCE.SPARSE_DENSIFIED"],
+ sparse={"/A":{"policy":"densify","max_dense_elements":1000000}},ver=V423,backend=BACK_NUM("subspace::cond"))
+cd_in=ins("linalg.matrix.cond",{"A":M,"p":{"oneOf":[{"enum":[1,2]},{"enum":["inf","fro"]}],"default":2,"x-aeoi-provenance":"convention"}},["A"],{"x-aeoi-shape-constraints":["A: [m, n]；p ≠ 2 时 m = n"]},ver=V423)
+cd_out=outs("linalg.matrix.cond",{"cond":dict(EXTNUM2,description="条件数；奇异时为 \"Inf\""),"rcond":{"type":"number","description":"1/cond（奇异时为 0）"},"p":{"description":"回显"},
+ "relative_error_estimate":dict(EXTNUM2,description="cond 的相对误差估计（启发式）")},["cond","rcond","p","relative_error_estimate"],ver=V423)
+B3.update({"linalg.subspace.rank":(rk,rk_in,rk_out),"linalg.subspace.basis":(bs,bs_in,bs_out),"linalg.matrix.pinv":(pv,pv_in,pv_out),"linalg.matrix.norm":(nm,nm_in,nm_out),"linalg.matrix.cond":(cd_,cd_in,cd_out)})
+DESC.update({op:{"A":"矩阵 [m, n]，row-major（MATLAB 是 column-major，先转置再展平）","tol":"可选：秩判定阈值（奇异值 > tol 的个数）。不给时用 MATLAB 缺省 max(m, n)·eps(σ_max)。阈值是建模选择（数据的噪声水平），不要代用户编一个"} for op in ("linalg.subspace.rank","linalg.subspace.basis","linalg.matrix.pinv")})
+DESC.update({"linalg.matrix.norm":{"x":"向量 [n]（[1, n]、[n, 1] 也按向量处理，同 MATLAB）或矩阵 [m, n]，row-major","p":"范数类型：向量可为任意 p ≥ 1、\"inf\"、\"-inf\"、\"fro\"；矩阵为 1、2（缺省）、\"inf\"、\"fro\""},
+ "linalg.matrix.cond":{"A":"矩阵 [m, n]，row-major；p ≠ 2 时必须是方阵","p":"范数：2（缺省，σ_max/σ_min）、1、\"inf\"、\"fro\""}})
 ALL_OPS={"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2|B3
 for op,props in DESC.items():
     for (m_,i_,o_) in [ALL_OPS[op]]:
@@ -955,6 +1009,16 @@ RECEIPT["linalg.matrix.inv"]={"method_id":"aeoi:inv:lu-refine","assumptions":[A(
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["backward_stable","forward_error_below_one","all_finite"]}
 RECEIPT["linalg.matrix.det"]={"method_id":"aeoi:det:lu-scaled-product","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("square","A 为方阵","error:E.VALIDATION.SHAPE"),A("significant","误差估计 < 1（det 与 0 可区分）","check:significant"),A("estimate_heuristic","误差估计是一阶的启发式界，用的 ‖A⁻¹‖₁ 是估计（下界）","caller")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["significant"]}
+RECEIPT["linalg.subspace.rank"]={"method_id":"aeoi:rank:jacobi-svd","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("rank_threshold","秩取决于阈值 tol；缺省阈值只区分舍入噪声，数据本身的噪声水平要由调用方给出","caller"),A("separated","阈值附近没有奇异值","warning:W.NUMERICAL.RANK_AMBIGUOUS")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["svd_reconstructs","rank_well_separated"]}
+RECEIPT["linalg.subspace.basis"]={"method_id":"aeoi:basis:jacobi-svd","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("rank_threshold","秩取决于阈值 tol；缺省阈值只区分舍入噪声，数据本身的噪声水平要由调用方给出","caller"),A("separated","阈值附近没有奇异值","warning:W.NUMERICAL.RANK_AMBIGUOUS"),A("non_unique","基不唯一：只有张成的子空间有意义","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["svd_reconstructs","rank_well_separated","orthonormal","null_residual"]}
+RECEIPT["linalg.matrix.pinv"]={"method_id":"aeoi:pinv:jacobi-svd","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("rank_threshold","秩取决于阈值 tol；缺省阈值只区分舍入噪声，数据本身的噪声水平要由调用方给出","caller"),A("separated","阈值附近没有奇异值","warning:W.NUMERICAL.RANK_AMBIGUOUS")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["svd_reconstructs","rank_well_separated","penrose"]}
+RECEIPT["linalg.matrix.norm"]={"method_id":"aeoi:norm:compensated-or-svd","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("representable","范数不超出 f64 范围","error:E.NUMERICAL.NON_FINITE_EVALUATION")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["decomposition_checked","all_finite"]}
+RECEIPT["linalg.matrix.cond"]={"method_id":"aeoi:cond:svd-or-lu-inverse","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("accuracy","cond 很大时（接近 1/u）只有量级有意义","warning:W.NUMERICAL.ILL_CONDITIONED")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["decomposition_checked"]}
 RECEIPT["fit.poly.polyval"]={"method_id":"aeoi:polyval:compensated-horner","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("no_overflow","求值过程不溢出","error:E.NUMERICAL.NON_FINITE_EVALUATION"),A("no_underflow","误差界不考虑下溢（结果的量级在 1e-290 以上时成立）","caller"),A("coefficients_exact","误差界针对给定的 f64 系数；系数本身的误差经 condition 放大","caller")],
    "exactness":{"class":"approximate","bound_kind":"rigorous"},"postconditions":["horner_consistent"]}
 RECEIPT["fit.poly.roots"]={"method_id":"aeoi:roots:companion-eig-newton-inclusion","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("nonzero","p 不是零多项式","error:E.DOMAIN.ZERO_POLYNOMIAL"),A("coefficients_exact","根与半径针对给定的 f64 系数；系数本身的误差另经根的条件数放大","caller"),A("clusters","簇内各根的位置不能单独确定","warning:W.ACCURACY.CLUSTERED_ROOTS")],
@@ -1000,7 +1064,9 @@ COVERAGE.update({"control.design.pid":{"formula_matches":"test_points"},"control
  "signal.spectral.fft":{"parseval":"full","dft_spot_check":"sampled"},
  "ode.ivp.solve":{"tolerance_consistent":"full"},
  "linalg.system.solve":{"backward_stable":"full"},
- "linalg.matrix.inv":{"backward_stable":"full","forward_error_below_one":"full"},"linalg.matrix.det":{"significant":"full"},
+ "linalg.matrix.inv":{"backward_stable":"full","forward_error_below_one":"full"},
+ "linalg.subspace.rank":{"svd_reconstructs":"full","rank_well_separated":"full"},"linalg.subspace.basis":{"svd_reconstructs":"full","rank_well_separated":"full","orthonormal":"full","null_residual":"full"},
+ "linalg.matrix.pinv":{"svd_reconstructs":"full","rank_well_separated":"full","penrose":"full"},"linalg.matrix.norm":{"decomposition_checked":"full","all_finite":"full"},"linalg.matrix.cond":{"decomposition_checked":"full"},"linalg.matrix.det":{"significant":"full"},
  "interp.grid.interp1":{"pieces_interpolate":"full","spline_c2":"full","local_bounds":"full"},
  "fit.poly.polyfit":{"backward_stable":"full"},
  "signal.design.butter":{"stable":"full","edge_gain":"full","sos_consistent":"test_points"},
@@ -1023,6 +1089,11 @@ GUARDS["signal.design.butter"]={"stable":["/z","/p","/k","/sos","/b","/a","/syst
 GUARDS["fit.poly.polyval"]={"horner_consistent":["/y","/error_bound"]}
 GUARDS["linalg.matrix.inv"]={"backward_stable":["/X"],"forward_error_below_one":["/X"]}
 GUARDS["linalg.matrix.det"]={"significant":["/det","/sign","/log_abs_det"]}
+GUARDS["linalg.subspace.rank"]={"svd_reconstructs":["/rank","/s","/smallest_kept","/largest_dropped"],"rank_well_separated":["/rank"]}
+GUARDS["linalg.subspace.basis"]={"svd_reconstructs":["/rank","/s","/orth","/null"],"rank_well_separated":["/rank","/orth","/null"],"orthonormal":["/orth","/null"],"null_residual":["/null"]}
+GUARDS["linalg.matrix.pinv"]={"svd_reconstructs":["/X","/rank","/cond_r"],"rank_well_separated":["/X","/rank"],"penrose":["/X"]}
+GUARDS["linalg.matrix.norm"]={"decomposition_checked":["/norm"]}
+GUARDS["linalg.matrix.cond"]={"decomposition_checked":["/cond","/rcond"]}
 GUARDS["fit.poly.roots"]={"backward_stable":["/roots","/error_radius"],"radii_finite":["/error_radius","/multiplicity"]}
 GUARDS["calculus.quadrature.integral"]={"tolerance_met":["/value","/error_estimate"],"refinement_consistent":["/value","/error_estimate"]}
 GUARDS["optim.linear.linprog"]={"kkt":["/x","/fval","/lambda"]}

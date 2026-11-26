@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.matrix.pinv/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "A"
+  ],
+  "properties": {
+    "A": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "矩阵 [m, n]，row-major（MATLAB 是 column-major，先转置再展平）"
+    },
+    "tol": {
+      "type": "number",
+      "minimum": 0,
+      "x-aeoi-provenance": "supplied",
+      "description": "可选：秩判定阈值（奇异值 > tol 的个数）。不给时用 MATLAB 缺省 max(m, n)·eps(σ_max)。阈值是建模选择（数据的噪声水平），不要代用户编一个"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  },
+  "x-aeoi-shape-constraints": [
+    "A: [m, n]"
+  ]
+}

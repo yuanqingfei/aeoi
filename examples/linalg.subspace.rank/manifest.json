@@ -1,0 +1,155 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "linalg.subspace.rank",
+  "version": "0.4.0",
+  "title": "Numerical rank",
+  "description": "矩阵的数值秩（= MATLAB rank）：奇异值大于阈值 tol 的个数。tol 缺省为 MATLAB 的 max(m, n)·eps(σ_max)，也可由调用方给出。结果同时给出阈值两侧最近的奇异值；有奇异值落在阈值附近 (tol/10, 100·tol] 时，秩取决于舍入与阈值的选择，发 W.NUMERICAL.RANK_AMBIGUOUS 并把 rank 标为不可依赖。",
+  "category": "analysis",
+  "tags": [
+    "linalg",
+    "rank",
+    "svd",
+    "subspace"
+  ],
+  "applicability": {
+    "preconditions": [
+      "A 为 [m, n] 实数矩阵"
+    ],
+    "not_for": [
+      "符号秩或有理数矩阵的精确秩（这里是浮点数据的数值秩）",
+      "大型稀疏矩阵（需要秩揭示 QR 或迭代法）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "单边 Jacobi SVD（与 linalg.decomp.svd 同一内核）；秩 = #{σ_k > tol}，tol 缺省 max(m, n)·eps(σ_max)（同 MATLAB rank/null/orth/pinv）。有奇异值落在 (tol/10, 100·tol] 内时秩不明确：W.NUMERICAL.RANK_AMBIGUOUS，后置条件 rank_well_separated 不成立",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., Johns Hopkins 2013, §2.4（SVD、数值秩）、§5.5（秩亏最小二乘与伪逆）"
+      },
+      {
+        "type": "paper",
+        "cite": "J. Demmel, K. Veselić, Jacobi's method is more accurate than QR, SIMAX 13(4), 1992",
+        "doi": "10.1137/0613074"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "subspace::rank",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {
+    "/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_dimension": 1000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/linalg.subspace.rank/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.NUMERICAL.RANK_AMBIGUOUS",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "linalg_subspace_rank",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:rank:jacobi-svd",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "rank_threshold",
+        "statement": "秩取决于阈值 tol；缺省阈值只区分舍入噪声，数据本身的噪声水平要由调用方给出",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "separated",
+        "statement": "阈值附近没有奇异值",
+        "enforced_by": "warning:W.NUMERICAL.RANK_AMBIGUOUS"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "svd_reconstructs",
+      "rank_well_separated"
+    ],
+    "coverage": {
+      "svd_reconstructs": "full",
+      "rank_well_separated": "full"
+    },
+    "guards": {
+      "svd_reconstructs": [
+        "/rank",
+        "/s",
+        "/smallest_kept",
+        "/largest_dropped"
+      ],
+      "rank_well_separated": [
+        "/rank"
+      ]
+    }
+  }
+}

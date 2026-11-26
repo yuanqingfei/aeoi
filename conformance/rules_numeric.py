@@ -594,7 +594,98 @@ def rule_det(case, env, manifest, req=None, expected=None):
     return out
 
 
-RULES = {"linalg.matrix.inv": rule_inv, "linalg.matrix.det": rule_det, "signal.spectral.fft": rule_fft, "ode.ivp.solve": rule_ode, "linalg.system.solve": rule_linsolve, "interp.grid.interp1": rule_interp1,
+# ---------------------------------------------------------------- v0.4.23: rank, basis, pinv, norm, cond (profiles 10.37 – 10.41)
+def _flagged(case, env, key="rank_well_separated"):
+    return bool(case.get("expect_postcondition_failed")) and ((env.get("trust") or {}).get("checks") or {}).get(key) is False
+
+
+def _rank_checks(case, env):
+    e = case["expected"]; r = env["result"]; claims = (env.get("trust") or {}).get("checks") or {}
+    m, n = int(e["m"]), int(e["n"])
+    s = arr(r["s"]).ravel(); st = np.array(e["s_true"], dtype=float)
+    out = [check("singular values: |Δσ_k| ≤ 32·max(m, n)·u·σ_max  [RK-1]", float(np.max(np.abs(s - st))) if s.shape == st.shape else float("inf"), 32 * max(m, n) * U * max(st[0], np.finfo(float).tiny))]
+    if case.get("expect_postcondition_failed"):
+        out.append(("claim: rank_well_separated = false where a true singular value lies in (tol/10, 100·tol]  [RK-3]", claims.get("rank_well_separated") is False, None, None, f"rank_well_separated = {claims.get('rank_well_separated')}"))
+    else:
+        out.append(("rank equals the true rank  [RK-2]", r.get("rank") == e["rank_true"], None, None, f"got {r.get('rank')}, want {e['rank_true']}"))
+    if r.get("tol_source") == "default":
+        t = max(m, n) * float(np.spacing(s[0])) if s[0] != 0 else max(m, n) * 5e-324
+        out.append(("default tol = max(m, n)·eps(s_1) of the returned s, and rank = #{s_k > tol}, recomputed by the runner  [RK-2]",
+                    num(r.get("tol")) == t and r.get("rank") == int(np.sum(s > t)), None, None, f"tol {r.get('tol')} vs {t}, rank {r.get('rank')} vs {int(np.sum(s > t))}"))
+    return out
+
+
+def rule_rank(case, env, manifest, req=None, expected=None):
+    return _rank_checks(case, env)
+
+
+def _proj(Q):
+    return Q @ Q.T if Q.size else np.zeros((Q.shape[0], Q.shape[0]))
+
+
+def rule_basis(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = case["expected"]; r = env["result"]
+    m, n, k = int(e["m"]), int(e["n"]), int(e["rank_true"])
+    O = arr(r["orth"]).reshape(m, -1); N = arr(r["null"]).reshape(n, -1)
+    out = _rank_checks(dict(case, expected=dict(e, s_true=e.get("s_true", list(arr(r["s"]).ravel())))), env)[1:]
+    if not _flagged(case, env):
+        Ot = np.array(e["orth_true"], dtype=float).reshape(m, k); Pn = np.array(e["null_projector_true"], dtype=float).reshape(n, n)
+        if O.shape[1] != k or N.shape[1] != n - k:
+            return out + [fail("orth [m, r], null [n, n − r]", f"got {O.shape}, {N.shape}")]
+        d = max(float(np.linalg.norm(_proj(O) - _proj(Ot))), float(np.linalg.norm(_proj(N) - Pn)))
+        tol = 64 * max(m, n) * U * (e["sigma_max_true"] / e["gap_true"] if e.get("gap_true") else 1.0)
+        out.insert(0, check("range and null projectors vs the truth: ‖ΔP‖_F ≤ 64·max(m, n)·u·σ_max/gap  [BS-2]", d, max(tol, 64 * max(m, n) * U)))
+        A = arr(req["A"]).reshape(m, n)
+        oe = max(float(np.max(np.abs(O.T @ O - np.eye(O.shape[1])))) if O.size else 0.0, float(np.max(np.abs(N.T @ N - np.eye(N.shape[1])))) if N.size else 0.0)
+        out.append(check("orthonormality of the returned bases, recomputed by the runner  [BS-3]", oe, 100 * max(m, n) * U))
+        an = float(np.linalg.norm(A @ N)) if N.size else 0.0
+        out.append(check("‖A·N‖_F, recomputed by the runner  [BS-3]", an, np.sqrt(n - k) * num(r.get("tol")) + 100 * max(m, n) * U * float(np.linalg.norm(A))))
+    return out
+
+
+def rule_pinv(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = case["expected"]; r = env["result"]
+    m, n = int(e["m"]), int(e["n"])
+    if _flagged(case, env):
+        return [("flagged case: rank_well_separated = false and /X listed unreliable  [PI-3]", True, None, None, "")]
+    X = arr(r["X"])
+    if X.shape != (n, m):
+        return [fail("X: shape [n, m]", f"got {X.shape}")]
+    Xt = np.array(e["X_true"], dtype=float).reshape(n, m)
+    nt = float(np.linalg.norm(Xt)); k = max(1.0, e["cond_r_true"] or 1.0)
+    d = float(np.linalg.norm(X - Xt)) / nt if nt else float(np.linalg.norm(X))
+    tol = 64 * max(m, n) * U * k
+    A = arr(req["A"]).reshape(m, n)
+    s = np.linalg.svd(A, compute_uv=False)
+    dropped = float(np.linalg.norm(s[int(e["rank_true"]):])) / max(float(np.linalg.norm(A)), np.finfo(float).tiny)
+    p1 = float(np.linalg.norm(A @ X @ A - A)) / max(float(np.linalg.norm(A)), np.finfo(float).tiny)
+    p2 = float(np.linalg.norm(X @ A @ X - X)) / nt if nt else 0.0
+    return [check("X vs the true pseudoinverse: ‖ΔX‖_F/‖X‖_F ≤ 64·max(m, n)·u·max(1, κ_r)  [PI-2]", d, tol),
+            ("rank equals the true rank  [PI-2]", r.get("rank") == e["rank_true"], None, None, f"got {r.get('rank')}"),
+            check("Penrose A·X·A = A, recomputed by the runner (plus the dropped part)  [PI-4]", p1, dropped + 100 * max(m, n) * U * k + 1e-300),
+            check("Penrose X·A·X = X, recomputed by the runner  [PI-4]", p2, 100 * max(m, n) * U * k)]
+
+
+def rule_norm(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = case["expected"]; r = env["result"]
+    t = float(e["norm_true"]); g = num(r.get("norm"))
+    svd = e["treated_as"] == "matrix" and req.get("p", 2) == 2
+    tol = 32 * e["max_dim"] * U if svd else 4 * (e["n_elements"] + 6) * U
+    return [check("norm vs the truth: |Δ|/norm ≤ 4·(N + 6)·u (direct) or 32·max(m, n)·u (matrix 2-norm)  [NM-2]", abs(g - t) / max(abs(t), np.finfo(float).tiny), tol),
+            ("treated_as (vector for [n], [1, n], [n, 1])  [NM-1]", r.get("treated_as") == e["treated_as"], None, None, f"got {r.get('treated_as')}")]
+
+
+def rule_cond(case, env, manifest, req=None, expected=None):
+    e = case["expected"]; r = env["result"]
+    t = e.get("cond_true")
+    if t is None:
+        return [("exact zero pivot: cond = \"Inf\", rcond = 0  [CN-3]", r.get("cond") == "Inf" and num(r.get("rcond")) == 0.0, None, None, f"got {r.get('cond')}, {r.get('rcond')}")]
+    g = num(r.get("cond"))
+    return [check("cond vs the truth: |Δ|/cond ≤ 64·max(m, n)·u·cond  [CN-2]", abs(g - t) / t, 64 * e["max_dim"] * U * t),
+            check("rcond = 1/cond of the returned value  [CN-4]", abs(num(r.get("rcond")) * g - 1.0), 4 * U)]
+
+
+RULES = {"linalg.subspace.rank": rule_rank, "linalg.subspace.basis": rule_basis, "linalg.matrix.pinv": rule_pinv, "linalg.matrix.norm": rule_norm, "linalg.matrix.cond": rule_cond, "linalg.matrix.inv": rule_inv, "linalg.matrix.det": rule_det, "signal.spectral.fft": rule_fft, "ode.ivp.solve": rule_ode, "linalg.system.solve": rule_linsolve, "interp.grid.interp1": rule_interp1,
          "fit.poly.polyfit": rule_polyfit, "linalg.decomp.eig": rule_eig, "linalg.decomp.svd": rule_svd,
          "signal.design.butter": rule_butter, "signal.filter.filter": rule_filter,
          "nonlinear.root.fzero": rule_fzero, "nonlinear.system.fsolve": rule_fsolve,

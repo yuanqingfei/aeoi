@@ -1,0 +1,74 @@
+{
+  "operator": "linalg.subspace.basis",
+  "reference": "truth for the stored data: mpmath 50 digits (exact rationals for the 1-, inf-, Frobenius norms). Not MATLAB.",
+  "cases": 16,
+  "error_cases": 3,
+  "worst_error_over_tolerance": 0.02267896872638894,
+  "tolerance": "rank exact; ‖P − P_true‖_F ≤ 64·max(m, n)·u·σ_max/gap for the range and null projectors (Wedin); flagged cases: the failed post-condition only",
+  "cases_detail": [
+    {
+      "flagged": true,
+      "family": "ambiguous_near_threshold"
+    },
+    {
+      "projector_error": 0.0,
+      "tolerance": 0.00021316282072803006,
+      "family": "graded_kept"
+    },
+    {
+      "projector_error": 1.208460783860784e-15,
+      "tolerance": 0.0008672927662513556,
+      "family": "hilbert_8"
+    },
+    {
+      "projector_error": 4.921236536752678e-16,
+      "tolerance": 6.394884621840902e-14,
+      "family": "lowrank_4x9_r1"
+    },
+    {
+      "projector_error": 1.8028309333234493e-15,
+      "tolerance": 2.3923479077645213e-13,
+      "family": "lowrank_6x5_r2"
+    },
+    {
+      "projector_error": 2.9343671873067887e-15,
+      "tolerance": 2.7334182041555504e-13,
+      "family": "lowrank_8x8_r4"
+    },
+    {
+      "projector_error": 3.6821932062951477e-16,
+      "tolerance": 3.3615609446301916e-13,
+      "family": "magic3_like_r2"
+    },
+    {
+      "projector_error": 2.895406785742411e-15,
+      "tolerance": 1.2766924372418023e-13,
+      "family": "noisy_lowrank_supplied_tol"
+    },
+    {
+      "projector_error": 7.865778489861988e-16,
+      "tolerance": 3.0625930708064236e-12,
+      "family": "random_square"
+    },
+    {
+      "projector_error": 5.309047441500895e-16,
+      "tolerance": 1.4824182295574721e-13,
+      "family": "random_tall"
+    },
+    {
+      "projector_error": 6.084108277399628e-16,
+      "tolerance": 8.120514186696009e-14,
+      "family": "random_wide"
+    },
+    {
+      "projector_error": 1.4364729693618277e-16,
+      "tolerance": 3.552713678800501e-14,
+      "family": "single_column"
+    },
+    {
+      "projector_error": 0.0,
+      "tolerance": 2.1316282072803006e-14,
+      "family": "zero_rank0"
+    }
+  ]
+}

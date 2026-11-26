@@ -1,0 +1,22 @@
+# Parity test spec — linalg.subspace.basis 0.4.0 (AEOI v0.4.23-draft)
+operator: linalg.subspace.basis
+references:
+  - {engine: mpmath, role: high_precision_reference, status: active, generator: scripts/golden/gen_golden_subspace.py,
+     golden_store: "golden/mpmath/linalg.subspace.basis/0.4.0/*.json",
+     note: "truth for the stored f64 data at 50 digits (SVD / inverse / p-norms); NOT MATLAB output"}
+  - {engine: numpy, version: "numpy.linalg (LAPACK gesdd / getrf)", role: dev_reference, status: active, note: "recorded for comparison only"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_subspace"
+tolerance_class: T1
+compare:
+  bases: "compared as subspaces: ‖P − P_true‖_F ≤ 64·max(m, n)·u·σ_max/gap for the range and the null projector (Wedin; gap = σ_r − σ_{r+1} of the truth)"
+  rank, shapes: exact
+  warnings: "exactly the predicted set; predictions use the true singular values and only cases at least a factor 2 from every threshold edge are written"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py. No trust.* value of the implementation is used as a tolerance
+  projectors: "same bound as compare"
+  recomputed: "the runner recomputes ‖QᵀQ − I‖ of both returned bases (≤ 100·max(m, n)·u) and ‖A·N‖_F ≤ sqrt(n − r)·tol + 100·max(m, n)·u·‖A‖_F"
+  flagged cases: "the failed post-condition only"
+case_families:
+  - {name: "random square / tall / wide, exact low rank (6×5 r2, 8×8 r4, 4×9 r1, 3×3 r2), graded (σ down to 1e-10), Hilbert 8, single column", n: 11}
+  - {name: "zero_rank0 / noisy low rank with supplied tol / ambiguous_near_threshold", n: 3}
+  - {name: errors, n: 3, expect: "SHAPE, DTYPE, SCHEMA"}

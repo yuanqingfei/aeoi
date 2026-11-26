@@ -1,0 +1,175 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "linalg.subspace.basis",
+  "version": "0.4.0",
+  "title": "Orthonormal bases of range and null space",
+  "description": "值域与零空间的标准正交基（= MATLAB orth 与 null，一次给出）：orth 为 U 的前 r 列 [m, r]，null 为 V 的后 n − r 列 [n, n − r]，r 为数值秩（阈值同 linalg.subspace.rank）。基不唯一，比较时应比较张成的子空间（投影矩阵）。秩不明确时两组基都标为不可依赖。",
+  "category": "analysis",
+  "tags": [
+    "linalg",
+    "null",
+    "orth",
+    "subspace",
+    "kernel",
+    "range"
+  ],
+  "applicability": {
+    "preconditions": [
+      "A 为 [m, n] 实数矩阵"
+    ],
+    "not_for": [
+      "有理数基（MATLAB null(A, 'r')）",
+      "大型稀疏矩阵"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "单边 Jacobi SVD（与 linalg.decomp.svd 同一内核）；秩 = #{σ_k > tol}，tol 缺省 max(m, n)·eps(σ_max)（同 MATLAB rank/null/orth/pinv）。有奇异值落在 (tol/10, 100·tol] 内时秩不明确：W.NUMERICAL.RANK_AMBIGUOUS，后置条件 rank_well_separated 不成立；orth = U[:, :r]，null = V[:, r:]（V 由薄 SVD 的 V 补全为 n 阶正交矩阵，补全用 Householder QR）。符号约定同 linalg.decomp.svd SV-3",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., Johns Hopkins 2013, §2.4（SVD、数值秩）、§5.5（秩亏最小二乘与伪逆）"
+      },
+      {
+        "type": "paper",
+        "cite": "J. Demmel, K. Veselić, Jacobi's method is more accurate than QR, SIMAX 13(4), 1992",
+        "doi": "10.1137/0613074"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "subspace::basis",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {
+    "/A": {
+      "policy": "densify",
+      "max_dense_elements": 1000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_dimension": 1000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/linalg.subspace.basis/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.NUMERICAL.RANK_AMBIGUOUS",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "linalg_subspace_basis",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:basis:jacobi-svd",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "rank_threshold",
+        "statement": "秩取决于阈值 tol；缺省阈值只区分舍入噪声，数据本身的噪声水平要由调用方给出",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "separated",
+        "statement": "阈值附近没有奇异值",
+        "enforced_by": "warning:W.NUMERICAL.RANK_AMBIGUOUS"
+      },
+      {
+        "id": "non_unique",
+        "statement": "基不唯一：只有张成的子空间有意义",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "svd_reconstructs",
+      "rank_well_separated",
+      "orthonormal",
+      "null_residual"
+    ],
+    "coverage": {
+      "svd_reconstructs": "full",
+      "rank_well_separated": "full",
+      "orthonormal": "full",
+      "null_residual": "full"
+    },
+    "guards": {
+      "svd_reconstructs": [
+        "/rank",
+        "/s",
+        "/orth",
+        "/null"
+      ],
+      "rank_well_separated": [
+        "/rank",
+        "/orth",
+        "/null"
+      ],
+      "orthonormal": [
+        "/orth",
+        "/null"
+      ],
+      "null_residual": [
+        "/null"
+      ]
+    }
+  }
+}

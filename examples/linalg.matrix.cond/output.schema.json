@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.matrix.cond/0.4.0/output",
+  "type": "object",
+  "required": [
+    "cond",
+    "rcond",
+    "p",
+    "relative_error_estimate"
+  ],
+  "properties": {
+    "cond": {
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "$ref": "aeoi://schemas/common/0.4#/$defs/NonFinite"
+        }
+      ],
+      "description": "条件数；奇异时为 \"Inf\""
+    },
+    "rcond": {
+      "type": "number",
+      "description": "1/cond（奇异时为 0）"
+    },
+    "p": {
+      "description": "回显"
+    },
+    "relative_error_estimate": {
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "$ref": "aeoi://schemas/common/0.4#/$defs/NonFinite"
+        }
+      ],
+      "description": "cond 的相对误差估计（启发式）"
+    }
+  }
+}

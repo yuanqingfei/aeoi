@@ -437,3 +437,36 @@ fn det_example() {
     let e = call(op, &read(&format!("{dir}/request.error.json")));
     assert_eq!(e["error"]["code"], "E.VALIDATION.SHAPE");
 }
+
+/// v0.4.23: rank / basis / pinv / norm / cond examples — bitwise on the same platform, plus the facts each
+/// example is there to show.
+#[test]
+fn subspace_examples() {
+    let cases: [(&str, &[(&str, &str)], &str); 5] = [
+        ("linalg.subspace.rank", &[("request.json", "response.success.json"), ("request.ambiguous.json", "response.ambiguous.json")], "E.VALIDATION.SHAPE"),
+        ("linalg.subspace.basis", &[("request.json", "response.success.json")], "E.VALIDATION.DTYPE"),
+        ("linalg.matrix.pinv", &[("request.json", "response.success.json"), ("request.ambiguous.json", "response.ambiguous.json")], "E.VALIDATION.SHAPE"),
+        ("linalg.matrix.norm", &[("request.json", "response.success.json"), ("request.matrix.json", "response.matrix.json")], "E.VALIDATION.RANGE"),
+        ("linalg.matrix.cond", &[("request.json", "response.success.json"), ("request.ill.json", "response.ill.json")], "E.VALIDATION.SHAPE"),
+    ];
+    for (op, pairs, err) in cases {
+        let dir = format!("examples/{op}");
+        for (rq, rs) in pairs.iter() {
+            let env = call(op, &read(&format!("{dir}/{rq}")));
+            assert!(env["status"] == "ok" || env["status"] == "ok_with_warnings", "{op} {rq}: {}", env["error"]);
+            assert_hash_on_same_platform(&env, &read(&format!("{dir}/{rs}")), &format!("{op} {rq}: bitwise example"));
+            let warned = |c: &str| env["warnings"].as_array().unwrap().iter().any(|w| w["code"] == c);
+            if rq.contains("ambiguous") {
+                assert!(warned("W.NUMERICAL.RANK_AMBIGUOUS"), "{op} {rq}");
+            }
+            if rq.contains("ill") {
+                assert!(warned("W.NUMERICAL.ILL_CONDITIONED"), "{op} {rq}");
+            }
+        }
+        let e = call(op, &read(&format!("{dir}/request.error.json")));
+        assert_eq!(e["error"]["code"], err, "{op}");
+    }
+    assert_eq!(call("linalg.subspace.rank", &read("examples/linalg.subspace.rank/request.json"))["result"]["rank"], 2);
+    assert_eq!(call("linalg.matrix.norm", &read("examples/linalg.matrix.norm/request.json"))["result"]["norm"], 5.0);
+    assert_eq!(call("linalg.matrix.norm", &read("examples/linalg.matrix.norm/request.matrix.json"))["result"]["norm"], 7.0);
+}

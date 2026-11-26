@@ -1,0 +1,21 @@
+# Parity test spec — linalg.matrix.norm 0.4.0 (AEOI v0.4.23-draft)
+operator: linalg.matrix.norm
+references:
+  - {engine: mpmath, role: high_precision_reference, status: active, generator: scripts/golden/gen_golden_subspace.py,
+     golden_store: "golden/mpmath/linalg.matrix.norm/0.4.0/*.json",
+     note: "truth for the stored f64 data at 50 digits (SVD / inverse / p-norms); NOT MATLAB output"}
+  - {engine: numpy, version: "numpy.linalg (LAPACK gesdd / getrf)", role: dev_reference, status: active, note: "recorded for comparison only"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_subspace"
+tolerance_class: T1
+compare:
+  norm: "|Δ|/norm_true ≤ 4·(N + 6)·u (direct formulas, N = number of elements) or 32·max(m, n)·u (matrix 2-norm by SVD)"
+  treated_as: exact
+  warnings: "exactly the predicted set; predictions use the true singular values and only cases at least a factor 2 from every threshold edge are written"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py. No trust.* value of the implementation is used as a tolerance
+  norm: "same bound as compare"
+  echoed: "treated_as (vector for [n], [1, n], [n, 1], as in MATLAB)"
+case_families:
+  - {name: "vector p ∈ {2 (default), 1, inf, -inf, fro, 3, 1.5, 10}, row matrix with p = 1, 1e300 entries (no overflow), 1e-300 entries (no underflow)", n: 11}
+  - {name: "matrix p ∈ {2, 1, inf, fro}, low-rank matrix", n: 5}
+  - {name: errors, n: 4, expect: "RANGE (matrix p = 3), SCHEMA (p < 1), DTYPE, NON_FINITE_EVALUATION (overflow)"}

@@ -81,23 +81,7 @@ impl Operator for Inv {
             return Err(singular_err(p));
         }
         let anorm1 = norm1(&i.a, n, n);
-        let anorm_inf = norm_inf_mat(&i.a, n, n);
-        let mut x_all = vec![0.0f64; n * n];
-        let (mut eta_worst, mut steps_max) = (0.0f64, 0usize);
-        for j in 0..n {
-            let mut e = vec![0.0; n];
-            e[j] = 1.0;
-            let (x, steps) = lu_solve_refined(&lu, &i.a, n, &e, if i.refine { MAX_REFINE } else { 0 });
-            steps_max = steps_max.max(steps);
-            let r = residual_dd(&i.a, n, n, &x, &e);
-            // Rigal–Gaches normwise backward error of column j (‖e_j‖∞ = 1)
-            let eta = norm_inf(&r) / (anorm_inf * norm_inf(&x) + 1.0);
-            eta_worst = eta_worst.max(eta);
-            for (r_i, v) in x.iter().enumerate() {
-                x_all[r_i * n + j] = *v;
-            }
-            ctx.check()?;
-        }
+        let (x_all, eta_worst, steps_max) = inverse_refined(&lu, &i.a, n, if i.refine { MAX_REFINE } else { 0 }, &|| ctx.check())?;
         let xnorm1 = norm1(&x_all, n, n);
         let kappa1 = anorm1 * xnorm1;
         let rcond = 1.0 / kappa1;

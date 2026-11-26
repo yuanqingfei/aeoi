@@ -151,6 +151,30 @@ pub fn lu_solve_refined(lu: &Lu, a: &[f64], n: usize, b: &[f64], max_steps: usiz
     (x, steps)
 }
 
+/// Explicit inverse of the n×n matrix `a` (row-major) from its LU factor: column j solves A·x_j = e_j with
+/// `lu_solve_refined` (at most `max_steps` refinement steps). Returns (X row-major, max column normwise backward
+/// error ‖e_j − A·x_j‖∞/(‖A‖∞‖x_j‖∞ + 1), max refinement steps). Shared by linalg.matrix.inv and
+/// linalg.matrix.cond (RI-1).
+pub fn inverse_refined(lu: &Lu, a: &[f64], n: usize, max_steps: usize, check: &dyn Fn() -> Result<(), crate::error::OpError>) -> Result<(Vec<f64>, f64, usize), crate::error::OpError> {
+    let anorm_inf = norm_inf_mat(a, n, n);
+    let mut x_all = vec![0.0f64; n * n];
+    let (mut eta_worst, mut steps_max) = (0.0f64, 0usize);
+    for j in 0..n {
+        let mut e = vec![0.0; n];
+        e[j] = 1.0;
+        let (x, steps) = lu_solve_refined(lu, a, n, &e, max_steps);
+        steps_max = steps_max.max(steps);
+        let r = residual_dd(a, n, n, &x, &e);
+        let eta = norm_inf(&r) / (anorm_inf * norm_inf(&x) + 1.0);
+        eta_worst = eta_worst.max(eta);
+        for (r_i, v) in x.iter().enumerate() {
+            x_all[r_i * n + j] = *v;
+        }
+        check()?;
+    }
+    Ok((x_all, eta_worst, steps_max))
+}
+
 // ------------------------------------------------------------------ Householder QR (m ≥ n)
 pub struct Qr {
     m: usize,

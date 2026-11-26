@@ -1,0 +1,138 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.subspace.rank",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "rank": 2,
+    "tol": 1.0658141036401503e-14,
+    "tol_source": "default",
+    "s": {
+      "dtype": "f64",
+      "shape": [
+        3
+      ],
+      "data": [
+        16.848103352614213,
+        1.0683695145547087,
+        1.473048158783726e-16
+      ]
+    },
+    "smallest_kept": 1.0683695145547087,
+    "largest_dropped": 1.473048158783726e-16
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "svd_reconstruction": 6.21530087301273e-16,
+      "svd_orthonormality": 4.440892098500626e-16,
+      "threshold": 3.3306690738754696e-14,
+      "definition": "‖A − U·diag(s)·Vᵀ‖_F/‖A‖_F 与 max(‖UᵀU − I‖, ‖VᵀV − I‖)，同 linalg.decomp.svd SV-5"
+    },
+    "error_estimate": {
+      "singular_value_abs": 2.5456757327302236e-14,
+      "basis": "|Δσ_k| ≲ ‖A‖_F·重构残差 + 2σ_max·正交性误差（Weyl；小奇异值只有绝对精度）"
+    },
+    "checks": {
+      "svd_reconstructs": true,
+      "rank_well_separated": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:rank:jacobi-svd",
+      "routine": "subspace::rank",
+      "provenance": "aeoi://operators/linalg.subspace.rank/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "rank_threshold",
+        "statement": "秩取决于阈值 tol；缺省阈值只区分舍入噪声，数据本身的噪声水平要由调用方给出",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "separated",
+        "statement": "阈值附近没有奇异值",
+        "enforced_by": "warning:W.NUMERICAL.RANK_AMBIGUOUS"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "singular_value_abs": 2.5456757327302236e-14
+      },
+      "basis": "|Δσ_k| ≲ ‖A‖_F·重构残差 + 2σ_max·正交性误差（Weyl；小奇异值只有绝对精度）"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "svd_reconstructs": true,
+        "rank_well_separated": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "svd_reconstructs": "full",
+        "rank_well_separated": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:fbc812916724335882314291fcf8b8f3700037fad4fd1967ac5fb9d31c20042e",
+      "result": "sha256:c1f2ae54036d6b3b4a88ff3e93adf272b21f05e84cd40bb1f4697f381cb862d4",
+      "output_hash": "sha256:ca9a0776570c0f456a8385d2dbe16c251d50ef1ddb43d636935c75e905fc9f94",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.subspace.rank@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:2b78545dd3a632707eafc6c264976bcf94f9e5c36ecc7f81a9b7bc281e3cb0fa",
+    "output_hash": "sha256:ca9a0776570c0f456a8385d2dbe16c251d50ef1ddb43d636935c75e905fc9f94",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.17080099999999998
+  }
+}

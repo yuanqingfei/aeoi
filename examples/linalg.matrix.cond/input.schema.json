@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.matrix.cond/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "A"
+  ],
+  "properties": {
+    "A": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "矩阵 [m, n]，row-major；p ≠ 2 时必须是方阵"
+    },
+    "p": {
+      "oneOf": [
+        {
+          "enum": [
+            1,
+            2
+          ]
+        },
+        {
+          "enum": [
+            "inf",
+            "fro"
+          ]
+        }
+      ],
+      "default": 2,
+      "x-aeoi-provenance": "convention",
+      "description": "范数：2（缺省，σ_max/σ_min）、1、\"inf\"、\"fro\""
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  },
+  "x-aeoi-shape-constraints": [
+    "A: [m, n]；p ≠ 2 时 m = n"
+  ]
+}

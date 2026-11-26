@@ -1,0 +1,22 @@
+# Parity test spec — linalg.matrix.pinv 0.4.0 (AEOI v0.4.23-draft)
+operator: linalg.matrix.pinv
+references:
+  - {engine: mpmath, role: high_precision_reference, status: active, generator: scripts/golden/gen_golden_subspace.py,
+     golden_store: "golden/mpmath/linalg.matrix.pinv/0.4.0/*.json",
+     note: "truth for the stored f64 data at 50 digits (SVD / inverse / p-norms); NOT MATLAB output"}
+  - {engine: numpy, version: "numpy.linalg (LAPACK gesdd / getrf)", role: dev_reference, status: active, note: "recorded for comparison only"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_subspace"
+tolerance_class: T2
+compare:
+  X: "‖X − X_true‖_F/‖X_true‖_F ≤ 64·max(m, n)·u·max(1, κ_r), κ_r = σ_1/σ_r of the truth"
+  rank: exact
+  warnings: "exactly the predicted set; predictions use the true singular values and only cases at least a factor 2 from every threshold edge are written"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py. No trust.* value of the implementation is used as a tolerance
+  X: "same bound as compare"
+  recomputed: "Penrose conditions recomputed by the runner: ‖AXA − A‖_F/‖A‖_F ≤ ‖σ_dropped‖/‖A‖_F + 100·max(m, n)·u·κ_r and ‖XAX − X‖_F/‖X‖_F ≤ 100·max(m, n)·u·κ_r"
+  flagged cases: "the failed post-condition only"
+case_families:
+  - {name: "same matrices as rank except Hilbert 8", n: 10}
+  - {name: "noisy low rank with supplied tol / ambiguous_near_threshold", n: 2}
+  - {name: errors, n: 3, expect: "SHAPE, NON_FINITE, SCHEMA"}

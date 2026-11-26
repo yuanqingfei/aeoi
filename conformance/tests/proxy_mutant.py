@@ -175,6 +175,31 @@ def m_det_log_wrong(r):                     # log|det| off by 1e-9 (absolute)
         r["log_abs_det"] += 1e-9
 
 
+def m_rank_off_by_one(r):                  # reports one more than the numerical rank
+    r["rank"] = r["rank"] + 1
+
+
+def m_rank_overclaims(r, env):              # never admits an ambiguous rank
+    env["trust"]["checks"]["rank_well_separated"] = True
+
+
+def m_basis_null_scaled(r):                 # null-space basis no longer orthonormal (columns scaled by 1 + 1e-6)
+    r["null"]["data"] = [v * (1 + 1e-6) for v in r["null"]["data"]]
+
+
+def m_pinv_scaled(r):                       # pseudoinverse off by a factor 1 + 1e-9
+    r["X"]["data"] = [v * (1 + 1e-9) for v in r["X"]["data"]]
+
+
+def m_norm_rel_1e12(r):                     # norm off by 1e-12 (relative): beyond a compensated sum's accuracy
+    r["norm"] = r["norm"] * (1 + 1e-12)
+
+
+def m_cond_reciprocal(r):                   # returns rcond in the cond field
+    if isinstance(r["cond"], float) and r["cond"] != 0:
+        r["cond"], r["rcond"] = 1.0 / r["cond"], r["cond"]
+
+
 def m_interp1_one_ulp(r):                   # every value one ulp up: inside the tolerance, but node hits are no longer exact
     import math
     r["yq"]["data"] = [math.nextafter(v, math.inf) if isinstance(v, float) else v for v in r["yq"]["data"]]
@@ -367,6 +392,12 @@ MUTANTS = {
     "ode_overclaims": ("ode.ivp.solve", m_ode_overclaims),
     "linsolve_x_wrong": ("linalg.system.solve", m_linsolve_x_wrong),
     "linsolve_overclaims": ("linalg.system.solve", m_linsolve_overclaims),
+    "rank_off_by_one": ("linalg.subspace.rank", m_rank_off_by_one),
+    "rank_overclaims": ("linalg.subspace.rank", m_rank_overclaims),
+    "basis_null_scaled": ("linalg.subspace.basis", m_basis_null_scaled),
+    "pinv_scaled": ("linalg.matrix.pinv", m_pinv_scaled),
+    "norm_rel_1e12": ("linalg.matrix.norm", m_norm_rel_1e12),
+    "cond_reciprocal": ("linalg.matrix.cond", m_cond_reciprocal),
     "inv_transposed": ("linalg.matrix.inv", m_inv_transposed),
     "inv_overclaims": ("linalg.matrix.inv", m_inv_overclaims),
     "det_sign_flipped": ("linalg.matrix.det", m_det_sign_flipped),
