@@ -28,11 +28,12 @@
       "description": "0 起始的行置换：A[perm, :] = L·U"
     },
     "perm_sign": {
+      "type": "integer",
       "enum": [
         -1,
         1
       ],
-      "description": "置换的符号（det(P)）"
+      "description": "置换的符号（det(P)，JSON 整数）"
     },
     "growth_factor": {
       "type": "number",

@@ -150,7 +150,8 @@
       ],
       "rank_well_separated": [
         "/X",
-        "/rank"
+        "/rank",
+        "/cond_r"
       ],
       "penrose": [
         "/X"

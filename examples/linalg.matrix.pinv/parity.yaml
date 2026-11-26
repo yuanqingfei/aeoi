@@ -11,7 +11,7 @@ tolerance_class: T2
 compare:
   X: "‖X − X_true‖_F/‖X_true‖_F ≤ 64·max(m, n)·u·max(1, κ_r), κ_r = σ_1/σ_r of the truth"
   rank: exact
-  warnings: "exactly the predicted set; predictions use the true singular values and only cases at least a factor 2 from every threshold edge are written"
+  warnings: "RANK_AMBIGUOUS MUST be present where a true singular value lies in (tol/10, 100·tol]; an extra RANK_AMBIGUOUS elsewhere is allowed (RK-3: the test is on computed values, and reporting ambiguity is the conservative side). Predictions use the true singular values; only cases at least a factor 2 from every threshold edge are written"
 conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py. No trust.* value of the implementation is used as a tolerance
   X: "same bound as compare"
   recomputed: "Penrose conditions recomputed by the runner: ‖AXA − A‖_F/‖A‖_F ≤ ‖σ_dropped‖/‖A‖_F + 100·max(m, n)·u·κ_r and ‖XAX − X‖_F/‖X‖_F ≤ 100·max(m, n)·u·κ_r"

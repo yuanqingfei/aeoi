@@ -2,7 +2,7 @@
 
 规范 9.4（CF-1 – CF-12）的实现。标题里的 v0.3 是套件格式的版本，规范本身已到 v0.4.17-draft。
 
-**状态（2026-11-26，规范 v0.4.24-draft）**
+**状态（2026-11-26，规范 v0.4.25-draft）**
 
 - 37 / 49 个算子（76%）有数值规则：
   - 控制：`lyap`、`poles_zeros`、`bode`、`step`、`convert`、`lqr`、`c2d`、`lsim`、`pidtune`
@@ -13,7 +13,7 @@
   - 非线性方程与优化：`fzero`、`fsolve`、`linprog`、`fmincon`、`fminsearch`
 - 参考实现（Rust）：1419 通过 / 0 失败 / 217 跳过。
 - 变异测试：第二实现 8 种缺陷、参考实现 66 种改写，全部被抓住。
-- Python 第二实现做 9 个算子：`lyap`；v0.4.19 只读规范写成的 `fft`、`linalg.system.solve`、`interp1`、`integral`；v0.4.21 第二轮的 `bode`、`step`、`convert`、`roots`。528 通过 / 0 失败 / 0 跳过。两轮共找出 65 处规范问题，见 `impls/python_scipy/SPEC_FINDINGS.md`。
+- Python 第二实现做 14 个算子：`lyap`；v0.4.19 只读规范写成的 `fft`、`linalg.system.solve`、`interp1`、`integral`；v0.4.21 第二轮的 `bode`、`step`、`convert`、`roots`；v0.4.25 第三轮的 `rank`、`pinv`、`qr`、`chol`、`det`。620 通过 / 0 失败 / 0 跳过。三轮共找出 79 处规范问题，见 `impls/python_scipy/SPEC_FINDINGS.md`。
 
 ## 内容
 
@@ -23,7 +23,7 @@
 | `aeoi_hash.py` | 规范 3.7 / 4.3 R-3 / P-2 的独立重写（RFC 8785 JCS、数组摘要、请求指纹）。运行器用它重算指纹，不采信被测实现自报的值 |
 | `rules_numeric.py` | 控制以外的 26 个算子：`fft`（规范 v0.4.7，含运行器从请求的 x 与返回的 X 独立重算 Parseval）；`ode.ivp.solve`（规范 v0.4.8：对照精确解而不是参考求解器的步长序列；运行器用精确解检查 `tolerance_consistent = true` 的声明是否属实）；`linalg.system.solve`（规范 v0.4.10：运行器用有理数精确重算后向误差，并检查 `backward_stable = true` 的声明是否属实）；`interp.grid.interp1`（规范 v0.4.10：节点处必须精确、范围外点数由运行器重数）；`fit.poly.polyfit`、`linalg.decomp.eig`、`linalg.decomp.svd`（规范 v0.4.11：特征向量、奇异向量不唯一，只比较不变量——特征值最近匹配、运行器从请求重算残差、正交性与规一化规则）；`butter`、`filter`（v0.4.12：零极点按集合对照精确构造，运行器从返回的 sos / zpk 重算截止点增益与 b/a 偏差，并从请求重算差分方程残差）；`fzero`、`fsolve`（v0.4.13：运行器用自己的表达式求值器重算残差与变号）；`linprog`、`fmincon`、`fminsearch`（v0.4.14：对照独立核对过的最优点，运行器从请求重算可行性与乘子的 KKT 条件）；`integral`、`trapz`（v0.4.15：对照 50 位真值并核查误差估计是否覆盖真实误差，`trapz` 对照精确有理数求和） |
 | `rules_control.py` | `poles_zeros`、`bode`、`step`、`lqr`、`c2d` 的数值规则（v0.2），`lsim`（规范 v0.4.5）、`pidtune`（规范 v0.4.6，含运行器用返回的控制器重算 L(jωc)）、`convert`（规范 v0.4.21，运行器由请求重算被测结果与输入系统的响应差）；`lyap` 的规则在运行器里 |
-| `impls/python_scipy/` | 第二实现：Python + numpy/scipy，线级（MCP stdio）。`server.py` 提供 9 个工具；共享层 `aeoi_common.py`（信封、收据、指纹、method_policy、数组编码）、表达式语言 `aeoi_expr.py`、LTI 表示 `aeoi_lti.py`、自写数值内核 `aeoi_kernels.py`、每个算子一个 `op_*.py`；`SPEC_FINDINGS.md` 是只读规范时发现的问题及处理结果 |
+| `impls/python_scipy/` | 第二实现：Python + numpy/scipy，线级（MCP stdio）。`server.py` 提供 14 个工具；共享层 `aeoi_common.py`（信封、收据、指纹、method_policy、数组编码）、表达式语言 `aeoi_expr.py`、LTI 表示 `aeoi_lti.py`、自写数值内核 `aeoi_kernels.py`、每个算子一个 `op_*.py`；`SPEC_FINDINGS.md` 是只读规范时发现的问题及处理结果 |
 | `tests/test_runner_catches_mutants.py` | 证明规则既不太松也不太严：对第二实现注入 8 种缺陷，再经 `proxy_mutant.py` 对参考实现做 66 种改写（v0.4.8 加了 `ode_y_wrong`、`ode_states_reordered`、`ode_overclaims`；v0.4.10 加了 `linsolve_x_wrong`、`linsolve_overclaims`、`interp1_one_ulp`、`interp1_count_wrong`；v0.4.11 加了 `polyfit_coef_wrong`、`polyfit_mu_wrong`、`eig_vectors_swapped`、`eig_pair_order`、`eig_value_wrong`、`svd_u_sign_only`、`svd_both_signs`；v0.4.12 加了 `butter_pole_wrong`、`butter_warning_dropped`、`filter_y_wrong`、`filter_state_dropped`；v0.4.13 加了 `fzero_x_wrong`、`fzero_warning_dropped`、`fsolve_x_wrong`、`fsolve_residual_zeroed`；v0.4.14 加了 `linprog_lambda_sign`、`fmincon_x_wrong`、`fmincon_lambda_dropped`、`fminsearch_x_shifted`；v0.4.15 加了 `integral_value_wrong`、`integral_error_understated`、`trapz_value_ulps`），错误答案（含相位整体加 360°）必须失败，等价答案（换极点顺序、相似变换、tf 分子分母同乘常数）必须通过 |
 | `tests/proxy_mutant.py` | 包住参考实现的 MCP 代理，按 `$AEOI_MUTANT` 改写一个算子的结果并重算 `output_hash` |
 
@@ -58,7 +58,7 @@ python3 conformance/tests/test_runner_catches_mutants.py
 
 ## 结果
 
-参考实现：`rust/target/release/aeoi-mcp`，规范 v0.4.24-draft，在云容器 x86_64-linux（glibc 2.39）上运行。结果是 1419 通过 / 0 失败 / 217 跳过，共 1636 个用例：
+参考实现：`rust/target/release/aeoi-mcp`，规范 v0.4.25-draft，在云容器 x86_64-linux（glibc 2.39）上运行。结果是 1419 通过 / 0 失败 / 217 跳过，共 1636 个用例：
 
 - 1172 个来自 `golden/python-control`（参考值出自 python-control / numpy / scipy）；
 - 54 个来自 `golden/mpmath`（高精度真值）；
@@ -92,7 +92,7 @@ python3 conformance/tests/test_runner_catches_mutants.py
 
 跳过的 217 个用例，是其余 12 个算子的 golden 成功用例，以及少数只对某种模式适用的默认值用例（F-8，例如 PID 的 `Ti`/`Td`、离散系统上的 `interpolation`）。没有数值规则的算子，错误码、警告、指纹、收据照样检查。
 
-第二实现（Python，`impls/python_scipy/`）：9 个算子 528 通过 / 0 失败 / 0 跳过（lyap 47、fft 59、linsolve 34、interp1 64、integral 29、bode 104、step 90、convert 80、roots 21，各含默认值与方法选择用例）。
+第二实现（Python，`impls/python_scipy/`）：14 个算子 620 通过 / 0 失败 / 0 跳过（lyap 47、fft 59、linsolve 34、interp1 64、integral 29、bode 104、step 90、convert 80、roots 21、rank 18、pinv 15、qr 13、chol 12、det 23，各含默认值与方法选择用例）。
 
 - `fft`、`linalg.system.solve`、`interp1`、`integral` 是 v0.4.19 由一个只读规范的子 agent 写的：它不能看 Rust 代码、golden 生成脚本和本套件的规则文件，manifest 也是自己写的。FFT 是自写的混合基加 Bluestein，没有用 numpy 的 pocketfft；线性方程组是自写的 LU 与 Householder QR，残差用正确舍入内积；积分用自写的表达式解析器与 Gauss–Kronrod。按 CF-11 的机械判定，这四个算子的通过都算独立通过。
 - `bode`、`step`、`convert`、`roots` 是 v0.4.21 第二轮，条件相同：共享层 `aeoi_lti.py`，数值内核自写（Parlett–Reinsch 平衡、Householder Hessenberg、Francis 双位移 QR、Padé 缩放平方 expm），结果路径上没有 python-control、scipy.signal、numpy.roots 或 LAPACK 特征值。第一次运行就全部通过，但其中两处靠的是 profile 正文以外的东西（step 的指标细节、convert 的 MIMO 警告），已写回 profile（ST-6、CV-3）。
@@ -101,10 +101,10 @@ python3 conformance/tests/test_runner_catches_mutants.py
 ## 已知限制
 
 - 37 个算子有数值规则；其余 12 个算子（`ctrb_obsv`、`margin`、`impulse`、`place`、`dlqr`、`series`、`parallel`、`feedback`、`pid`、`stepinfo`、`pade`、`loopsens`）的成功用例是 `skip`。
-- 有第二实现检验的规则有 9 个算子（`lyap`、`fft`、`linalg.system.solve`、`interp1`、`integral`、`bode`、`step`、`convert`、`roots`）；其余 28 个算子的规则只在参考实现上跑过。
+- 有第二实现检验的规则有 14 个算子（`lyap`、`fft`、`linalg.system.solve`、`interp1`、`integral`、`bode`、`step`、`convert`、`roots`、`rank`、`pinv`、`qr`、`chol`、`det`）；其余 23 个算子的规则只在参考实现上跑过。
 - 哈希只支持 `json` 编码的稠密数组；`b64` / `ref` / 稀疏数组的请求不重算指纹。
 - 没有 CF-10 的逐方法运行：参考实现已实现 `method_policy`（v0.4），但还没有哪个算子在 `receipt.alternatives` 里登记第二个方法。
-- 第二实现里 `lyap` 的 manifest 复用参考实现的 manifest，只替换了方法、后端、构建与精度等级，不是在“只看规范”的条件下写出来的；其余 8 个是自己写的。
+- 第二实现里 `lyap` 的 manifest 复用参考实现的 manifest，只替换了方法、后端、构建与精度等级，不是在“只看规范”的条件下写出来的；其余 13 个是自己写的。
 - E-11a（profile 点名的后置条件是最小集合）还没有机械检查。
 
 ## 用这个套件发现的规范问题

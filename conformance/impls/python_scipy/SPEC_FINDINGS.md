@@ -325,3 +325,115 @@ bode、step、convert、roots 第一次运行就全部通过（convert 的 74 �
 | PY-63 | RT-5：簇中心 = 簇内近似根的平均，半径 = max(\|z_j − c\| + r_j)（与你的做法相同） |
 | PY-64 | 9.4 CF-7 加例外：逐元素的包含区域不与验收容差比大小，而由规则核查真值在区域内；RT-4 引用之 |
 | PY-65 | 开放问题 31（与 PY-30 同类，等统一迁移 golden 目录时处理） |
+
+## 第三轮（linalg.subspace.rank、linalg.matrix.pinv、linalg.decomp.qr、linalg.decomp.chol、linalg.matrix.det）
+
+2026-11-26，规范 v0.4.24-draft。范围：`linalg.subspace.rank`（10.37）、`linalg.matrix.pinv`（10.39）、`linalg.decomp.qr`（10.43）、`linalg.decomp.chol`（10.44）、`linalg.matrix.det`（10.36）。
+新文件 `op_rank.py`、`op_pinv.py`、`op_qr.py`、`op_chol.py`、`op_det.py`；`aeoi_kernels.py` 新增自写内核：单边 Hestenes Jacobi SVD（`jacobi_svd`，含正交补全）、Householder QR（`householder_qr`，dlarfg 约定，任意形状，econ/full）与 QR-3 的变号、按列 Cholesky（`cholesky_upper`，正确舍入内积）、`spacing`（eps(x)）、补偿残差。rank 与 pinv 共用同一个 SVD 内核与同一段秩判定（`op_rank.rank_decision`）；det 直接调用 `op_linsolve` 的 LU（`_lu`）与 Hager–Higham 估计（`_inv_norm1_est`），即与 linsolve 同一段代码。说明：`op_linsolve` 里超定情形用的 Householder QR 仍是第一轮的那份，没有改成调用 `aeoi_kernels.householder_qr`（为了不动已通过、且被变异测试注入的旧文件），所以按 RI-1 的精神，本实现的 QR 目前有两份。结果路径上没有 numpy.linalg、scipy.linalg 或 LAPACK；Householder 更新与 pinv 的 X 也改成了逐元素运算（不走 BLAS），只有后置条件里的矩阵乘积用 numpy `@`。
+只读了 `spec-v0.4.md`、这五份 profile 及其引用的 10.19（LS-2、LS-5）、10.23（SV-1 – SV-7）、10.35（只看了引用处）、`examples/<op>/`（含 manifest.json、parity.yaml、各 request/response）、`schemas/`、`golden/**/<op>/**`、`conformance/README.md`、`conformance/aeoi_hash.py` 与本目录。没有读 `rust/`、`scripts/`、`conformance/rules_*.py`、`conformance/aeoi_conformance.py` 与 `conformance/tests/` 的源码（只运行并看退出码与报告）、`docs/reference-impl.md`、`roadmap/`、`CHANGELOG.md`，也没有看 git 历史。
+
+### 结果
+
+| 算子 | golden 通过 / 失败 / 跳过 | method-policy | 默认值用例 | 退出码 |
+|---|---|---|---|---|
+| `linalg.subspace.rank` | 18 / 0 / 0（mpmath，独立） | 1 | 0（input schema 没有带 default 的字段） | 0 |
+| `linalg.matrix.pinv` | 15 / 0 / 0（mpmath，独立） | 1 | 0 | 0 |
+| `linalg.decomp.qr` | 13 / 0 / 0（mpmath，独立） | 1 | 3 | 0 |
+| `linalg.decomp.chol` | 12 / 0 / 0（mpmath，独立） | 1 | 3 | 0 |
+| `linalg.matrix.det` | 23 / 0 / 0（mpmath，独立） | 1 | 0 | 0 |
+| 五个一起 | 92 / 0 / 0 | | | 0 |
+| 十四个算子一起（前两轮 9 个 + 本轮 5 个） | 620 / 0 / 0（前 9 个仍是 528 / 0 / 0） | | | 0 |
+
+`python3 -I conformance/tests/test_runner_catches_mutants.py` 退出码 0。
+
+第一次运行 87 通过 / 5 失败：3 个 det 失败是我自己的缺陷（`"Inf"`/`"-Inf"` 在求 output_hash 之前没有编码成 R-3 的字符串，服务端抛 internal error），与规范无关；另 2 个（rank、pinv 的 `lowrank_4x9_r1`，报 `E.NUMERICAL.NO_CONVERGENCE`）是照 SV-2 字面写的 Jacobi 判据不收敛（PY-68）。改正后全部通过。另做了几个反向实验（把实现改回另一种同样符合正文的读法，在临时副本上跑套件），数字写在各条里。
+
+还有一类“通过但不一致”的情形套件看不到：本实现在 `lowrank_6x5_r2`（rank 与 pinv）和 pinv 的示例 `request.json` 上发 `W.NUMERICAL.RANK_AMBIGUOUS`、claim 为 `unverified`，参考实现在同样的输入上不发（PY-70）。
+
+### 通用（核心规范）
+
+- **PY-66** 全部五个算子 · RK-1、DT-1、CH-1/CH-2、QR-1，3.3 R-2 · 歧义 · 读
+  每份 profile 都列了 `SHAPE`、`DTYPE`、`NON_FINITE`（chol 还有 `NOT_SYMMETRIC`、`NOT_POSITIVE_DEFINITE`），但核心规范和 profile 都没有规定一个输入同时违反几条时报哪一个：复数的一维数组、带 `"NaN"` 的 2×3 矩阵（det 要方阵）、不对称且不是方阵的 chol 输入等。golden 里每个错误用例只违反一条，所以套件也不决定。我的顺序是：schema → 编码与 dtype → 非有限值（`read_array` 解码时）→ 形状 → 对称 → 正定。两个实现可以对同一个请求报不同的码，而 CF-4 要求错误码精确匹配。建议在 3.x 给出全局的校验顺序。
+- **PY-67** rank、pinv、qr、chol · SV-5、PI-4、QR-4、CH-4 · 歧义 · 读 + 运行
+  这些后置条件都是“相对”量，分母为 0 时没有定义：A = 0 时 ‖A − UΣVᵀ‖_F/‖A‖_F（rank、pinv 的 `svd_reconstructs`，golden `zero` 用例就是 3×4 零矩阵）、‖A − QR‖_F/‖A‖_F；r = 0 时 X = 0，PI-4 的 ‖XAX − X‖_F/‖X‖_F = 0/0（golden pinv `zero`）；`max(1, cond_r)` 在 `cond_r = null` 时怎么算也没写。开放问题 26 的“空真”针对的是整条后置条件不适用，这里是适用的条件里出现 0/0。我的做法：分母为 0 时改用绝对残差（零矩阵上恰为 0），`cond_r = null` 按 1。反向实验：把 0/0 当作 NaN（于是 `penrose = false`、claim `unverified`），套件仍然 0 失败——claim 是运行器按本实现自己的 checks 重推的，所以这一点套件不检验，两种实现会对同一个零矩阵给出不同的 claim。
+
+### 10.37 linalg.subspace.rank 与 10.23 SV-2（rank、pinv 共用）
+
+- **PY-68** rank、pinv · SV-2（经 RK-1、PI-1 引用） · **阻塞** · 读 + 运行
+  SV-2 的旋转判据“|g_pᵀg_q| > sqrt(m)·ε·‖g_p‖‖g_q‖ 时旋转，至多 60 轮”照字面实现（范数先缩放再求，不会下溢）时，`lowrank_4x9_r1`（4×9，秩 1）不收敛：Aᵀ 的一个列只剩舍入残余（第 5 轮 7.4e-79），它几乎与模 30 的列平行，余弦接近 1，判据每轮都成立；每次旋转只把它缩小约 ε 倍，一路缩进次正规数范围，60 轮后仍在旋转，报 `NO_CONVERGENCE`。SV-2 自己的说明里写参考实现在 σ₂ = 1.8e-172 处停下，是因为“内积会下溢为 0，旋转判据被‘满足’”——也就是说，参考实现能停下来靠的是某种求值顺序下的下溢，而这个求值顺序规范没有写。我加了一条规范里没有的规则：模 ≤ max(m, n)·ε·max_j‖g_j‖（SV-2 的“数值零”）的列不参与旋转。反向实验：去掉这条，rank、pinv 各失败 1 个（`lowrank_4x9_r1`，`E.NUMERICAL.NO_CONVERGENCE`）。另外，m < n 时作用在 Aᵀ 上，判据里的 sqrt(m) 是 A 的行数还是被处理矩阵（Aᵀ）的行数，也没有写（我用后者）。建议 SV-2 把“数值零的列不旋转”写成规则，而不是写成下溢的副作用。
+- **PY-69** rank、pinv · RK-2“eps(x) 为 x 处的浮点间距” · 歧义 · 读 + 运行
+  x 是 2 的幂时，“x 处的间距”向上是 2^(e−52)、向下是 2^(e−53)，差一倍；MATLAB `eps` 与 `numpy.spacing` 都取向上，规范没写。运行器按 parity.yaml 的 `conformance_compare` 用 `spacing(s_1)` 精确重算 tol。反向实验：取向下的间距，rank 失败 2 个（`ambiguous_near_threshold`、`graded_kept`，两者 σ_max 都恰为 1）。把 eps(σ_max) 读成 ε·σ_max（很常见的写法）则 rank 失败 11 个；而同一个 parity.yaml 的 `compare` 写的是“default：在 max(m, n)·eps(σ_max_true) 的 2 倍以内”，`conformance_compare` 却是逐位重算，两处的严格程度不同。eps(0) 按“间距”是 2⁻¹⁰⁷⁴（golden `zero` 的 tol = 2e-323 与此一致），但规范没有单独写零矩阵：这时 tol/10 下溢为 0，区间变成 (0, 100·tol]，零奇异值不在区间内只是因为下沿是开的。
+- **PY-70** rank、pinv · RK-3 区间下沿 tol/10、SV-5/SV-6、parity.yaml · **矛盾** · 读 + 运行
+  RK-3 选 tol/10 作下沿的理由是“精确秩亏的矩阵，后向稳定的 SVD 算出的‘零’奇异值在 u·σ_max 量级，约为缺省 tol 的 1/(2·max(m, n))”。但后向稳定只保证 |Δσ| ≤ c(m, n)·u·‖A‖，SV-5 自己允许的重构/正交性误差到 100·max(m, n)·u，SV-6 的误差界也是 ‖A‖_F·残差 + σ_max·正交性误差。本实现的 Jacobi SVD 满足 SV-5（重构 1e-16 量级），但在 `lowrank_6x5_r2` 上给出的“零”奇异值是 3.15e-14 = 0.74·tol（约 4.8·u·σ_max），在 pinv 示例 `request.json`（2×3，秩 1）上是 6.66e-16 = 0.125·tol，都落在 (tol/10, 100·tol] 内，于是发 `RANK_AMBIGUOUS`、`rank_well_separated = false`、`/rank`（pinv 还有 `/X`）列为不可依赖；参考实现在同样的输入上不发（示例 `response.success.json` 的 status 是 `ok`）。同一个 golden 用例、两个都“合规”的实现，给出相反的可靠性结论。parity.yaml 的 `compare` 写“warnings：exactly the predicted set”，而 `conformance_compare` 只把“真值在区间内却声称 `rank_well_separated = true`”判为虚报，所以运行器接受我多发的警告（这两条在同一个规范性文件里不一致）。我保留了按 RK-3 字面的行为（发警告），没有为了贴近参考而调 SVD 的舍入。反向实验：下沿改成 tol/100，套件 0 失败——RK-3 理由里说的“每个秩亏矩阵都会被误报”在本实现上没有出现，区间的宽窄在套件上不可观察。建议：下沿的理由改为与 SV-5 的阈值一致（或者把区间与算出的误差界 SV-6 挂钩），并决定多发 `RANK_AMBIGUOUS` 是否算不一致。
+- **PY-71** rank、pinv · RK-3“依赖秩的字段列为不可依赖（E-13）”、PI-3 · 歧义 · 读
+  RK-3 没有列出 rank 的哪些字段“依赖秩”。参考 manifest 只列 `/rank`；但 `smallest_kept`、`largest_dropped` 是按 r 切开 s 得到的，r 不可依赖时它们“是哪两个奇异值”也不可依赖。pinv 的 PI-3 明确写 `/X` 与 `/rank`，而 `cond_r` = σ₁/σ_r 同样取决于 r。我对 rank 列 `/rank`、`/smallest_kept`、`/largest_dropped`，对 pinv 照 PI-3 只列 `/X`、`/rank`。运行器不比较 `unreliable` 的内容（它来自各自的 manifest），所以两个实现可以告诉模型不同的“不得引用”字段。
+
+### 10.39 linalg.matrix.pinv
+
+- **PY-72** pinv · PI-1“同 RK-1 – RK-3”、`output.schema.json` · 歧义 · 读
+  PI-1 整体引用 RK-2，而 RK-2 要求“结果回显 tol 与 tol_source，并给出 smallest_kept、largest_dropped”；pinv 的 output schema 只要求 `X`、`rank`、`tol`、`tol_source`、`cond_r`，示例响应也没有 smallest_kept / largest_dropped。照 PI-1 字面要输出，照 schema 与示例不用。我输出了（schema 没有 `additionalProperties: false`，合法），但它们进入 output_hash，与参考实现的结果哈希不可能相同（P-7 只在同一构建内比较，所以不算失败）。PI-4 里的 ‖σ_{r+1..}‖₂ 用算出的还是真的奇异值、是否包括 RK-3 区间内被舍去的那些，也没有写（我用算出的、全部被舍去的）。
+
+### 10.43 linalg.decomp.qr
+
+- **PY-73** qr · QR-2“输出超过 `limits.max_output_elements` 时报 `E.RESOURCE.OUTPUT_TOO_LARGE`” · **阻塞** · 读 + 运行
+  profile 没有给这个上限的值，也没有说计数是只算 Q 还是 Q 与 R 之和；golden `full_too_large`（1500×1，mode = full：Q 有 2 250 000 个元素，加 R 共 2 251 500 个）却期望 `OUTPUT_TOO_LARGE`。也就是说，只有选的上限恰好低于 2 250 000 的实现才能通过；参考 manifest 写的是 2 000 000。我类比 L-6（内联 JSON 数组 ≤ 10⁶ 个元素，原文只针对输入）取 10⁶、计 Q + R，所以通过只是碰巧。反向实验：上限取 10⁷，这个用例开始真算，本实现的精确正交性检查（O(m³) 个正确舍入内积）超过运行器的 60 s，失败 1 个，并拖累其后几个用例也超时。建议 QR-2 写出上限的数值与计数方式，或者 golden 里不放依赖实现上限的用例。补丁“删除 mode”在 econ 本身也超限时无效，这种情形我只给 `ask_user`。
+- **PY-74** qr · QR-1/QR-3、SV-1 · 歧义 · 读
+  (1) `mode = full` 时 Q 的后 m − k 列：QR-3 只对 i < k 的列变号，没说这些列是什么。m − k ≥ 2 时它们只确定到一个正交变换，规范没有写“取 H₀…H_{k−1} 作用在单位阵上的那几列”（我是这样做的，与示例 `response.full.json` 一致到 1e-15）。parity 对 `tall_full`、`wide_full` 标 `unique: True` 并比较 ‖ΔQ‖_F，这对补全列只在采用同一构造时成立。(2) dlarfg 在尾部为 0 时 τ = 0、H = I，R_jj = α 可为负，QR-3 的变号兜住了；R_ii 恰为 0 不变号，规范按“R_ii < 0”字面也是如此。但 α = −0.0 时 dlarfg 的 SIGN(β, α) 取哪一边（Fortran 对负零的 SIGN 依编译器而定）没有说；只影响零列，结果仍满足 R_ii ≥ 0。(3) QR-4 的 `reconstructs` 写明补偿算术，`orthonormal` 没写；我两者都用正确舍入内积。
+
+### 10.44 linalg.decomp.chol
+
+- **PY-75** chol · CH-1、CH-2 · 歧义 · 读
+  (1) CH-2 写“只读 A 的上三角（同 MATLAB）”，CH-1 又有 `triangle = "lower"`。MATLAB 的 `chol(A, 'lower')` 读的是**下**三角；按 CH-2 字面，lower 也读上三角、只是返回 Rᵀ（我这样做），那么“同 MATLAB”只对缺省成立。(2) 阈值 10·n·u·max|a_ij| 里的 max|a_ij| 是整个矩阵还是上三角没写（golden 里两者相同；我用整个矩阵，与 `asymmetry` 的定义“max|a_ij − a_ji|/max|a_ij|”一致）；零矩阵时 `asymmetry` = 0/0（随后报 NOT_POSITIVE_DEFINITE，不影响输出，但检查顺序也没写）。(3) `details` 的“最大差与位置”只有示例给了键名（`max_asymmetry`、`at`），位置是 [i, j] 还是 [j, i]、并列取哪一个没写（我取上三角行主序第一个最大者，[i, j]，i < j）。(4) 补丁“把 A 换成 (A + Aᵀ)/2”的 JSON Pointer 只在示例里是 `/A/data`：A 以 b64 编码给出时没有 `/A/data`，A 为 i64 时 (A + Aᵀ)/2 可能不是整数，套用后不通过校验（CF-9）。我在这两种情形下改为替换整个 `/A`（f64）。
+- **PY-76** chol · CH-3 · 措辞 · 读
+  “MUST 与 `lqr`、`dlqr` 同一内核”是对参考实现的约束（RI-1）；对第二实现，d_j = a_jj − Σ r_kj² 的求和顺序与精度没有规定，而 d_j ≤ 0 的判定恰好对这一点敏感：接近奇异的正定矩阵，普通求和与正确舍入求和可能一个通过、一个报 `NOT_POSITIVE_DEFINITE`（golden 的 `semidefinite` [[1, 1], [1, 1]] 在任何算术下 d₁ 都恰为 0，测不出来）。我用正确舍入内积。`details` 的键名（`failed_column`、`pivot`）与 `retryable` 只在示例里。
+
+### 10.36 linalg.matrix.det
+
+- **PY-77** det · DT-4 的 est(‖A⁻¹‖₁)、10.19 LS-5 · 歧义 · 读
+  DT-4 的误差估计公式 ε = n·u·est(‖A⁻¹‖₁)·‖|L||U|‖₁ + n·u 里，‖|L||U|‖₁ 的算法写清楚了，但 est 只引用 LS-5“固定起始向量，至多 5 次迭代，加上交错向量”：起始向量是什么、迭代的停止条件、交错向量的公式以及它怎样并入估计，都没有写。`zero_within_error` 是 ε ≥ 1 的阈值判定，est 不同，ε 接近 1 的矩阵上旗标就不同。我用第一轮按 Higham（Algorithm 15.4 的 Hager 迭代，x = e/n，‖y‖₁ 不再增大或 |z_j| ≤ zᵀx 即停；交错向量 x_i = (−1)^i(1 + i/(n − 1))，取 max(est, 2‖y‖₁/(3n))）写的那份，示例的 2.25 与 2251799813685247.5 逐位相同——但这是文献，不是规范。建议 LS-5 写出算法。
+- **PY-78** det · DT-3、`parity.yaml` · **矛盾** · 读
+  DT-3：“|det| 超出 f64 的**正规数**范围时 MUST 发 `W.NUMERICAL.DET_OUT_OF_RANGE`”，即 ln|det| < ln(2⁻¹⁰²²) ≈ −708.40 或 ln|det| ≥ 1024·ln 2 ≈ 709.78。parity.yaml（profile 声明它是规范的一部分）写“DET_OUT_OF_RANGE iff |ln|det_true|| > 708”：上溢一侧 708 < ln|det| < 709.78 时 parity 要求发、DT-3 不要求；还有一处不同是 parity 按真值判、DT-3 没有说按真值还是按算出的值（接近边界时两者可能在边界两侧）。golden 里只有 991 与 −807，测不出来。我按 DT-3 用算出的尾数与指数判定（2⁻¹⁰²² ≤ |det| 且不溢出）。
+- **PY-79** det · DT-2、DT-4、DT-5、`output.schema.json` · 措辞 · 读 + 运行
+  (1) 某步主元恰为 0 时，DT-4 规定了四个输出，但 `trust.condition`（est、‖|L||U|‖₁）这时算不出来，写什么没说；是否像 dgetf2 那样继续消元也没说（我立即停止）。(2) 舍入后“奇异”的矩阵（`magic(4)`）主元不为 0，`sign` = −1 而真值为 0；`conformance_compare` 写“sign：equal to the truth”，运行器实际上对被标出的用例不比较 sign（本实现通过），这一例外只能从 E-13 推出，parity.yaml 没写。(3) `sign` 的 schema 是 `enum [−1, 0, 1]`，没有说必须是 JSON 整数；反向实验：把 sign 写成 `−1.0`，套件 0 失败（JSON Schema 的数值相等与 JCS 都不区分 1 与 1.0）。规范里“整数”字段（`sign`、`rank`、`failed_column`）是否允许 1.0 没有一般规定。(4) `log_abs_det` 用了 `math.log`（系统 libm），按 M-7a 本实现的确定性只能是 `platform_bitwise`，与 DT-6 一致。
+
+### 新增：无法只从规范推出的 manifest 字段（第三轮）
+
+| 字段 | rank | pinv | qr | chol | det |
+|---|---|---|---|---|---|
+| `version`、`tolerance_class` | profile 开头（0.4.0，T1） | 同（0.4.0，T2） | 同（0.4.0，T1） | 同（0.4.0，T1） | 同（0.4.0，T2） |
+| `receipt.postconditions` | RK-1 `svd_reconstructs` + RK-3 `rank_well_separated`（SV-5 的 `all_finite` 没有列，RK-1 没点名） | PI-4 点名的三项 | QR-4 点名的三项 | CH-4 点名的两项 | DT-4 `significant` |
+| `receipt.coverage` | 全部 `full`：profile 没写，E-11a 要求“同样的 coverage”却无从对照；与参考 manifest 相同 | 同 | 同 | 同 | 同 |
+| `receipt.guards` | `rank_well_separated` 自定（PY-71）；`svd_reconstructs` → `/rank`、`/s`、`/smallest_kept`、`/largest_dropped`：**读参考 manifest 后采用** | `rank_well_separated` 取自 PI-3；`svd_reconstructs` → `/X`、`/rank`、`/cond_r`、`penrose` → `/X`：**读参考 manifest 后采用** | `reconstructs` → `/Q`、`/R`，`orthonormal` → `/Q`：**读参考 manifest 后采用**；`all_finite` 自加 | `reconstructs` → `/R`：**读参考 manifest 后采用**；`all_finite` 自加 | DT-4 写明（`/det`、`/sign`、`/log_abs_det`） |
+| `receipt.exactness.bound_kind` | 自定 `a_posteriori_heuristic` | 自定 | 自定 | 自定 | DT-4 规定 |
+| `receipt.assumptions` | 自写（“阈值是建模选择”一条的意思取自 RK-2） | 同 | 自写 | 自写 | 自写（“估计是启发式”取自 DT-4） |
+| `errors[]` | 按实际会发的码；`NO_CONVERGENCE` 来自 SV-2 的 60 轮上限（profile 没写码） | 同 | `OUTPUT_TOO_LARGE` 来自 QR-2 | `NOT_SYMMETRIC`（CH-2）、`NOT_POSITIVE_DEFINITE`（CH-3） | 按实际会发的码 |
+| `warnings[]` | `RANK_AMBIGUOUS`（RK-3） | 同 | 无 | 无 | `DET_NOT_SIGNIFICANT`、`DET_OUT_OF_RANGE`（DT-3、DT-4） |
+| `limits` | `max_dimension` 500（取 SV-2 给 svd 的值；参考 rank 是 1000）、`max_jacobi_sweeps` 60（SV-2） | 同 | `max_output_elements` 10⁶（类比 L-6，PY-73）、`max_dimension` 2000 自定 | `max_dimension` 1000 自定 | `max_dimension` 1000 自定、估计迭代 5（LS-5） |
+| `determinism` | RK-5 | PI-5 | QR-5 | CH-5 | DT-6（全部 `platform_bitwise`） |
+| `applicability.not_for` | 自写 | PI 末段要求写“最小二乘不要先求伪逆”，措辞自写 | 自写 | CH-3 要求写“不是判断正定性的可靠手段”，措辞自写 | DT 末段要求写“判断奇异用条件数”，措辞自写 |
+| `method_id`、`backend`、`provenance`、`title`、`description`、`tags`、`category` | 自写 | 自写 | 自写 | 自写 | 自写 |
+| `accuracy_grade`、`conformance` | C / L1（7.3） | 同 | 同 | 同 | 同 |
+| `sparse_support`、`encodings` | `{}`（reject）、json + b64（没有 data root，不收 ref） | 同 | 同 | 同 | 同 |
+| `input_schema`、`output_schema` | profile 链接的 schema，内联 | 同（输出另含 `smallest_kept`、`largest_dropped`，PY-72） | 同 | 同 | 同 |
+
+## 处理结果（第三轮，v0.4.25-draft，2026-11-26）
+
+同前两轮：每条先对照参考实现核实。两条阻塞、两条矛盾都成立。
+
+| 发现 | 处理 |
+|---|---|
+| PY-66 | 核心 3.3 新增 R-2a：校验顺序 SHOULD 为 schema → 编码与 dtype → 非有限值 → 形状 → 语义约束 → DOMAIN（与你的顺序相同，也与参考实现相同）；暂定 SHOULD，见开放问题 32 |
+| PY-67 | SV-5、PI-4、QR-4：相对残差的分母为 0 时取绝对残差（参考实现一直如此：分母取 max(·, 最小正规数)） |
+| PY-68 | **成立。** 参考实现停下来确实靠未缩放平方和下溢。SV-2 新增“旋转下限”：‖g_p‖ 或 ‖g_q‖ ≤ max(m, n)·ε²·‖A‖_F 时不旋转；参考内核改用这个显式判据（`lowrank_4x9_r1` 的 σ₂ 由 1.8e-172 变为 1.35e-31，其余 golden 与示例逐位不变）。下限先试过 ε·‖A‖_F：它冻结了 Hilbert 13 的 σ_min，cond 警告消失，秩亏矩阵的噪声奇异值落进 RK-3 的区间——正是 PY-70 说的现象；所以用 ε² |
+| PY-69 | SV-4 写明 eps：到下一个更大 f64 的距离（2 的幂时向上），eps(0) = 2⁻¹⁰⁷⁴；rank 的 parity.yaml `compare` 改为逐位重算，与 `conformance_compare` 一致 |
+| PY-70 | **成立。** RK-3 改为“按算出的奇异值判定”，并写明它依赖实现：多报秩不明确是保守的方向，允许；一致性套件只要求真奇异值在区间内时必须报。rank、basis、pinv 的 parity.yaml 由“exactly the predicted set”改为“必须包含；多报允许”。是否换成与实现无关的判据，列入开放问题 32 |
+| PY-71 | RK-3 列全不可依赖的字段：rank 为 `/rank`、`/smallest_kept`、`/largest_dropped`；pinv 为 `/X`、`/rank`、`/cond_r`；basis 不变。参考 manifest 的 guards 同步（你的 rank 与此相同；pinv 请补 `/cond_r`） |
+| PY-72 | PI-1 写明：只引用 RK 的范围、阈值与秩判定，输出字段只有 PI-2 的那些 |
+| PY-73 | **成立。** QR-2 写明上限 MUST 为 2 000 000，按 Q 与 R 的元素数之和计 |
+| PY-74 | QR-3 写明：full 模式的 Q 全部 m 列都是 H₀…H_{k−1} 作用在单位阵上，后 m − k 列不变号；sign(α) 按 IEEE 符号位（−0.0 为负）；R_ii = 0 不变号；QR-4 正交性残差用普通 f64 即可 |
+| PY-75 | CH-2 写明：不论 `triangle` 取什么都读上三角；max|a_ij| 取整个矩阵；补丁改为替换整个 `/A`（内联 f64），参考实现同步修改，b64/i64 输入也能套用 |
+| PY-76 | CH-3 写明参考实现的求和方式，并允许精度更高的求和（你的正确舍入内积合规）；接近奇异时结论可能不同，golden 不收这类用例 |
+| PY-77 | LS-5 把 Hager–Higham 估计器写全（起始向量、停止条件、交错向量及其并入方式），DT-4 引用它 |
+| PY-78 | **成立。** parity.yaml 改为与 DT-3 一致（ln|det_true| ≥ 709.78 或 < −708.40）；DT-3 写明按算出的尾数与指数判定；生成脚本断言用例离两条边界都远 |
+| PY-79 | DT-5：`sign` MUST 是 JSON 整数（schema 改为 `type: integer`，lu 的 `perm_sign` 同）；主元为 0 时不必继续消元，`trust.condition` 写 `"Inf"` 与 `"NaN"`；被标出的用例上不比较 `sign`（E-13） |
+| RI-1（你的附注） | 第二实现内部两份 QR：对第二实现而言是 RI-1 的偏差，记入开放问题 32，暂不处理 |

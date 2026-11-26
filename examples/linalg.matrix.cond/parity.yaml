@@ -10,7 +10,7 @@ runner: "cargo test --release -p aeoi-numeric --test parity_subspace"
 tolerance_class: T2
 compare:
   cond: "|Δ|/cond_true ≤ 64·max(m, n)·u·cond_true (σ_min and A⁻¹ have only absolute accuracy); exact zero pivot: \"Inf\""
-  warnings: "exactly the predicted set; predictions use the true singular values and only cases at least a factor 2 from every threshold edge are written"
+  warnings: "exactly the predicted set; predictions use the true values and only cases clearly on one side of each threshold are written"
 conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py. No trust.* value of the implementation is used as a tolerance
   cond: "same bound as compare"
   recomputed: "rcond = 1/cond of the returned value (0 for Inf)"

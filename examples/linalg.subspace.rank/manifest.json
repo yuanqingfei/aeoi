@@ -148,7 +148,9 @@
         "/largest_dropped"
       ],
       "rank_well_separated": [
-        "/rank"
+        "/rank",
+        "/smallest_kept",
+        "/largest_dropped"
       ]
     }
   }

@@ -11,7 +11,7 @@ tolerance_class: T1
 compare:
   bases: "compared as subspaces: ‖P − P_true‖_F ≤ 64·max(m, n)·u·σ_max/gap for the range and the null projector (Wedin; gap = σ_r − σ_{r+1} of the truth)"
   rank, shapes: exact
-  warnings: "exactly the predicted set; predictions use the true singular values and only cases at least a factor 2 from every threshold edge are written"
+  warnings: "RANK_AMBIGUOUS MUST be present where a true singular value lies in (tol/10, 100·tol]; an extra RANK_AMBIGUOUS elsewhere is allowed (RK-3: the test is on computed values, and reporting ambiguity is the conservative side). Predictions use the true singular values; only cases at least a factor 2 from every threshold edge are written"
 conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py. No trust.* value of the implementation is used as a tolerance
   projectors: "same bound as compare"
   recomputed: "the runner recomputes ‖QᵀQ − I‖ of both returned bases (≤ 100·max(m, n)·u) and ‖A·N‖_F ≤ sqrt(n − r)·tol + 100·max(m, n)·u·‖A‖_F"

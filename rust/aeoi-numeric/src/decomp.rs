@@ -215,11 +215,13 @@ impl Operator for Chol {
         let tol = 10.0 * n as f64 * U * amax;
         if worst > tol {
             let sym: Vec<Value> = (0..n * n).map(|t| num(0.5 * (a[t] + a[(t % n) * n + t / n]))).collect();
+            // the patch replaces /A as a whole (inline f64), so it also applies when A came as b64 or i64 (CH-2)
+            let sym_a = json!({"dtype": "f64", "shape": [n, n], "data": sym});
             return Err(OpError::new("E.VALIDATION.NOT_SYMMETRIC", format!("A 不对称：|a[{}][{}] − a[{}][{}]| = {worst:.3e}，超过舍入容差 10·n·u·max|a| = {tol:.3e}。Cholesky 只对对称矩阵有定义（MATLAB 会悄悄只用上三角）。", at.0, at.1, at.1, at.0), "检查 A 的录入；如果 A 应当对称、误差来自数据，可以用 (A + Aᵀ)/2。")
                 .path("/A")
                 .detail("max_asymmetry", num(worst))
                 .detail("at", json!([at.0, at.1]))
-                .remedy(modify_input("symmetrize", "用 (A + Aᵀ)/2 代替 A（改变了数据，需要确认）", "medium", true, json!([{"op": "replace", "path": "/A/data", "value": sym}]))));
+                .remedy(modify_input("symmetrize", "用 (A + Aᵀ)/2 代替 A（改变了数据，需要确认）", "medium", true, json!([{"op": "replace", "path": "/A", "value": sym_a}]))));
         }
         let lower = args.get("triangle").and_then(|v| v.as_str()) == Some("lower");
         Ok((DecIn { m, n, a, full: false, lower }, Vec::new()))

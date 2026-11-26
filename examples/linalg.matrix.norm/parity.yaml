@@ -11,7 +11,7 @@ tolerance_class: T1
 compare:
   norm: "|Δ|/norm_true ≤ 4·(N + 6)·u (direct formulas, N = number of elements) or 32·max(m, n)·u (matrix 2-norm by SVD)"
   treated_as: exact
-  warnings: "exactly the predicted set; predictions use the true singular values and only cases at least a factor 2 from every threshold edge are written"
+  warnings: "exactly the predicted set; predictions use the true values and only cases clearly on one side of each threshold are written"
 conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py. No trust.* value of the implementation is used as a tolerance
   norm: "same bound as compare"
   echoed: "treated_as (vector for [n], [1, n], [n, 1], as in MATLAB)"

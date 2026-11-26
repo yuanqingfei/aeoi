@@ -11,8 +11,8 @@ tolerance_class: T1
 compare:
   rank: exact
   s: "|Δσ_k| ≤ 32·max(m, n)·u·σ_max (absolute, Weyl)"
-  tol: "default: within a factor 2 of max(m, n)·eps(σ_max_true); supplied: echoed"
-  warnings: "exactly the predicted set; predictions use the true singular values and only cases at least a factor 2 from every threshold edge are written"
+  tol: "default: max(m, n)·eps(s_1) of the returned s, exactly (eps as in SV-4: the spacing above |x|; eps(0) = 2^-1074); supplied: echoed"
+  warnings: "RANK_AMBIGUOUS MUST be present where a true singular value lies in (tol/10, 100·tol]; an extra RANK_AMBIGUOUS elsewhere is allowed (RK-3: the test is on computed values, and reporting ambiguity is the conservative side). Predictions use the true singular values; only cases at least a factor 2 from every threshold edge are written"
 conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py. No trust.* value of the implementation is used as a tolerance
   rank: "equal to the truth (non-flagged cases)"
   s: "|Δσ_k| ≤ 32·max(m, n)·u·σ_max"

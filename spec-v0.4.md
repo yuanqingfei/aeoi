@@ -1,6 +1,6 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.24-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.25-draft
 
-> 状态：Draft v0.4.24 · 2026-11-26 · 作者：Qingfei Yuan（草拟协助：Grok Bot、Claude）
+> 状态：Draft v0.4.25 · 2026-11-26 · 作者：Qingfei Yuan（草拟协助：Grok Bot、Claude）
 >
 > SPDX-License-Identifier: CC-BY-4.0 · © 2026 Qingfei Yuan。规范文本按 CC-BY-4.0 许可（`LICENSE-CC-BY-4.0`）；规范中的代码片段、JSON Schema 与参考实现按 MIT OR Apache-2.0 许可（`LICENSE-MIT`、`LICENSE-APACHE`）。
 >
@@ -142,6 +142,7 @@ CLI / 其他语言绑定 ──────────┘   参考实现：Rust
 
 - R-1 范围约束（正数、区间、整数）MUST 写入 JSON Schema；跨字段约束（`min < max`、`w < π/ts`、频点严格递增）由 `validate()` 检查（`E.VALIDATION.RANGE` / `E.VALIDATION.GRID` / `E.DOMAIN.ABOVE_NYQUIST`）。
 - R-2 JSON 无法表示 NaN/Inf。规范编码为字符串 `"NaN"`、`"Inf"`、`"-Inf"`，且仅在 schema 显式允许的位置出现。**输入默认拒绝非有限值**（`E.VALIDATION.NON_FINITE`），二进制编码中的 NaN/Inf 同样拒绝。
+- R-2a **校验顺序**（v0.4.25，第二实现 PY-66）：一个输入同时违反几条时，SHOULD 按 schema → 编码与 dtype → 非有限值 → 形状 → 语义约束（对称等）→ 数学上不可解（`DOMAIN`）的顺序报第一条。golden 的错误用例每个只违反一条，一致性套件不依赖这个顺序；以后要把它定为 MUST，需要先在全部算子上核实。
 - R-3 输出中出现非有限值 MUST 使用 R-2 编码，并 SHOULD 附一条 warning 说明含义（例：频点恰为传递函数零点时幅值为 `-Inf` dB，附 `W.NUMERICAL.ZERO_ON_GRID`）。
 - R-4 所有输入对象 MUST 设 `additionalProperties: false`：Agent 拼错参数名必须立刻得到错误，而不是被静默忽略。
 
@@ -846,6 +847,7 @@ Rust 参考实现的结构、运行方式、已知限制与内核复用规则（
 29. **（v0.4.19 新，PY-27）放宽容差的补丁可能掩盖发散**：IN-5 的“放宽到 1e-6”补丁套到发散积分（1/x 在 [1, ∞)）上，结果“收敛”为 36.62，只靠 `refinement_consistent` 不成立把 claim 降为 `unverified`。CF-9 只要求套用补丁后通过校验，套件会接受。可选：没有奇点证据时不给放宽补丁；或规定套用放宽补丁后 MUST 检查 `refinement_consistent`。
 30. **（v0.4.19 新，PY-15）用估计常数写成的“先验界”**：FT-6 把 c = 10 的估计归为 `bound_kind = a_priori`，强于实际（对 Bluestein 与混合基没有证明）。可选：改为 `a_posteriori_heuristic`，或给出有证明的常数。
 31. **（v0.4.21 新，第二实现第二轮）尚未规定的细节**：bode、step、convert、roots 的 profile 与 3.1/3.10 已按第二轮发现改写（BD-1 – BD-8、ST-1 – ST-9、CV-1 – CV-8、T-5、R-6、R-8、R-9、CF-7，处理表见 `SPEC_FINDINGS.md`）。仍未处理的有：零 DC 增益与稳定性用算出的值、不设容差（ST-5，PY-39/40：确定但不与尺度无关，X-4a 要求的阈值留待以后）；R-7 的 `normalize = false` 对 ss→tf 无意义（PY-43 后半）；roots 的 golden 目录名不符合 V-3（PY-65，与 PY-30 同类，等统一迁移 golden 时处理）。
+32. **（v0.4.25 新，第二实现第三轮）尚未处理的细节**：校验顺序只定为 SHOULD（R-2a，PY-66）；秩不明确的判定依赖实现的舍入（RK-3 允许多报，PY-70），是否改用与实现无关的判据（例如按 SV-5 的残差放宽区间下沿）留待以后；第二实现内部有两份 QR（第一轮 linsolve 与本轮 qr），对第二实现而言不满足 RI-1，暂不处理。
 
 ### 12.2 下一步
 

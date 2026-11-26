@@ -11,6 +11,11 @@ Operators
   control.lti.step               (10.2)   own Pade-13 scaling-squaring expm (Van Loan ZOH) + recursion
   control.lti.convert            (10.4)   own canonical realizations, R-7 ss2tf, zero dynamics for ss -> zpk
   fit.poly.roots                 (10.34)  own balanced companion + Francis double-shift QR + Newton, inclusion radii
+  linalg.subspace.rank           (10.37)  own one-sided Hestenes Jacobi SVD (aeoi_kernels.jacobi_svd) + rank decision
+  linalg.matrix.pinv             (10.39)  same SVD kernel and rank decision as rank
+  linalg.decomp.qr               (10.43)  own Householder QR (dlarfg convention) + R_ii >= 0 sign fix
+  linalg.decomp.chol             (10.44)  own column Cholesky on the upper triangle, correctly rounded dots
+  linalg.matrix.det              (10.36)  LU of op_linsolve + frexp mantissa/exponent product + Hager-Higham estimate
 
   aeoi_lti.py      shared LtiSystem parsing / validation / conversion / frequency response (all control operators)
   aeoi_kernels.py  shared numerics: balance, Hessenberg, Francis QR (hqr), LU, batched complex LU, expm, polynomials
@@ -29,6 +34,8 @@ What is independent and what is not
         defines these only by reference to python-control (SPEC_FINDINGS PY-50);
       - the realizations follow the scipy tf2ss / ss2tf conventions the spec names (3.10 R-6, R-7);
       - interp1 (spline uses LAPACK dgtsv, same published formulas as scipy) and lyap (scipy LAPACK).
+  * Round 3 (rank, pinv, qr, chol, det) under the same rules; no numpy.linalg / scipy.linalg / LAPACK on the
+    result paths (SVD, QR, Cholesky, LU are own code).
   * Envelope, receipt, fingerprints, errors and method_policy live in aeoi_common.py; JCS and the
     json array digest are reused from conformance/aeoi_hash.py (itself an independent rewrite).
 """
@@ -53,9 +60,15 @@ import op_bode  # noqa: E402
 import op_step  # noqa: E402
 import op_convert  # noqa: E402
 import op_roots  # noqa: E402
+import op_rank  # noqa: E402
+import op_pinv  # noqa: E402
+import op_qr  # noqa: E402
+import op_chol  # noqa: E402
+import op_det  # noqa: E402
 
 OPERATORS = [op_lyap.Lyap(), op_fft.FFT(), op_linsolve.LinSolve(), op_interp1.Interp1(), op_integral.Integral(),
-             op_bode.Bode(), op_step.Step(), op_convert.Convert(), op_roots.Roots()]
+             op_bode.Bode(), op_step.Step(), op_convert.Convert(), op_roots.Roots(),
+             op_rank.Rank(), op_pinv.Pinv(), op_qr.QR(), op_chol.Chol(), op_det.Det()]
 BY_TOOL = {op.tool_name: op for op in OPERATORS}
 PROTOCOLS = ("2025-06-18", "2025-03-26", "2024-11-05")
 

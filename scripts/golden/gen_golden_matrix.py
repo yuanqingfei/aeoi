@@ -169,7 +169,9 @@ def det_case(family, A, exact_zero=False):
         la = mp.log(abs(d))
         exp.update({"det_true": float(d) if abs(la) < 700 else None, "sign_true": 1 if d > 0 else -1, "log_abs_det_true": float(la), "kappa1_true": kappa1(A, X)})
         assert n * U * exp["kappa1_true"] < 1e-3, f"{family}: not clearly significant (κ₁ = {exp['kappa1_true']:.2e})"
-        if abs(la) > 708:
+        # DT-3: outside the f64 normal range (ln 2^1024 ≈ 709.78, ln 2^-1022 ≈ −708.40); stay clear of both edges
+        assert abs(float(la) - 709.78) > 1 and abs(float(la) + 708.40) > 1, f"{family}: ln|det| too close to the range edge"
+        if float(la) >= 709.78 or float(la) < -708.40:
             w = ["W.NUMERICAL.DET_OUT_OF_RANGE"]
     DT.save(family, {"A": enc(A)}, exp, expect_warning=w[0] if len(w) == 1 else (w or None), expect_postcondition_failed=pc)
 

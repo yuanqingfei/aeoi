@@ -80,6 +80,13 @@ pub fn jacobi(mut g: Vec<Vec<f64>>, m: usize, check: &dyn Fn() -> Result<(), OpE
     let n = g.len();
     let mut v: Vec<Vec<f64>> = (0..n).map(|k| (0..n).map(|i| if i == k { 1.0 } else { 0.0 }).collect()).collect();
     let tol = (m as f64).sqrt() * f64::EPSILON;
+    // SV-2 (v0.4.25): a column whose norm is at most max(m, n)·ε²·‖A‖_F takes no part in rotations. The rounding
+    // remainder of an exactly rank-deficient matrix stays nearly parallel to a large column and shrinks by about ε
+    // per rotation, so without a floor the rotation test is met forever; before v0.4.25 the loop only stopped
+    // because the unscaled squared norm underflowed to 0. ε² keeps genuine small singular values (down to about
+    // 1e-31·‖A‖_F) rotating, so Jacobi's relative accuracy for graded matrices is kept.
+    let afro = { let all: Vec<f64> = g.iter().flatten().copied().collect(); nrm2(&all) };
+    let zero2 = { let z = m.max(n) as f64 * f64::EPSILON * f64::EPSILON * afro; z * z };
     for _sweep in 0..MAX_SWEEPS {
         let mut rotated = false;
         for p in 0..n {
@@ -88,7 +95,7 @@ pub fn jacobi(mut g: Vec<Vec<f64>>, m: usize, check: &dyn Fn() -> Result<(), OpE
                 let alpha: f64 = gp.iter().map(|x| x * x).sum();
                 let beta: f64 = gq.iter().map(|x| x * x).sum();
                 let gamma: f64 = gp.iter().zip(gq).map(|(a, b)| a * b).sum();
-                if alpha == 0.0 || beta == 0.0 || gamma.abs() <= tol * alpha.sqrt() * beta.sqrt() {
+                if alpha <= zero2 || beta <= zero2 || gamma.abs() <= tol * alpha.sqrt() * beta.sqrt() {
                     continue;
                 }
                 rotated = true;
@@ -148,9 +155,9 @@ pub fn svd_thin(a: &[f64], m: usize, n: usize, check: &dyn Fn() -> Result<(), Op
     let mut order: Vec<usize> = (0..p).collect();
     order.sort_by(|&x, &y| sig[y].partial_cmp(&sig[x]).unwrap().then(x.cmp(&y)));
     let s: Vec<f64> = order.iter().map(|&k| sig[k]).collect();
-    // Columns whose σ is at the numerical-zero level (≤ max(m, n)·ε·σ_max, v0.4.23) are not normalised: their
-    // inner products may underflow (σ ≈ 1e-172 passed the rotation test with exact zeros), so g_k/σ_k need not be
-    // orthogonal to the others. Their singular vectors come from the orthonormal completion, like σ = 0.
+    // Columns whose σ is at the numerical-zero level (≤ max(m, n)·ε·σ_max, v0.4.23) are not normalised: g_k/σ_k is
+    // rounding garbage and need not be orthogonal to the others. Their singular vectors come from the orthonormal
+    // completion, like σ = 0.
     let zero_level = rows.max(cols) as f64 * f64::EPSILON * s.first().copied().unwrap_or(0.0);
     let nz = s.iter().filter(|&&x| x > 0.0 && x > zero_level).count();
     let mut left: Vec<Vec<f64>> = order[..nz].iter().map(|&k| g[k].iter().map(|x| x / sig[k]).collect()).collect();

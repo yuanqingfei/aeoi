@@ -882,7 +882,7 @@ mdet=man("linalg.matrix.det","Determinant with error estimate","实方阵的行�
  sparse={"/A":{"policy":"densify","max_dense_elements":4000000}},ver=V422,backend=BACK_NUM("matrix::det"))
 mdet_in=ins("linalg.matrix.det",{"A":M},["A"],{"x-aeoi-shape-constraints":["A: [n, n]，n ≥ 1"]},ver=V422)
 mdet_out=outs("linalg.matrix.det",{"det":dict(EXTNUM,description="行列式；超出 f64 范围时为 \"Inf\" / \"-Inf\" 或下溢的值（看 log_abs_det）"),
- "sign":{"enum":[-1,0,1],"description":"det 的符号；主元为 0 时为 0"},
+ "sign":{"type":"integer","enum":[-1,0,1],"description":"det 的符号（JSON 整数）；主元为 0 时为 0"},
  "log_abs_det":dict(EXTNUM,description="ln|det|（自然对数），不会溢出；det = 0 时为 \"-Inf\""),
  "relative_error_estimate":dict(EXTNUM,description="det 的相对误差估计（启发式一阶界）；主元为 0 时为 \"Inf\""),
  "zero_within_error":{"type":"boolean","description":"true：误差估计 ≥ 1，det 与 0 不可区分（det、sign、log_abs_det 不可依赖）"},
@@ -959,7 +959,7 @@ lu=man("linalg.decomp.lu","LU factorization with partial pivoting","实方阵的
 lu_in=ins("linalg.decomp.lu",{"A":M},["A"],{"x-aeoi-shape-constraints":["A: [n, n]"]},ver=V424)
 lu_out=outs("linalg.decomp.lu",{"L":dict(M,description="单位下三角 [n, n]"),"U":dict(M,description="上三角 [n, n]"),
  "perm":{"type":"array","items":{"type":"integer","minimum":0},"description":"0 起始的行置换：A[perm, :] = L·U"},
- "perm_sign":{"enum":[-1,1],"description":"置换的符号（det(P)）"},"growth_factor":{"type":"number","description":"max|u_ij|/max|a_ij|"},
+ "perm_sign":{"type":"integer","enum":[-1,1],"description":"置换的符号（det(P)，JSON 整数）"},"growth_factor":{"type":"number","description":"max|u_ij|/max|a_ij|"},
  "zero_pivot":{"description":"第一个恰为 0 的主元所在步（0 起始），没有则为 null"}},["L","U","perm","perm_sign","growth_factor","zero_pivot"],ver=V424)
 qr=man("linalg.decomp.qr","QR factorization","实矩阵的 QR 分解（= MATLAB qr）：A = Q·R。Householder 变换（LAPACK dgeqr2 约定），任意形状。缺省为经济型（Q 为 [m, k]，R 为 [k, n]，k = min(m, n)，同 numpy），mode = \"full\" 时 Q 为 [m, m]、R 为 [m, n]。R 的对角元归一化为非负（满秩时分解唯一；MATLAB 不归一化，符号可能不同）。不选列主元：秩亏时 R 不揭示秩。","analysis",["linalg","qr","factorization","householder","decomposition"],
  ["A 为 [m, n] 实数矩阵"],["带列主元的秩揭示 QR（MATLAB [Q, R, P] = qr(A)，以后考虑）","求数值秩（用 linalg.subspace.rank）","最小二乘（直接用 linalg.system.solve）"],
@@ -1132,9 +1132,9 @@ GUARDS["signal.design.butter"]={"stable":["/z","/p","/k","/sos","/b","/a","/syst
 GUARDS["fit.poly.polyval"]={"horner_consistent":["/y","/error_bound"]}
 GUARDS["linalg.matrix.inv"]={"backward_stable":["/X"],"forward_error_below_one":["/X"]}
 GUARDS["linalg.matrix.det"]={"significant":["/det","/sign","/log_abs_det"]}
-GUARDS["linalg.subspace.rank"]={"svd_reconstructs":["/rank","/s","/smallest_kept","/largest_dropped"],"rank_well_separated":["/rank"]}
+GUARDS["linalg.subspace.rank"]={"svd_reconstructs":["/rank","/s","/smallest_kept","/largest_dropped"],"rank_well_separated":["/rank","/smallest_kept","/largest_dropped"]}
 GUARDS["linalg.subspace.basis"]={"svd_reconstructs":["/rank","/s","/orth","/null"],"rank_well_separated":["/rank","/orth","/null"],"orthonormal":["/orth","/null"],"null_residual":["/null"]}
-GUARDS["linalg.matrix.pinv"]={"svd_reconstructs":["/X","/rank","/cond_r"],"rank_well_separated":["/X","/rank"],"penrose":["/X"]}
+GUARDS["linalg.matrix.pinv"]={"svd_reconstructs":["/X","/rank","/cond_r"],"rank_well_separated":["/X","/rank","/cond_r"],"penrose":["/X"]}
 GUARDS["linalg.matrix.norm"]={"decomposition_checked":["/norm"]}
 GUARDS["linalg.matrix.cond"]={"decomposition_checked":["/cond","/rcond"]}
 GUARDS["linalg.decomp.lu"]={"reconstructs":["/L","/U","/perm"]}

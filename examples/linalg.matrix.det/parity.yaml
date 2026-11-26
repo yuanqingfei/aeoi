@@ -13,7 +13,7 @@ compare:
   det: "same bound on |Δdet|/|det| when det_true is in the f64 normal range"
   sign: exact
   singular data: "det_true = 0 exactly ⇒ zero_within_error = true (W.NUMERICAL.DET_NOT_SIGNIFICANT, significant = false)"
-  warnings: "exactly the predicted set: DET_OUT_OF_RANGE iff |ln|det_true|| > 708"
+  warnings: "exactly the predicted set: DET_OUT_OF_RANGE iff ln|det_true| ≥ 709.78 or < −708.40 (DT-3: outside the f64 normal range); only cases far from both edges are written (golden: 991, −807)"
   relative_error_estimate: "heuristic; recorded against the actual error in reports/parity-det.json, not asserted"
 conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py (rule_det). No trust.* value of the implementation is used as a tolerance
   log_abs_det: "|Δ ln|det|| ≤ 16 · n · u · max(1, κ₁), κ₁ from the truth"

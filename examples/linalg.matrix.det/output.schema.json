@@ -23,12 +23,13 @@
       "description": "行列式；超出 f64 范围时为 \"Inf\" / \"-Inf\" 或下溢的值（看 log_abs_det）"
     },
     "sign": {
+      "type": "integer",
       "enum": [
         -1,
         0,
         1
       ],
-      "description": "det 的符号；主元为 0 时为 0"
+      "description": "det 的符号（JSON 整数）；主元为 0 时为 0"
     },
     "log_abs_det": {
       "oneOf": [

@@ -107,7 +107,8 @@
       },
       "unreliable": [
         "/X",
-        "/rank"
+        "/rank",
+        "/cond_r"
       ]
     },
     "fingerprint": {
@@ -142,7 +143,7 @@
     },
     {
       "code": "W.EVIDENCE.POSTCONDITION_FAILED",
-      "message": "后置条件未满足或未给出：rank_well_separated；结果不能视为已验证；不可依赖的结果字段：/X, /rank",
+      "message": "后置条件未满足或未给出：rank_well_separated；结果不能视为已验证；不可依赖的结果字段：/X, /rank, /cond_r",
       "details": {
         "failed": [
           "rank_well_separated"
@@ -154,7 +155,8 @@
         },
         "unreliable": [
           "/X",
-          "/rank"
+          "/rank",
+          "/cond_r"
         ]
       }
     }

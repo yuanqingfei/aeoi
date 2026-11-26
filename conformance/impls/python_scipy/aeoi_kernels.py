@@ -489,3 +489,237 @@ def poly_roots(q, polish_steps=4):
                     break
         out[i] = zi
     return out
+
+
+# ------------------------------------------------------------------------------------------
+# dense factorizations for the round-3 linear-algebra operators (rank, pinv, qr, chol; det uses
+# the LU of op_linsolve).  All own code on numpy element-wise arithmetic; no numpy.linalg / LAPACK.
+
+EPS = 2.0 ** -52
+
+
+def norm_fro(a):
+    """Scaled Frobenius norm (no overflow for large entries), summed with math.fsum."""
+    v = np.abs(np.asarray(a, dtype=float)).ravel()
+    s = float(np.max(v)) if v.size else 0.0
+    if s == 0.0 or not math.isfinite(s):
+        return s
+    w = v / s
+    return s * math.sqrt(math.fsum((w * w).tolist()))
+
+
+def _householder_vec(x):
+    """LAPACK dlarfg convention for the vector x = [alpha, x2]: returns (v with v[0] = 1, tau, beta).
+
+    H = I - tau v v^T, H x = [beta, 0, ...]. xnorm = 0 gives tau = 0, beta = alpha (H = I)."""
+    alpha = float(x[0])
+    xnorm = norm_fro(x[1:]) if x.size > 1 else 0.0
+    if xnorm == 0.0:
+        v = np.zeros(x.size)
+        v[0] = 1.0
+        return v, 0.0, alpha
+    beta = -math.copysign(math.hypot(alpha, xnorm), alpha)
+    tau = (beta - alpha) / beta
+    v = np.concatenate([[1.0], np.asarray(x[1:], dtype=float) / (alpha - beta)])
+    return v, tau, beta
+
+
+def householder_qr(a, full=False):
+    """Householder QR (dgeqr2 / dlarfg convention), any shape, no pivoting.
+
+    Returns (Q, R): econ Q [m, k], R [k, n]; full Q [m, m], R [m, n]; k = min(m, n).
+    No sign normalisation here (see qr_sign_fix)."""
+    R = np.array(a, dtype=float, copy=True)
+    m, n = R.shape
+    k = min(m, n)
+    refl = []
+    for j in range(k):
+        v, tau, beta = _householder_vec(R[j:, j])
+        refl.append((v, tau))
+        if tau != 0.0:
+            R[j, j] = beta
+            R[j + 1:, j] = 0.0
+            if j + 1 < n:
+                sub = R[j:, j + 1:]
+                w = np.sum(v[:, None] * sub, axis=0)      # element-wise, no BLAS
+                sub -= tau * np.outer(v, w)
+    qc = m if full else k
+    Q = np.zeros((m, qc))
+    Q[:qc, :qc] = np.eye(qc)
+    for j in range(k - 1, -1, -1):          # Q = H_0 H_1 ... H_{k-1} [I; 0] (dorg2r order)
+        v, tau = refl[j]
+        if tau == 0.0:
+            continue
+        sub = Q[j:, :]
+        w = np.sum(v[:, None] * sub, axis=0)
+        sub -= tau * np.outer(v, w)
+    Rout = np.triu(R[:qc, :]) if full else np.triu(R[:k, :])
+    return Q, Rout
+
+
+def qr_sign_fix(Q, R):
+    """QR-3: for every i < k with R_ii < 0 negate row i of R and column i of Q (exact)."""
+    Q = Q.copy()
+    R = R.copy()
+    k = min(R.shape[0], R.shape[1])
+    for i in range(k):
+        if R[i, i] < 0.0:
+            R[i, :] = -R[i, :]
+            Q[:, i] = -Q[:, i]
+    return Q, R
+
+
+def orth_complement(Ukept, m, count):
+    """`count` orthonormal columns orthogonal to the orthonormal columns of Ukept [m, r] (Householder QR, full Q)."""
+    if count <= 0:
+        return np.zeros((m, 0))
+    r = Ukept.shape[1]
+    if r == 0:
+        return np.eye(m)[:, :count]
+    Q, _ = householder_qr(Ukept, full=True)
+    return Q[:, r:r + count]
+
+
+def jacobi_svd(a, max_sweeps=60):
+    """One-sided (Hestenes) Jacobi SVD, profile 10.23 SV-2.
+
+    Works on A (m >= n) or A^T (m < n). Rotates the pair (p, q) when |g_p.g_q| > sqrt(rows)·eps·|g_p||g_q|;
+    at most `max_sweeps` sweeps (raises NoConvergence). sigma_k = |g_k|_2, sorted descending (stable).
+    Columns with sigma_k <= max(m, n)·eps·sigma_max get u_k from an orthogonal completion, not g_k/sigma_k.
+    Returns U [m, p], s [p], V [n, p], sweeps; p = min(m, n)."""
+    A = np.array(a, dtype=float)
+    m, n = A.shape
+    trans = m < n
+    G = (A.T if trans else A).copy()
+    rows, cols = G.shape
+    V = np.eye(cols)
+    thr = math.sqrt(rows) * EPS
+    sweeps = 0
+    converged = cols < 2
+    while not converged:
+        if sweeps >= max_sweeps:
+            raise NoConvergence(f"one-sided Jacobi did not converge in {max_sweeps} sweeps")
+        sweeps += 1
+        rotated = False
+        # numerical-zero columns (SV-2: sigma_k <= max(m, n)·eps·sigma_max) are not rotated: with the literal
+        # criterion a column of rounding residue parallel to a large one shrinks by ~eps per sweep down into the
+        # subnormal range and the sweep count exceeds 60 (SPEC_FINDINGS PY-68)
+        zero_thr = max(m, n) * EPS * max(norm_fro(G[:, j]) for j in range(cols))
+        for p in range(cols - 1):
+            for q in range(p + 1, cols):
+                gp, gq = G[:, p], G[:, q]
+                npn, nqn = norm_fro(gp), norm_fro(gq)
+                if npn <= zero_thr or nqn <= zero_thr:
+                    continue
+                gam = float(np.dot(gp, gq))
+                if not abs(gam) > thr * npn * nqn:
+                    continue
+                rotated = True
+                alpha, beta = npn * npn, nqn * nqn
+                zeta = (beta - alpha) / (2.0 * gam)
+                t = math.copysign(1.0, zeta) / (abs(zeta) + math.hypot(1.0, zeta))
+                c = 1.0 / math.hypot(1.0, t)
+                s = c * t
+                gp_new = c * gp - s * gq
+                gq_new = s * gp + c * gq
+                G[:, p], G[:, q] = gp_new, gq_new
+                vp, vq = V[:, p].copy(), V[:, q].copy()
+                V[:, p] = c * vp - s * vq
+                V[:, q] = s * vp + c * vq
+        converged = not rotated
+    sig = np.array([norm_fro(G[:, j]) for j in range(cols)])
+    order = sorted(range(cols), key=lambda j: -sig[j])          # stable: ties keep column order
+    sig = sig[order]
+    G = G[:, order]
+    V = V[:, order]
+    smax = float(sig[0]) if cols else 0.0
+    null_thr = max(m, n) * EPS * smax
+    good = [j for j in range(cols) if sig[j] > null_thr and sig[j] > 0.0]
+    bad = [j for j in range(cols) if j not in good]
+    Uw = np.zeros((rows, cols))
+    for j in good:
+        Uw[:, j] = G[:, j] / sig[j]
+    if bad:
+        comp = orth_complement(Uw[:, good], rows, len(bad))
+        for i, j in enumerate(bad):
+            Uw[:, j] = comp[:, i]
+    if trans:
+        return V, sig, Uw, sweeps
+    return Uw, sig, V, sweeps
+
+
+def spacing(x):
+    """eps(x): gap from |x| to the next larger float (MATLAB eps, numpy.spacing); eps(0) = 2^-1074."""
+    x = abs(float(x))
+    if not math.isfinite(x):
+        return math.nan
+    return math.nextafter(x, math.inf) - x
+
+
+def cholesky_upper(S):
+    """Column Cholesky reading only the upper triangle of S: S = R^T R.
+
+    d_j = s_jj - sum_{k<j} r_kj^2 (correctly rounded dot products); returns (R, None) or (None, (j, d_j))
+    at the first column with d_j <= 0."""
+    n = S.shape[0]
+    R = np.zeros((n, n))
+    for j in range(n):
+        col = R[:j, j]
+        d = float(S[j, j]) - dot_exact(col, col) if j else float(S[j, j])
+        if not d > 0.0:
+            return None, (j, d)
+        rjj = math.sqrt(d)
+        R[j, j] = rjj
+        for i in range(j + 1, n):
+            s = float(S[j, i]) - dot_exact(R[:j, j], R[:j, i]) if j else float(S[j, i])
+            R[j, i] = s / rjj
+    return R, None
+
+
+_SPLIT = 134217729.0
+
+
+def dot_exact(a, b):
+    """Correctly rounded dot product (Dekker products + math.fsum); same as aeoi_common.dot_exact."""
+    a = np.asarray(a, dtype=np.float64)
+    b = np.asarray(b, dtype=np.float64)
+    p = a * b
+    ca = _SPLIT * a
+    ah = ca - (ca - a)
+    al = a - ah
+    cb = _SPLIT * b
+    bh = cb - (cb - b)
+    bl = b - bh
+    e = al * bl - (((p - ah * bh) - al * bh) - ah * bl)
+    return math.fsum(np.concatenate([p.ravel(), e.ravel()]).tolist())
+
+
+def matmul_exact(A, B):
+    """A @ B with every entry a correctly rounded dot product (used for compensated residuals)."""
+    m, k = A.shape
+    n = B.shape[1]
+    out = np.empty((m, n))
+    for i in range(m):
+        for j in range(n):
+            out[i, j] = dot_exact(A[i, :], B[:, j])
+    return out
+
+
+def residual_fro_exact(A, P, Q):
+    """||A - P Q||_F with each entry of A - P Q correctly rounded (error-free products, fsum)."""
+    m, n = A.shape
+    out = np.empty((m, n))
+    for i in range(m):
+        for j in range(n):
+            a = np.asarray(P[i, :], dtype=np.float64)
+            b = np.asarray(Q[:, j], dtype=np.float64)
+            p = a * b
+            ca = _SPLIT * a
+            ah = ca - (ca - a)
+            al = a - ah
+            cb = _SPLIT * b
+            bh = cb - (cb - b)
+            bl = b - bh
+            e = al * bl - (((p - ah * bh) - al * bh) - ah * bl)
+            out[i, j] = math.fsum([float(A[i, j])] + (-p).tolist() + (-e).tolist())
+    return norm_fro(out)
