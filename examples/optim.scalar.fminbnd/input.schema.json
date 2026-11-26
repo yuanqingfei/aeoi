@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/optim.scalar.fminbnd/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "expression",
+    "interval"
+  ],
+  "properties": {
+    "expression": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000,
+      "description": "f(x)，3.15 表达式语言；求极小"
+    },
+    "variable": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+      "default": "x",
+      "x-aeoi-provenance": "convention",
+      "description": "自变量名（缺省 x）"
+    },
+    "params": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "number"
+      },
+      "x-aeoi-provenance": "supplied",
+      "description": "参数名 → 数值"
+    },
+    "interval": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "x-aeoi-provenance": "supplied",
+      "description": "搜索区间 [x1, x2]，x1 < x2（端点本身不被 Brent 求值，同 MATLAB）"
+    },
+    "tol_x": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "default": 0.0001,
+      "x-aeoi-provenance": "convention",
+      "description": "x 的绝对容差（缺省 1e-4，同 MATLAB TolX）"
+    },
+    "max_evaluations": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100000,
+      "default": 500,
+      "x-aeoi-provenance": "convention",
+      "description": "Brent 的求值上限（缺省 500，同 MATLAB MaxFunEvals）"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  }
+}

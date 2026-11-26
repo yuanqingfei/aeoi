@@ -746,7 +746,49 @@ def rule_chol(case, env, manifest, req=None, expected=None):
     return out
 
 
-RULES = {"linalg.decomp.lu": rule_lu, "linalg.decomp.qr": rule_qr, "linalg.decomp.chol": rule_chol, "linalg.subspace.rank": rule_rank, "linalg.subspace.basis": rule_basis, "linalg.matrix.pinv": rule_pinv, "linalg.matrix.norm": rule_norm, "linalg.matrix.cond": rule_cond, "linalg.matrix.inv": rule_inv, "linalg.matrix.det": rule_det, "signal.spectral.fft": rule_fft, "ode.ivp.solve": rule_ode, "linalg.system.solve": rule_linsolve, "interp.grid.interp1": rule_interp1,
+# ---------------------------------------------------------------- v0.4.26: quadprog, fminbnd (profiles 10.45, 10.46)
+def rule_quadprog(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = case["expected"]; r = env["result"]
+    n = int(e["n"]); x = np.array([num(v) for v in r["x"]])
+    H = np.array(req["H"], dtype=float); H = (H + H.T) / 2; f = np.array(req["f"], dtype=float)
+    tol = 1e-12 * max(1.0, e["kappa2_H"] / 100.0)
+    rel = lambda a, b: float(np.max(np.abs(np.asarray(a, float) - np.asarray(b, float)))) / max(1.0, float(np.max(np.abs(np.asarray(b, float))))) if len(b) else 0.0
+    lam = r["lambda"]; lt = e["lambda_true"]
+    out = [check("x vs the true optimum: max|Δx|/max(1, |x|) ≤ 1e-12·max(1, κ₂(H)/100)  [QP-2]", rel(x, e["x_true"]), tol)]
+    out.append(check("multipliers (ineqlin, eqlin, lower, upper) vs the truth, same bound  [QP-3]", max(rel([num(v) for v in lam[g]], lt[g]) for g in ("ineqlin", "eqlin", "lower", "upper")), tol))
+    A = np.array(req.get("A", np.zeros((0, n))), dtype=float).reshape(-1, n); b = np.array(req.get("b", []), dtype=float)
+    Aeq = np.array(req.get("Aeq", np.zeros((0, n))), dtype=float).reshape(-1, n); beq = np.array(req.get("beq", []), dtype=float)
+    li = np.array([num(v) for v in lam["ineqlin"]]); le = np.array([num(v) for v in lam["eqlin"]]); ll = np.array([num(v) for v in lam["lower"]]); lu = np.array([num(v) for v in lam["upper"]])
+    g = H @ x + f
+    st = g + (A.T @ li if A.size else 0) + (Aeq.T @ le if Aeq.size else 0) - ll + lu
+    sc = max(1.0, float(np.max(np.abs(g))), float(np.max(np.abs(f))))
+    out.append(check("stationarity Hx + f + Aᵀλ + Aeqᵀμ − λ_lower + λ_upper, recomputed by the runner (relative)  [QP-4]", float(np.max(np.abs(st))) / sc, 1e-9))
+    viol = max([0.0] + list(np.maximum(A @ x - b, 0) / np.maximum(1, np.abs(b))) + list(np.abs(Aeq @ x - beq) / np.maximum(1, np.abs(beq))))
+    out.append(check("primal feasibility, recomputed by the runner  [QP-4]", float(viol), 1e-9))
+    # fval of the returned x in exact rational arithmetic (with x ~ 1e6 and ill-conditioned H, float evaluation
+    # loses digits); compared relative to the sum of |terms|, since fval may be a small difference of large terms
+    Hf = [[Fraction(float(v)) for v in row] for row in H]; xf = [Fraction(float(v)) for v in x]; ff = [Fraction(float(v)) for v in f]
+    fv = Fraction(1, 2) * sum(xf[i] * Hf[i][j] * xf[j] for i in range(n) for j in range(n)) + sum(ff[i] * xf[i] for i in range(n))
+    terms = max(1.0, float(sum(abs(xf[i] * Hf[i][j] * xf[j]) for i in range(n) for j in range(n)) / 2 + sum(abs(ff[i] * xf[i]) for i in range(n))))
+    out.append(check("fval = ½xᵀHx + fᵀx of the returned x, exact, relative to Σ|terms|  [QP-5]", abs(float(Fraction(float(num(r["fval"]))) - fv)) / terms, 1e-12))
+    return out
+
+
+def rule_fminbnd(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = case["expected"]; r = env["result"]
+    x = num(r["x"]); tol_x = e["tol_x"]
+    near = lambda m: 3 * (math.sqrt(np.finfo(float).eps) * max(1.0, abs(m)) + tol_x)
+    ms = [p["x"] for p in e["minima"]]
+    m = min(ms, key=lambda v: abs(x - v)); d = abs(x - m)
+    is_global = abs(x - e["global_x"]) <= near(e["global_x"])
+    warned = any(w.get("code") == "W.ACCURACY.BETTER_POINT_FOUND" for w in env.get("warnings", []))
+    gp = ((env.get("trust") or {}).get("checks") or {}).get("grid_probe")
+    return [check("x is a true local minimiser to Brent's accuracy: |x − x*| ≤ 3·(√ε·max(1, |x*|) + tol_x)  [FB-2]", d, near(m)),
+            ("claim: W.ACCURACY.BETTER_POINT_FOUND (grid_probe = false) iff the returned point is not the global minimiser  [FB-4]", warned == (not is_global) and (gp is False) == (not is_global), None, None, f"warned = {warned}, grid_probe = {gp}, global = {is_global}"),
+            ("tol_x and max_evaluations echoed (defaults 1e-4, 500)  [FB-3]", num(r.get("tol_x")) == req.get("tol_x", 1e-4) and r.get("max_evaluations") == req.get("max_evaluations", 500), None, None, f"got {r.get('tol_x')}, {r.get('max_evaluations')}")]
+
+
+RULES = {"optim.quadratic.quadprog": rule_quadprog, "optim.scalar.fminbnd": rule_fminbnd, "linalg.decomp.lu": rule_lu, "linalg.decomp.qr": rule_qr, "linalg.decomp.chol": rule_chol, "linalg.subspace.rank": rule_rank, "linalg.subspace.basis": rule_basis, "linalg.matrix.pinv": rule_pinv, "linalg.matrix.norm": rule_norm, "linalg.matrix.cond": rule_cond, "linalg.matrix.inv": rule_inv, "linalg.matrix.det": rule_det, "signal.spectral.fft": rule_fft, "ode.ivp.solve": rule_ode, "linalg.system.solve": rule_linsolve, "interp.grid.interp1": rule_interp1,
          "fit.poly.polyfit": rule_polyfit, "linalg.decomp.eig": rule_eig, "linalg.decomp.svd": rule_svd,
          "signal.design.butter": rule_butter, "signal.filter.filter": rule_filter,
          "nonlinear.root.fzero": rule_fzero, "nonlinear.system.fsolve": rule_fsolve,

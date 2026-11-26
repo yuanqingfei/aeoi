@@ -1,0 +1,41 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "optim.scalar.fminbnd",
+ "operator_version": "0.4.0",
+ "case_family": "matlab_doc_sin",
+ "request": {
+  "expression": "sin(x)",
+  "interval": [
+   0.0,
+   6.283185307179586
+  ]
+ },
+ "reference_env": {
+  "engine": "mpmath",
+  "mpmath": "1.4.1",
+  "dps": 50,
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261130,
+  "method": "quadprog: active-set enumeration with 50-digit KKT solves; fminbnd: every local minimiser by findroot on f′ at 50 digits",
+  "note": "high-precision truth; NOT MATLAB output"
+ },
+ "postcondition_may_fail": [
+  "grid_probe"
+ ],
+ "expected": {
+  "minima": [
+   {
+    "x": 4.71238898038469,
+    "f": -1.0
+   },
+   {
+    "x": 0.0,
+    "f": 0.0
+   }
+  ],
+  "global_x": 4.71238898038469,
+  "global_f": -1.0,
+  "tol_x": 0.0001
+ }
+}

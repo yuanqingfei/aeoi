@@ -1,0 +1,80 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "optim.quadratic.quadprog",
+ "operator_version": "0.4.0",
+ "case_family": "matlab_doc_example",
+ "request": {
+  "H": [
+   [
+    1.0,
+    -1.0
+   ],
+   [
+    -1.0,
+    2.0
+   ]
+  ],
+  "f": [
+   -2.0,
+   -6.0
+  ],
+  "A": [
+   [
+    1.0,
+    1.0
+   ],
+   [
+    -1.0,
+    2.0
+   ],
+   [
+    2.0,
+    1.0
+   ]
+  ],
+  "b": [
+   2.0,
+   2.0,
+   3.0
+  ]
+ },
+ "reference_env": {
+  "engine": "mpmath",
+  "mpmath": "1.4.1",
+  "dps": 50,
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261130,
+  "method": "quadprog: active-set enumeration with 50-digit KKT solves; fminbnd: every local minimiser by findroot on f′ at 50 digits",
+  "note": "high-precision truth; NOT MATLAB output"
+ },
+ "expected": {
+  "x_true": [
+   0.6666666666666666,
+   1.3333333333333333
+  ],
+  "fval_true": -8.222222222222221,
+  "lambda_true": {
+   "ineqlin": [
+    3.111111111111111,
+    0.4444444444444444,
+    0.0
+   ],
+   "eqlin": [],
+   "lower": [
+    0.0,
+    0.0
+   ],
+   "upper": [
+    0.0,
+    0.0
+   ]
+  },
+  "active": [
+   "ineqlin/0",
+   "ineqlin/1"
+  ],
+  "kappa2_H": 6.854101966249685,
+  "n": 2
+ }
+}

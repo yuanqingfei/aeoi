@@ -39,6 +39,7 @@ pub mod filter;
 pub mod fft;
 pub mod interp1;
 pub mod linsolve;
+pub mod minimize;
 pub mod matrix;
 pub mod ode;
 pub mod optim;
@@ -53,7 +54,7 @@ use aeoi_core::DynOperator;
 
 /// All operators in this crate.
 pub fn registry() -> Vec<Box<dyn DynOperator>> {
-    vec![Box::new(fft::Fft::new()), Box::new(ode::OdeIvp::new()), Box::new(linsolve::LinSolve::new()), Box::new(interp1::Interp1::new()), Box::new(polyfit::PolyFit::new()), Box::new(eig::Eig::new()), Box::new(svd::Svd::new()), Box::new(butter::Butter::new()), Box::new(filter::Filter::new()), Box::new(roots::Fzero::new()), Box::new(roots::Fsolve::new()), Box::new(optim::Linprog::new()), Box::new(optim::Fmincon::new()), Box::new(optim::Fminsearch::new()), Box::new(quad::Integral::new()), Box::new(quad::Trapz::new()), Box::new(polynomial::PolyVal::new()), Box::new(polynomial::Roots::new()), Box::new(matrix::Inv::new()), Box::new(matrix::Det::new()), Box::new(subspace::Rank::new()), Box::new(subspace::Basis::new()), Box::new(subspace::Pinv::new()), Box::new(subspace::Norm::new()), Box::new(subspace::Cond::new()), Box::new(decomp::Lu::new()), Box::new(decomp::Qr::new()), Box::new(decomp::Chol::new())]
+    vec![Box::new(fft::Fft::new()), Box::new(ode::OdeIvp::new()), Box::new(linsolve::LinSolve::new()), Box::new(interp1::Interp1::new()), Box::new(polyfit::PolyFit::new()), Box::new(eig::Eig::new()), Box::new(svd::Svd::new()), Box::new(butter::Butter::new()), Box::new(filter::Filter::new()), Box::new(roots::Fzero::new()), Box::new(roots::Fsolve::new()), Box::new(optim::Linprog::new()), Box::new(optim::Fmincon::new()), Box::new(optim::Fminsearch::new()), Box::new(quad::Integral::new()), Box::new(quad::Trapz::new()), Box::new(polynomial::PolyVal::new()), Box::new(polynomial::Roots::new()), Box::new(matrix::Inv::new()), Box::new(matrix::Det::new()), Box::new(subspace::Rank::new()), Box::new(subspace::Basis::new()), Box::new(subspace::Pinv::new()), Box::new(subspace::Norm::new()), Box::new(subspace::Cond::new()), Box::new(decomp::Lu::new()), Box::new(decomp::Qr::new()), Box::new(decomp::Chol::new()), Box::new(minimize::Quadprog::new()), Box::new(minimize::Fminbnd::new())]
 }
 
 /// Look up by operator id or MCP tool name.

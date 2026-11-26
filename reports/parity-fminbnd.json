@@ -1,0 +1,83 @@
+{
+  "operator": "optim.scalar.fminbnd",
+  "reference": "every local minimiser at 50 digits (mpmath). Not MATLAB.",
+  "cases": 15,
+  "error_cases": 6,
+  "worst_distance_over_tolerance": 0.220323707048918,
+  "ended_in_local_valley": 1,
+  "tolerance": "|x − x*| ≤ 3·(√ε·max(1, |x*|) + tol_x) for the nearest true local minimiser x*; BETTER_POINT_FOUND iff x* is not the global minimiser",
+  "cases_detail": [
+    {
+      "family": "boundary_minimum",
+      "x": 0.00006610696135189609,
+      "nearest_minimiser": 0.0,
+      "distance": 0.00006610696135189609,
+      "global": true,
+      "evaluations": 20
+    },
+    {
+      "family": "cos_3_4",
+      "x": 3.141594801851406,
+      "nearest_minimiser": 3.141592653589793,
+      "distance": 2.1482616130441556e-6,
+      "global": true,
+      "evaluations": 8
+    },
+    {
+      "family": "cubic",
+      "x": 0.8164968152048236,
+      "nearest_minimiser": 0.816496580927726,
+      "distance": 2.342770976104802e-7,
+      "global": true,
+      "evaluations": 9
+    },
+    {
+      "family": "matlab_doc_sin",
+      "x": 4.712391081200089,
+      "nearest_minimiser": 4.71238898038469,
+      "distance": 2.100815398975442e-6,
+      "global": true,
+      "evaluations": 9
+    },
+    {
+      "family": "parabola",
+      "x": 2.0,
+      "nearest_minimiser": 2.0,
+      "distance": 0.0,
+      "global": true,
+      "evaluations": 6
+    },
+    {
+      "family": "params",
+      "x": 0.75,
+      "nearest_minimiser": 0.75,
+      "distance": 0.0,
+      "global": true,
+      "evaluations": 6
+    },
+    {
+      "family": "tight_tolerance",
+      "x": 3.141592653589793,
+      "nearest_minimiser": 3.141592653589793,
+      "distance": 0.0,
+      "global": true,
+      "evaluations": 6
+    },
+    {
+      "family": "two_valleys_global_found",
+      "x": -2.0878631469656943,
+      "nearest_minimiser": -2.0878738250414104,
+      "distance": 0.000010678075716086255,
+      "global": true,
+      "evaluations": 11
+    },
+    {
+      "family": "two_valleys_shallow_found",
+      "x": 1.898681895694292,
+      "nearest_minimiser": 1.898680832083876,
+      "distance": 1.0636104159633675e-6,
+      "global": false,
+      "evaluations": 11
+    }
+  ]
+}

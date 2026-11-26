@@ -1,0 +1,40 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "optim.quadratic.quadprog",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.DOMAIN.NOT_POSITIVE_DEFINITE",
+    "category": "domain",
+    "retryable": true,
+    "message": "H（对称部分）不是正定的：Cholesky 第 1 列的主元 d = -3.000e0 ≤ 0。本算子只解严格凸的二次规划；半正定或不定的 H 可能没有唯一解或没有下界。",
+    "agent_hint": "检查 H 的符号与录入（求最大值时目标要取负）；H = 0 时用 optim.linear.linprog；非凸问题需要别的方法。",
+    "details": {
+      "path": "/H",
+      "failed_column": 1,
+      "pivot": -3.0
+    },
+    "remediation": [
+      {
+        "id": "convexity",
+        "kind": "ask_user",
+        "description": "目标应当是严格凸的吗？H 是否录错了符号，或者问题本来就是线性/非凸的？",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.057401
+  }
+}

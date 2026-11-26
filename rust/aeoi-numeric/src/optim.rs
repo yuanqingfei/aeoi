@@ -22,7 +22,7 @@ fn fnum(v: &Value) -> Option<f64> {
         _ => None,
     }
 }
-fn vecf(v: &Value, path: &str, n: Option<usize>) -> Result<Vec<f64>, OpError> {
+pub(crate) fn vecf(v: &Value, path: &str, n: Option<usize>) -> Result<Vec<f64>, OpError> {
     let a = v.as_array().ok_or_else(|| OpError::new("E.VALIDATION.SCHEMA", format!("{path} 要是数组。"), "按 schema 给出。").path(path))?;
     let out: Option<Vec<f64>> = a.iter().map(fnum).collect();
     let out = out.ok_or_else(|| OpError::new("E.VALIDATION.SCHEMA", format!("{path} 的元素要是数（边界可用 \"Inf\" / \"-Inf\"）。"), "修正元素。").path(path))?;
@@ -33,7 +33,7 @@ fn vecf(v: &Value, path: &str, n: Option<usize>) -> Result<Vec<f64>, OpError> {
     }
     Ok(out)
 }
-fn rows(v: &Value, path: &str, n: usize) -> Result<Vec<Vec<f64>>, OpError> {
+pub(crate) fn rows(v: &Value, path: &str, n: usize) -> Result<Vec<Vec<f64>>, OpError> {
     match v.as_array() {
         None => Ok(vec![]),
         Some(a) => a.iter().enumerate().map(|(i, r)| {
@@ -45,7 +45,7 @@ fn rows(v: &Value, path: &str, n: usize) -> Result<Vec<Vec<f64>>, OpError> {
         }).collect(),
     }
 }
-fn bounds(args: &Value, n: usize) -> Result<(Vec<f64>, Vec<f64>), OpError> {
+pub(crate) fn bounds(args: &Value, n: usize) -> Result<(Vec<f64>, Vec<f64>), OpError> {
     let lb = match args.get("lb") { Some(v) => vecf(v, "/lb", Some(n))?, None => vec![f64::NEG_INFINITY; n] };
     let ub = match args.get("ub") { Some(v) => vecf(v, "/ub", Some(n))?, None => vec![f64::INFINITY; n] };
     if let Some(j) = (0..n).find(|&j| lb[j] > ub[j] || lb[j] == f64::INFINITY || ub[j] == f64::NEG_INFINITY) {
@@ -53,7 +53,7 @@ fn bounds(args: &Value, n: usize) -> Result<(Vec<f64>, Vec<f64>), OpError> {
     }
     Ok((lb, ub))
 }
-fn linear(args: &Value, n: usize) -> Result<(Vec<Vec<f64>>, Vec<f64>, Vec<Vec<f64>>, Vec<f64>), OpError> {
+pub(crate) fn linear(args: &Value, n: usize) -> Result<(Vec<Vec<f64>>, Vec<f64>, Vec<Vec<f64>>, Vec<f64>), OpError> {
     let a = rows(&args["A"], "/A", n)?;
     let b = match args.get("b") { Some(v) => vecf(v, "/b", Some(a.len()))?, None => vec![] };
     let aeq = rows(&args["Aeq"], "/Aeq", n)?;
@@ -66,7 +66,7 @@ fn linear(args: &Value, n: usize) -> Result<(Vec<Vec<f64>>, Vec<f64>, Vec<Vec<f6
     }
     Ok((a, b, aeq, beq))
 }
-fn infeasible(msg: String) -> OpError {
+pub(crate) fn infeasible(msg: String) -> OpError {
     OpError::new("E.DOMAIN.INFEASIBLE", msg, "检查约束是否相互矛盾（符号、单位、上下限）；问清用户哪些约束可以放宽。").path("/").remedy(ask_user("relax", "约束互相矛盾：哪些可以放宽？"))
 }
 

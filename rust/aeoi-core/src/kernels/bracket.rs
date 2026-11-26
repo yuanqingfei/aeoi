@@ -113,3 +113,106 @@ pub fn zeroin(
         }
     }
 }
+
+/// Converged minimisation: point `x`, value `fx`, final bracket [a, b], iterations, evaluations.
+pub struct Fmin {
+    pub x: f64,
+    pub fx: f64,
+    pub a: f64,
+    pub b: f64,
+    pub iters: usize,
+}
+
+/// Failure of `fmin`: why, and the best point so far.
+pub struct FminErr {
+    pub stop: Stop,
+    pub x: f64,
+    pub fx: f64,
+}
+
+/// Brent's minimisation on [a, b] (Brent 1973 Ch. 5; Forsythe–Malcolm–Moler `fmin`, the algorithm of MATLAB
+/// fminbnd; spec 10.46 FB-2): golden-section steps c = (3 − √5)/2, parabolic interpolation when it is
+/// acceptable, tol1 = √ε·|x| + tol_x/3, tol2 = 2·tol1; stops when |x − (a+b)/2| ≤ tol2 − (b − a)/2.
+/// The end points themselves are never evaluated. `check` is called every 64 iterations.
+pub fn fmin(f: &mut dyn FnMut(f64) -> Result<f64, Stop>, mut a: f64, mut b: f64, tol_x: f64, check: &dyn Fn() -> Result<(), OpError>) -> Result<Fmin, FminErr> {
+    let c = 0.5 * (3.0 - 5f64.sqrt());
+    let seps = EPS.sqrt();
+    let mut v = a + c * (b - a);
+    let mut w = v;
+    let mut xf = v;
+    let (mut d, mut e) = (0.0f64, 0.0f64);
+    let mut fx = f(xf).map_err(|stop| FminErr { stop, x: xf, fx: f64::NAN })?;
+    let (mut fv, mut fw) = (fx, fx);
+    let mut xm = 0.5 * (a + b);
+    let mut tol1 = seps * xf.abs() + tol_x / 3.0;
+    let mut tol2 = 2.0 * tol1;
+    let mut iters = 0usize;
+    while (xf - xm).abs() > tol2 - 0.5 * (b - a) {
+        iters += 1;
+        if iters % 64 == 0 {
+            check().map_err(|e| FminErr { stop: Stop::Abort(e), x: xf, fx })?;
+        }
+        let mut golden = true;
+        if e.abs() > tol1 {
+            // parabolic fit through x, w, v
+            let mut r = (xf - w) * (fx - fv);
+            let mut q = (xf - v) * (fx - fw);
+            let mut p = (xf - v) * q - (xf - w) * r;
+            q = 2.0 * (q - r);
+            if q > 0.0 {
+                p = -p;
+            }
+            q = q.abs();
+            r = e;
+            e = d;
+            if p.abs() < (0.5 * q * r).abs() && p > q * (a - xf) && p < q * (b - xf) {
+                d = p / q;
+                let u = xf + d;
+                golden = false;
+                if (u - a) < tol2 || (b - u) < tol2 {
+                    let si = if xm - xf >= 0.0 { 1.0 } else { -1.0 };
+                    d = tol1 * si;
+                }
+            }
+        }
+        if golden {
+            e = if xf >= xm { a - xf } else { b - xf };
+            d = c * e;
+        }
+        let si = if d >= 0.0 { 1.0 } else { -1.0 };
+        let u = xf + si * d.abs().max(tol1);
+        let fu = f(u).map_err(|stop| FminErr { stop, x: xf, fx })?;
+        if fu <= fx {
+            if u >= xf {
+                a = xf;
+            } else {
+                b = xf;
+            }
+            v = w;
+            fv = fw;
+            w = xf;
+            fw = fx;
+            xf = u;
+            fx = fu;
+        } else {
+            if u < xf {
+                a = u;
+            } else {
+                b = u;
+            }
+            if fu <= fw || w == xf {
+                v = w;
+                fv = fw;
+                w = u;
+                fw = fu;
+            } else if fu <= fv || v == xf || v == w {
+                v = u;
+                fv = fu;
+            }
+        }
+        xm = 0.5 * (a + b);
+        tol1 = seps * xf.abs() + tol_x / 3.0;
+        tol2 = 2.0 * tol1;
+    }
+    Ok(Fmin { x: xf, fx, a, b, iters })
+}

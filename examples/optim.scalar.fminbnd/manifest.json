@@ -1,0 +1,155 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "optim.scalar.fminbnd",
+  "version": "0.4.0",
+  "title": "Bounded scalar minimization",
+  "description": "在区间 [x1, x2] 上求单变量函数的极小（= MATLAB fminbnd）：f 用 3.15 的表达式语言写。Brent 方法（黄金分割 + 抛物插值，FMM fmin，MATLAB fminbnd 的算法），容差缺省同 MATLAB（tol_x = 1e-4，求值上限 500）。结果只是局部极小：之后在两端点与 101 个等距点上探测 f，发现更低的点时警告并给出该点。",
+  "category": "analysis",
+  "tags": [
+    "optimization",
+    "fminbnd",
+    "scalar",
+    "minimization",
+    "brent",
+    "golden-section"
+  ],
+  "applicability": {
+    "preconditions": [
+      "f 在区间上连续",
+      "x1 < x2"
+    ],
+    "not_for": [
+      "全局极小的保证（只给局部极小，并做网格探测）",
+      "多变量（optim.local.fminsearch、fmincon）",
+      "不连续的 f"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "Brent 极小化（Brent 1973 Ch. 5；Forsythe–Malcolm–Moler fmin；MATLAB fminbnd）：c = (3 − √5)/2，x = v = w = x1 + c(x2 − x1)；tol1 = √ε·|x| + tol_x/3，tol2 = 2·tol1；|x − (a + b)/2| ≤ tol2 − (b − a)/2 时停止；抛物步满足 |p| < |q·r/2| 且落在 (a, b) 内时采用，否则黄金分割步；步长至少 tol1。之后的全局探测：f(x1)、f(x2) 与 x1 + k(x2 − x1)/100（k = 0 … 100）",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "R. P. Brent, Algorithms for Minimization without Derivatives, Prentice-Hall 1973, Ch. 5"
+      },
+      {
+        "type": "textbook",
+        "cite": "G. E. Forsythe, M. A. Malcolm, C. B. Moler, Computer Methods for Mathematical Computations, Prentice-Hall 1977, §8.2（fmin）"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "bracket::fmin",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T2",
+  "sparse_support": {},
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_evaluations": 500,
+    "max_expression_length": 4096,
+    "probe_points": 101
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/optim.scalar.fminbnd/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.RANGE",
+    "E.VALIDATION.EXPRESSION",
+    "E.NUMERICAL.NON_FINITE_EVALUATION",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.ACCURACY.BETTER_POINT_FOUND"
+  ],
+  "mcp": {
+    "tool_name": "optim_scalar_fminbnd",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:fminbnd:brent",
+    "assumptions": [
+      {
+        "id": "expression",
+        "statement": "f 是合法的 3.15 表达式",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "continuous",
+        "statement": "f 在区间上连续",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "local_only",
+        "statement": "结果只是局部极小；全局性只在 101 个探测点上抽查",
+        "enforced_by": "check:grid_probe"
+      },
+      {
+        "id": "tolerance",
+        "statement": "x 只精确到 tol_x（缺省 1e-4）",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "probe_local_minimum",
+      "grid_probe",
+      "all_finite"
+    ],
+    "coverage": {
+      "probe_local_minimum": "test_points",
+      "grid_probe": "sampled"
+    },
+    "guards": {
+      "probe_local_minimum": [
+        "/x",
+        "/fval"
+      ],
+      "grid_probe": [
+        "/x",
+        "/fval"
+      ]
+    }
+  }
+}

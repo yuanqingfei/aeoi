@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/optim.quadratic.quadprog/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "H",
+    "f"
+  ],
+  "properties": {
+    "H": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        }
+      },
+      "x-aeoi-provenance": "supplied",
+      "description": "二次项矩阵 [n, n]（每行一个数组），对称正定；不对称时取 (H + Hᵀ)/2"
+    },
+    "f": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "x-aeoi-provenance": "supplied",
+      "description": "一次项系数 [n]"
+    },
+    "A": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        }
+      },
+      "x-aeoi-provenance": "supplied",
+      "description": "不等式约束矩阵，每行一个约束 A·x ≤ b"
+    },
+    "b": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "x-aeoi-provenance": "supplied",
+      "description": "不等式右端"
+    },
+    "Aeq": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        }
+      },
+      "x-aeoi-provenance": "supplied",
+      "description": "等式约束矩阵"
+    },
+    "beq": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "x-aeoi-provenance": "supplied",
+      "description": "等式右端"
+    },
+    "lb": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "number"
+          },
+          {
+            "enum": [
+              "Inf",
+              "-Inf"
+            ]
+          }
+        ]
+      },
+      "x-aeoi-provenance": "supplied",
+      "description": "下界 [n]，无界写 \"-Inf\"；缺省全部无下界（同 MATLAB）"
+    },
+    "ub": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "number"
+          },
+          {
+            "enum": [
+              "Inf",
+              "-Inf"
+            ]
+          }
+        ]
+      },
+      "x-aeoi-provenance": "supplied",
+      "description": "上界 [n]，无界写 \"Inf\""
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  }
+}

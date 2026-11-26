@@ -1,6 +1,6 @@
 # AEOI — AI Engineering Operator Interface
 
-面向 AI Agent 的工程计算算子接口规范（v0.4.24-draft）及其 Rust 参考实现，以一个 MCP stdio 服务器提供。每个结果都带容差类、后置条件检查、不可依赖字段的标注、带修复补丁的结构化错误，以及可重放的收据。改动历史见 `CHANGELOG.md`；给 AI agent 的入口见 `AGENTS.md`。
+面向 AI Agent 的工程计算算子接口规范（v0.4.26-draft）及其 Rust 参考实现，以一个 MCP stdio 服务器提供。每个结果都带容差类、后置条件检查、不可依赖字段的标注、带修复补丁的结构化错误，以及可重放的收据。改动历史见 `CHANGELOG.md`；给 AI agent 的入口见 `AGENTS.md`。
 
 ## 目标与进度
 
@@ -13,18 +13,18 @@
 | 信号 | 15 | 3 |
 | 多项式、插值、拟合 | 9 | 4 |
 | 微积分与 ODE | 10 | 4 |
-| 非线性方程与优化 | 10 | 5 |
+| 非线性方程与优化 | 10 | 7 |
 | 统计 | 8 | 0 |
-| 合计 | 102 | 52（51%） |
+| 合计 | 102 | 54（53%） |
 
-这 52 个函数由 49 个 AEOI 算子提供：
+这 54 个函数由 51 个 AEOI 算子提供：
 
 - 控制（21 个）：`control.lti.{convert, step, impulse, lsim, bode, poles_zeros, c2d, pade, series, parallel, feedback, stepinfo}`、`control.analysis.{margin, ctrb_obsv, loopsens}`、`control.design.{lqr, dlqr, place, pid, pidtune}`、`control.math.lyap`
 - 信号：`signal.spectral.fft`、`signal.design.butter`、`signal.filter.filter`
 - 线性代数：`linalg.system.solve`、`linalg.matrix.{inv, det, pinv, norm, cond}`、`linalg.subspace.{rank, basis}`、`linalg.decomp.{lu, qr, chol, eig, svd}`
 - 插值、拟合与多项式：`interp.grid.interp1`、`fit.poly.polyfit`、`fit.poly.polyval`、`fit.poly.roots`
 - 微积分与 ODE：`ode.ivp.solve`、`calculus.quadrature.integral`、`calculus.quadrature.trapz`
-- 非线性方程与优化：`nonlinear.root.fzero`、`nonlinear.system.fsolve`、`optim.linear.linprog`、`optim.local.fmincon`、`optim.local.fminsearch`
+- 非线性方程与优化：`nonlinear.root.fzero`、`nonlinear.system.fsolve`、`optim.linear.linprog`、`optim.quadratic.quadprog`、`optim.local.fmincon`、`optim.local.fminsearch`、`optim.scalar.fminbnd`
 
 所有算子的数值计算都调用 `aeoi-core::kernels` 里的 25 个共享内核（LU/QR/Cholesky、SVD、实 Schur 与特征分解、FFT、补偿求和、Riccati、频率响应、自适应积分、Runge–Kutta 等）。一个算子用到另一个算子的计算时，调用的是同一段代码，不另写一份，也不改调外部库（规范 11.5）。外部数值代码只剩 nalgebra（只作矩阵容器和做矩阵乘法）和编入二进制的 Rust `libm`。
 

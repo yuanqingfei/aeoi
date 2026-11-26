@@ -981,6 +981,40 @@ B3.update({"linalg.decomp.lu":(lu,lu_in,lu_out),"linalg.decomp.qr":(qr,qr_in,qr_
 DESC.update({"linalg.decomp.lu":{"A":"方阵 [n, n]，row-major（MATLAB 是 column-major，先转置再展平）"},
  "linalg.decomp.qr":{"A":"矩阵 [m, n]，row-major","mode":"econ（缺省：Q 为 [m, min(m, n)]）或 full（Q 为 [m, m]）；高瘦矩阵的 full 输出很大"},
  "linalg.decomp.chol":{"A":"对称正定方阵 [n, n]，row-major","triangle":"upper（缺省，同 MATLAB：RᵀR = A）或 lower（L·Lᵀ = A）"}})
+
+# ---- v0.4.26: optim.quadratic.quadprog (kernel qp), optim.scalar.fminbnd (kernel bracket)
+V426="0.4.0"
+qpm=man("optim.quadratic.quadprog","Convex quadratic programming","凸二次规划（= MATLAB quadprog）：min ½xᵀHx + fᵀx，s.t. A·x ≤ b、Aeq·x = beq、lb ≤ x ≤ ub。H 必须正定（严格凸）：最优解唯一，而且是全局最优。H 不对称时按 (H + Hᵀ)/2 处理（目标不变）并发警告。有效集法（可行起点由线性规划内核给出），与 fmincon 的 SQP 子问题同一内核；给出全部乘子（MATLAB 的分组与符号）并用 KKT 残差验证。","analysis",["optimization","quadratic","quadprog","qp","convex"],
+ ["H 为 [n, n] 对称正定（不对称时取对称部分）","系数有限","变量个数 ≤ max_variables（稠密）"],["半正定或不定的 H（非严格凸、非凸 QP，以后的方法）","大规模稀疏 QP","整数变量"],
+ "H 先对称化为 (H + Hᵀ)/2（不对称超出 10·n·u·max|h_ij| 时 W.VALIDATION.SYMMETRIZED）；正定性用 Cholesky 检验（与 linalg.decomp.chol 同一内核），失败报 E.DOMAIN.NOT_POSITIVE_DEFINITE。有限的 lb、ub 化为不等式行 −x_j ≤ −lb_j、x_j ≤ ub_j。原始有效集法：可行起点由两阶段单纯形（LP 内核，零目标）给出；每步解等式约束的 KKT 系统（LU 内核），工作集的独立性用 QR 内核检验；步长取阻挡约束；s = 0 时最负的不等式乘子出集，全部 ≥ 0 即最优。乘子按 MATLAB 约定：Hx + f + Aᵀλ_ineqlin + Aeqᵀλ_eqlin − λ_lower + λ_upper = 0。KKT 残差相对数据尺度 ≤ 1e-9",
+ [{"type":"textbook","cite":"J. Nocedal, S. J. Wright, Numerical Optimization, 2nd ed., Springer 2006, §16.5（有效集法）"},
+  {"type":"textbook","cite":"R. Fletcher, Practical Methods of Optimization, 2nd ed., Wiley 1987, §10.3"}],
+ "qp::solve (primal active set; LP start; LU / QR kernels)","T1",{"max_variables":500,"max_iterations":100000},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.NON_FINITE","E.DOMAIN.NOT_POSITIVE_DEFINITE","E.DOMAIN.INFEASIBLE","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
+ ["W.VALIDATION.SYMMETRIZED"],sparse={},ver=V426,backend=BACK_NUM("qp::solve"))
+qp_in=ins("optim.quadratic.quadprog",{"H":ROWS,"f":VEC,"A":ROWS,"b":VEC,"Aeq":ROWS,"beq":VEC,"lb":BND,"ub":BND},["H","f"],ver=V426)
+qp_out=outs("optim.quadratic.quadprog",{"x":{"type":"array"},"fval":{"type":["number","string"]},"lambda":{"type":"object","description":"乘子（MATLAB 约定）：Hx + f + Aᵀ·ineqlin + Aeqᵀ·eqlin − lower + upper = 0；ineqlin、lower、upper ≥ 0"},
+ "iterations":{"type":"integer"},"bounds_used":{"type":"object","description":"实际使用的 lb、ub（缺省为 ±Inf）"},"symmetrized":{"type":"boolean","description":"H 是否因不对称而被替换为 (H + Hᵀ)/2"}},
+ ["x","fval","lambda","iterations","bounds_used","symmetrized"],ver=V426)
+fmb=man("optim.scalar.fminbnd","Bounded scalar minimization","在区间 [x1, x2] 上求单变量函数的极小（= MATLAB fminbnd）：f 用 3.15 的表达式语言写。Brent 方法（黄金分割 + 抛物插值，FMM fmin，MATLAB fminbnd 的算法），容差缺省同 MATLAB（tol_x = 1e-4，求值上限 500）。结果只是局部极小：之后在两端点与 101 个等距点上探测 f，发现更低的点时警告并给出该点。","analysis",["optimization","fminbnd","scalar","minimization","brent","golden-section"],
+ ["f 在区间上连续","x1 < x2"],["全局极小的保证（只给局部极小，并做网格探测）","多变量（optim.local.fminsearch、fmincon）","不连续的 f"],
+ "Brent 极小化（Brent 1973 Ch. 5；Forsythe–Malcolm–Moler fmin；MATLAB fminbnd）：c = (3 − √5)/2，x = v = w = x1 + c(x2 − x1)；tol1 = √ε·|x| + tol_x/3，tol2 = 2·tol1；|x − (a + b)/2| ≤ tol2 − (b − a)/2 时停止；抛物步满足 |p| < |q·r/2| 且落在 (a, b) 内时采用，否则黄金分割步；步长至少 tol1。之后的全局探测：f(x1)、f(x2) 与 x1 + k(x2 − x1)/100（k = 0 … 100）",
+ [{"type":"textbook","cite":"R. P. Brent, Algorithms for Minimization without Derivatives, Prentice-Hall 1973, Ch. 5"},
+  {"type":"textbook","cite":"G. E. Forsythe, M. A. Malcolm, C. B. Moler, Computer Methods for Mathematical Computations, Prentice-Hall 1977, §8.2（fmin）"}],
+ "bracket::fmin (Brent golden section + parabolic)","T2",{"max_evaluations":500,"max_expression_length":4096,"probe_points":101},
+ ["E.VALIDATION.SCHEMA","E.VALIDATION.RANGE","E.VALIDATION.EXPRESSION","E.NUMERICAL.NON_FINITE_EVALUATION","E.NUMERICAL.NO_CONVERGENCE","E.RESOURCE.TIMEOUT","E.INTERNAL.PANIC"],
+ ["W.ACCURACY.BETTER_POINT_FOUND"],sparse={},ver=V426,backend=BACK_NUM("bracket::fmin"))
+fmb_in=ins("optim.scalar.fminbnd",{"expression":EXPR,"variable":dict(NAME,default="x",**{"x-aeoi-provenance":"convention"}),"params":PARAMS,
+ "interval":{"type":"array","items":{"type":"number"},"minItems":2,"maxItems":2,"x-aeoi-provenance":"supplied"},
+ "tol_x":{"type":"number","exclusiveMinimum":0,"default":1e-4,"x-aeoi-provenance":"convention"},
+ "max_evaluations":{"type":"integer","minimum":1,"maximum":100000,"default":500,"x-aeoi-provenance":"convention"}},["expression","interval"],ver=V426)
+fmb_out=outs("optim.scalar.fminbnd",{"x":{"type":"number"},"fval":{"type":"number"},"interval":{"type":"array","description":"回显 [x1, x2]"},
+ "final_bracket":{"type":"array","description":"Brent 结束时的 [a, b]：f 在区间上单峰时极小点在其中"},"iterations":{"type":"integer"},"evaluations":{"type":"integer","description":"Brent 的求值次数（不含之后的探测）"},
+ "tol_x":{"type":"number"},"max_evaluations":{"type":"integer"},"best_probe":{"type":"object","description":"探测点中 f 最小的点 {x, f}"}},
+ ["x","fval","interval","final_bracket","iterations","evaluations","tol_x","max_evaluations","best_probe"],ver=V426)
+B3.update({"optim.quadratic.quadprog":(qpm,qp_in,qp_out),"optim.scalar.fminbnd":(fmb,fmb_in,fmb_out)})
+DESC.update({"optim.quadratic.quadprog":{"H":"二次项矩阵 [n, n]（每行一个数组），对称正定；不对称时取 (H + Hᵀ)/2","f":"一次项系数 [n]","A":"不等式约束矩阵，每行一个约束 A·x ≤ b","b":"不等式右端","Aeq":"等式约束矩阵","beq":"等式右端","lb":"下界 [n]，无界写 \"-Inf\"；缺省全部无下界（同 MATLAB）","ub":"上界 [n]，无界写 \"Inf\""},
+ "optim.scalar.fminbnd":{"expression":"f(x)，3.15 表达式语言；求极小","variable":"自变量名（缺省 x）","params":"参数名 → 数值","interval":"搜索区间 [x1, x2]，x1 < x2（端点本身不被 Brent 求值，同 MATLAB）","tol_x":"x 的绝对容差（缺省 1e-4，同 MATLAB TolX）","max_evaluations":"Brent 的求值上限（缺省 500，同 MATLAB MaxFunEvals）"}})
 ALL_OPS={"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2|B3
 for op,props in DESC.items():
     for (m_,i_,o_) in [ALL_OPS[op]]:
@@ -1061,6 +1095,10 @@ RECEIPT["linalg.decomp.qr"]={"method_id":"aeoi:qr:householder-signfix","assumpti
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["reconstructs","orthonormal","all_finite"]}
 RECEIPT["linalg.decomp.chol"]={"method_id":"aeoi:chol:column","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("symmetric","A 对称（舍入以内）","error:E.VALIDATION.NOT_SYMMETRIC"),A("positive_definite","A 正定","error:E.DOMAIN.NOT_POSITIVE_DEFINITE")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["reconstructs","all_finite"]}
+RECEIPT["optim.quadratic.quadprog"]={"method_id":"aeoi:quadprog:active-set","assumptions":[A("finite","所有数据有限","error:E.VALIDATION.NON_FINITE"),A("convex","H 正定（严格凸）","error:E.DOMAIN.NOT_POSITIVE_DEFINITE"),A("feasible","约束有可行解","error:E.DOMAIN.INFEASIBLE"),A("global","H 正定时最优解唯一且是全局最优","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["kkt","all_finite"]}
+RECEIPT["optim.scalar.fminbnd"]={"method_id":"aeoi:fminbnd:brent","assumptions":[A("expression","f 是合法的 3.15 表达式","error:E.VALIDATION.EXPRESSION"),A("continuous","f 在区间上连续","caller"),A("local_only","结果只是局部极小；全局性只在 101 个探测点上抽查","check:grid_probe"),A("tolerance","x 只精确到 tol_x（缺省 1e-4）","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["probe_local_minimum","grid_probe","all_finite"]}
 RECEIPT["fit.poly.polyval"]={"method_id":"aeoi:polyval:compensated-horner","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("no_overflow","求值过程不溢出","error:E.NUMERICAL.NON_FINITE_EVALUATION"),A("no_underflow","误差界不考虑下溢（结果的量级在 1e-290 以上时成立）","caller"),A("coefficients_exact","误差界针对给定的 f64 系数；系数本身的误差经 condition 放大","caller")],
    "exactness":{"class":"approximate","bound_kind":"rigorous"},"postconditions":["horner_consistent"]}
 RECEIPT["fit.poly.roots"]={"method_id":"aeoi:roots:companion-eig-newton-inclusion","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("nonzero","p 不是零多项式","error:E.DOMAIN.ZERO_POLYNOMIAL"),A("coefficients_exact","根与半径针对给定的 f64 系数；系数本身的误差另经根的条件数放大","caller"),A("clusters","簇内各根的位置不能单独确定","warning:W.ACCURACY.CLUSTERED_ROOTS")],
@@ -1107,6 +1145,7 @@ COVERAGE.update({"control.design.pid":{"formula_matches":"test_points"},"control
  "ode.ivp.solve":{"tolerance_consistent":"full"},
  "linalg.system.solve":{"backward_stable":"full"},
  "linalg.matrix.inv":{"backward_stable":"full","forward_error_below_one":"full"},
+ "optim.quadratic.quadprog":{"kkt":"full"},"optim.scalar.fminbnd":{"probe_local_minimum":"test_points","grid_probe":"sampled"},
  "linalg.decomp.lu":{"reconstructs":"full","all_finite":"full"},"linalg.decomp.qr":{"reconstructs":"full","orthonormal":"full","all_finite":"full"},"linalg.decomp.chol":{"reconstructs":"full","all_finite":"full"},
  "linalg.subspace.rank":{"svd_reconstructs":"full","rank_well_separated":"full"},"linalg.subspace.basis":{"svd_reconstructs":"full","rank_well_separated":"full","orthonormal":"full","null_residual":"full"},
  "linalg.matrix.pinv":{"svd_reconstructs":"full","rank_well_separated":"full","penrose":"full"},"linalg.matrix.norm":{"decomposition_checked":"full","all_finite":"full"},"linalg.matrix.cond":{"decomposition_checked":"full"},"linalg.matrix.det":{"significant":"full"},
@@ -1140,6 +1179,8 @@ GUARDS["linalg.matrix.cond"]={"decomposition_checked":["/cond","/rcond"]}
 GUARDS["linalg.decomp.lu"]={"reconstructs":["/L","/U","/perm"]}
 GUARDS["linalg.decomp.qr"]={"reconstructs":["/Q","/R"],"orthonormal":["/Q"]}
 GUARDS["linalg.decomp.chol"]={"reconstructs":["/R"]}
+GUARDS["optim.quadratic.quadprog"]={"kkt":["/x","/fval","/lambda"]}
+GUARDS["optim.scalar.fminbnd"]={"probe_local_minimum":["/x","/fval"],"grid_probe":["/x","/fval"]}
 GUARDS["fit.poly.roots"]={"backward_stable":["/roots","/error_radius"],"radii_finite":["/error_radius","/multiplicity"]}
 GUARDS["calculus.quadrature.integral"]={"tolerance_met":["/value","/error_estimate"],"refinement_consistent":["/value","/error_estimate"]}
 GUARDS["optim.linear.linprog"]={"kkt":["/x","/fval","/lambda"]}

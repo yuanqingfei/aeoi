@@ -1,0 +1,35 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "optim.scalar.fminbnd",
+ "operator_version": "0.4.0",
+ "case_family": "tight_tolerance",
+ "request": {
+  "expression": "(x - pi)^2",
+  "interval": [
+   0.0,
+   5.0
+  ],
+  "tol_x": 1e-10
+ },
+ "reference_env": {
+  "engine": "mpmath",
+  "mpmath": "1.4.1",
+  "dps": 50,
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261130,
+  "method": "quadprog: active-set enumeration with 50-digit KKT solves; fminbnd: every local minimiser by findroot on f′ at 50 digits",
+  "note": "high-precision truth; NOT MATLAB output"
+ },
+ "expected": {
+  "minima": [
+   {
+    "x": 3.141592653589793,
+    "f": 1.0215007317535786e-102
+   }
+  ],
+  "global_x": 3.141592653589793,
+  "global_f": 1.0215007317535786e-102,
+  "tol_x": 1e-10
+ }
+}

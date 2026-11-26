@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/optim.quadratic.quadprog/0.4.0/output",
+  "type": "object",
+  "required": [
+    "x",
+    "fval",
+    "lambda",
+    "iterations",
+    "bounds_used",
+    "symmetrized"
+  ],
+  "properties": {
+    "x": {
+      "type": "array"
+    },
+    "fval": {
+      "type": [
+        "number",
+        "string"
+      ]
+    },
+    "lambda": {
+      "type": "object",
+      "description": "乘子（MATLAB 约定）：Hx + f + Aᵀ·ineqlin + Aeqᵀ·eqlin − lower + upper = 0；ineqlin、lower、upper ≥ 0"
+    },
+    "iterations": {
+      "type": "integer"
+    },
+    "bounds_used": {
+      "type": "object",
+      "description": "实际使用的 lb、ub（缺省为 ±Inf）"
+    },
+    "symmetrized": {
+      "type": "boolean",
+      "description": "H 是否因不对称而被替换为 (H + Hᵀ)/2"
+    }
+  }
+}

@@ -1,7 +1,7 @@
 {
   "generated_by": "rust/aeoi-control/tests/receipt.rs",
-  "golden_successes": 1140,
-  "golden_errors": 253,
+  "golden_successes": 1156,
+  "golden_errors": 265,
   "claims_by_operator": {
     "calculus.quadrature.integral": {
       "verified": 13
@@ -148,6 +148,13 @@
     },
     "optim.local.fminsearch": {
       "verified": 5
+    },
+    "optim.quadratic.quadprog": {
+      "verified": 7
+    },
+    "optim.scalar.fminbnd": {
+      "spot_checked": 8,
+      "unverified": 1
     },
     "signal.design.butter": {
       "verified": 20

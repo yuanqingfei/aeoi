@@ -1,4 +1,4 @@
-目标共 102 个 MATLAB 函数，已覆盖 52 个（51%），由 48 个 AEOI 算子提供。共享内核 33 个：已有 25，待从算子中抽出 0，待新写 8。层号 = 1 + 依赖中最大的层号（无依赖为 0）；由 `roadmap/targets.py` 生成，改清单只改那个文件。
+目标共 102 个 MATLAB 函数，已覆盖 54 个（53%），由 50 个 AEOI 算子提供。共享内核 33 个：已有 25，待从算子中抽出 0，待新写 8。层号 = 1 + 依赖中最大的层号（无依赖为 0）；由 `roadmap/targets.py` 生成，改清单只改那个文件。
 
 **共享内核**
 
@@ -59,6 +59,7 @@
 | 2 | 线性代数 | inv | `linalg.matrix.inv` | 已有 | `dense` |
 | 2 | 线性代数 | det | `linalg.matrix.det` | 已有 | `dense` |
 | 2 | 非线性方程与优化 | fzero | `nonlinear.root.fzero` | 已有 | `bracket`, `expr` |
+| 2 | 非线性方程与优化 | fminbnd | `optim.scalar.fminbnd` | 已有 | `bracket`, `expr` |
 | 2 | 非线性方程与优化 | fminsearch | `optim.local.fminsearch` | 已有 | `expr` |
 | 2 | 信号 | conv | `signal.filter.conv` | 待做 | `fft`, `sum` |
 | 2 | 信号 | xcorr | `signal.spectral.xcorr` | 待做 | `fft` |
@@ -74,7 +75,6 @@
 | 2 | 统计 | quantile/prctile | `stats.describe.quantile` | 待做 | `stats` |
 | 2 | 统计 | cov/corrcoef | `stats.describe.cov` | 待做 | `stats`, `dense` |
 | 2 | 统计 | histcounts | `stats.describe.histcounts` | 待做 | `stats` |
-| 2 | 非线性方程与优化 | fminbnd | `optim.scalar.fminbnd` | 待做 | `bracket`, `expr` |
 | 3 | 多项式、插值、拟合 | polyfit | `fit.poly.polyfit` | 已有 | `dense`, `svd` |
 | 3 | 多项式、插值、拟合 | interp1 | `interp.grid.interp1` | 已有 | `spline` |
 | 3 | 控制 | ctrb/obsv | `control.analysis.ctrb_obsv` | 已有 | `svd` |
@@ -96,12 +96,12 @@
 | 4 | 控制 | place | `control.design.place` | 已有 | `cdense`, `svd`, `eig` |
 | 4 | 线性代数 | eig | `linalg.decomp.eig` | 已有 | `eig` |
 | 4 | 非线性方程与优化 | fmincon | `optim.local.fmincon` | 已有 | `qp`, `expr` |
+| 4 | 非线性方程与优化 | quadprog | `optim.quadratic.quadprog` | 已有 | `qp` |
 | 4 | 多项式、插值、拟合 | lsqcurvefit | `fit.nonlinear.lsqcurvefit` | 待做 | `lsq`, `expr` |
 | 4 | 微积分与 ODE | ode15s | `ode.ivp.solve（stiff）` | 待做 | `stiff`, `expr` |
 | 4 | 微积分与 ODE | bvp4c | `ode.bvp.solve` | 待做 | `bvp`, `expr` |
 | 4 | 微积分与 ODE | pdepe | `pde.parabolic.pdepe` | 待做 | `stiff` |
 | 4 | 统计 | fitlm | `stats.regression.fitlm` | 待做 | **regress** |
-| 4 | 非线性方程与优化 | quadprog | `optim.quadratic.quadprog` | 待做 | `qp` |
 | 4 | 非线性方程与优化 | lsqnonlin | `optim.lsq.lsqnonlin` | 待做 | `lsq`, `expr` |
 | 4 | 非线性方程与优化 | lsqlin | `optim.lsq.lsqlin` | 待做 | `qp`, `dense` |
 | 5 | 多项式、插值、拟合 | polyval | `fit.poly.polyval` | 已有 | `poly`, `sum` |
@@ -152,6 +152,6 @@
 | 信号 | 15 | 3 |
 | 多项式、插值、拟合 | 9 | 4 |
 | 微积分与 ODE | 10 | 4 |
-| 非线性方程与优化 | 10 | 5 |
+| 非线性方程与优化 | 10 | 7 |
 | 统计 | 8 | 0 |
-| 合计 | 102 | 52（51%） |
+| 合计 | 102 | 54（53%） |

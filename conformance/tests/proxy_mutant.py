@@ -216,6 +216,19 @@ def m_chol_wrong_triangle(r):               # returns the transpose of what was 
     r["R"]["data"] = [d[j * n + i] for i in range(n) for j in range(n)]
 
 
+def m_quadprog_lambda_sign(r):             # inequality multipliers with scipy's sign (negated)
+    r["lambda"]["ineqlin"] = [-v for v in r["lambda"]["ineqlin"]]
+
+
+def m_quadprog_x_wrong(r):                  # first component off by 1e-8 (relative)
+    r["x"][0] = r["x"][0] * (1 + 1e-8) + 1e-8
+
+
+def m_fminbnd_no_warning(r, env):           # drops the better-point warning and claims the grid probe passed
+    env["warnings"] = [w for w in env["warnings"] if w.get("code") != "W.ACCURACY.BETTER_POINT_FOUND"]
+    env["trust"]["checks"]["grid_probe"] = True
+
+
 def m_interp1_one_ulp(r):                   # every value one ulp up: inside the tolerance, but node hits are no longer exact
     import math
     r["yq"]["data"] = [math.nextafter(v, math.inf) if isinstance(v, float) else v for v in r["yq"]["data"]]
@@ -408,6 +421,9 @@ MUTANTS = {
     "ode_overclaims": ("ode.ivp.solve", m_ode_overclaims),
     "linsolve_x_wrong": ("linalg.system.solve", m_linsolve_x_wrong),
     "linsolve_overclaims": ("linalg.system.solve", m_linsolve_overclaims),
+    "quadprog_lambda_sign": ("optim.quadratic.quadprog", m_quadprog_lambda_sign),
+    "quadprog_x_wrong": ("optim.quadratic.quadprog", m_quadprog_x_wrong),
+    "fminbnd_no_warning": ("optim.scalar.fminbnd", m_fminbnd_no_warning),
     "lu_perm_swapped": ("linalg.decomp.lu", m_lu_perm_swapped),
     "qr_sign_not_normalised": ("linalg.decomp.qr", m_qr_sign_not_normalised),
     "chol_wrong_triangle": ("linalg.decomp.chol", m_chol_wrong_triangle),

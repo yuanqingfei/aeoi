@@ -1,0 +1,151 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "optim.quadratic.quadprog",
+  "version": "0.4.0",
+  "title": "Convex quadratic programming",
+  "description": "凸二次规划（= MATLAB quadprog）：min ½xᵀHx + fᵀx，s.t. A·x ≤ b、Aeq·x = beq、lb ≤ x ≤ ub。H 必须正定（严格凸）：最优解唯一，而且是全局最优。H 不对称时按 (H + Hᵀ)/2 处理（目标不变）并发警告。有效集法（可行起点由线性规划内核给出），与 fmincon 的 SQP 子问题同一内核；给出全部乘子（MATLAB 的分组与符号）并用 KKT 残差验证。",
+  "category": "analysis",
+  "tags": [
+    "optimization",
+    "quadratic",
+    "quadprog",
+    "qp",
+    "convex"
+  ],
+  "applicability": {
+    "preconditions": [
+      "H 为 [n, n] 对称正定（不对称时取对称部分）",
+      "系数有限",
+      "变量个数 ≤ max_variables（稠密）"
+    ],
+    "not_for": [
+      "半正定或不定的 H（非严格凸、非凸 QP，以后的方法）",
+      "大规模稀疏 QP",
+      "整数变量"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "H 先对称化为 (H + Hᵀ)/2（不对称超出 10·n·u·max|h_ij| 时 W.VALIDATION.SYMMETRIZED）；正定性用 Cholesky 检验（与 linalg.decomp.chol 同一内核），失败报 E.DOMAIN.NOT_POSITIVE_DEFINITE。有限的 lb、ub 化为不等式行 −x_j ≤ −lb_j、x_j ≤ ub_j。原始有效集法：可行起点由两阶段单纯形（LP 内核，零目标）给出；每步解等式约束的 KKT 系统（LU 内核），工作集的独立性用 QR 内核检验；步长取阻挡约束；s = 0 时最负的不等式乘子出集，全部 ≥ 0 即最优。乘子按 MATLAB 约定：Hx + f + Aᵀλ_ineqlin + Aeqᵀλ_eqlin − λ_lower + λ_upper = 0。KKT 残差相对数据尺度 ≤ 1e-9",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "J. Nocedal, S. J. Wright, Numerical Optimization, 2nd ed., Springer 2006, §16.5（有效集法）"
+      },
+      {
+        "type": "textbook",
+        "cite": "R. Fletcher, Practical Methods of Optimization, 2nd ed., Wiley 1987, §10.3"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "qp::solve",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {},
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_variables": 500,
+    "max_iterations": 100000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/optim.quadratic.quadprog/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.DOMAIN.NOT_POSITIVE_DEFINITE",
+    "E.DOMAIN.INFEASIBLE",
+    "E.NUMERICAL.NO_CONVERGENCE",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.VALIDATION.SYMMETRIZED"
+  ],
+  "mcp": {
+    "tool_name": "optim_quadratic_quadprog",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:quadprog:active-set",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有数据有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "convex",
+        "statement": "H 正定（严格凸）",
+        "enforced_by": "error:E.DOMAIN.NOT_POSITIVE_DEFINITE"
+      },
+      {
+        "id": "feasible",
+        "statement": "约束有可行解",
+        "enforced_by": "error:E.DOMAIN.INFEASIBLE"
+      },
+      {
+        "id": "global",
+        "statement": "H 正定时最优解唯一且是全局最优",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "kkt",
+      "all_finite"
+    ],
+    "coverage": {
+      "kkt": "full"
+    },
+    "guards": {
+      "kkt": [
+        "/x",
+        "/fval",
+        "/lambda"
+      ]
+    }
+  }
+}

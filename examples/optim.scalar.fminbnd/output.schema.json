@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/optim.scalar.fminbnd/0.4.0/output",
+  "type": "object",
+  "required": [
+    "x",
+    "fval",
+    "interval",
+    "final_bracket",
+    "iterations",
+    "evaluations",
+    "tol_x",
+    "max_evaluations",
+    "best_probe"
+  ],
+  "properties": {
+    "x": {
+      "type": "number"
+    },
+    "fval": {
+      "type": "number"
+    },
+    "interval": {
+      "type": "array",
+      "description": "回显 [x1, x2]"
+    },
+    "final_bracket": {
+      "type": "array",
+      "description": "Brent 结束时的 [a, b]：f 在区间上单峰时极小点在其中"
+    },
+    "iterations": {
+      "type": "integer"
+    },
+    "evaluations": {
+      "type": "integer",
+      "description": "Brent 的求值次数（不含之后的探测）"
+    },
+    "tol_x": {
+      "type": "number"
+    },
+    "max_evaluations": {
+      "type": "integer"
+    },
+    "best_probe": {
+      "type": "object",
+      "description": "探测点中 f 最小的点 {x, f}"
+    }
+  }
+}

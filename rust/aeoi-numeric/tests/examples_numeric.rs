@@ -495,3 +495,27 @@ fn decomp_examples() {
     assert_eq!(a["error"]["code"], "E.VALIDATION.NOT_SYMMETRIC");
     assert_eq!(a["error"]["remediation"][0]["requires_user_confirmation"], true);
 }
+
+/// v0.4.26: quadprog (MATLAB's documentation example; indefinite H → NOT_POSITIVE_DEFINITE) and fminbnd
+/// (sin on [0, 2π] → 3π/2; two valleys on [−2.5, 3]: the shallow one is returned and the probe flags the deeper).
+#[test]
+fn minimize_examples() {
+    let op = "optim.quadratic.quadprog";
+    let env = call(op, &read(&format!("examples/{op}/request.json")));
+    assert_eq!(env["status"], "ok", "{}", env["error"]);
+    assert_hash_on_same_platform(&env, &read(&format!("examples/{op}/response.success.json")), "quadprog example");
+    let x: Vec<f64> = env["result"]["x"].as_array().unwrap().iter().map(|v| v.as_f64().unwrap()).collect();
+    assert!((x[0] - 2.0 / 3.0).abs() < 1e-14 && (x[1] - 4.0 / 3.0).abs() < 1e-14, "{x:?}");
+    assert_eq!(call(op, &read(&format!("examples/{op}/request.error.json")))["error"]["code"], "E.DOMAIN.NOT_POSITIVE_DEFINITE");
+    let op = "optim.scalar.fminbnd";
+    for (rq, rs) in [("request.json", "response.success.json"), ("request.valleys.json", "response.valleys.json")] {
+        let env = call(op, &read(&format!("examples/{op}/{rq}")));
+        assert!(env["status"] == "ok" || env["status"] == "ok_with_warnings", "{rq}: {}", env["error"]);
+        assert_hash_on_same_platform(&env, &read(&format!("examples/{op}/{rs}")), &format!("{op} {rq}"));
+        let warned = env["warnings"].as_array().unwrap().iter().any(|w| w["code"] == "W.ACCURACY.BETTER_POINT_FOUND");
+        assert_eq!(warned, rq == "request.valleys.json", "{rq}");
+    }
+    let x = call(op, &read(&format!("examples/{op}/request.json")))["result"]["x"].as_f64().unwrap();
+    assert!((x - 1.5 * std::f64::consts::PI).abs() < 1e-4);
+    assert_eq!(call(op, &read(&format!("examples/{op}/request.error.json")))["error"]["code"], "E.VALIDATION.RANGE");
+}

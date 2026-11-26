@@ -1,0 +1,19 @@
+# Parity test spec — optim.quadratic.quadprog 0.4.0 (AEOI v0.4.26-draft)
+operator: optim.quadratic.quadprog
+references:
+  - {engine: mpmath, role: high_precision_reference, status: active, generator: scripts/golden/gen_golden_minimize.py,
+     golden_store: "golden/mpmath/optim.quadratic.quadprog/0.4.0/*.json",
+     note: "truth by active-set enumeration: every subset of inequality rows (bounds included) is solved at 50 digits; the unique primal-feasible, dual-feasible one is the optimum; degenerate optima are not written. NOT MATLAB output"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_minimize"
+tolerance_class: T1
+compare:
+  x, lambda: "max|Δ|/max(1, max|·|) ≤ 1e-12·max(1, κ₂(H)/100), every multiplier group (ineqlin, eqlin, lower, upper)"
+  warnings: "exactly the predicted set (W.VALIDATION.SYMMETRIZED for the asymmetric H)"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py (rule_quadprog). No trust.* value of the implementation is used as a tolerance
+  x, lambda: "same bound as compare"
+  recomputed: "the runner recomputes the KKT conditions from the request (stationarity Hx + f + Aᵀλ_ineqlin + Aeqᵀλ_eqlin − λ_lower + λ_upper = 0, feasibility, λ ≥ 0, complementarity; all ≤ 1e-9 relative, as QP-4) and fval = ½xᵀHx + fᵀx"
+case_families:
+  - {name: "unconstrained / MATLAB documentation example / bounds only / equality + inequality / random n = 8 (6 inequalities, 1 equality, 1 bound) / ill-conditioned H (κ 1e6)", n: 6}
+  - {name: asymmetric_H_symmetrized, n: 1, expect_warning: W.VALIDATION.SYMMETRIZED}
+  - {name: errors, n: 6, expect: "NOT_POSITIVE_DEFINITE ×2 (indefinite, semidefinite), INFEASIBLE ×2 (constraints, crossed bounds), SHAPE, SCHEMA"}

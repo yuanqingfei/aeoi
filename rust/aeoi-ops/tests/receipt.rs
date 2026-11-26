@@ -77,6 +77,11 @@ fn receipts_on_all_golden_requests() {
         if case.get("expect_postcondition_failed").is_some() {
             assert_eq!(want, "unverified", "{}: expected failed post-conditions {}", p.display(), case["expect_postcondition_failed"]);
             assert_eq!(r["evidence"]["failed"], case["expect_postcondition_failed"], "{}", p.display());
+        } else if let Some(may) = case.get("postcondition_may_fail").and_then(|v| v.as_array()) {
+            // v0.4.26 (fminbnd with several valleys): whether the post-condition fails depends on the
+            // implementation's iteration path, so it is allowed, but only for the listed post-conditions
+            let failed: Vec<Value> = r["evidence"]["failed"].as_array().cloned().unwrap_or_default();
+            assert!(failed.iter().all(|f| may.contains(f)), "{}: failed {:?}, may fail only {:?}", p.display(), failed, may);
         } else {
             assert_ne!(want, "unverified", "{}: a golden success fails post-conditions {:?}", p.display(), r["evidence"]["failed"]);
         }

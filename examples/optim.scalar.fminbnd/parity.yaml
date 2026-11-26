@@ -1,0 +1,21 @@
+# Parity test spec — optim.scalar.fminbnd 0.4.0 (AEOI v0.4.26-draft)
+operator: optim.scalar.fminbnd
+references:
+  - {engine: mpmath, role: high_precision_reference, status: active, generator: scripts/golden/gen_golden_minimize.py,
+     golden_store: "golden/mpmath/optim.scalar.fminbnd/0.4.0/*.json",
+     note: "every local minimiser of f on the interval at 50 digits (findroot on f′ from 400 starts, f″ > 0; end points where f increases inward), each checked by neighbouring values. NOT MATLAB output"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_minimize"
+tolerance_class: T2
+compare:
+  x: "within 3·(√ε·max(1, |x*|) + tol_x) of a true local minimiser x* (which valley Brent ends in is path-dependent)"
+  fval: "≥ f(x*) − 1e-12·max(1, |f(x*)|)"
+  warnings: "W.ACCURACY.BETTER_POINT_FOUND iff x* is not the global minimiser"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py (rule_fminbnd)
+  x: "same bound as compare"
+  claim: "a returned point that is not the global minimiser without W.ACCURACY.BETTER_POINT_FOUND (or with grid_probe = true) is a false claim; the warning on the global minimiser is also a failure"
+  echoed: "tol_x and max_evaluations (defaults 1e-4 and 500, FB-3)"
+case_families:
+  - {name: "cos on [3, 4] / MATLAB doc sin on [0, 2π] / parabola / cubic / boundary minimum (x·e^-x at 0) / tight tolerance 1e-10 / params", n: 7}
+  - {name: "two valleys on [−2.5, 3] (shallow valley returned, flagged) / on [−3, 3] (global returned)", n: 2}
+  - {name: errors, n: 6, expect: "RANGE ×2, NON_FINITE_EVALUATION, EXPRESSION, NO_CONVERGENCE (budget 3), SCHEMA"}

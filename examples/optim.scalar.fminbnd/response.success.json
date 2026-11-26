@@ -1,0 +1,164 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "optim.scalar.fminbnd",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "x": 4.712391081200089,
+    "fval": -0.9999999999977933,
+    "interval": [
+      0.0,
+      6.283185307179586
+    ],
+    "final_bracket": [
+      4.712357677646656,
+      4.712424484753521
+    ],
+    "iterations": 8,
+    "evaluations": 9,
+    "tol_x": 0.0001,
+    "max_evaluations": 500,
+    "best_probe": {
+      "x": 4.71238898038469,
+      "f": -1.0
+    }
+  },
+  "trust": {
+    "convergence": {
+      "applicable": true,
+      "converged": true,
+      "iterations": 8,
+      "criterion": "|x − (a + b)/2| ≤ tol2 − (b − a)/2，tol2 = 2(√ε·|x| + tol_x/3)"
+    },
+    "residual": {
+      "local_probe": {
+        "h": 0.00010021066029732825,
+        "f_left": -0.9999999951872292,
+        "f_right": -0.999999994766181
+      },
+      "probe_points": 101,
+      "probe_step": 0.06283185307179587
+    },
+    "condition": {
+      "applicable": false
+    },
+    "error_estimate": {
+      "x_abs": 3.340355343262047e-05,
+      "basis": "f 在最终区间上单峰时，极小点在 [a, b] 内（非严格：f 不单峰时不成立）"
+    },
+    "checks": {
+      "probe_local_minimum": true,
+      "grid_probe": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "C",
+    "credentials": null,
+    "derived": {
+      "optimum": "local",
+      "probe_extra_evaluations": 103
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:fminbnd:brent",
+      "routine": "bracket::fmin",
+      "provenance": "aeoi://operators/optim.scalar.fminbnd/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "expression",
+        "statement": "f 是合法的 3.15 表达式",
+        "enforced_by": "error:E.VALIDATION.EXPRESSION"
+      },
+      {
+        "id": "continuous",
+        "statement": "f 在区间上连续",
+        "enforced_by": "caller"
+      },
+      {
+        "id": "local_only",
+        "statement": "结果只是局部极小；全局性只在 101 个探测点上抽查",
+        "enforced_by": "check:grid_probe"
+      },
+      {
+        "id": "tolerance",
+        "statement": "x 只精确到 tol_x（缺省 1e-4）",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "x_abs": 3.340355343262047e-05
+      },
+      "basis": "f 在最终区间上单峰时，极小点在 [a, b] 内（非严格：f 不单峰时不成立）"
+    },
+    "evidence": {
+      "claim": "spot_checked",
+      "postconditions": {
+        "probe_local_minimum": true,
+        "grid_probe": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": {
+        "converged": true,
+        "iterations": 8
+      },
+      "accuracy_grade": "C",
+      "tolerance_class": "T2",
+      "credentials": null,
+      "coverage": {
+        "probe_local_minimum": "test_points",
+        "grid_probe": "sampled",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:6fac1daca49d9588becf03f51cf5a519ab3e30dbedddf95a5510f988137bb979",
+      "result": "sha256:5d76551887795b363edf6a8a1ceb014b2b64f58c050d703ee6a54388331ddb94",
+      "output_hash": "sha256:9846aa6c4439303fdc1adfd5c7581bf92b9ac33c913741c0a5baf2c3da3cf4b6",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of optim.scalar.fminbnd@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:4a6f18300c8edfca0610ed88ce4d0eee0ab3f274161b97b843fd9c113a63100b",
+    "output_hash": "sha256:9846aa6c4439303fdc1adfd5c7581bf92b9ac33c913741c0a5baf2c3da3cf4b6",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.18333
+  }
+}

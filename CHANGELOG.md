@@ -2,6 +2,48 @@
 
 > 从规范第 13 章移出（v0.4.18）。每个版本：起因、规范改动、已做的改动、开发中发现的问题、结果。最新的在前。
 
+## v0.4.26-draft（2026-11-26）
+
+起因：第五批，`quadprog` 与 `fminbnd`。前者直接包装 fmincon 子问题已经在用的 QP 内核，后者在 bracket 内核里加 Brent 极小化。
+
+作者的决定（2026-11-26）：
+
+- `quadprog` 只接受正定的 H。
+- `quadprog` 遇到不对称的 H 时按 (H + Hᵀ)/2 求解并发警告（目标不变）。
+- `fminbnd` 的容差缺省同 MATLAB（1e-4，500 次求值）。
+- `fminbnd` 结束后在端点与 101 个等距点上探测；发现更深的谷时警告。
+
+**规范改动**
+
+| # | 位置 | 改动 | 理由 |
+|---|---|---|---|
+| 1 | `profiles/10.45-quadprog.md`（新） | QP-1 – QP-6；严格凸 ⇒ `derived.optimum = global` | 与 fmincon 的“只是局部最优”区分开 |
+| 2 | `profiles/10.46-fminbnd.md`（新） | FB-1 – FB-6；网格探测作为 `sampled` 后置条件，claim 最多 `spot_checked` | 结果只是局部极小，MATLAB 不提醒 |
+| 3 | 5.1 | 新码 `W.ACCURACY.BETTER_POINT_FOUND` | — |
+| 4 | 第 10 章索引 | 加 10.45、10.46 | — |
+
+**已做的改动**
+
+| 位置 | 改动 |
+|---|---|
+| `kernels::bracket` | 新增 `fmin`（Brent 极小化，FMM fmin / MATLAB fminbnd） |
+| `aeoi-numeric/src/minimize.rs`（新） | 两个算子；quadprog 用 linprog 的输入解析（`optim.rs` 的辅助函数改为 crate 内可见） |
+| `scripts/golden/gen_golden_minimize.py`（新） | quadprog 真值：枚举起作用集、50 位 KKT（与有效集路径无关）；fminbnd 真值：全部局部极小点 |
+| `conformance/rules_numeric.py` | `rule_quadprog`（对真值；运行器重算 KKT；fval 用有理数精确重算）、`rule_fminbnd`（返回点是真局部极小；不是全局时必须有警告） |
+| 代理变异 | `quadprog_lambda_sign`、`quadprog_x_wrong`、`fminbnd_no_warning`（共 69 种） |
+
+**开发中发现的问题**
+
+- 极小在端点时（x·e⁻ˣ 在 [0, 1] 上），局部探测把探测点截到端点上，f(0) 更低，后置条件误判；改为跳过区间外的一侧（FB-5）。
+- 生成脚本在 x = 1 处把 f′ 的数值舍入（−1e-50）当成“向内增大”，把一个极大点当成边界极小；端点判据加了余量。
+- 收据测试要求 golden 的成功用例不得有失败的后置条件，除非用例写明 `expect_postcondition_failed`；而多谷用例上 `grid_probe` 是否失败取决于迭代路径，不能预测。新增 golden 字段 `postcondition_may_fail`（只供参考实现的收据测试读，列出允许失败的后置条件）。
+- 运行器在浮点里重算 fval：x 量级 7e5、κ₂(H) = 1e6 时，重算本身差 6e-12，比算子还不准；改为有理数精确重算，并以各项绝对值之和归一。
+
+**结果**
+
+- 28 个新 golden 用例（16 个成功、12 个错误）全部通过；quadprog 最坏用掉容差 1.3e-3，fminbnd 0.22。
+- 目标进度 54 / 102（53%），51 个算子。
+
 ## v0.4.25-draft（2026-11-26）
 
 起因：第二实现第三轮。一个只读规范的子代理在 Python 第二实现里写了 `rank`、`pinv`、`qr`、`chol`、`det`，数值内核自写（Jacobi SVD、Householder QR、Cholesky、LU），结果路径上不调用 numpy.linalg / scipy.linalg。全部 14 个算子 620 / 0 / 0，变异测试通过。它报告了 14 处发现（PY-66 – PY-79），其中阻塞 2 处、矛盾 2 处，核实后都成立。

@@ -1,0 +1,172 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "optim.quadratic.quadprog",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "x": [
+      0.6666666666666667,
+      1.3333333333333333
+    ],
+    "fval": -8.222222222222223,
+    "lambda": {
+      "ineqlin": [
+        3.1111111111111107,
+        0.44444444444444386,
+        0.0
+      ],
+      "eqlin": [],
+      "lower": [
+        0.0,
+        0.0
+      ],
+      "upper": [
+        0.0,
+        0.0
+      ]
+    },
+    "iterations": 2,
+    "bounds_used": {
+      "lb": [
+        "-Inf",
+        "-Inf"
+      ],
+      "ub": [
+        "Inf",
+        "Inf"
+      ]
+    },
+    "symmetrized": false
+  },
+  "trust": {
+    "convergence": {
+      "applicable": true,
+      "converged": true,
+      "iterations": 2
+    },
+    "residual": {
+      "primal_infeasibility": 0.0,
+      "dual_infeasibility": 0.0,
+      "complementarity": 8.22387425648263e-18,
+      "stationarity": 2.590520390792032e-16,
+      "threshold": 1e-09,
+      "definition": "相对数据尺度的 KKT 残差：Hx + f + Aᵀλ_ineqlin + Aeqᵀλ_eqlin − λ_lower + λ_upper = 0，λ ≥ 0，λ·松弛 = 0；驻定与互补以 max(1, ‖Hx + f‖∞, ‖f‖∞) 归一，原始可行以 max(1, |右端|) 归一"
+    },
+    "condition": {
+      "applicable": false
+    },
+    "error_estimate": {
+      "applicable": false,
+      "note": "H 正定：最优解唯一且是全局最优；KKT 残差就是验证"
+    },
+    "checks": {
+      "kkt": true,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "optimum": "global",
+      "method": "原始有效集法；可行起点由 LP 内核给出，KKT 系统用 LU 内核，工作集独立性用 QR 内核"
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:quadprog:active-set",
+      "routine": "qp::solve",
+      "provenance": "aeoi://operators/optim.quadratic.quadprog/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有数据有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "convex",
+        "statement": "H 正定（严格凸）",
+        "enforced_by": "error:E.DOMAIN.NOT_POSITIVE_DEFINITE"
+      },
+      {
+        "id": "feasible",
+        "statement": "约束有可行解",
+        "enforced_by": "error:E.DOMAIN.INFEASIBLE"
+      },
+      {
+        "id": "global",
+        "statement": "H 正定时最优解唯一且是全局最优",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": null
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "kkt": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": {
+        "converged": true,
+        "iterations": 2
+      },
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "kkt": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:054eb23259abd8bf9629796614fc8c949a2c83c985a97b63e2171b51f700347d",
+      "result": "sha256:dadc44ffe39cc0ae7592a4bd8aab757edd38da55fb2acdd5675c384560ee102c",
+      "output_hash": "sha256:f7d940317d32197cff4e914452d5076331f2e028ce8c251e47779716436aaca5",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of optim.quadratic.quadprog@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:a2bf8b8b8dd6ed6dc3cc09850cd1606ffead39c8088ece9918350f7340136cf9",
+    "output_hash": "sha256:f7d940317d32197cff4e914452d5076331f2e028ce8c251e47779716436aaca5",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.21151
+  }
+}

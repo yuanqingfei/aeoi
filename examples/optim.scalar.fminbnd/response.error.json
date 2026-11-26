@@ -1,0 +1,48 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "optim.scalar.fminbnd",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.VALIDATION.RANGE",
+    "category": "validation",
+    "retryable": true,
+    "message": "interval = [1, -1]：要求有限的 x1 < x2。",
+    "agent_hint": "按升序给出区间两端。",
+    "details": {
+      "path": "/interval"
+    },
+    "remediation": [
+      {
+        "id": "swap",
+        "kind": "modify_input",
+        "description": "交换两端",
+        "confidence": "high",
+        "requires_user_confirmation": false,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/interval",
+            "value": [
+              -1.0,
+              1.0
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.058705
+  }
+}

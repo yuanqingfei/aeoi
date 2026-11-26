@@ -1,0 +1,115 @@
+{
+  "operator": "optim.quadratic.quadprog",
+  "reference": "truth by active-set enumeration with 50-digit KKT solves (mpmath). Not MATLAB.",
+  "cases": 13,
+  "error_cases": 6,
+  "worst_error_over_tolerance": 0.0013380735306046353,
+  "tolerance": "max|Δx|/max(1, max|x|) and the same for every multiplier group ≤ 1e-12·max(1, κ₂(H)/100)",
+  "cases_detail": [
+    {
+      "family": "asymmetric_H_symmetrized",
+      "x_error": 0.0,
+      "lambda_error": 0.0,
+      "kappa2_H": 1.666666666666667,
+      "iterations": 2,
+      "kkt": {
+        "primal_infeasibility": 0.0,
+        "dual_infeasibility": 0.0,
+        "complementarity": 0.0,
+        "stationarity": 0.0,
+        "threshold": 1e-9,
+        "definition": "相对数据尺度的 KKT 残差：Hx + f + Aᵀλ_ineqlin + Aeqᵀλ_eqlin − λ_lower + λ_upper = 0，λ ≥ 0，λ·松弛 = 0；驻定与互补以 max(1, ‖Hx + f‖∞, ‖f‖∞) 归一，原始可行以 max(1, |右端|) 归一"
+      }
+    },
+    {
+      "family": "bounds_only",
+      "x_error": 0.0,
+      "lambda_error": 0.0,
+      "kappa2_H": 1.0,
+      "iterations": 2,
+      "kkt": {
+        "primal_infeasibility": 0.0,
+        "dual_infeasibility": 0.0,
+        "complementarity": 0.0,
+        "stationarity": 0.0,
+        "threshold": 1e-9,
+        "definition": "相对数据尺度的 KKT 残差：Hx + f + Aᵀλ_ineqlin + Aeqᵀλ_eqlin − λ_lower + λ_upper = 0，λ ≥ 0，λ·松弛 = 0；驻定与互补以 max(1, ‖Hx + f‖∞, ‖f‖∞) 归一，原始可行以 max(1, |右端|) 归一"
+      }
+    },
+    {
+      "family": "equality_and_inequality",
+      "x_error": 1.8908485888147197e-16,
+      "lambda_error": 2.301484226230251e-16,
+      "kappa2_H": 2.719718449945218,
+      "iterations": 4,
+      "kkt": {
+        "primal_infeasibility": 3.3306690738754696e-16,
+        "dual_infeasibility": 0.0,
+        "complementarity": 0.0,
+        "stationarity": 1.1102230246251565e-16,
+        "threshold": 1e-9,
+        "definition": "相对数据尺度的 KKT 残差：Hx + f + Aᵀλ_ineqlin + Aeqᵀλ_eqlin − λ_lower + λ_upper = 0，λ ≥ 0，λ·松弛 = 0；驻定与互补以 max(1, ‖Hx + f‖∞, ‖f‖∞) 归一，原始可行以 max(1, |右端|) 归一"
+      }
+    },
+    {
+      "family": "ill_conditioned_H",
+      "x_error": 3.640266676887087e-12,
+      "lambda_error": 0.0,
+      "kappa2_H": 999999.9999780923,
+      "iterations": 5,
+      "kkt": {
+        "primal_infeasibility": 0.0,
+        "dual_infeasibility": 0.0,
+        "complementarity": 0.0,
+        "stationarity": 0.0,
+        "threshold": 1e-9,
+        "definition": "相对数据尺度的 KKT 残差：Hx + f + Aᵀλ_ineqlin + Aeqᵀλ_eqlin − λ_lower + λ_upper = 0，λ ≥ 0，λ·松弛 = 0；驻定与互补以 max(1, ‖Hx + f‖∞, ‖f‖∞) 归一，原始可行以 max(1, |右端|) 归一"
+      }
+    },
+    {
+      "family": "matlab_doc_example",
+      "x_error": 8.326672684688674e-17,
+      "lambda_error": 1.7842870038618588e-16,
+      "kappa2_H": 6.854101966249685,
+      "iterations": 2,
+      "kkt": {
+        "primal_infeasibility": 0.0,
+        "dual_infeasibility": 0.0,
+        "complementarity": 8.22387425648263e-18,
+        "stationarity": 2.590520390792032e-16,
+        "threshold": 1e-9,
+        "definition": "相对数据尺度的 KKT 残差：Hx + f + Aᵀλ_ineqlin + Aeqᵀλ_eqlin − λ_lower + λ_upper = 0，λ ≥ 0，λ·松弛 = 0；驻定与互补以 max(1, ‖Hx + f‖∞, ‖f‖∞) 归一，原始可行以 max(1, |右端|) 归一"
+      }
+    },
+    {
+      "family": "random_8",
+      "x_error": 1.2212453270876722e-15,
+      "lambda_error": 1.3380735306046353e-15,
+      "kappa2_H": 32.672657069590855,
+      "iterations": 15,
+      "kkt": {
+        "primal_infeasibility": 1.27675647831893e-15,
+        "dual_infeasibility": 0.0,
+        "complementarity": 1.1071632834800883e-17,
+        "stationarity": 9.937189800599004e-17,
+        "threshold": 1e-9,
+        "definition": "相对数据尺度的 KKT 残差：Hx + f + Aᵀλ_ineqlin + Aeqᵀλ_eqlin − λ_lower + λ_upper = 0，λ ≥ 0，λ·松弛 = 0；驻定与互补以 max(1, ‖Hx + f‖∞, ‖f‖∞) 归一，原始可行以 max(1, |右端|) 归一"
+      }
+    },
+    {
+      "family": "unconstrained",
+      "x_error": 0.0,
+      "lambda_error": 0.0,
+      "kappa2_H": 2.783611624891225,
+      "iterations": 1,
+      "kkt": {
+        "primal_infeasibility": 0.0,
+        "dual_infeasibility": 0.0,
+        "complementarity": 0.0,
+        "stationarity": 1.1102230246251565e-16,
+        "threshold": 1e-9,
+        "definition": "相对数据尺度的 KKT 残差：Hx + f + Aᵀλ_ineqlin + Aeqᵀλ_eqlin − λ_lower + λ_upper = 0，λ ≥ 0，λ·松弛 = 0；驻定与互补以 max(1, ‖Hx + f‖∞, ‖f‖∞) 归一，原始可行以 max(1, |右端|) 归一"
+      }
+    }
+  ]
+}

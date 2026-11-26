@@ -165,12 +165,12 @@ add("微积分与 ODE", [
 add("非线性方程与优化", [
     ("fzero",     "nonlinear.root.fzero",      "done", ["bracket", "expr"]),
     ("fsolve",    "nonlinear.system.fsolve",   "done", ["newton", "expr"]),
-    ("fminbnd",   "optim.scalar.fminbnd",      "todo", ["bracket", "expr"]),
+    ("fminbnd",   "optim.scalar.fminbnd",      "done", ["bracket", "expr"]),
     ("fminsearch","optim.local.fminsearch",    "done", ["expr"]),
     ("fminunc",   "optim.local.fminunc",       "todo", ["quasi", "expr"]),
     ("fmincon",   "optim.local.fmincon",       "done", ["qp", "expr"]),
     ("linprog",   "optim.linear.linprog",      "done", ["lp"]),
-    ("quadprog",  "optim.quadratic.quadprog",  "todo", ["qp"]),
+    ("quadprog",  "optim.quadratic.quadprog",  "done", ["qp"]),
     ("lsqnonlin", "optim.lsq.lsqnonlin",       "todo", ["lsq", "expr"]),
     ("lsqlin",    "optim.lsq.lsqlin",          "todo", ["qp", "dense"]),
 ])
