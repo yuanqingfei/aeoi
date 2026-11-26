@@ -5,21 +5,13 @@ use aeoi_core::error::{ask_user, modify_input, OpError, Warning};
 use aeoi_core::linalg::{cond2, sort_poles, symmetrize};
 use aeoi_core::lti::eigenvalues;
 use aeoi_core::matrix::{complex_vector, dense_real};
-use aeoi_core::sysalg::{lyap_bs, pbh, LyapKind};
+use aeoi_core::kernels::riccati::{dare_residual, newton_hewer, sda, SdaErr};
+use aeoi_core::sysalg::pbh;
 use aeoi_core::{num, opt_num, ExecCtx, HostCtx, Operator, Output};
 use nalgebra::DMatrix;
 use serde_json::{json, Value};
 
 operator_struct!(Dlqr, "control.design.dlqr");
-
-/// DARE residual AᵀXA − X − (AᵀXB+N)(R+BᵀXB)⁻¹(BᵀXA+Nᵀ) + Q and the gain K.
-fn dare_residual(a: &DMatrix<f64>, b: &DMatrix<f64>, q: &DMatrix<f64>, r: &DMatrix<f64>, n: &DMatrix<f64>, x: &DMatrix<f64>) -> Option<(DMatrix<f64>, DMatrix<f64>)> {
-    let rb = r + b.transpose() * x * b;
-    let rhs = b.transpose() * x * a + n.transpose();
-    let k = aeoi_core::kernels::nalg::cholesky(&rb).map(|c| aeoi_core::kernels::nalg::chol_solve(&c, &rhs)).or_else(|| aeoi_core::kernels::nalg::solve(&rb, &rhs))?;
-    let res = a.transpose() * x * a - x - (a.transpose() * x * b + n) * &k + q;
-    Some((symmetrize(&res), k))
-}
 
 impl Operator for Dlqr {
     type Input = LqrInput;
@@ -77,60 +69,20 @@ impl Operator for Dlqr {
                 }
             }
         }
-        // SDA
-        let id = DMatrix::<f64>::identity(nx, nx);
-        let (mut ak, mut gk, mut hk) = (abar.clone(), g.clone(), qbar.clone());
+        // SDA (shared Riccati kernel)
         let max_it = self.meta.manifest["limits"]["max_sda_iterations"].as_u64().unwrap_or(100) as usize;
-        let (mut iters, mut last, mut converged) = (0usize, f64::INFINITY, false);
-        while iters < max_it {
-            ctx.check()?;
-            iters += 1;
-            let w = &id + &gk * &hk;
-            let wa = aeoi_core::kernels::nalg::solve(&w, &ak).ok_or_else(|| OpError::new("E.NUMERICAL.SINGULAR", "SDA 迭代中 I + G·H 奇异。", "问题极度病态；尝试状态尺度归一化或在 Q 中加正则项。").path("/Q"))?;
-            let wg = aeoi_core::kernels::nalg::solve(&w, &gk).unwrap();
-            let a_next = &ak * &wa;
-            let g_next = symmetrize(&(&gk + &ak * wg * ak.transpose()));
-            let h_next = symmetrize(&(&hk + ak.transpose() * &hk * &wa));
-            let diff = (&h_next - &hk).norm() / h_next.norm().max(f64::MIN_POSITIVE);
-            ak = a_next;
-            gk = g_next;
-            hk = h_next;
-            if !hk.iter().all(|v| v.is_finite()) {
-                break;
-            }
-            if diff <= 1e-15 || (diff >= last && last <= 1e-12) {
-                converged = true;
-                last = diff.min(last);
-                break;
-            }
-            last = diff;
-        }
-        if !converged && !(last <= 1e-8) {
-            return Err(OpError::new("E.NUMERICAL.NO_CONVERGENCE", format!("SDA 迭代 {iters} 步未收敛（最后相对变化 {last:.2e}）。"), "问题可能极度病态（闭环特征值接近单位圆）。尝试状态尺度归一化、在 Q 中加正则项，或增大 exec.timeout_ms。")
+        let (hk, iters, last) = sda(&abar, &g, &qbar, max_it, &|| ctx.check()).map_err(|e| match e {
+            SdaErr::Abort(e) => e,
+            SdaErr::Singular => OpError::new("E.NUMERICAL.SINGULAR", "SDA 迭代中 I + G·H 奇异。", "问题极度病态；尝试状态尺度归一化或在 Q 中加正则项。").path("/Q"),
+            SdaErr::NoConvergence(iters, last) => OpError::new("E.NUMERICAL.NO_CONVERGENCE", format!("SDA 迭代 {iters} 步未收敛（最后相对变化 {last:.2e}）。"), "问题可能极度病态（闭环特征值接近单位圆）。尝试状态尺度归一化、在 Q 中加正则项，或增大 exec.timeout_ms。")
                 .detail("iterations", json!(iters)).detail("last_relative_change", json!(last))
-                .remedy(ask_user("ask", "与用户确认是否可以对模型做尺度归一化")));
-        }
-        let mut s = symmetrize(&hk);
-        let (mut res, mut k) = dare_residual(&a, &b, &q, &r, &nm, &s).ok_or_else(|| OpError::new("E.NUMERICAL.SINGULAR", "R + BᵀSB 奇异。", "检查 R。").path("/R"))?;
+                .remedy(ask_user("ask", "与用户确认是否可以对模型做尺度归一化")),
+        })?;
+        let s = symmetrize(&hk);
+        let (res, k) = dare_residual(&a, &b, &q, &r, &nm, &s).ok_or_else(|| OpError::new("E.NUMERICAL.SINGULAR", "R + BᵀSB 奇异。", "检查 R。").path("/R"))?;
         let sda_res = res.norm();
-        // Newton–Hewer refinement: X = A_kᵀ X A_k + [I; −K]ᵀ W [I; −K]
-        let mut newton = 0;
-        for _ in 0..3 {
-            ctx.check()?;
-            let acl = &a - &b * &k;
-            let wq = &q - &nm * &k - k.transpose() * nm.transpose() + k.transpose() * &r * &k;
-            let Ok((x, _)) = lyap_bs(&acl.transpose(), &symmetrize(&wq), LyapKind::Discrete) else { break };
-            let x = symmetrize(&x);
-            let Some((rx, kx)) = dare_residual(&a, &b, &q, &r, &nm, &x) else { break };
-            if rx.norm() < res.norm() {
-                s = x;
-                res = rx;
-                k = kx;
-                newton += 1;
-            } else {
-                break;
-            }
-        }
+        // Newton–Hewer refinement (shared Riccati kernel)
+        let (s, res, k, newton) = newton_hewer(&a, &b, &q, &r, &nm, s, res, k, &|| ctx.check())?;
         let acl = &a - &b * &k;
         let mut cl = eigenvalues(&acl);
         sort_poles(&mut cl);

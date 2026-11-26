@@ -13,3 +13,7 @@ pub mod svd;
 pub mod sum;
 pub mod bracket;
 pub mod newton;
+pub mod quad;
+pub mod rk;
+pub mod spline;
+pub mod riccati;

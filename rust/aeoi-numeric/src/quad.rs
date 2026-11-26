@@ -11,25 +11,13 @@
 use crate::expr::{check_name, eval, expr_err, parse, parse_params, Node};
 use crate::interp1::vec1;
 use aeoi_core::error::{ask_user, modify_input, OpError, Warning};
+use aeoi_core::kernels::quad::{adaptive, bisected_value, total, AdaptErr, Map};
 use aeoi_core::kernels::sum::Dot2;
 use aeoi_core::{num, ExecCtx, HostCtx, Operator, Output};
 use serde_json::{json, Value};
 
 operator_struct!(Integral, "calculus.quadrature.integral");
 operator_struct!(Trapz, "calculus.quadrature.trapz");
-
-// QUADPACK qk15 nodes (positive half) and weights
-const XGK: [f64; 8] = [0.991455371120812639206854697526329, 0.949107912342758524526189684047851, 0.864864423359769072789712788640926, 0.741531185599394439863864773280788, 0.586087235467691130294144845693013, 0.405845151377397166906606412076961, 0.207784955007898467600689403773245, 0.0];
-const WGK: [f64; 8] = [0.022935322010529224963732008058970, 0.063092092629978553290700663189204, 0.104790010322250183839876322541518, 0.140653259715525918745189590510238, 0.169004726639267902826583426598550, 0.190350578064785409913256402421014, 0.204432940075298892414161999234649, 0.209482141084727828012999174891714];
-const WG: [f64; 4] = [0.129484966168869693270611432679082, 0.279705391489276667901467771423780, 0.381830050505118944950369775488975, 0.417959183673469387755102040816327];
-
-#[derive(Clone, Copy)]
-enum Map {
-    Finite(f64, f64),
-    Both,
-    Upper(f64), // [a, ∞)
-    Lower(f64), // (−∞, b]
-}
 
 pub struct InQ {
     expr: Node,
@@ -41,50 +29,6 @@ pub struct InQ {
     rel_tol: f64,
     abs_tol: f64,
     max_intervals: usize,
-}
-
-struct Seg {
-    lo: f64,
-    hi: f64,
-    val: f64,
-    err: f64,
-}
-
-fn gk15(f: &mut dyn FnMut(f64) -> f64, lo: f64, hi: f64) -> (f64, f64, bool) {
-    let c = 0.5 * (lo + hi);
-    let h = 0.5 * (hi - lo);
-    let fc = f(c);
-    let mut resk = fc * WGK[7];
-    let mut resg = fc * WG[3];
-    let mut resabs = resk.abs();
-    let mut fv1 = [0.0; 7];
-    let mut fv2 = [0.0; 7];
-    for j in 0..7 {
-        let x = h * XGK[j];
-        let (f1, f2) = (f(c - x), f(c + x));
-        fv1[j] = f1;
-        fv2[j] = f2;
-        resk += WGK[j] * (f1 + f2);
-        resabs += WGK[j] * (f1.abs() + f2.abs());
-        if j % 2 == 1 {
-            resg += WG[j / 2] * (f1 + f2);
-        }
-    }
-    let reskh = resk * 0.5;
-    let mut resasc = WGK[7] * (fc - reskh).abs();
-    for j in 0..7 {
-        resasc += WGK[j] * ((fv1[j] - reskh).abs() + (fv2[j] - reskh).abs());
-    }
-    let (result, resabs, resasc) = (resk * h, resabs * h.abs(), resasc * h.abs());
-    let mut err = ((resk - resg) * h).abs();
-    if resasc != 0.0 && err != 0.0 {
-        err = resasc * aeoi_libm::libm::pow(200.0 * err / resasc, 1.5).min(1.0);
-    }
-    if resabs > f64::MIN_POSITIVE / (50.0 * f64::EPSILON) {
-        err = err.max(50.0 * f64::EPSILON * resabs);
-    }
-    let finite = result.is_finite() && fv1.iter().chain(fv2.iter()).all(|v| v.is_finite()) && fc.is_finite();
-    (result, err, finite)
 }
 
 impl Operator for Integral {
@@ -138,12 +82,7 @@ impl Operator for Integral {
         let bad: std::cell::Cell<Option<f64>> = std::cell::Cell::new(None);
         // integrand in t, including the Jacobian of the map
         let mut g = |t: f64| -> f64 {
-            let (x, dx) = match i.map {
-                Map::Finite(a, b) => ((a + b) / 2.0 + (b - a) / 4.0 * t * (3.0 - t * t), (b - a) / 4.0 * 3.0 * (1.0 - t * t)),
-                Map::Both => { let d = 1.0 - t * t; (t / d, (1.0 + t * t) / (d * d)) }
-                Map::Upper(a) => { let d = 1.0 - t; (a + t / d, 1.0 / (d * d)) }
-                Map::Lower(b) => { let d = 1.0 - t; (b - t / d, 1.0 / (d * d)) }
-            };
+            let (x, dx) = i.map.x_dx(t);
             evals.set(evals.get() + 1);
             // dx = 0 at the ends of a finite interval; x = ±∞ when a node rounds onto t = ±1 of an infinite map
             // (the integrand's tail must vanish there for the integral to exist)
@@ -157,42 +96,18 @@ impl Operator for Integral {
             }
             v
         };
-        let (t0, t1) = match i.map {
-            Map::Finite(..) | Map::Both => (-1.0, 1.0),
-            _ => (0.0, 1.0),
-        };
-        // global adaptive: start from 10 equal panels (as MATLAB), always split the worst
-        let mut segs: Vec<Seg> = Vec::new();
-        for k in 0..10 {
-            let (lo, hi) = (t0 + (t1 - t0) * k as f64 / 10.0, t0 + (t1 - t0) * (k + 1) as f64 / 10.0);
-            let (v, e, _) = gk15(&mut g, lo, hi);
-            segs.push(Seg { lo, hi, val: v, err: e });
-        }
-        let total = |s: &[Seg]| -> (f64, f64) {
-            let mut d = Dot2::default();
-            for x in s {
-                d.add(x.val);
-            }
-            let (h, l) = d.hi_lo();
-            (h + l, s.iter().map(|x| x.err).sum())
-        };
+        let (t0, t1) = i.map.t_range();
         let tol = |v: f64| i.abs_tol.max(i.rel_tol * v.abs());
-        loop {
-            if let Some(x) = bad.get() {
-                return Err(OpError::new("E.NUMERICAL.NON_FINITE_EVALUATION", format!("被积函数在 x = {x:e} 处不是有限值（NaN 或 Inf）。"), "积分区间内有奇点或定义域问题：把区间在奇点处分开，或检查表达式。").path("/expression").detail("at", json!(num(x))));
-            }
-            let (v, e) = total(&segs);
-            if e <= tol(v) {
-                break;
-            }
-            if segs.len() >= i.max_intervals {
+        let poll = || match bad.get() {
+            Some(x) => Err(OpError::new("E.NUMERICAL.NON_FINITE_EVALUATION", format!("被积函数在 x = {x:e} 处不是有限值（NaN 或 Inf）。"), "积分区间内有奇点或定义域问题：把区间在奇点处分开，或检查表达式。").path("/expression").detail("at", json!(num(x)))),
+            None => Ok(()),
+        };
+        let segs = match adaptive(&mut g, t0, t1, i.abs_tol, i.rel_tol, i.max_intervals, &poll, &|| ctx.check()) {
+            Ok(s) => s,
+            Err(AdaptErr::Stopped(e)) => return Err(e),
+            Err(AdaptErr::Budget { segs, value: v, error: e }) => {
                 let worst = segs.iter().max_by(|a, b| a.err.partial_cmp(&b.err).unwrap()).unwrap();
-                let back = |t: f64| match i.map {
-                    Map::Finite(a, b) => (a + b) / 2.0 + (b - a) / 4.0 * t * (3.0 - t * t),
-                    Map::Both => t / (1.0 - t * t),
-                    Map::Upper(a) => a + t / (1.0 - t),
-                    Map::Lower(b) => b - t / (1.0 - t),
-                };
+                let back = |t: f64| i.map.x(t);
                 return Err(OpError::new("E.NUMERICAL.NO_CONVERGENCE", format!("{} 个子区间后误差估计 {e:.3e} 仍大于容差 {:.3e}；当前估计值 {:.15e}。", segs.len(), tol(v), i.sign * v), "被积函数可能在某处奇异、剧烈振荡或积分发散：在难点处分段积分，或放宽 rel_tol / abs_tol。")
                     .path("/expression")
                     .detail("estimate", json!(num(i.sign * v)))
@@ -201,29 +116,11 @@ impl Operator for Integral {
                     .remedy(modify_input("loosen", "把 rel_tol 放宽到 1e-6（MATLAB 的缺省），须用户确认", "medium", true, json!([{"op": "add", "path": "/rel_tol", "value": 1e-6}])))
                     .remedy(ask_user("singularity", "被积函数在哪里有奇点或剧烈变化？可以在那里分段。")));
             }
-            let (k, _) = segs.iter().enumerate().fold((0, -1.0), |(bk, be), (k, s)| if s.err > be { (k, s.err) } else { (bk, be) });
-            let s = segs.swap_remove(k);
-            let mid = 0.5 * (s.lo + s.hi);
-            let (v1, e1, _) = gk15(&mut g, s.lo, mid);
-            let (v2, e2, _) = gk15(&mut g, mid, s.hi);
-            segs.push(Seg { lo: s.lo, hi: mid, val: v1, err: e1 });
-            segs.push(Seg { lo: mid, hi: s.hi, val: v2, err: e2 });
-            if segs.len() % 50 == 0 {
-                ctx.check()?;
-            }
-            segs.sort_by(|a, b| a.lo.partial_cmp(&b.lo).unwrap());
-        }
+        };
         let (v, e) = total(&segs);
         let n_int = segs.len();
         // post-condition: split every subinterval once more and compare
-        let mut d = Dot2::default();
-        for s in &segs {
-            let mid = 0.5 * (s.lo + s.hi);
-            d.add(gk15(&mut g, s.lo, mid).0);
-            d.add(gk15(&mut g, mid, s.hi).0);
-        }
-        let (h, l) = d.hi_lo();
-        let v2 = h + l;
+        let v2 = bisected_value(&mut g, &segs);
         let consistent = (v2 - v).abs() <= tol(v);
         // reported error: the larger of the Kronrod estimate and the change under one more bisection everywhere
         // (the Kronrod estimate alone under-reports near endpoint singularities)
