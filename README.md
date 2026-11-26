@@ -1,15 +1,54 @@
 # AEOI — AI Engineering Operator Interface
 
-面向 AI Agent 的工程计算算子接口规范（v0.4.15-draft）及其 Rust 参考实现：37 个算子（控制 21 个、`signal.spectral.fft`、`signal.design.butter`、`signal.filter.filter`、`ode.ivp.solve`、`linalg.system.solve`、`interp.grid.interp1`、`fit.poly.polyfit`、`linalg.decomp.eig`、`linalg.decomp.svd`、`nonlinear.root.fzero`、`nonlinear.system.fsolve`、`optim.linear.linprog`、`optim.local.fmincon`、`optim.local.fminsearch`、`calculus.quadrature.integral`、`calculus.quadrature.trapz`），一个 MCP stdio 服务器。每个结果带容差类、后置条件检查、不可依赖字段的标注、带修复补丁的结构化错误，以及可重放的收据。当前状态与改动历史见规范第 13 章 Changelog；给 AI agent 的入口见 `AGENTS.md`。
+面向 AI Agent 的工程计算算子接口规范（v0.4.17-draft）及其 Rust 参考实现，以一个 MCP stdio 服务器提供。每个结果都带容差类、后置条件检查、不可依赖字段的标注、带修复补丁的结构化错误，以及可重放的收据。当前状态与改动历史见规范第 13 章 Changelog；给 AI agent 的入口见 `AGENTS.md`。
 
-- `spec-v0.4.md` — 规范全文（源稿 `spec-src.md`，`python3 build_spec.py` 生成；`spec-v0.3.md`、`spec-v0.2.md`、`spec-v0.1.md` 为历史版本）
-- `schemas/` — JSON Schema（common / manifest / envelope / error）
-- `examples/` — 37 个算子的 manifest、schema、示例与 parity 规格（v0.4.5 起另有 `control.lti.lsim`、`control.design.pidtune`、`signal.spectral.fft`、`ode.ivp.solve`，v0.4.10 起有 `linalg.system.solve`、`interp.grid.interp1`，v0.4.11 起有 `fit.poly.polyfit`、`linalg.decomp.eig`、`linalg.decomp.svd`，v0.4.12 起有 `signal.design.butter`、`signal.filter.filter`，v0.4.13 起有 `nonlinear.root.fzero`、`nonlinear.system.fsolve`，v0.4.14 起有三个优化算子，v0.4.15 起有 integral、trapz）。早期的：v0.2 的 `control.lti.bode`、`control.lti.step`、`control.design.lqr`；v0.3 的 `control.lti.convert`、`control.lti.poles_zeros`、`control.analysis.ctrb_obsv`、`control.analysis.margin`、`control.lti.c2d`、`control.lti.impulse`、`control.math.lyap`、`control.design.place`、`control.design.dlqr`；v0.3.5 的 `control.lti.series`、`control.lti.parallel`、`control.lti.feedback`、`control.design.pid`、`control.lti.stepinfo`、`control.lti.pade`；v0.3.6 的 `control.analysis.loopsens`（对象 + 控制器的一次性开环/闭环分析）
-- `golden/python-control/` — 对照参考用例（参考值来自 python-control/scipy，**非 MATLAB**）
-- `matlab/` — MATLAB golden 生成脚本（尚未在 MATLAB 中运行）
-- `rust/` — cargo workspace：`aeoi-core`、`aeoi-libm`（编入二进制的数学库）、`aeoi-control`、`aeoi-numeric`（fft、表达式语言、ode）、`aeoi-ops`（跨领域注册表、`aeoi-call`）、`aeoi-mcp`（stdio MCP server）、`aeoi-web`（LLM 端到端测试台 + 评测）、`aeoi-wasm`（浏览器版）；`rust/vendor/matrixmultiply` 是固定通用内核的补丁副本
-- `conformance/` — 跨实现一致性套件（规范 9.4）
-- `eval/` — LLM 评测题库（`questions.zh.json`，由 `gen_questions.py` 生成）；报告写入 `reports/eval-<model>.json`
+## 目标与进度
+
+目标是覆盖工程计算里最常用的 102 个 MATLAB 函数（规范 12.3）。清单、每个函数依赖的共享内核和依赖层都在 `roadmap/targets.py` 里，由它生成 `roadmap/layers.md` 和内核依赖图 `roadmap/deps.mmd`。实现顺序是按依赖层从底往上。102 个全部完成后发布 v0.5，在此之前不发布新版本。
+
+| 类别 | 目标 | 已覆盖 |
+|---|---|---|
+| 控制 | 35 | 24 |
+| 线性代数 | 15 | 3 |
+| 信号 | 15 | 3 |
+| 多项式、插值、拟合 | 9 | 2 |
+| 微积分与 ODE | 10 | 4 |
+| 非线性方程与优化 | 10 | 5 |
+| 统计 | 8 | 0 |
+| 合计 | 102 | 41（40%） |
+
+这 41 个函数由 37 个 AEOI 算子提供：
+
+- 控制（21 个）：`control.lti.{convert, step, impulse, lsim, bode, poles_zeros, c2d, pade, series, parallel, feedback, stepinfo}`、`control.analysis.{margin, ctrb_obsv, loopsens}`、`control.design.{lqr, dlqr, place, pid, pidtune}`、`control.math.lyap`
+- 信号：`signal.spectral.fft`、`signal.design.butter`、`signal.filter.filter`
+- 线性代数：`linalg.system.solve`、`linalg.decomp.eig`、`linalg.decomp.svd`
+- 插值与拟合：`interp.grid.interp1`、`fit.poly.polyfit`
+- 微积分与 ODE：`ode.ivp.solve`、`calculus.quadrature.integral`、`calculus.quadrature.trapz`
+- 非线性方程与优化：`nonlinear.root.fzero`、`nonlinear.system.fsolve`、`optim.linear.linprog`、`optim.local.fmincon`、`optim.local.fminsearch`
+
+所有算子的数值计算都调用 `aeoi-core::kernels` 里的 25 个共享内核（LU/QR/Cholesky、SVD、实 Schur 与特征分解、FFT、补偿求和、Riccati、频率响应、自适应积分、Runge–Kutta 等）。一个算子用到另一个算子的计算时，调用的是同一段代码，不另写一份，也不改调外部库（规范 11.5）。外部数值代码只剩 nalgebra（只作矩阵容器和做矩阵乘法）和编入二进制的 Rust `libm`。
+
+## 仓库内容
+
+- `spec-v0.4.md`：规范全文。源稿是 `spec-src.md`，用 `python3 build_spec.py` 生成；`spec-v0.3.md`、`spec-v0.2.md`、`spec-v0.1.md` 是历史版本。
+- `schemas/`：JSON Schema（common / manifest / envelope / error）。
+- `examples/`：每个算子一个目录，含 manifest、输入输出 schema（由 `write_manifests.py` 生成）、示例请求与响应、`parity.yaml`。
+- `golden/`：对照参考用例，共 1188 个。`python-control/` 下的参考值来自 python-control / numpy / scipy，`mpmath/` 下的是高精度真值。**参考值都不是 MATLAB 算的。** 生成脚本是仓库根目录的 `gen_golden_*.py`。
+- `roadmap/`：102 个目标函数与内核的清单和依赖层。
+- `rust/`：cargo workspace。
+  - `aeoi-core`：信封、校验、收据，以及共享内核 `kernels`。
+  - `aeoi-libm`：编入二进制的数学库。
+  - `aeoi-control`：控制算子。
+  - `aeoi-numeric`：控制以外的算子与表达式语言。
+  - `aeoi-ops`：跨领域注册表与命令行工具 `aeoi-call`。
+  - `aeoi-mcp`：stdio MCP 服务器。
+  - `aeoi-bridge`、`aeoi-web`：LLM 端到端测试台与评测。
+  - `aeoi-wasm`：浏览器版。
+  - `vendor/matrixmultiply`：固定使用通用内核的补丁副本。
+- `conformance/`：跨实现一致性套件（规范 9.4），见 `conformance/README.md`。
+- `matlab/`：MATLAB golden 生成脚本，尚未在 MATLAB 里运行过。
+- `eval/`：LLM 评测题库，报告写入 `reports/eval-<model>.json`。
+- `reports/`：parity、一致性、评测报告。
 
 ## 安装
 
@@ -19,17 +58,21 @@
 - **任何 MCP 客户端**（Claude Code、Cursor、VS Code 等）：下载对应平台的压缩包，把 `aeoi-mcp` 登记为 stdio 服务器，例如 `claude mcp add aeoi -- /path/to/aeoi-mcp`。Cursor、VS Code 在各自的 MCP 配置里写 `{"command": "/path/to/aeoi-mcp"}`。
 - **不经过 LLM**：`aeoi-call <算子 id> request.json` 输出结果信封，`aeoi-call verify …` 重放收据。
 
-同一请求在各平台上的结果逐位相同（规范 2.1 M-7a）：发布流水线会比较各平台上全部 golden 用例的 `output_hash`。
+最新正式发布是 **v0.4.9**，只含当时的 23 个算子（控制 21 个、`fft`、`ode.ivp.solve`）。之后加的算子要从源码构建（见下节），下一次发布是 v0.5。
+
+同一请求在各平台上的结果逐位相同（规范 2.1 M-7a）。发布流水线会在 Linux x86_64、Linux aarch64、macOS arm64、macOS x86_64、Windows x86_64 五个平台上构建，并比较全部 golden 用例的 `output_hash`。
 
 ## 运行
 
 ```
 cd rust
-cargo test --release
-cargo test --release -p aeoi-control --test parity -- --nocapture
-cargo test --release -p aeoi-control --test parity_b2 -- --nocapture
-./target/release/aeoi-mcp
+cargo build --release -p aeoi-mcp -p aeoi-ops
+cargo test --workspace --release                                  # 含全部 parity 测试，报告写到 ../reports/
+./target/release/aeoi-mcp                                         # MCP stdio 服务器
+./target/release/aeoi-call signal.spectral.fft ../examples/signal.spectral.fft/request.json
 ```
+
+完整的验证步骤（manifest、示例校验、一致性套件、变异测试、规范构建）见 `AGENTS.md`。
 
 每个成功结果都带**结果收据**（`receipt`，规范 §4.3）：方法 id、前提（以及由谁保证）、精确性类与误差界、后置条件证据（只有全部通过才是 `verified`）、请求/结果两层指纹。复核：`./target/release/aeoi-call verify control.design.lqr ../examples/control.design.lqr/request.json ../examples/control.design.lqr/response.success.json`，或 MCP 工具 `aeoi_verify`，或网页轨迹面板的"重放验证"按钮。
 
@@ -37,7 +80,7 @@ cargo test --release -p aeoi-control --test parity_b2 -- --nocapture
 
 ## LLM 端到端测试台（`aeoi-web`）
 
-一个本地网页：云端 LLM（默认 Gemini）通过函数调用使用 19 个 AEOI 算子。左侧是中文对话，右侧是调用轨迹：模型选了哪个工具、请求 JSON、AEOI 响应（result / trust / warnings / error + remediation）、耗时与 token 用量；bode、step、impulse 的结果会自动画图（Plotly basic，已内置在仓库里，不走 CDN；加载失败时退回内置的简易 SVG 图）。没有 key 时可以选 `mock:demo` 模型，看一段脚本化的演示（含一次报错 → 按 remediation 自我纠错）。
+一个本地网页：云端 LLM（默认 Gemini）通过函数调用使用全部 37 个 AEOI 算子。左侧是中文对话，右侧是调用轨迹：模型选了哪个工具、请求 JSON、AEOI 响应（result / trust / warnings / error + remediation）、耗时与 token 用量；bode、step、impulse 的结果会自动画图（Plotly basic，已内置在仓库里，不走 CDN；加载失败时退回内置的简易 SVG 图）。没有 key 时可以选 `mock:demo` 模型，看一段脚本化的演示（含一次报错 → 按 remediation 自我纠错）。
 
 纯 Rust（axum + tokio + reqwest/rustls-ring），静态页面编译进二进制，不需要 npm，也不依赖 Linux 专有库，Windows 应可直接构建：已在 Linux 上交叉编译 `x86_64-pc-windows-gnu` 通过（得到 `aeoi-web.exe`），但还没在真 Windows 机器上运行过，MSVC 工具链未验证。
 
@@ -114,13 +157,13 @@ cargo run --release -p aeoi-web -- design --model openrouter:nvidia/nemotron-3-u
 
 ### 浏览器版（GitHub Pages）
 
-不想装 Rust 时可以直接打开 **https://yuanqingfei.github.io/aeoi/** （会跳转到账号的自定义域名 https://yuanqingfei.me/aeoi/ ）：19 个算子与工具桥编译成 WebAssembly 在浏览器里运行，Agent 循环也在页面里，没有任何服务器。
+不想装 Rust 时可以直接打开 **https://yuanqingfei.github.io/aeoi/** （会跳转到账号的自定义域名 https://yuanqingfei.me/aeoi/ ）：全部 37 个算子与工具桥编译成 WebAssembly 在浏览器里运行，Agent 循环也在页面里，没有任何服务器。
 
 - 不填 key：选 `mock:demo`，离线演示（4 次工具调用，含一次自我纠错，带 Plotly 图）。
 - 用真实模型：点右上角"API key"填自己的 Gemini 或 OpenRouter key。key **只保存在这个浏览器的 localStorage**，由页面直接发给 Google / OpenRouter（两家都允许跨域调用），不经过 AEOI 的任何服务器，也不在仓库里；"忘记 key"按钮会清除它。公用电脑上请不要保存。
 - 与本地版是同一份 Rust 代码（`rust/aeoi-bridge`：函数声明、F-5 核对、provider 线格式、系统提示词），轨迹面板与画图相同。浏览器版没有评测 CLI。
-- 数值：与 x86_64 原生版在 755 个 golden/示例请求中 566 个逐位相同（串联、并联、反馈、pid、stepinfo 全部逐位相同；lqr、lyap 也是）。状态或错误码不一致的用例是 0。其余差异是末位舍入；多输入 `place` 的 K 不唯一，极点相同。见 `reports/parity-wasm-vs-native.json` 与规范 §8.5。
-- 体积：wasm 2.97 MB（gzip 1.07 MB）+ Plotly basic 1.07 MB（gzip 354 KB）。
+- 数值：与 Linux x86_64 原生版逐位相同。每次推送 main，Pages 工作流的 parity 任务都会把全部 golden 与示例请求分别在 wasm 和原生版上运行并比较。2026-11-25（提交 `4f1114b`）的结果是 1295 / 1295 个请求逐位相同，状态或错误码不一致的为 0。`reports/parity-wasm-vs-native.json` 是 v0.4.9 之前的旧记录（当时 755 个里 566 个逐位相同），v0.4.9 把数学库编入二进制以后，剩下的差异都消失了（规范 2.1）。
+- 体积：wasm 约 4.2 MB（未压缩），另加 Plotly basic 1.07 MB（gzip 后 354 KB）。
 
 本地构建（需要 `rustup target add wasm32-unknown-unknown`、wasm-bindgen CLI 0.2.130，可选 binaryen 的 wasm-opt）：
 
@@ -137,7 +180,7 @@ node aeoi-wasm/parity/parity.mjs /tmp/pkg-node /tmp/cases.json /tmp/native.jsonl
 
 ### 设计要点
 
-- 算子在进程内调用（`aeoi_control::registry()`），与 `aeoi-mcp` 走同一条 `DynOperator::call` 管线，信封逐字节相同；不需要子进程和 JSON-RPC，Windows 上更简单。
+- 算子在进程内调用（`aeoi_ops::registry()`），与 `aeoi-mcp` 走同一条 `DynOperator::call` 管线，信封逐字节相同；不需要子进程和 JSON-RPC，Windows 上更简单。
 - 函数声明由 manifest + input schema 自动生成。Gemini 只接受 OpenAPI 子集，转换器（`rust/aeoi-web/src/schema_conv.rs`）的有损映射见规范 §8.4，`aeoi-web tools --losses` 打印汇总；算子仍按完整 schema 校验，所以有损只意味着模型看到的约束少了，不会放过非法输入。
 - 工具报错（`status: "error"`）时，整个错误信封（含 `agent_hint` 与 `remediation` patch）原样回传给模型，模型可自行修正；轨迹面板统计"自我纠错"次数。
 - 不许编造采样周期（规范 F-5）：`c2d` 的 `ts` 在 schema 中标为 `x-aeoi-provenance: "user"`，函数声明因此多一个必填参数 `_user_quote`，模型要逐字引用用户给出 ts 的那句话；引用不在用户消息里或数值对不上时，绑定层不调用算子，返回 `E.VALIDATION.UNGROUNDED_INPUT`（只有 `ask_user` 一种补救）。

@@ -54,7 +54,7 @@
     <div id="tab-tools" class="tab"></div>
     <div id="tab-prompt" class="tab"><pre id="prompt"></pre></div>
     <div id="tab-about" class="tab"><div class="card">
-      <p>这是 <a href="https://github.com/yuanqingfei/aeoi">AEOI</a> 规范的端到端测试台的纯静态版本：19 个控制算子（Rust，编译为 WebAssembly）在你的浏览器里运行；Agent 循环也在浏览器里，模型由页面用你的 key 直接调用（Gemini Generative Language API 或 OpenRouter）。</p>
+      <p>这是 <a href="https://github.com/yuanqingfei/aeoi">AEOI</a> 规范的端到端测试台的纯静态版本：37 个工程计算算子（控制、信号、线性代数、插值拟合、积分与 ODE、求根与优化；Rust，编译为 WebAssembly）在你的浏览器里运行；Agent 循环也在浏览器里，模型由页面用你的 key 直接调用（Gemini Generative Language API 或 OpenRouter）。</p>
       <p>与本地版（<code>cargo run -p aeoi-web</code>）的算子、函数声明、F-5 来源核对、系统提示词完全相同（同一套 Rust 代码）。浮点结果与 x86_64 原生版在约 3/4 的 golden 用例上逐位相同（lqr、lyap 全部逐位相同），其余差异 ≤ 1.5e-14（范数相对；多输入 place 的 K 不唯一），详见仓库 <code>reports/parity-wasm-vs-native.json</code>；平台标识为 <code>wasm32-unknown</code>。</p>
       <p>参考值来自 python-control / scipy（不是 MATLAB）。</p>
       <p>许可：代码 MIT OR Apache-2.0（<a href="LICENSE-MIT">LICENSE-MIT</a>、<a href="LICENSE-APACHE">LICENSE-APACHE</a>），规范与文档 CC-BY-4.0（<a href="LICENSE-CC-BY-4.0">LICENSE-CC-BY-4.0</a>）。第三方：Plotly.js basic 2.35.2（MIT，© Plotly, Inc，<a href="vendor/plotly-LICENSE.txt">许可全文</a>）与编译进 wasm 的 Rust crate，见 <a href="THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md</a>。</p>
