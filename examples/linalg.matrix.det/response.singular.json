@@ -1,0 +1,166 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok_with_warnings",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.matrix.det",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "det": -1.4495071809506048e-12,
+    "sign": -1,
+    "log_abs_det": -27.25979749247321,
+    "relative_error_estimate": 43.916666666666664,
+    "zero_within_error": true,
+    "method": "lu_partial_pivoting"
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "applicable": false
+    },
+    "condition": {
+      "norm1_inv_A_estimate": 2251799813685247.5,
+      "norm1_abs_L_abs_U": 43.91666666666667,
+      "estimator": "Hager–Higham 1-范数估计（下界）"
+    },
+    "error_estimate": {
+      "det_rel": 43.916666666666664,
+      "basis": "启发式一阶界 n·u·est(‖A⁻¹‖₁)·‖|L||U|‖₁ + n·u：LU 的后向误差 |E| ≲ n·u·|L||U| 经 det(A + E) ≈ det(A)(1 + tr(A⁻¹E)) 传到 det，再加乘积的 n 次舍入；不是严格上界"
+    },
+    "checks": {
+      "significant": false
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:det:lu-scaled-product",
+      "routine": "matrix::det",
+      "provenance": "aeoi://operators/linalg.matrix.det/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "square",
+        "statement": "A 为方阵",
+        "enforced_by": "error:E.VALIDATION.SHAPE"
+      },
+      {
+        "id": "significant",
+        "statement": "误差估计 < 1（det 与 0 可区分）",
+        "enforced_by": "check:significant"
+      },
+      {
+        "id": "estimate_heuristic",
+        "statement": "误差估计是一阶的启发式界，用的 ‖A⁻¹‖₁ 是估计（下界）",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "det_rel": 43.916666666666664
+      },
+      "basis": "启发式一阶界 n·u·est(‖A⁻¹‖₁)·‖|L||U|‖₁ + n·u：LU 的后向误差 |E| ≲ n·u·|L||U| 经 det(A + E) ≈ det(A)(1 + tr(A⁻¹E)) 传到 det，再加乘积的 n 次舍入；不是严格上界"
+    },
+    "evidence": {
+      "claim": "unverified",
+      "postconditions": {
+        "significant": false
+      },
+      "failed": [
+        "significant"
+      ],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null,
+      "coverage": {
+        "significant": "full"
+      },
+      "unreliable": [
+        "/det",
+        "/sign",
+        "/log_abs_det"
+      ]
+    },
+    "fingerprint": {
+      "request": "sha256:28ebefc52a57508010147acc886d046e8607ae2b76a1b15cd31f97bbc8333a2e",
+      "result": "sha256:cfe1a78bf20ab237d916ebeadaf602758af306d47ca915b58379609fa9f07e0e",
+      "output_hash": "sha256:77086733e7334ab21691e9cd638a8a1b79397e4b497608c99ebf78d4dd6f5abf",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.matrix.det@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [
+    {
+      "code": "W.NUMERICAL.DET_NOT_SIGNIFICANT",
+      "message": "det 的相对误差估计为 4.39e1 ≥ 1：算出的 det = -1.450e-12 与 0 不可区分（矩阵在舍入意义下奇异）；det、sign、log_abs_det 不可依赖。",
+      "path": "/A",
+      "details": {
+        "relative_error_estimate": 43.916666666666664,
+        "det": -1.4495071809506048e-12
+      }
+    },
+    {
+      "code": "W.EVIDENCE.POSTCONDITION_FAILED",
+      "message": "后置条件未满足或未给出：significant；结果不能视为已验证；不可依赖的结果字段：/det, /sign, /log_abs_det",
+      "details": {
+        "failed": [
+          "significant"
+        ],
+        "postconditions": {
+          "significant": false
+        },
+        "unreliable": [
+          "/det",
+          "/sign",
+          "/log_abs_det"
+        ]
+      }
+    }
+  ],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:6f63e692d44716d22ab07f7c175bdfcbc5fd16eca48d19e761ea59d95c2ac979",
+    "output_hash": "sha256:77086733e7334ab21691e9cd638a8a1b79397e4b497608c99ebf78d4dd6f5abf",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.171149
+  }
+}

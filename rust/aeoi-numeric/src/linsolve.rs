@@ -125,27 +125,7 @@ impl Operator for LinSolve {
             threshold = 10.0 * n as f64 * U;
             for j in 0..k {
                 let b = col(&i.b, j);
-                let mut x = lu.solve(&b);
-                let mut steps = 0usize;
-                if i.refine {
-                    let mut prev = f64::INFINITY;
-                    for _ in 0..MAX_REFINE {
-                        let r = residual_dd(&i.a, m, n, &x, &b);
-                        let d = lu.solve(&r);
-                        let dn = norm_inf(&d);
-                        if !dn.is_finite() || dn > prev / 2.0 {
-                            break;
-                        }
-                        for (xi, di) in x.iter_mut().zip(&d) {
-                            *xi += di;
-                        }
-                        steps += 1;
-                        prev = dn;
-                        if dn <= 2.0 * U * norm_inf(&x) {
-                            break;
-                        }
-                    }
-                }
+                let (x, steps) = lu_solve_refined(&lu, &i.a, n, &b, if i.refine { MAX_REFINE } else { 0 });
                 refine_steps = refine_steps.max(steps);
                 let r = residual_dd(&i.a, m, n, &x, &b);
                 let eta = norm_inf(&r) / (anorm_inf * norm_inf(&x) + norm_inf(&b)).max(f64::MIN_POSITIVE);

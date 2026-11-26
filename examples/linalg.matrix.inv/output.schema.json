@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.matrix.inv/0.4.0/output",
+  "type": "object",
+  "required": [
+    "X",
+    "kappa1",
+    "rcond",
+    "method",
+    "refinement_steps"
+  ],
+  "properties": {
+    "X": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "A⁻¹，[n, n]"
+    },
+    "kappa1": {
+      "description": "‖A‖₁·‖X‖₁（由返回的 X 算出）"
+    },
+    "rcond": {
+      "description": "1/kappa1"
+    },
+    "method": {
+      "enum": [
+        "lu_partial_pivoting"
+      ]
+    },
+    "refinement_steps": {
+      "type": "integer",
+      "description": "各列实际加上的修正步数的最大值"
+    }
+  }
+}

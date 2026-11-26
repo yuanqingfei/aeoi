@@ -389,3 +389,51 @@ fn roots_example() {
     let e = call(op, &read(&format!("{dir}/request.error.json")));
     assert_eq!(e["error"]["code"], "E.DOMAIN.ZERO_POLYNOMIAL");
 }
+
+/// v0.4.22: inv — request.json ([[4, 7], [2, 6]]: inverse [[0.6, −0.7], [−0.2, 0.4]]), request.ill.json (Hilbert 13:
+/// a result with W.NUMERICAL.ILL_CONDITIONED and /X listed as unreliable), request.error.json (rank 1 → SINGULAR).
+#[test]
+fn inv_example() {
+    let op = "linalg.matrix.inv";
+    let dir = format!("examples/{op}");
+    let rf = read(&format!("{dir}/reference.python-control.json"));
+    for (rq, rs) in [("request.json", "response.success.json"), ("request.ill.json", "response.ill.json")] {
+        let env = call(op, &read(&format!("{dir}/{rq}")));
+        assert!(env["status"] == "ok" || env["status"] == "ok_with_warnings", "{rq}: {}", env["error"]);
+        assert_hash_on_same_platform(&env, &read(&format!("{dir}/{rs}")), &format!("{op} {rq}: bitwise example"));
+        if rq == "request.ill.json" {
+            assert!(env["warnings"].as_array().unwrap().iter().any(|w| w["code"] == "W.NUMERICAL.ILL_CONDITIONED"));
+            assert_eq!(env["trust"]["checks"]["forward_error_below_one"], false);
+            continue;
+        }
+        let got = env["result"]["X"]["data"].as_array().unwrap();
+        for (g, w) in got.iter().zip(rf[rq]["X_true"].as_array().unwrap()) {
+            let (g, w) = (g.as_f64().unwrap(), w.as_f64().unwrap());
+            assert!((g - w).abs() <= 1e-15 * w.abs().max(1.0), "{rq}: {g} vs {w}");
+        }
+    }
+    let e = call(op, &read(&format!("{dir}/request.error.json")));
+    assert_eq!(e["error"]["code"], "E.NUMERICAL.SINGULAR");
+    assert_eq!(e["error"]["remediation"][0]["kind"], "ask_user");
+}
+
+/// v0.4.22: det — request.json (det = −16), request.singular.json (magic(4): the computed det is a tiny non-zero
+/// number, flagged zero_within_error), request.error.json (3×2 → SHAPE).
+#[test]
+fn det_example() {
+    let op = "linalg.matrix.det";
+    let dir = format!("examples/{op}");
+    let rf = read(&format!("{dir}/reference.python-control.json"));
+    for (rq, rs) in [("request.json", "response.success.json"), ("request.singular.json", "response.singular.json")] {
+        let env = call(op, &read(&format!("{dir}/{rq}")));
+        assert!(env["status"] == "ok" || env["status"] == "ok_with_warnings", "{rq}: {}", env["error"]);
+        assert_hash_on_same_platform(&env, &read(&format!("{dir}/{rs}")), &format!("{op} {rq}: bitwise example"));
+        let t = rf[rq]["det_true"].as_f64().unwrap();
+        assert_eq!(env["result"]["zero_within_error"], t == 0.0, "{rq}");
+        if t != 0.0 {
+            assert!((env["result"]["det"].as_f64().unwrap() - t).abs() <= 1e-13 * t.abs(), "{rq}");
+        }
+    }
+    let e = call(op, &read(&format!("{dir}/request.error.json")));
+    assert_eq!(e["error"]["code"], "E.VALIDATION.SHAPE");
+}

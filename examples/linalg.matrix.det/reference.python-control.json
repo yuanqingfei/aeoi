@@ -1,0 +1,11 @@
+{
+ "note": "truth for the stored data: mpmath 80 digits (exact rationals for n \u2264 8); numpy.linalg (LAPACK) for comparison; NOT MATLAB output",
+ "request.json": {
+  "det_true": -16.0,
+  "numpy_det": -15.999999999999998
+ },
+ "request.singular.json": {
+  "det_true": 0.0,
+  "numpy_det": -1.449507180950607e-12
+ }
+}

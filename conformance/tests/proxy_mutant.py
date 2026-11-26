@@ -151,6 +151,30 @@ def m_linsolve_overclaims(r, env):          # always claims a backward-stable so
     env["trust"]["checks"]["backward_stable"] = True
 
 
+def m_inv_transposed(r):                   # returns Xᵀ (a row/column-major mix-up); exact only for symmetric A
+    n = r["X"]["shape"][0]; d = r["X"]["data"]
+    r["X"]["data"] = [d[j * n + i] for i in range(n) for j in range(n)]
+
+
+def m_inv_overclaims(r, env):               # always claims the result has correct digits
+    env["trust"]["checks"]["forward_error_below_one"] = True
+
+
+def m_det_sign_flipped(r):                  # sign of det reversed (det negated, |det| unchanged)
+    if isinstance(r["det"], (int, float)):
+        r["det"] = -r["det"]
+    r["sign"] = -r["sign"]
+
+
+def m_det_never_zero(r):                    # never admits that det is indistinguishable from 0
+    r["zero_within_error"] = False
+
+
+def m_det_log_wrong(r):                     # log|det| off by 1e-9 (absolute)
+    if isinstance(r["log_abs_det"], float):
+        r["log_abs_det"] += 1e-9
+
+
 def m_interp1_one_ulp(r):                   # every value one ulp up: inside the tolerance, but node hits are no longer exact
     import math
     r["yq"]["data"] = [math.nextafter(v, math.inf) if isinstance(v, float) else v for v in r["yq"]["data"]]
@@ -343,6 +367,11 @@ MUTANTS = {
     "ode_overclaims": ("ode.ivp.solve", m_ode_overclaims),
     "linsolve_x_wrong": ("linalg.system.solve", m_linsolve_x_wrong),
     "linsolve_overclaims": ("linalg.system.solve", m_linsolve_overclaims),
+    "inv_transposed": ("linalg.matrix.inv", m_inv_transposed),
+    "inv_overclaims": ("linalg.matrix.inv", m_inv_overclaims),
+    "det_sign_flipped": ("linalg.matrix.det", m_det_sign_flipped),
+    "det_never_zero": ("linalg.matrix.det", m_det_never_zero),
+    "det_log_wrong": ("linalg.matrix.det", m_det_log_wrong),
     "interp1_one_ulp": ("interp.grid.interp1", m_interp1_one_ulp),
     "interp1_count_wrong": ("interp.grid.interp1", m_interp1_count_wrong),
     "polyfit_coef_wrong": ("fit.poly.polyfit", m_polyfit_coef_wrong),

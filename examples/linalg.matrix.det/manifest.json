@@ -1,0 +1,154 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "linalg.matrix.det",
+  "version": "0.4.0",
+  "title": "Determinant with error estimate",
+  "description": "实方阵的行列式（= MATLAB det）。LU 分解（部分选主元，与 linalg.system.solve 同一内核），det = sign(P)·Π u_ii，乘积按尾数与指数分开累乘，不会中途溢出。同时返回 log|det| 与符号（超出 f64 范围时仍有意义），以及相对误差估计：估计 ≥ 1 时 det 与 0 不可区分（例如舍入后的奇异矩阵给出 1e-12 这样的小数），此时 det、sign、log|det| 标为不可依赖。判断奇异请看条件数（linalg.system.solve 或 linalg.matrix.inv 的 rcond），不要看 det 的大小。",
+  "category": "analysis",
+  "tags": [
+    "linalg",
+    "determinant",
+    "det",
+    "slogdet"
+  ],
+  "applicability": {
+    "preconditions": [
+      "A 为 [n, n] 实数方阵"
+    ],
+    "not_for": [
+      "判断矩阵是否奇异或接近奇异（det 的大小与条件数无关：0.1·I₁₀₀ 的 det 是 1e-100，但完全良态；用 rcond）",
+      "复数矩阵（0.4.0 未支持）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "LU 分解 P·A = L·U，部分选主元（同 linalg.system.solve）；det = sign(P)·Π u_ii。乘积分成尾数 m ∈ [0.5, 1) 与二进制指数 e 累乘（每步一次舍入，跨平台逐位相同），det = m·2^e，log|det| = ln m + e·ln 2，超出 f64 范围时 det 为 ±Inf 或下溢并发 W.NUMERICAL.DET_OUT_OF_RANGE。某步主元恰为 0 时 det = 0、sign = 0、log|det| = −Inf。相对误差估计（启发式一阶界）：ε = n·u·est(‖A⁻¹‖₁)·‖|L|·|U|‖₁ + n·u，est 为 Hager–Higham 1-范数估计；ε ≥ 1 或主元为 0 时 zero_within_error = true，发 W.NUMERICAL.DET_NOT_SIGNIFICANT",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §9（LU）、§12（迭代精化）、§14（矩阵求逆）、§15（条件数估计）"
+      },
+      {
+        "type": "paper",
+        "cite": "T. Ogita, S. M. Rump, S. Oishi, Accurate sum and dot product, SIAM J. Sci. Comput. 26(6), 2005",
+        "doi": "10.1137/030601818"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "matrix::det",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T2",
+  "sparse_support": {
+    "/A": {
+      "policy": "densify",
+      "max_dense_elements": 4000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_dimension": 2000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/linalg.matrix.det/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.NUMERICAL.DET_NOT_SIGNIFICANT",
+    "W.NUMERICAL.DET_OUT_OF_RANGE",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "linalg_matrix_det",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:det:lu-scaled-product",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "square",
+        "statement": "A 为方阵",
+        "enforced_by": "error:E.VALIDATION.SHAPE"
+      },
+      {
+        "id": "significant",
+        "statement": "误差估计 < 1（det 与 0 可区分）",
+        "enforced_by": "check:significant"
+      },
+      {
+        "id": "estimate_heuristic",
+        "statement": "误差估计是一阶的启发式界，用的 ‖A⁻¹‖₁ 是估计（下界）",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "significant"
+    ],
+    "coverage": {
+      "significant": "full"
+    },
+    "guards": {
+      "significant": [
+        "/det",
+        "/sign",
+        "/log_abs_det"
+      ]
+    }
+  }
+}

@@ -2,6 +2,43 @@
 
 > 从规范第 13 章移出（v0.4.18）。每个版本：起因、规范改动、已做的改动、开发中发现的问题、结果。最新的在前。
 
+## v0.4.22-draft（2026-11-26）
+
+起因：按 12.3 的依赖层自底向上加算子，第二批是 `inv` + `det`。两者都建在 `kernels::dense` 的 LU 上，与 `linalg.system.solve` 同一内核（RI-1）。
+
+作者的决定（2026-11-26）：
+
+- `inv` 遇到病态矩阵（rcond < ε）仍返回结果并发警告；结果没有有效数字时把 X 标为不可依赖。
+- `det` 同时返回 `det`、`log_abs_det` 与 `sign`，后两者不会溢出。
+- `det` 带相对误差估计；估计 ≥ 1 时标为“与零不可区分”。
+- 只支持实数矩阵，与 `linalg.system.solve` 0.4.0 一致。
+
+**规范改动**
+
+| # | 位置 | 改动 | 理由 |
+|---|---|---|---|
+| 1 | `profiles/10.35-inv.md`（新） | IV-1 – IV-6；后置条件 `backward_stable`（逐列）与 `forward_error_below_one`（κ₁·η < 1），后者不成立时 `/X` 不可依赖 | MATLAB 的 `inv(hilb(13))` 只打印一行警告，返回的矩阵一位有效数字也没有 |
+| 2 | `profiles/10.36-det.md`（新） | DT-1 – DT-6；尾数/指数分开累乘；误差估计与 `zero_within_error`；后置条件 `significant` | MATLAB 的 `det(magic(4))` = −1.4495e-12，常被误读为可逆；150×150 的矩阵 det 就会溢出 |
+| 3 | 5.1 | 新码 `W.NUMERICAL.DET_NOT_SIGNIFICANT`、`W.NUMERICAL.DET_OUT_OF_RANGE` | — |
+| 4 | 第 10 章索引 | 加 10.35、10.36 | — |
+
+**已做的改动**
+
+| 位置 | 改动 |
+|---|---|
+| `kernels::dense` | 新增 `lu_solve_refined`（LS-2 的精化循环从 `linsolve` 移入内核，`inv` 与 `linsolve` 共用；`linsolve` 的示例逐位不变）与 `Lu::perm_sign` |
+| `aeoi-numeric/src/matrix.rs`（新） | `linalg.matrix.inv`、`linalg.matrix.det` |
+| `gen_golden_matrix.py`（新） | 真值：mpmath 80 位；n ≤ 8 与全部奇异用例另用有理数精确计算并断言一致；警告与后置条件只按真值预测，只收明确落在一侧的用例 |
+| golden | 放在 `golden/mpmath/linalg.matrix.{inv,det}/`（V-3：比较对象是 mpmath 真值；不再重复 PY-65 的问题） |
+| `conformance/rules_numeric.py` | `rule_inv`（对真值、运行器用有理数重算逐列后向误差、重算 κ₁、核查 `forward_error_below_one` 是否虚报）、`rule_det`（ln|det|、det、符号对真值；奇异数据上 `zero_within_error = false` 是虚报） |
+| 代理变异 | `inv_transposed`、`inv_overclaims`、`det_sign_flipped`、`det_never_zero`、`det_log_wrong`（共 57 种） |
+| `roadmap/targets.py` | inv、det 完成：45 / 102 |
+
+**结果**
+
+- inv：23 个 golden（15 成功、8 错误），最坏用掉容差 2e-4；15 个成功用例中 13 个与真值逐位相同，10 个比 numpy 准（Hilbert 10：本算子 0，numpy 2.3e-6）。
+- det：23 个 golden（18 成功、5 错误），ln|det| 最坏用掉容差 8e-3；非奇异用例的误差估计 15 / 15 不小于实际误差；三个奇异用例都标为与零不可区分。
+
 ## v0.4.21-draft（2026-11-26）
 
 起因：第二实现第二轮。Python 实现只读规范，新增 `control.lti.bode`、`step`、`convert` 与 `fit.poly.roots`（共享层 `aeoi_lti.py`；数值内核自写，结果路径上没有 python-control、scipy.signal、numpy.roots、LAPACK 特征值）。它报告了 33 处发现（PY-33 – PY-65），其中阻塞 3 处：step 的指标定义只能去读 python-control 源码（PY-50）；convert 的 MIMO ss→tf 警告只出现在 parity.yaml 里（PY-57）；套件没有 convert 的数值规则，76 个成功用例全部记为跳过（PY-60）。

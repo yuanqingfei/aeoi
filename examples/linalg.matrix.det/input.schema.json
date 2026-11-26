@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.matrix.det/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "A"
+  ],
+  "properties": {
+    "A": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "方阵 [n, n]，row-major（行列式对转置不变，所以录入顺序不影响结果）"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  },
+  "x-aeoi-shape-constraints": [
+    "A: [n, n]，n ≥ 1"
+  ]
+}

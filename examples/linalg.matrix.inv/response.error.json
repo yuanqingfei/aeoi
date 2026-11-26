@@ -1,0 +1,39 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.matrix.inv",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.NUMERICAL.SINGULAR",
+    "category": "numerical",
+    "retryable": true,
+    "message": "A 奇异：LU 分解第 1 步的主元恰好为 0（部分选主元后该列在对角线以下全为 0），逆矩阵不存在。",
+    "agent_hint": "检查 A 的录入（重复行/列、漏填）；需要“广义逆”时用 linalg.matrix.pinv；只是要解方程组时用 linalg.system.solve。",
+    "details": {
+      "path": "/A",
+      "zero_pivot_step": 1
+    },
+    "remediation": [
+      {
+        "id": "singular_model",
+        "kind": "ask_user",
+        "description": "A 奇异：是录入错误，还是模型本身缺少约束？",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.125408
+  }
+}

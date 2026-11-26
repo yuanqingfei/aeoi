@@ -1,0 +1,132 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.matrix.det",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "det": -16.0,
+    "sign": -1,
+    "log_abs_det": 2.772588722239781,
+    "relative_error_estimate": 1.532107773982716e-14,
+    "zero_within_error": false,
+    "method": "lu_partial_pivoting"
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "applicable": false
+    },
+    "condition": {
+      "norm1_inv_A_estimate": 2.25,
+      "norm1_abs_L_abs_U": 20.0,
+      "estimator": "Hager–Higham 1-范数估计（下界）"
+    },
+    "error_estimate": {
+      "det_rel": 1.532107773982716e-14,
+      "basis": "启发式一阶界 n·u·est(‖A⁻¹‖₁)·‖|L||U|‖₁ + n·u：LU 的后向误差 |E| ≲ n·u·|L||U| 经 det(A + E) ≈ det(A)(1 + tr(A⁻¹E)) 传到 det，再加乘积的 n 次舍入；不是严格上界"
+    },
+    "checks": {
+      "significant": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:det:lu-scaled-product",
+      "routine": "matrix::det",
+      "provenance": "aeoi://operators/linalg.matrix.det/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "square",
+        "statement": "A 为方阵",
+        "enforced_by": "error:E.VALIDATION.SHAPE"
+      },
+      {
+        "id": "significant",
+        "statement": "误差估计 < 1（det 与 0 可区分）",
+        "enforced_by": "check:significant"
+      },
+      {
+        "id": "estimate_heuristic",
+        "statement": "误差估计是一阶的启发式界，用的 ‖A⁻¹‖₁ 是估计（下界）",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "det_rel": 1.532107773982716e-14
+      },
+      "basis": "启发式一阶界 n·u·est(‖A⁻¹‖₁)·‖|L||U|‖₁ + n·u：LU 的后向误差 |E| ≲ n·u·|L||U| 经 det(A + E) ≈ det(A)(1 + tr(A⁻¹E)) 传到 det，再加乘积的 n 次舍入；不是严格上界"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "significant": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T2",
+      "credentials": null,
+      "coverage": {
+        "significant": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:9246030e48b1d106bb8bf252f3555a44010df712ecadb976ded47adc4d09765a",
+      "result": "sha256:7e8033339d250fc45ae2f33871804324bff71e79a1a72d56059247c2d0112dfe",
+      "output_hash": "sha256:bfe29b0280453d229a975e89485cab4d0a8456555e35054ee10acf3248dba12c",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.matrix.det@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T2",
+    "input_hash": "sha256:40ed97ae552aab60c53723e61cb4d2dd726ea48c87cf441108ce368f2138d919",
+    "output_hash": "sha256:bfe29b0280453d229a975e89485cab4d0a8456555e35054ee10acf3248dba12c",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.195555
+  }
+}

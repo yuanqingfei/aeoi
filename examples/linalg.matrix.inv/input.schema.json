@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.matrix.inv/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "A"
+  ],
+  "properties": {
+    "A": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "方阵 [n, n]，row-major（MATLAB 是 column-major，先转置再展平）"
+    },
+    "refinement": {
+      "enum": [
+        "auto",
+        "none"
+      ],
+      "default": "auto",
+      "x-aeoi-provenance": "convention",
+      "description": "auto（缺省：每列用补偿残差做至多 3 步迭代精化）或 none（每列只解一次，与 MATLAB inv 相近）"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  },
+  "x-aeoi-shape-constraints": [
+    "A: [n, n]，n ≥ 1"
+  ]
+}

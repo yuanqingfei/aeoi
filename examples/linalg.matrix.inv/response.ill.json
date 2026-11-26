@@ -1,0 +1,359 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok_with_warnings",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.matrix.inv",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "X": {
+      "dtype": "f64",
+      "shape": [
+        13,
+        13
+      ],
+      "data": [
+        153.35327638476156,
+        -11885.177115738392,
+        305346.0418243408,
+        -3840497.409301758,
+        27928301.96899414,
+        -128229028.21777344,
+        390404955.828125,
+        -807776969.109375,
+        1141554885.9375,
+        -1084973072.53125,
+        663289318.5,
+        -235607877.75390625,
+        36956376.4921875,
+        -11895.93171148002,
+        1250678.388418257,
+        -36715880.934391014,
+        499595861.11285394,
+        -3833520618.618163,
+        18318358004.619137,
+        -57551808094.406235,
+        122176540242.93747,
+        -176428111337.24997,
+        170819172726.09372,
+        -106130459057.15623,
+        38240983525.851555,
+        -6075275119.312499,
+        306087.7504316861,
+        -36767092.22402896,
+        1166951617.0273232,
+        -16737854615.866983,
+        133499901689.45978,
+        -657353778576.4646,
+        2115760860593.8843,
+        -4582336662200.58,
+        6730053495798.6,
+        -6611640369320.273,
+        4160273572688.7954,
+        -1515879769108.6064,
+        243230157406.77606,
+        -3857269.7224926758,
+        501139793.8617211,
+        -16764468020.172934,
+        249833328059.14868,
+        -2052015823030.8604,
+        10343229279304.402,
+        -33934620037914.324,
+        74683407887642.44,
+        -111193323848428.9,
+        110529753242453.67,
+        -70266870166395.2,
+        25835794332904.406,
+        -4178921896576.7227,
+        28111884.038502313,
+        -3852530771.2807555,
+        133936786648.15398,
+        -2055307990322.0474,
+        17276016496850.205,
+        -88728540428800.38,
+        295667280708624.0,
+        -659297772470570.2,
+        992684669083854.9,
+        -996399106432627.6,
+        638847859054321.5,
+        -236661203374005.3,
+        38536002159741.484,
+        -129375891.71971217,
+        18445025832.145454,
+        -660628496735.3418,
+        10376129888278.365,
+        -88863542367108.28,
+        463468251152554.1,
+        -1564400956002984.0,
+        3526739204867285.0,
+        -5360261433040486.0,
+        5424470658445148.0,
+        -3502963230526331.0,
+        1305928759676358.0,
+        -213851585362281.94,
+        394857679.6600851,
+        -58064058447.74571,
+        2129886064150.0908,
+        -34094265290641.664,
+        296540678047117.06,
+        -1566582766685025.5,
+        5345397153637726.0,
+        -1.2162414037948296e+16,
+        1.8633810019923304e+16,
+        -1.8988937123319428e+16,
+        1.2337972133393964e+16,
+        -4624780776571771.0,
+        761016985383221.0,
+        -819009810.1066605,
+        123505635830.52695,
+        -4620511373941.892,
+        75143607806179.25,
+        -662130062701619.2,
+        3536172562800603.5,
+        -1.2177669734700286e+16,
+        2.7928161576878224e+16,
+        -4.308324021930403e+16,
+        4.4169383381090696e+16,
+        -2.885179759057621e+16,
+        1.086609486577636e+16,
+        -1795621115838054.5,
+        1160286075.0454655,
+        -178690486736.86188,
+        6796887726101.943,
+        -112032553801372.28,
+        998193828098308.2,
+        -5380903463141005.0,
+        1.867831865619116e+16,
+        -4.313134583468816e+16,
+        6.693495618883142e+16,
+        -6.898366596394005e+16,
+        4.527078973048661e+16,
+        -1.7120677284898876e+16,
+        2839748277069655.5,
+        -1105465413.0368056,
+        173333431246.44864,
+        -6687459886313.594,
+        111508975994107.73,
+        -1003094873557197.5,
+        5451230491373642.0,
+        -1.905384782563765e+16,
+        4.426292311584419e+16,
+        -6.905188682384371e+16,
+        7.149503868277661e+16,
+        -4.711199063585088e+16,
+        1.7882582106723632e+16,
+        -2975949028586445.0,
+        677433771.5479065,
+        -107887496042.4326,
+        4214097435682.773,
+        -70976473291634.31,
+        643838493454036.2,
+        -3523738940803243.0,
+        1.2391725662556228e+16,
+        -2.8938940048294868e+16,
+        4.535552826298433e+16,
+        -4.715318097169616e+16,
+        3.1185563774976036e+16,
+        -1.1876167468231588e+16,
+        1982241560038489.0,
+        -241193705.19479904,
+        38941841200.91187,
+        -1537616968721.7893,
+        26126913082130.65,
+        -238751236828479.2,
+        1314877812238559.5,
+        -4648899107165702.0,
+        1.0907800048528704e+16,
+        -1.7166300482969104e+16,
+        1.791215076321322e+16,
+        -1.188534896651422e+16,
+        4539558456734391.0,
+        -759715583077021.6,
+        37918339.240520135,
+        -6196974617.390493,
+        247042687584.2152,
+        -4230618552192.744,
+        38913030367979.086,
+        -215499529857612.1,
+        765585113612318.0,
+        -1803849257424354.0,
+        2849349329310524.0,
+        -2982949229767324.0,
+        1985139738239215.0,
+        -760235678388305.0,
+        127536271660856.69
+      ]
+    },
+    "kappa1": 8.847879094074444e+17,
+    "rcond": 1.1302143591334955e-18,
+    "method": "lu_partial_pivoting",
+    "refinement_steps": 1
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "backward_error": 8.707195189377214e-18,
+      "threshold": 1.4432899320127035e-14,
+      "definition": "max_j ‖e_j − A·x_j‖∞ / (‖A‖∞‖x_j‖∞ + 1)（逐列范数后向误差，Rigal–Gaches）；残差用补偿算术（Dot2）"
+    },
+    "condition": {
+      "kappa1": 8.847879094074444e+17,
+      "rcond": 1.1302143591334955e-18,
+      "of": "A",
+      "basis": "‖A‖₁·‖X‖₁，X 为返回的逆（不是估计；X 不准时它也不准，但量级可靠）"
+    },
+    "error_estimate": {
+      "X_rel_forward_1": 7.7040210284116215,
+      "basis": "一阶界 ‖ΔX‖/‖X‖ ≲ κ₁·η"
+    },
+    "checks": {
+      "backward_stable": true,
+      "forward_error_below_one": false,
+      "all_finite": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null,
+    "derived": {
+      "refinement": "auto",
+      "norm1_A": 3.180133755133755,
+      "norm1_X": 2.7822348917843882e+17
+    }
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:inv:lu-refine",
+      "routine": "matrix::inv",
+      "provenance": "aeoi://operators/linalg.matrix.inv/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "square",
+        "statement": "A 为方阵",
+        "enforced_by": "error:E.VALIDATION.SHAPE"
+      },
+      {
+        "id": "nonsingular",
+        "statement": "A 非奇异",
+        "enforced_by": "error:E.NUMERICAL.SINGULAR"
+      },
+      {
+        "id": "conditioning",
+        "statement": "κ·u ≪ 1，否则 X 没有有效数字（前向误差 ≈ κ·η）",
+        "enforced_by": "warning:W.NUMERICAL.ILL_CONDITIONED"
+      },
+      {
+        "id": "row_major",
+        "statement": "A 按 row-major 录入",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic",
+      "bound": {
+        "X_rel_forward_1": 7.7040210284116215
+      },
+      "basis": "一阶界 ‖ΔX‖/‖X‖ ≲ κ₁·η"
+    },
+    "evidence": {
+      "claim": "unverified",
+      "postconditions": {
+        "backward_stable": true,
+        "forward_error_below_one": false,
+        "all_finite": true
+      },
+      "failed": [
+        "forward_error_below_one"
+      ],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "backward_stable": "full",
+        "forward_error_below_one": "full",
+        "all_finite": "full"
+      },
+      "unreliable": [
+        "/X"
+      ]
+    },
+    "fingerprint": {
+      "request": "sha256:751a34a0f986bdc0d763a87d70fe5c5d68673f58d35e0e1ec69afcadc8c8b963",
+      "result": "sha256:8e10147c6d9bbb8142ff27aaef92c30d8b004d8e62c34a2648935e8ded22ac98",
+      "output_hash": "sha256:b03573ecddc010f1146e2bebbe31f560710cd320cfda00ee45dd3739013bc92f",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.matrix.inv@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [
+    {
+      "code": "W.NUMERICAL.ILL_CONDITIONED",
+      "message": "A 接近奇异：rcond = 1.130e-18 < ε（κ₁ = 8.848e17）。逆矩阵的相对误差可能达到 κ₁·η ≈ 7.7e0，结果可能没有有效数字。",
+      "path": "/A",
+      "details": {
+        "rcond": 1.1302143591334955e-18,
+        "kappa1": 8.847879094074444e+17
+      }
+    },
+    {
+      "code": "W.EVIDENCE.POSTCONDITION_FAILED",
+      "message": "后置条件未满足或未给出：forward_error_below_one；结果不能视为已验证；不可依赖的结果字段：/X",
+      "details": {
+        "failed": [
+          "forward_error_below_one"
+        ],
+        "postconditions": {
+          "backward_stable": true,
+          "forward_error_below_one": false,
+          "all_finite": true
+        },
+        "unreliable": [
+          "/X"
+        ]
+      }
+    }
+  ],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:5f7711cf34b53a8f296005cfd6e7707f158add4145c08ac23c1d2227e9f0bb46",
+    "output_hash": "sha256:b03573ecddc010f1146e2bebbe31f560710cd320cfda00ee45dd3739013bc92f",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.27103700000000003
+  }
+}

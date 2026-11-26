@@ -543,7 +543,58 @@ def rule_roots(case, env, manifest, req=None, expected=None):
     return out
 
 
-RULES = {"signal.spectral.fft": rule_fft, "ode.ivp.solve": rule_ode, "linalg.system.solve": rule_linsolve, "interp.grid.interp1": rule_interp1,
+# ---------------------------------------------------------------- linalg.matrix.inv (parity.yaml: T1, profile 10.35)
+def rule_inv(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = expected or case["expected"]; r = env["result"]
+    n = int(e["n"])
+    X = arr(r["X"])
+    if X.shape != (n, n):
+        return [fail("X: shape [n, n]", f"got {X.shape}, want {(n, n)}")]
+    A = arr(req["A"]).reshape(n, n)
+    Xt = np.array(e["X_true"], dtype=float).reshape(n, n)
+    kappa = float(e["kappa1_true"])
+    claims = (env.get("trust") or {}).get("checks") or {}
+    fe = float(np.max(np.sum(np.abs(X - Xt), axis=0)) / np.max(np.sum(np.abs(Xt), axis=0)))
+    out = []
+    if case.get("expect_postcondition_failed") and claims.get("forward_error_below_one") is False:
+        out.append(("flagged case: forward_error_below_one = false and /X listed unreliable (accuracy not required)  [E-13]", True, None, None, ""))
+    else:
+        out.append(check("X vs exact inverse: ‖ΔX‖₁/‖X_true‖₁ ≤ 1e-12·max(1, κ₁/100)  [T1, V-6]", fe, 1e-12 * max(1.0, kappa / 100.0)))
+    out.append(("method echoes lu_partial_pivoting  [IV-2]", r.get("method") == "lu_partial_pivoting", None, None, f"got {r.get('method')}"))
+    if claims.get("forward_error_below_one") is True:
+        out.append(("claim: forward_error_below_one = true only where the true κ₁·u < 10  [IV-4]", kappa * U < 10, None, None, f"true κ₁ = {kappa:.3e}"))
+    k_ret = float(np.max(np.sum(np.abs(A), axis=0)) * np.max(np.sum(np.abs(X), axis=0)))
+    kr = num(r.get("kappa1"))
+    out.append(check("kappa1 = ‖A‖₁·‖X‖₁ of the returned X, recomputed by the runner (relative)  [IV-4]", abs(kr - k_ret) / k_ret if k_ret else abs(kr), 1e-12))
+    if claims.get("backward_stable") is True and n <= 60:
+        eta = _exact_backward_error(A, np.eye(n), X, True)
+        out.append(check("backward_stable = true ⇒ max_j ‖e_j − A x_j‖∞/(‖A‖∞‖x_j‖∞ + 1) ≤ 10·n·u, recomputed exactly by the runner  [IV-3]", eta, 10 * n * U))
+    return out
+
+
+# ---------------------------------------------------------------- linalg.matrix.det (parity.yaml: T2, profile 10.36)
+def rule_det(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = expected or case["expected"]; r = env["result"]
+    n = int(e["n"])
+    zero = r.get("zero_within_error")
+    if e["sign_true"] == 0:
+        return [("singular data (det_true = 0 exactly): zero_within_error = true  [DT-4, claim check]", zero is True, None, None, f"zero_within_error = {zero}, det = {r.get('det')}")]
+    kappa = float(e["kappa1_true"]); tol = 16 * n * U * max(1.0, kappa)
+    out = [("significant data (n·u·κ₁ < 1e-3): zero_within_error = false  [DT-4]", zero is False, None, None, f"zero_within_error = {zero}")]
+    la = num(r.get("log_abs_det"))
+    out.insert(0, check("ln|det| vs exact: |Δ| ≤ 16·n·u·max(1, κ₁)  [DT-2]", abs(la - float(e["log_abs_det_true"])), tol))
+    out.append(("sign equals the sign of the exact det  [DT-2]", r.get("sign") == e["sign_true"], None, None, f"got {r.get('sign')}, want {e['sign_true']}"))
+    d = num(r.get("det")); dt = e.get("det_true")
+    if dt is not None and abs(dt) >= np.finfo(float).tiny:
+        out.append(check("det vs exact: |Δdet|/|det| ≤ 16·n·u·max(1, κ₁)  [DT-2]", abs(d - dt) / abs(dt), tol))
+    else:
+        want = np.sign(e["sign_true"]) * np.inf if float(e["log_abs_det_true"]) > 0 else None
+        ok = (d == want) if want is not None else (abs(d) < np.finfo(float).tiny)
+        out.append(("det out of range: ±Inf (overflow) or below the normal range (underflow)  [DT-3]", bool(ok), None, None, f"got {r.get('det')}"))
+    return out
+
+
+RULES = {"linalg.matrix.inv": rule_inv, "linalg.matrix.det": rule_det, "signal.spectral.fft": rule_fft, "ode.ivp.solve": rule_ode, "linalg.system.solve": rule_linsolve, "interp.grid.interp1": rule_interp1,
          "fit.poly.polyfit": rule_polyfit, "linalg.decomp.eig": rule_eig, "linalg.decomp.svd": rule_svd,
          "signal.design.butter": rule_butter, "signal.filter.filter": rule_filter,
          "nonlinear.root.fzero": rule_fzero, "nonlinear.system.fsolve": rule_fsolve,

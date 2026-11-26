@@ -1,0 +1,77 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "linalg.matrix.det",
+ "operator_version": "0.4.0",
+ "case_family": "singular_rank3_integer",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    6,
+    6
+   ],
+   "data": [
+    50.0,
+    0.0,
+    30.0,
+    10.0,
+    20.0,
+    -45.0,
+    18.0,
+    4.0,
+    10.0,
+    -6.0,
+    12.0,
+    -6.0,
+    3.0,
+    -12.0,
+    7.0,
+    17.0,
+    -12.0,
+    -19.0,
+    -1.0,
+    1.0,
+    -5.0,
+    16.0,
+    -1.0,
+    -18.0,
+    -43.0,
+    5.0,
+    -31.0,
+    -2.0,
+    -13.0,
+    30.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "mpmath",
+  "mpmath": "1.4.1",
+  "dps": 80,
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261127,
+  "method": "inverse and determinant of the stored f64 matrix at 80 digits (mpmath LU); n ≤ 8 cross-checked with exact rationals",
+  "note": "high-precision truth; numpy.linalg values recorded for comparison; NOT MATLAB output"
+ },
+ "expected": {
+  "n": 6,
+  "method": "lu_partial_pivoting",
+  "numpy_det": 0.0,
+  "numpy_log_abs_det": null,
+  "det_true": 0.0,
+  "sign_true": 0,
+  "log_abs_det_true": null,
+  "kappa1_true": null
+ },
+ "expect_warning": "W.NUMERICAL.DET_NOT_SIGNIFICANT",
+ "expect_postcondition_failed": [
+  "significant"
+ ]
+}

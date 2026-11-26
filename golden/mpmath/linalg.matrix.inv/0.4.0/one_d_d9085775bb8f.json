@@ -1,0 +1,30 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "linalg.matrix.inv",
+ "operator_version": "0.4.0",
+ "case_family": "one_d",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    3
+   ],
+   "data": [
+    1.0,
+    2.0,
+    3.0
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "mpmath",
+  "mpmath": "1.4.1",
+  "dps": 80,
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261127,
+  "method": "inverse and determinant of the stored f64 matrix at 80 digits (mpmath LU); n ≤ 8 cross-checked with exact rationals",
+  "note": "high-precision truth; numpy.linalg values recorded for comparison; NOT MATLAB output"
+ },
+ "expected_error": "E.VALIDATION.SHAPE"
+}

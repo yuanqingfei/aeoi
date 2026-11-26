@@ -1,0 +1,41 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "linalg.matrix.det",
+ "operator_version": "0.4.0",
+ "case_family": "random",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    2
+   ],
+   "data": [
+    0.2790340231640343,
+    0.6964105097554883,
+    0.43281744113058296,
+    -0.9039687680738635
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "mpmath",
+  "mpmath": "1.4.1",
+  "dps": 80,
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261127,
+  "method": "inverse and determinant of the stored f64 matrix at 80 digits (mpmath LU); n ≤ 8 cross-checked with exact rationals",
+  "note": "high-precision truth; numpy.linalg values recorded for comparison; NOT MATLAB output"
+ },
+ "expected": {
+  "n": 2,
+  "method": "lu_partial_pivoting",
+  "numpy_det": -0.5536566569791014,
+  "numpy_log_abs_det": -0.5912105371062749,
+  "det_true": -0.5536566569791014,
+  "sign_true": -1,
+  "log_abs_det_true": -0.5912105371062749,
+  "kappa1_true": 3.8640643458922637
+ }
+}

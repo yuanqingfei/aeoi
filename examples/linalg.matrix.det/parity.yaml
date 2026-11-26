@@ -1,0 +1,27 @@
+# Parity test spec — linalg.matrix.det 0.4.0 (AEOI v0.4.22-draft)
+operator: linalg.matrix.det
+references:
+  - {engine: mpmath, role: high_precision_reference, status: active, generator: gen_golden_matrix.py,
+     golden_store: "golden/mpmath/linalg.matrix.det/0.4.0/*.json",
+     note: "determinant of the stored f64 matrix at 80 digits; exact rationals for n ≤ 8 and for every singular case (det = 0 exactly). NOT MATLAB output"}
+  - {engine: numpy, version: "numpy.linalg.det / slogdet (LAPACK dgetrf)", role: dev_reference, status: active, note: "recorded for comparison only"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_matrix"
+tolerance_class: T2
+compare:
+  log_abs_det: {against: exact answer, bound: "|Δ ln|det|| ≤ 16 · n · u · max(1, κ₁)  (κ₁ of the truth)"}
+  det: "same bound on |Δdet|/|det| when det_true is in the f64 normal range"
+  sign: exact
+  singular data: "det_true = 0 exactly ⇒ zero_within_error = true (W.NUMERICAL.DET_NOT_SIGNIFICANT, significant = false)"
+  warnings: "exactly the predicted set: DET_OUT_OF_RANGE iff |ln|det_true|| > 708"
+  relative_error_estimate: "heuristic; recorded against the actual error in reports/parity-det.json, not asserted"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py (rule_det). No trust.* value of the implementation is used as a tolerance
+  log_abs_det: "|Δ ln|det|| ≤ 16 · n · u · max(1, κ₁), κ₁ from the truth"
+  det: "same bound, relative, when det_true and the returned det are both in the normal range; ±Inf / underflow only with DET_OUT_OF_RANGE"
+  sign: "equal to the truth"
+  claim: "zero_within_error = false on singular data (det_true = 0) is a false claim; zero_within_error = true on data whose true det is significant is reported as a failure only when n·u·κ₁ < 1e-3 (the generator only writes such cases)"
+case_families:
+  - {name: "random ×7 (n = 1…200) / integer_exact / permutation_odd / triangular / needs_pivoting / tiny_but_well_conditioned / hilbert_8", n: 13}
+  - {name: "overflow (ln|det| = 991) / underflow (ln|det| = −807)", n: 2, expect_warning: W.NUMERICAL.DET_OUT_OF_RANGE}
+  - {name: "singular_magic4 / singular_rank1 / singular_rank3_integer", n: 3, expect_warning: W.NUMERICAL.DET_NOT_SIGNIFICANT}
+  - {name: errors, n: 5, expect: "E.VALIDATION.SHAPE ×2, DTYPE, NON_FINITE, SCHEMA"}

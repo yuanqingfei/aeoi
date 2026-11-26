@@ -853,6 +853,44 @@ rts_out=outs("fit.poly.roots",{"roots":dict(M,description="全部 n 个根，c12
 B3.update({"fit.poly.polyval":(pval,pval_in,pval_out),"fit.poly.roots":(rts,rts_in,rts_out)})
 DESC.update({"fit.poly.polyval":{"p":"系数 [n + 1]，最高次在前（x² − 3x + 2 写成 [1, −3, 2]）","x":"求值点 [q]（单个点写成 [1]）","mu":"可选：fit.poly.polyfit（scaling = center_scale）结果里的 mu = [mean, std]，原样粘贴；给了就在 (x − mu[0])/mu[1] 处求值"},
  "fit.poly.roots":{"p":"系数 [n + 1]，最高次在前（x² − 3x + 2 写成 [1, −3, 2]）；末尾的 0 给出零根"}})
+
+# ---- v0.4.22: linalg.matrix.inv, linalg.matrix.det (layer 2 of spec 12.3; kernel aeoi-core::kernels::dense)
+V422="0.4.0"
+LU_REFS=[{"type":"textbook","cite":"N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §9（LU）、§12（迭代精化）、§14（矩阵求逆）、§15（条件数估计）"},
+  {"type":"paper","cite":"T. Ogita, S. M. Rump, S. Oishi, Accurate sum and dot product, SIAM J. Sci. Comput. 26(6), 2005","doi":"10.1137/030601818"}]
+SQ_ERR=["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.DIGEST_MISMATCH","E.VALIDATION.REF_UNSUPPORTED","E.VALIDATION.REF_FORBIDDEN"]
+minv=man("linalg.matrix.inv","Matrix inverse","实方阵的逆矩阵（= MATLAB inv）。LU 分解（部分选主元，与 linalg.system.solve 同一内核），逐列解 A·x_j = e_j，再用补偿算术算残差做至多 3 步迭代精化。结果带每列的后向误差和由返回的逆算出的 1-范数条件数；A 接近奇异时仍返回结果，但发警告，结果没有有效数字时把 X 标为不可依赖。解方程组请用 linalg.system.solve，不要先求逆再相乘（更慢、更不准）。","analysis",["linalg","inverse","inv","matrix"],
+ ["A 为 [n, n] 实数方阵","A 非奇异（LU 主元不为 0）"],
+ ["解线性方程组（用 linalg.system.solve：A⁻¹·b 比直接解更慢、更不准）","非方阵或奇异矩阵的伪逆（用 linalg.matrix.pinv）","复数矩阵（0.4.0 未支持）","大型稀疏矩阵（逆一般是稠密的）"],
+ "LU 分解 P·A = L·U，部分选主元（每列取 |a_ik| 最大的第一行，与 LAPACK dgetf2 相同）；某步主元恰为 0 报 E.NUMERICAL.SINGULAR。逐列解 A·x_j = e_j；refinement = auto（缺省）时每列再做至多 3 步固定精度迭代精化（残差 e_j − A·x_j 用补偿算术 Dot2，规则同 linalg.system.solve LS-2）。后向误差逐列 η_j = ‖e_j − A·x_j‖∞ / (‖A‖∞‖x_j‖∞ + 1)；κ₁ = ‖A‖₁·‖X‖₁（由返回的 X 直接算，不是估计）；rcond = 1/κ₁ < ε 时 W.NUMERICAL.ILL_CONDITIONED",
+ LU_REFS,"matrix::inv (LU partial pivoting + per-column refinement)","T1",{"max_dimension":1000,"max_refinement_steps":3},
+ SQ_ERR+["E.NUMERICAL.SINGULAR"]+TAIL_ERR,["W.NUMERICAL.ILL_CONDITIONED","W.PERFORMANCE.SPARSE_DENSIFIED"],
+ sparse={"/A":{"policy":"densify","max_dense_elements":1000000}},ver=V422,backend=BACK_NUM("matrix::inv"))
+minv_in=ins("linalg.matrix.inv",{"A":M,"refinement":{"enum":["auto","none"],"default":"auto","x-aeoi-provenance":"convention"}},["A"],
+ {"x-aeoi-shape-constraints":["A: [n, n]，n ≥ 1"]},ver=V422)
+minv_out=outs("linalg.matrix.inv",{"X":dict(M,description="A⁻¹，[n, n]"),
+ "kappa1":{"description":"‖A‖₁·‖X‖₁（由返回的 X 算出）"},"rcond":{"description":"1/kappa1"},
+ "method":{"enum":["lu_partial_pivoting"]},"refinement_steps":{"type":"integer","description":"各列实际加上的修正步数的最大值"}},
+ ["X","kappa1","rcond","method","refinement_steps"],ver=V422)
+EXTNUM={"oneOf":[{"type":"number"},{"$ref":C+"NonFinite"}]}
+mdet=man("linalg.matrix.det","Determinant with error estimate","实方阵的行列式（= MATLAB det）。LU 分解（部分选主元，与 linalg.system.solve 同一内核），det = sign(P)·Π u_ii，乘积按尾数与指数分开累乘，不会中途溢出。同时返回 log|det| 与符号（超出 f64 范围时仍有意义），以及相对误差估计：估计 ≥ 1 时 det 与 0 不可区分（例如舍入后的奇异矩阵给出 1e-12 这样的小数），此时 det、sign、log|det| 标为不可依赖。判断奇异请看条件数（linalg.system.solve 或 linalg.matrix.inv 的 rcond），不要看 det 的大小。","analysis",["linalg","determinant","det","slogdet"],
+ ["A 为 [n, n] 实数方阵"],
+ ["判断矩阵是否奇异或接近奇异（det 的大小与条件数无关：0.1·I₁₀₀ 的 det 是 1e-100，但完全良态；用 rcond）","复数矩阵（0.4.0 未支持）"],
+ "LU 分解 P·A = L·U，部分选主元（同 linalg.system.solve）；det = sign(P)·Π u_ii。乘积分成尾数 m ∈ [0.5, 1) 与二进制指数 e 累乘（每步一次舍入，跨平台逐位相同），det = m·2^e，log|det| = ln m + e·ln 2，超出 f64 范围时 det 为 ±Inf 或下溢并发 W.NUMERICAL.DET_OUT_OF_RANGE。某步主元恰为 0 时 det = 0、sign = 0、log|det| = −Inf。相对误差估计（启发式一阶界）：ε = n·u·est(‖A⁻¹‖₁)·‖|L|·|U|‖₁ + n·u，est 为 Hager–Higham 1-范数估计；ε ≥ 1 或主元为 0 时 zero_within_error = true，发 W.NUMERICAL.DET_NOT_SIGNIFICANT",
+ LU_REFS,"matrix::det (LU partial pivoting, scaled product)","T2",{"max_dimension":2000},
+ SQ_ERR+TAIL_ERR,["W.NUMERICAL.DET_NOT_SIGNIFICANT","W.NUMERICAL.DET_OUT_OF_RANGE","W.PERFORMANCE.SPARSE_DENSIFIED"],
+ sparse={"/A":{"policy":"densify","max_dense_elements":4000000}},ver=V422,backend=BACK_NUM("matrix::det"))
+mdet_in=ins("linalg.matrix.det",{"A":M},["A"],{"x-aeoi-shape-constraints":["A: [n, n]，n ≥ 1"]},ver=V422)
+mdet_out=outs("linalg.matrix.det",{"det":dict(EXTNUM,description="行列式；超出 f64 范围时为 \"Inf\" / \"-Inf\" 或下溢的值（看 log_abs_det）"),
+ "sign":{"enum":[-1,0,1],"description":"det 的符号；主元为 0 时为 0"},
+ "log_abs_det":dict(EXTNUM,description="ln|det|（自然对数），不会溢出；det = 0 时为 \"-Inf\""),
+ "relative_error_estimate":dict(EXTNUM,description="det 的相对误差估计（启发式一阶界）；主元为 0 时为 \"Inf\""),
+ "zero_within_error":{"type":"boolean","description":"true：误差估计 ≥ 1，det 与 0 不可区分（det、sign、log_abs_det 不可依赖）"},
+ "method":{"enum":["lu_partial_pivoting"]}},
+ ["det","sign","log_abs_det","relative_error_estimate","zero_within_error","method"],ver=V422)
+B3.update({"linalg.matrix.inv":(minv,minv_in,minv_out),"linalg.matrix.det":(mdet,mdet_in,mdet_out)})
+DESC.update({"linalg.matrix.inv":{"A":"方阵 [n, n]，row-major（MATLAB 是 column-major，先转置再展平）","refinement":"auto（缺省：每列用补偿残差做至多 3 步迭代精化）或 none（每列只解一次，与 MATLAB inv 相近）"},
+ "linalg.matrix.det":{"A":"方阵 [n, n]，row-major（行列式对转置不变，所以录入顺序不影响结果）"}})
 ALL_OPS={"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2|B3
 for op,props in DESC.items():
     for (m_,i_,o_) in [ALL_OPS[op]]:
@@ -913,6 +951,10 @@ RECEIPT["linalg.system.solve"]={"method_id":"aeoi:linsolve:lu-refine-or-househol
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["backward_stable","all_finite"]}
 RECEIPT["calculus.quadrature.integral"]={"method_id":"aeoi:integral:adaptive-gauss-kronrod-7-15","assumptions":[A("expression","被积函数是合法的 3.15 表达式","error:E.VALIDATION.EXPRESSION"),A("integrable","积分收敛（可积，无内部不可积奇点）","error:E.NUMERICAL.NO_CONVERGENCE"),A("finite_values","被积函数在求值点上有限","error:E.NUMERICAL.NON_FINITE_EVALUATION"),A("error_estimate_heuristic","误差估计是启发式的；可能漏掉区间里窄的尖峰","check:refinement_consistent")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["tolerance_met","refinement_consistent","all_finite"]}
+RECEIPT["linalg.matrix.inv"]={"method_id":"aeoi:inv:lu-refine","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("square","A 为方阵","error:E.VALIDATION.SHAPE"),A("nonsingular","A 非奇异","error:E.NUMERICAL.SINGULAR"),A("conditioning","κ·u ≪ 1，否则 X 没有有效数字（前向误差 ≈ κ·η）","warning:W.NUMERICAL.ILL_CONDITIONED"),A("row_major","A 按 row-major 录入","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["backward_stable","forward_error_below_one","all_finite"]}
+RECEIPT["linalg.matrix.det"]={"method_id":"aeoi:det:lu-scaled-product","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("square","A 为方阵","error:E.VALIDATION.SHAPE"),A("significant","误差估计 < 1（det 与 0 可区分）","check:significant"),A("estimate_heuristic","误差估计是一阶的启发式界，用的 ‖A⁻¹‖₁ 是估计（下界）","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["significant"]}
 RECEIPT["fit.poly.polyval"]={"method_id":"aeoi:polyval:compensated-horner","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("no_overflow","求值过程不溢出","error:E.NUMERICAL.NON_FINITE_EVALUATION"),A("no_underflow","误差界不考虑下溢（结果的量级在 1e-290 以上时成立）","caller"),A("coefficients_exact","误差界针对给定的 f64 系数；系数本身的误差经 condition 放大","caller")],
    "exactness":{"class":"approximate","bound_kind":"rigorous"},"postconditions":["horner_consistent"]}
 RECEIPT["fit.poly.roots"]={"method_id":"aeoi:roots:companion-eig-newton-inclusion","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("nonzero","p 不是零多项式","error:E.DOMAIN.ZERO_POLYNOMIAL"),A("coefficients_exact","根与半径针对给定的 f64 系数；系数本身的误差另经根的条件数放大","caller"),A("clusters","簇内各根的位置不能单独确定","warning:W.ACCURACY.CLUSTERED_ROOTS")],
@@ -958,6 +1000,7 @@ COVERAGE.update({"control.design.pid":{"formula_matches":"test_points"},"control
  "signal.spectral.fft":{"parseval":"full","dft_spot_check":"sampled"},
  "ode.ivp.solve":{"tolerance_consistent":"full"},
  "linalg.system.solve":{"backward_stable":"full"},
+ "linalg.matrix.inv":{"backward_stable":"full","forward_error_below_one":"full"},"linalg.matrix.det":{"significant":"full"},
  "interp.grid.interp1":{"pieces_interpolate":"full","spline_c2":"full","local_bounds":"full"},
  "fit.poly.polyfit":{"backward_stable":"full"},
  "signal.design.butter":{"stable":"full","edge_gain":"full","sos_consistent":"test_points"},
@@ -978,6 +1021,8 @@ GUARDS["linalg.system.solve"]={"backward_stable":["/x"]}
 GUARDS["interp.grid.interp1"]={"pieces_interpolate":["/yq"],"spline_c2":["/yq"],"local_bounds":["/yq"]}
 GUARDS["signal.design.butter"]={"stable":["/z","/p","/k","/sos","/b","/a","/system"],"edge_gain":["/z","/p","/k","/sos","/b","/a","/system"],"sos_consistent":["/sos"]}
 GUARDS["fit.poly.polyval"]={"horner_consistent":["/y","/error_bound"]}
+GUARDS["linalg.matrix.inv"]={"backward_stable":["/X"],"forward_error_below_one":["/X"]}
+GUARDS["linalg.matrix.det"]={"significant":["/det","/sign","/log_abs_det"]}
 GUARDS["fit.poly.roots"]={"backward_stable":["/roots","/error_radius"],"radii_finite":["/error_radius","/multiplicity"]}
 GUARDS["calculus.quadrature.integral"]={"tolerance_met":["/value","/error_estimate"],"refinement_consistent":["/value","/error_estimate"]}
 GUARDS["optim.linear.linprog"]={"kkt":["/x","/fval","/lambda"]}

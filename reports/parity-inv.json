@@ -1,0 +1,160 @@
+{
+  "reference": "truth for the stored data: mpmath 80 digits (exact rationals for n ≤ 8); numpy.linalg.inv (LAPACK) recorded. Not MATLAB.",
+  "cases": 23,
+  "error_cases": 8,
+  "worst_forward_error_over_tolerance": 0.00019854532194430984,
+  "more_accurate_than_numpy": 10,
+  "tolerance": "‖X − X_true‖₁/‖X_true‖₁ ≤ 1e-12 · max(1, κ₁/100) (T1, V-6 κ scaling); flagged cases: the failed post-condition is asserted, accuracy is not",
+  "cases_detail": [
+    {
+      "family": "graded_scaling",
+      "n": 5,
+      "forward_error": 0.0,
+      "numpy_forward_error": 1.118579877441253e-14,
+      "kappa1_true": 47740124926808.445,
+      "kappa1_reported": 47740124926808.445,
+      "backward_error": 2.154373110263567e-17,
+      "refinement_steps": 2
+    },
+    {
+      "family": "hilbert_10",
+      "n": 10,
+      "forward_error": 0.0,
+      "numpy_forward_error": 2.274605802150786e-6,
+      "kappa1_true": 35354248023149.945,
+      "kappa1_reported": 35354248023149.945,
+      "backward_error": 6.34147494842665e-18,
+      "refinement_steps": 3
+    },
+    {
+      "family": "hilbert_13_ill",
+      "n": 13,
+      "forward_error": 0.8273442239570021,
+      "numpy_forward_error": 0.06620105919485834,
+      "kappa1_true": 5.124577524629698e+18,
+      "kappa1_reported": 8.847879094074444e+17,
+      "backward_error": 8.707195189377214e-18,
+      "refinement_steps": 1
+    },
+    {
+      "family": "hilbert_6",
+      "n": 6,
+      "forward_error": 0.0,
+      "numpy_forward_error": 2.728068663550935e-10,
+      "kappa1_true": 29070279.002278447,
+      "kappa1_reported": 29070279.002278447,
+      "backward_error": 6.7994278682022826e-18,
+      "refinement_steps": 2
+    },
+    {
+      "family": "integer_unimodular",
+      "n": 3,
+      "forward_error": 0.0,
+      "numpy_forward_error": 0.0,
+      "kappa1_true": 20.0,
+      "kappa1_reported": 20.0,
+      "backward_error": 0.0,
+      "refinement_steps": 1
+    },
+    {
+      "family": "needs_pivoting",
+      "n": 2,
+      "forward_error": 0.0,
+      "numpy_forward_error": 0.0,
+      "kappa1_true": 4.0,
+      "kappa1_reported": 4.0,
+      "backward_error": 3.3333333333333333e-21,
+      "refinement_steps": 1
+    },
+    {
+      "family": "orthogonal",
+      "n": 8,
+      "forward_error": 0.0,
+      "numpy_forward_error": 2.6436695051707663e-16,
+      "kappa1_true": 6.804857591164551,
+      "kappa1_reported": 6.804857591164551,
+      "backward_error": 1.429231547275547e-17,
+      "refinement_steps": 2
+    },
+    {
+      "family": "random",
+      "n": 1,
+      "forward_error": 0.0,
+      "numpy_forward_error": 0.0,
+      "kappa1_true": 1.0,
+      "kappa1_reported": 1.0,
+      "backward_error": 2.1262684686871632e-18,
+      "refinement_steps": 1
+    },
+    {
+      "family": "random",
+      "n": 30,
+      "forward_error": 0.0,
+      "numpy_forward_error": 6.86506186618361e-15,
+      "kappa1_true": 4551.086614713967,
+      "kappa1_reported": 4551.086614713967,
+      "backward_error": 1.820278617678043e-17,
+      "refinement_steps": 2
+    },
+    {
+      "family": "random",
+      "n": 2,
+      "forward_error": 0.0,
+      "numpy_forward_error": 4.4436910033089796e-17,
+      "kappa1_true": 19.753368962684714,
+      "kappa1_reported": 19.753368962684714,
+      "backward_error": 8.017881067769094e-18,
+      "refinement_steps": 1
+    },
+    {
+      "family": "random",
+      "n": 5,
+      "forward_error": 0.0,
+      "numpy_forward_error": 1.3838868925966918e-16,
+      "kappa1_true": 9.520852809566302,
+      "kappa1_reported": 9.520852809566302,
+      "backward_error": 2.3372778951375593e-17,
+      "refinement_steps": 1
+    },
+    {
+      "family": "random",
+      "n": 3,
+      "forward_error": 0.0,
+      "numpy_forward_error": 1.3843046434636613e-16,
+      "kappa1_true": 16.700248985608027,
+      "kappa1_reported": 16.700248985608027,
+      "backward_error": 7.706751019655433e-18,
+      "refinement_steps": 1
+    },
+    {
+      "family": "random",
+      "n": 10,
+      "forward_error": 0.0,
+      "numpy_forward_error": 8.68710036291438e-16,
+      "kappa1_true": 99.47452115713268,
+      "kappa1_reported": 99.47452115713268,
+      "backward_error": 3.272143923059112e-17,
+      "refinement_steps": 2
+    },
+    {
+      "family": "random",
+      "n": 50,
+      "forward_error": 0.0,
+      "numpy_forward_error": 1.6663292117826236e-15,
+      "kappa1_true": 758.3202139206185,
+      "kappa1_reported": 758.3202139206185,
+      "backward_error": 1.2758473576816301e-17,
+      "refinement_steps": 2
+    },
+    {
+      "family": "refinement_none",
+      "n": 12,
+      "forward_error": 2.4374720646893114e-14,
+      "numpy_forward_error": 2.4370188134104885e-14,
+      "kappa1_true": 12276.653213582136,
+      "kappa1_reported": 12276.653213582438,
+      "backward_error": 8.134178973995589e-17,
+      "refinement_steps": 0
+    }
+  ]
+}

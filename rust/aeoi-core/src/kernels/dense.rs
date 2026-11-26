@@ -51,6 +51,27 @@ pub fn lu_factor(a: &[f64], n: usize) -> Lu {
 }
 
 impl Lu {
+    /// Sign of the row permutation P (+1 or −1), from the cycle structure of `piv`.
+    pub fn perm_sign(&self) -> i64 {
+        let mut seen = vec![false; self.n];
+        let mut s = 1i64;
+        for i in 0..self.n {
+            if seen[i] {
+                continue;
+            }
+            let mut len = 0usize;
+            let mut j = i;
+            while !seen[j] {
+                seen[j] = true;
+                j = self.piv[j];
+                len += 1;
+            }
+            if len % 2 == 0 {
+                s = -s;
+            }
+        }
+        s
+    }
     /// Entry (i, j) of the combined factor (U on and above the diagonal, L multipliers below).
     pub fn entry(&self, i: usize, j: usize) -> f64 {
         self.lu[i * self.n + j]
@@ -99,6 +120,35 @@ impl Lu {
         }
         x
     }
+}
+
+/// Solve A·x = b with an existing LU factor of the n×n matrix `a` (row-major), then at most `max_steps` steps of
+/// fixed-precision iterative refinement with the residual in compensated arithmetic (spec 10.19 LS-2): a
+/// correction δ is discarded, and refinement stops, if ‖δ‖∞ is not below half of the previous one (the first is
+/// compared with ∞); after adding δ, stop if ‖δ‖∞ ≤ 2u‖x‖∞. Returns (x, steps actually added).
+/// Shared by linalg.system.solve and linalg.matrix.inv (RI-1).
+pub fn lu_solve_refined(lu: &Lu, a: &[f64], n: usize, b: &[f64], max_steps: usize) -> (Vec<f64>, usize) {
+    const U: f64 = f64::EPSILON / 2.0;
+    let mut x = lu.solve(b);
+    let mut steps = 0usize;
+    let mut prev = f64::INFINITY;
+    for _ in 0..max_steps {
+        let r = residual_dd(a, n, n, &x, b);
+        let d = lu.solve(&r);
+        let dn = norm_inf(&d);
+        if !dn.is_finite() || dn > prev / 2.0 {
+            break;
+        }
+        for (xi, di) in x.iter_mut().zip(&d) {
+            *xi += di;
+        }
+        steps += 1;
+        prev = dn;
+        if dn <= 2.0 * U * norm_inf(&x) {
+            break;
+        }
+    }
+    (x, steps)
 }
 
 // ------------------------------------------------------------------ Householder QR (m ≥ n)

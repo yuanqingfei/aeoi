@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.matrix.det/0.4.0/output",
+  "type": "object",
+  "required": [
+    "det",
+    "sign",
+    "log_abs_det",
+    "relative_error_estimate",
+    "zero_within_error",
+    "method"
+  ],
+  "properties": {
+    "det": {
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "$ref": "aeoi://schemas/common/0.4#/$defs/NonFinite"
+        }
+      ],
+      "description": "行列式；超出 f64 范围时为 \"Inf\" / \"-Inf\" 或下溢的值（看 log_abs_det）"
+    },
+    "sign": {
+      "enum": [
+        -1,
+        0,
+        1
+      ],
+      "description": "det 的符号；主元为 0 时为 0"
+    },
+    "log_abs_det": {
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "$ref": "aeoi://schemas/common/0.4#/$defs/NonFinite"
+        }
+      ],
+      "description": "ln|det|（自然对数），不会溢出；det = 0 时为 \"-Inf\""
+    },
+    "relative_error_estimate": {
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "$ref": "aeoi://schemas/common/0.4#/$defs/NonFinite"
+        }
+      ],
+      "description": "det 的相对误差估计（启发式一阶界）；主元为 0 时为 \"Inf\""
+    },
+    "zero_within_error": {
+      "type": "boolean",
+      "description": "true：误差估计 ≥ 1，det 与 0 不可区分（det、sign、log_abs_det 不可依赖）"
+    },
+    "method": {
+      "enum": [
+        "lu_partial_pivoting"
+      ]
+    }
+  }
+}

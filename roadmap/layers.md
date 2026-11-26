@@ -1,4 +1,4 @@
-目标共 102 个 MATLAB 函数，已覆盖 43 个（42%），由 39 个 AEOI 算子提供。共享内核 33 个：已有 25，待从算子中抽出 0，待新写 8。层号 = 1 + 依赖中最大的层号（无依赖为 0）；由 `roadmap/targets.py` 生成，改清单只改那个文件。
+目标共 102 个 MATLAB 函数，已覆盖 45 个（44%），由 41 个 AEOI 算子提供。共享内核 33 个：已有 25，待从算子中抽出 0，待新写 8。层号 = 1 + 依赖中最大的层号（无依赖为 0）；由 `roadmap/targets.py` 生成，改清单只改那个文件。
 
 **共享内核**
 
@@ -53,6 +53,8 @@
 | 2 | 微积分与 ODE | ode45 | `ode.ivp.solve` | 已有 | `rk`, `expr` |
 | 2 | 微积分与 ODE | integral | `calculus.quadrature.integral` | 已有 | `quad`, `expr` |
 | 2 | 线性代数 | mldivide/linsolve | `linalg.system.solve` | 已有 | `dense` |
+| 2 | 线性代数 | inv | `linalg.matrix.inv` | 已有 | `dense` |
+| 2 | 线性代数 | det | `linalg.matrix.det` | 已有 | `dense` |
 | 2 | 非线性方程与优化 | fzero | `nonlinear.root.fzero` | 已有 | `bracket`, `expr` |
 | 2 | 非线性方程与优化 | fminsearch | `optim.local.fminsearch` | 已有 | `expr` |
 | 2 | 信号 | conv | `signal.filter.conv` | 待做 | `fft`, `sum` |
@@ -66,8 +68,6 @@
 | 2 | 线性代数 | lu | `linalg.decomp.lu` | 待做 | `dense` |
 | 2 | 线性代数 | qr | `linalg.decomp.qr` | 待做 | `dense` |
 | 2 | 线性代数 | chol | `linalg.decomp.chol` | 待做 | `dense` |
-| 2 | 线性代数 | inv | `linalg.matrix.inv` | 待做 | `dense` |
-| 2 | 线性代数 | det | `linalg.matrix.det` | 待做 | `dense` |
 | 2 | 统计 | mean | `stats.describe.moments` | 待做 | `stats` |
 | 2 | 统计 | std/var | `stats.describe.moments` | 待做 | `stats` |
 | 2 | 统计 | median | `stats.describe.quantile` | 待做 | `stats` |
@@ -148,10 +148,10 @@
 | 类别 | 目标 | 已覆盖 |
 |---|---|---|
 | 控制 | 35 | 24 |
-| 线性代数 | 15 | 3 |
+| 线性代数 | 15 | 5 |
 | 信号 | 15 | 3 |
 | 多项式、插值、拟合 | 9 | 4 |
 | 微积分与 ODE | 10 | 4 |
 | 非线性方程与优化 | 10 | 5 |
 | 统计 | 8 | 0 |
-| 合计 | 102 | 43（42%） |
+| 合计 | 102 | 45（44%） |

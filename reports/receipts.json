@@ -1,7 +1,7 @@
 {
   "generated_by": "rust/aeoi-control/tests/receipt.rs",
-  "golden_successes": 1016,
-  "golden_errors": 210,
+  "golden_successes": 1049,
+  "golden_errors": 223,
   "claims_by_operator": {
     "calculus.quadrature.integral": {
       "verified": 13
@@ -89,6 +89,14 @@
     },
     "linalg.decomp.svd": {
       "verified": 15
+    },
+    "linalg.matrix.det": {
+      "unverified": 3,
+      "verified": 15
+    },
+    "linalg.matrix.inv": {
+      "unverified": 1,
+      "verified": 14
     },
     "linalg.system.solve": {
       "unverified": 1,

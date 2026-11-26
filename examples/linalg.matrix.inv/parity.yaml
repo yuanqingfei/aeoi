@@ -1,0 +1,24 @@
+# Parity test spec — linalg.matrix.inv 0.4.0 (AEOI v0.4.22-draft)
+operator: linalg.matrix.inv
+references:
+  - {engine: mpmath, role: high_precision_reference, status: active, generator: gen_golden_matrix.py,
+     golden_store: "golden/mpmath/linalg.matrix.inv/0.4.0/*.json",
+     note: "inverse of the stored f64 matrix at 80 digits; exact rationals for n ≤ 8 (asserted equal). NOT MATLAB output"}
+  - {engine: numpy, version: "numpy.linalg.inv (LAPACK dgetrf + dgetri)", role: dev_reference, status: active,
+     note: "recorded as numpy_forward_error for comparison only"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_matrix"
+tolerance_class: T1
+compare:
+  X: {against: exact answer, bound: "‖X − X_true‖₁ / ‖X_true‖₁ ≤ 1e-12 · max(1, κ₁/100)  (T1 with the κ scaling of V-6; κ₁ = ‖A‖₁‖A⁻¹‖₁ of the truth)"}
+  warnings: "exactly the predicted set: W.NUMERICAL.ILL_CONDITIONED iff 1/κ₁(true) < ε"
+  flagged cases: "expect_postcondition_failed (Hilbert 13, κ₁ ≈ 4e18): forward_error_below_one = false is asserted, accuracy is not"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py (rule_inv). No trust.* value of the implementation is used as a tolerance
+  X: "shape [n, n]; ‖X − X_true‖₁/‖X_true‖₁ ≤ 1e-12 · max(1, κ₁/100), κ₁ from the truth"
+  echoed: "method = lu_partial_pivoting"
+  recomputed: "the runner recomputes from the request, in exact rational arithmetic, the column backward error max_j ‖e_j − A x_j‖∞/(‖A‖∞‖x_j‖∞ + 1) when backward_stable = true (≤ 10·n·u), and kappa1 = ‖A‖₁‖X‖₁ of the returned X (relative 1e-12)"
+  claim: "forward_error_below_one = true on a case whose true κ₁·u ≥ 10 is a false claim"
+case_families:
+  - {name: "random ×7 (n = 1…50) / integer_unimodular / needs_pivoting / orthogonal / graded_scaling / refinement_none", n: 12}
+  - {name: "hilbert_6 / hilbert_10 / hilbert_13_ill", n: 3, note: "13 → W.NUMERICAL.ILL_CONDITIONED + forward_error_below_one = false"}
+  - {name: errors, n: 8, expect: "E.NUMERICAL.SINGULAR ×2 (rank 1, zero column), E.VALIDATION.SHAPE ×2, DTYPE, NON_FINITE, SCHEMA ×2"}

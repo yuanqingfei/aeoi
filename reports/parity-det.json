@@ -1,0 +1,163 @@
+{
+  "reference": "truth for the stored data: mpmath 80 digits; exact rationals for n ≤ 8 and for every singular case. numpy.linalg.det/slogdet recorded. Not MATLAB.",
+  "cases": 23,
+  "error_cases": 5,
+  "worst_error_over_tolerance": 0.008087339444339392,
+  "estimate_covers_actual": "15/15",
+  "tolerance": "|log|det| − log|det_true|| ≤ 16·n·u·max(1, κ₁) and the same for |Δdet|/|det| when det is in range; sign exact; singular data ⇒ zero_within_error = true",
+  "cases_detail": [
+    {
+      "family": "hilbert_8",
+      "n": 8.0,
+      "abs_error_log_abs_det": 7.817163805157179e-9,
+      "relative_error_estimate": 0.000030085081738087928,
+      "kappa1_true": 33872791001.15511,
+      "numpy_log_abs_det": -74.97842733170151,
+      "log_abs_det_true": -74.9784273262507
+    },
+    {
+      "family": "integer_exact",
+      "n": 3.0,
+      "abs_error_log_abs_det": 0.0,
+      "relative_error_estimate": 1.532107773982716e-14,
+      "kappa1_true": 31.5,
+      "numpy_log_abs_det": 2.772588722239781,
+      "log_abs_det_true": 2.772588722239781
+    },
+    {
+      "family": "needs_pivoting",
+      "n": 2.0,
+      "abs_error_log_abs_det": 1e-20,
+      "relative_error_estimate": 1.1102230246251565e-15,
+      "kappa1_true": 4.0,
+      "numpy_log_abs_det": 0.0,
+      "log_abs_det_true": -1e-20
+    },
+    {
+      "family": "overflow",
+      "n": 150.0,
+      "abs_error_log_abs_det": 1.1368683772161603e-13,
+      "relative_error_estimate": 1.9260903759296813e-8,
+      "kappa1_true": 13560.866371067677,
+      "numpy_log_abs_det": 991.189788167639,
+      "log_abs_det_true": 991.1897881676392
+    },
+    {
+      "family": "permutation_odd",
+      "n": 4.0,
+      "abs_error_log_abs_det": 0.0,
+      "relative_error_estimate": 8.881784197001252e-16,
+      "kappa1_true": 1.0,
+      "numpy_log_abs_det": 0.0,
+      "log_abs_det_true": 0.0
+    },
+    {
+      "family": "random",
+      "n": 3.0,
+      "abs_error_log_abs_det": 0.0,
+      "relative_error_estimate": 5.2953786599825514e-14,
+      "kappa1_true": 130.3431010572403,
+      "numpy_log_abs_det": -2.030565521440762,
+      "log_abs_det_true": -2.0305655214407605
+    },
+    {
+      "family": "random",
+      "n": 5.0,
+      "abs_error_log_abs_det": 4.440892098500626e-16,
+      "relative_error_estimate": 2.5989911100839987e-14,
+      "kappa1_true": 26.093317285633145,
+      "numpy_log_abs_det": 0.8484101380462483,
+      "log_abs_det_true": 0.8484101380462484
+    },
+    {
+      "family": "random",
+      "n": 2.0,
+      "abs_error_log_abs_det": 1.1102230246251565e-16,
+      "relative_error_estimate": 1.7049204841916933e-15,
+      "kappa1_true": 3.8640643458922637,
+      "numpy_log_abs_det": -0.5912105371062749,
+      "log_abs_det_true": -0.5912105371062749
+    },
+    {
+      "family": "random",
+      "n": 10.0,
+      "abs_error_log_abs_det": 0.0,
+      "relative_error_estimate": 3.77704640131339e-13,
+      "kappa1_true": 101.48738201327113,
+      "numpy_log_abs_det": 6.909549606918666,
+      "log_abs_det_true": 6.909549606918667
+    },
+    {
+      "family": "random",
+      "n": 1.0,
+      "abs_error_log_abs_det": 0.0,
+      "relative_error_estimate": 2.220446049250313e-16,
+      "kappa1_true": 1.0,
+      "numpy_log_abs_det": -0.3871814565667902,
+      "log_abs_det_true": -0.3871814565667902
+    },
+    {
+      "family": "random",
+      "n": 200.0,
+      "abs_error_log_abs_det": 0.0,
+      "relative_error_estimate": 1.665118471664536e-11,
+      "kappa1_true": 164.3086091551302,
+      "numpy_log_abs_det": 598.4300732455196,
+      "log_abs_det_true": 598.4300732455196
+    },
+    {
+      "family": "random",
+      "n": 50.0,
+      "abs_error_log_abs_det": 1.4210854715202004e-14,
+      "relative_error_estimate": 1.6092021080908457e-10,
+      "kappa1_true": 2986.103064326425,
+      "numpy_log_abs_det": 84.71799097797802,
+      "log_abs_det_true": 84.71799097797799
+    },
+    {
+      "family": "singular_magic4",
+      "det": -1.4495071809506048e-12,
+      "relative_error_estimate": 43.916666666666664,
+      "det_true": 0.0
+    },
+    {
+      "family": "singular_rank1",
+      "det": 0.0,
+      "relative_error_estimate": "Inf",
+      "det_true": 0.0
+    },
+    {
+      "family": "singular_rank3_integer",
+      "det": 0.0,
+      "relative_error_estimate": "Inf",
+      "det_true": 0.0
+    },
+    {
+      "family": "tiny_but_well_conditioned",
+      "n": 100.0,
+      "abs_error_log_abs_det": 0.0,
+      "relative_error_estimate": 2.220446049250313e-14,
+      "kappa1_true": 1.0,
+      "numpy_log_abs_det": -230.25850929940424,
+      "log_abs_det_true": -230.25850929940455
+    },
+    {
+      "family": "triangular",
+      "n": 6.0,
+      "abs_error_log_abs_det": 0.0,
+      "relative_error_estimate": 6.035995750583712e-15,
+      "kappa1_true": 8.061236071046235,
+      "numpy_log_abs_det": 6.384028439691669,
+      "log_abs_det_true": 6.384028439691669
+    },
+    {
+      "family": "underflow",
+      "n": 120.0,
+      "abs_error_log_abs_det": 0.0,
+      "relative_error_estimate": 3.682427869692451e-11,
+      "kappa1_true": 405.94321223266263,
+      "numpy_log_abs_det": -806.8396157860185,
+      "log_abs_det_true": -806.8396157860185
+    }
+  ]
+}
