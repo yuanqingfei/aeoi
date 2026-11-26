@@ -2,7 +2,8 @@
 //! control.lti.impulse — impulse response (spec 10.9) shares the grid/validation/recursion code.
 use crate::U;
 use aeoi_core::error::{ask_user, modify_input, OpError, Warning};
-use aeoi_core::linalg::{expm, norm1, sort_poles};
+use aeoi_core::kernels::timeresp::hold;
+use aeoi_core::linalg::{norm1, sort_poles};
 use aeoi_core::lti::{eigenvalues, parse_lti, SsData};
 use aeoi_core::matrix::{complex_vector, dense_real, dense_real_nd};
 use aeoi_core::{num, ExecCtx, HostCtx, Operator, OperatorMeta, Output};
@@ -178,11 +179,8 @@ impl Operator for Step {
         let mut warnings = Vec::new();
         // discretize
         let aug_expm = |h: f64| -> (DMatrix<f64>, DMatrix<f64>, u32) {
-            let mut m = DMatrix::zeros(nx + nu, nx + nu);
-            m.view_mut((0, 0), (nx, nx)).copy_from(&(&ss.a * h));
-            m.view_mut((0, nx), (nx, nu)).copy_from(&(&ss.b * h));
-            let (e, s) = expm(&m);
-            (e.view((0, 0), (nx, nx)).into_owned(), e.view((0, nx), (nx, nu)).into_owned(), s)
+            let (phi, f1, _, sq) = hold(&ss.a, &ss.b, h, false);
+            (phi, f1, sq)
         };
         let (phi, gam, squarings) = if continuous { aug_expm(dt) } else { (ss.a.clone(), ss.b.clone(), 0) };
         // recursion

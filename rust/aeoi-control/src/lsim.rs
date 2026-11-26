@@ -11,7 +11,8 @@
 use crate::step::decimate;
 use crate::U;
 use aeoi_core::error::{modify_input, OpError, Warning};
-use aeoi_core::linalg::{expm, norm1, sort_poles};
+use aeoi_core::kernels::timeresp::{hold_gammas, propagate};
+use aeoi_core::linalg::{norm1, sort_poles};
 use aeoi_core::lti::{eigenvalues, parse_lti, SsData};
 use aeoi_core::matrix::{dense_real, dense_real_nd, parse_array, to_real_matrix, Array};
 use aeoi_core::{num, ExecCtx, HostCtx, Operator, Output};
@@ -40,25 +41,8 @@ fn present(args: &Value, k: &str) -> bool {
     args.get(k).is_some_and(|v| !v.is_null())
 }
 
-/// Discretization (Φ, Γ0, Γ1) with x_{k+1} = Φ x_k + Γ0 u_k + Γ1 u_{k+1}; Γ1 = 0 for zoh.
 fn discretize(ss: &SsData, h: f64, foh: bool) -> (DMatrix<f64>, DMatrix<f64>, DMatrix<f64>, u32) {
-    let (nx, nu) = (ss.a.nrows(), ss.b.ncols());
-    let size = nx + if foh { 2 * nu } else { nu };
-    let mut m = DMatrix::zeros(size, size);
-    m.view_mut((0, 0), (nx, nx)).copy_from(&(&ss.a * h));
-    m.view_mut((0, nx), (nx, nu)).copy_from(&(&ss.b * h));
-    if foh {
-        m.view_mut((nx, nx + nu), (nu, nu)).copy_from(&DMatrix::identity(nu, nu));
-    }
-    let (e, sq) = expm(&m);
-    let phi = e.view((0, 0), (nx, nx)).into_owned();
-    let f1 = e.view((0, nx), (nx, nu)).into_owned();
-    if foh {
-        let f2 = e.view((0, nx + nu), (nx, nu)).into_owned();
-        (phi, &f1 - &f2, f2, sq)
-    } else {
-        (phi, f1, DMatrix::zeros(nx, nu), sq)
-    }
+    hold_gammas(&ss.a, &ss.b, h, foh)
 }
 
 impl Operator for Lsim {
@@ -169,30 +153,8 @@ impl Operator for Lsim {
         let (phi, g0, g1, squarings) = if continuous { discretize(ss, i.dt, i.foh) } else { (ss.a.clone(), ss.b.clone(), DMatrix::zeros(nx, nu), 0) };
         let x0 = i.x0.clone().unwrap_or_else(|| DVector::zeros(nx));
         // recursion; states kept only if returned or needed for the half-step check
-        let mut y = vec![0.0f64; ny * nt];
         let keep = if i.return_states { nt } else { HALF_STEP_STEPS.min(nt) };
-        let mut xs: Vec<DVector<f64>> = Vec::with_capacity(keep);
-        let mut x = x0.clone();
-        for k in 0..nt {
-            let uk = i.u.column(k);
-            let yk = &ss.c * &x + &ss.d * uk;
-            for r in 0..ny {
-                y[r * nt + k] = yk[r];
-            }
-            if k < keep {
-                xs.push(x.clone());
-            }
-            if k + 1 < nt {
-                let mut xn = &phi * &x + &g0 * uk;
-                if i.foh {
-                    xn += &g1 * i.u.column(k + 1);
-                }
-                x = xn;
-            }
-            if k % 20000 == 0 {
-                ctx.check()?;
-            }
-        }
+        let (y, xs) = propagate(&phi, &g0, &g1, &ss.c, &ss.d, &i.u, &x0, i.foh, keep, &|| ctx.check())?;
         // post-condition: re-discretize at dt/2, feed the same interpolated input (midpoint = mean for foh,
         // u_k for zoh), and compare even-indexed states over the first steps
         let (half_ok, half_rel) = if continuous && nx > 0 && nt > 1 {

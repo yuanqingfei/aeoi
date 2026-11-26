@@ -7,7 +7,8 @@
 //! must be given explicitly as Hz (+ sample rate) or as MATLAB's normalised Wn (1 = Nyquist), never
 //! defaulted; analog designs (domain = analog) are supported and returned as an LTI system as well.
 use aeoi_core::error::{ask_user, modify_input, OpError, Warning};
-use aeoi_core::kernels::filter::*;
+use aeoi_core::kernels::filter::{ba_eval_s, ba_eval_z, sos_eval_z};
+use aeoi_core::kernels::iir::*;
 use aeoi_core::lti::C64;
 use aeoi_libm::libm;
 use aeoi_core::{num, ExecCtx, HostCtx, Operator, Output};
@@ -116,15 +117,13 @@ impl Operator for Butter {
     fn execute(&self, i: In, _ctx: &ExecCtx) -> Result<Output, OpError> {
         let proto = buttap(i.n);
         // digital: prewarp with fs = 2 (normalised frequency, 1 = Nyquist), like scipy
-        let warp = |w: f64| if i.analog { w } else { 4.0 * libm::tan(std::f64::consts::PI * w / 2.0) };
-        let w: Vec<f64> = i.edges.iter().map(|e| warp(*e)).collect();
-        let a = match i.kind {
-            Kind::Low => lp2lp(&proto, w[0]),
-            Kind::High => lp2hp(&proto, w[0]),
-            Kind::BandPass => lp2bp(&proto, (w[0] * w[1]).sqrt(), w[1] - w[0]),
-            Kind::BandStop => lp2bs(&proto, (w[0] * w[1]).sqrt(), w[1] - w[0]),
+        let band = match i.kind {
+            Kind::Low => Band::Low,
+            Kind::High => Band::High,
+            Kind::BandPass => Band::BandPass,
+            Kind::BandStop => Band::BandStop,
         };
-        let f = if i.analog { a } else { bilinear(&a, 2.0) };
+        let f = design(&proto, band, &i.edges, i.analog);
         let (b, aa) = zpk2tf(&f);
         let sos = if i.analog { None } else { Some(zpk2sos(&f)) };
         // response grid: digital on the unit circle, analog on jω around the band

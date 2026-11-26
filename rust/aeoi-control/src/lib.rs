@@ -96,10 +96,6 @@ pub(crate) fn mimo_err(path: &str, what: &str, ny: usize, nu: usize) -> aeoi_cor
 
 pub(crate) const U: f64 = f64::EPSILON / 2.0; // unit roundoff
 
-pub(crate) fn gamma(k: usize) -> f64 {
-    let ku = k as f64 * U;
-    ku / (1.0 - ku)
-}
 
 #[cfg(test)]
 mod op_tests {

@@ -3,7 +3,7 @@
 use crate::mimo_err;
 use aeoi_core::error::{OpError, Warning};
 use aeoi_core::lti::{parse_lti, Lti, C64};
-use aeoi_core::poly::{polyadd_scaled, polyder, polymul, polyval, polyval_r, roots, strip};
+use aeoi_core::poly::{polyadd_scaled, polyder, polymul, polyval_r, roots, strip};
 use aeoi_core::sysalg::{ss2tf, zpk2tf};
 use aeoi_core::{num, ExecCtx, HostCtx, Operator, Output};
 use serde_json::{json, Value};
@@ -130,8 +130,7 @@ fn bilinear(p: &[f64], big_n: usize) -> Vec<f64> {
 
 impl Margin {
     fn g(&self, inp: &MarginInput, w: f64) -> C64 {
-        let s = if inp.ts > 0.0 { C64::from_polar(1.0, w * inp.ts) } else { C64::new(0.0, w) };
-        polyval(&inp.num, s) / polyval(&inp.den, s)
+        aeoi_core::kernels::freqresp::tf_siso(&inp.num, &inp.den, w, inp.ts)
     }
     /// Secant refinement of f on ω (accept only if |f| decreases).
     fn refine(&self, w0: f64, f: &dyn Fn(f64) -> f64) -> f64 {

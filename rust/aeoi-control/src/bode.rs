@@ -1,11 +1,11 @@
 //! control.lti.bode — frequency response (spec 10.1).
-use crate::{gamma, U};
+use crate::U;
+use aeoi_core::kernels::freqresp as fr;
 use aeoi_core::error::{modify_input, OpError, Warning};
 use aeoi_core::linalg::{cond2_c, sort_poles};
 use aeoi_core::lti::{parse_lti, Lti, C64};
 use aeoi_core::matrix::{complex_vector, dense_real_nd};
 use aeoi_core::{num, opt_num, ExecCtx, HostCtx, Operator, OperatorMeta, Output};
-use nalgebra::DMatrix;
 use serde_json::{json, Value};
 use std::f64::consts::PI;
 
@@ -38,22 +38,7 @@ pub struct BodeInput {
     pub center: f64,
 }
 
-/// Map an angle (deg) into (c-180, c+180].
-pub fn wrap_to(p: f64, c: f64) -> f64 {
-    p - 360.0 * ((p - c - 180.0) / 360.0).ceil()
-}
-
-/// Horner evaluation with the running condition sum Σ|a_k||s|^k (Higham 2002 §5.1).
-fn horner(p: &[f64], s: C64) -> (C64, f64) {
-    let mut v = C64::new(0.0, 0.0);
-    let mut mag = 0.0;
-    let sa = s.norm();
-    for &a in p {
-        v = v * s + a;
-        mag = mag * sa + a.abs();
-    }
-    (v, mag)
-}
+pub use aeoi_core::kernels::freqresp::wrap_to;
 
 impl Operator for Bode {
     type Input = BodeInput;
@@ -125,7 +110,7 @@ impl Operator for Bode {
         let (ny, nu) = inp.sys.dims();
         let nw = inp.w.len();
         let ts = inp.sys.ts();
-        let s_of = |w: f64| if ts > 0.0 { C64::from_polar(1.0, w * ts) } else { C64::new(0.0, w) };
+        let s_of = |w: f64| fr::s_of(w, ts);
         let mut h = vec![C64::new(0.0, 0.0); ny * nu * nw];
         let mut rel_bound = vec![0.0f64; nw]; // first-order relative error bound / estimate per frequency
         let mut max_cond_ss: Option<f64> = None;
@@ -141,15 +126,9 @@ impl Operator for Bode {
                     let s = s_of(inp.w[k]);
                     for i in 0..ny {
                         for j in 0..nu {
-                            let (nv, nm) = horner(&num[i][j], s);
-                            let (dv, dm) = horner(&den[i][j], s);
-                            let bd = gamma(2 * den[i][j].len()) * dm / dv.norm();
-                            if dv.norm() == 0.0 || bd >= 0.5 {
-                                return Err(pole_err(k, inp.w[k]));
-                            }
-                            let bn = if nv.norm() == 0.0 { 0.0 } else { gamma(2 * num[i][j].len()) * nm / nv.norm() };
-                            h[(i * nu + j) * nw + k] = nv / dv;
-                            rel_bound[k] = rel_bound[k].max(bn + bd + U);
+                            let (v, bnd) = fr::tf_point(&num[i][j], &den[i][j], s).ok_or_else(|| pole_err(k, inp.w[k]))?;
+                            h[(i * nu + j) * nw + k] = v;
+                            rel_bound[k] = rel_bound[k].max(bnd + U);
                         }
                     }
                     if k % 4096 == 0 {
@@ -161,25 +140,9 @@ impl Operator for Bode {
             Lti::Zpk { z, p, k: gain, .. } => {
                 for k in 0..nw {
                     let s = s_of(inp.w[k]);
-                    let mut v = C64::new(*gain, 0.0);
-                    let mut b = 0.0;
-                    for zz in z {
-                        let d = s - zz;
-                        if d.norm() != 0.0 {
-                            b += U * (s.norm() + zz.norm()) / d.norm();
-                        }
-                        v *= d;
-                    }
-                    for pp in p {
-                        let d = s - pp;
-                        if d.norm() == 0.0 || U * (s.norm() + pp.norm()) / d.norm() >= 0.5 {
-                            return Err(pole_err(k, inp.w[k]));
-                        }
-                        b += U * (s.norm() + pp.norm()) / d.norm();
-                        v /= d;
-                    }
+                    let (v, bnd) = fr::zpk_point(z, p, *gain, s).ok_or_else(|| pole_err(k, inp.w[k]))?;
                     h[k] = v;
-                    rel_bound[k] = b + (z.len() + p.len() + 1) as f64 * U;
+                    rel_bound[k] = bnd;
                 }
                 ("a_priori_bound", "乘积形式先验误差界（一阶）：Σ u·(|s|+|r|)/|s−r| + (n_z+n_p+1)·u；dB 误差 ≈ 8.686×相对误差，相位误差 ≈ 57.30°×相对误差")
             }
@@ -195,8 +158,7 @@ impl Operator for Bode {
                     let g = if n == 0 {
                         dc.clone()
                     } else {
-                        let m = DMatrix::<C64>::identity(n, n) * s - &ac;
-                        let x = aeoi_core::kernels::nalg::csolve(&m, &bc).ok_or_else(|| pole_err(k, inp.w[k]))?;
+                        let (x, m) = fr::resolvent(&ac, &bc, s).ok_or_else(|| pole_err(k, inp.w[k]))?;
                         if use_svd {
                             let kappa = cond2_c(&m);
                             if !kappa.is_finite() || kappa * U * n as f64 >= 0.5 {
@@ -228,27 +190,8 @@ impl Operator for Bode {
         let mut phase = vec![0.0; h.len()];
         let mut zero_hits = 0usize;
         for ch in 0..ny * nu {
-            let mut prev_arg: Option<f64> = None;
-            let mut prev_phase = 0.0;
-            for k in 0..nw {
-                let idx = ch * nw + k;
-                let v = h[idx];
-                if v.norm() == 0.0 {
-                    mag[idx] = f64::NEG_INFINITY;
-                    phase[idx] = f64::NAN;
-                    zero_hits += 1;
-                    continue;
-                }
-                mag[idx] = 20.0 * v.norm().log10();
-                let arg = v.im.atan2(v.re).to_degrees();
-                let ph = match (inp.unwrap, prev_arg) {
-                    (true, Some(pa)) => prev_phase + wrap_to(arg - pa, 0.0),
-                    _ => wrap_to(arg, inp.center),
-                };
-                phase[idx] = ph;
-                prev_arg = Some(arg);
-                prev_phase = ph;
-            }
+            let r = ch * nw..(ch + 1) * nw;
+            zero_hits += fr::mag_phase(&h[r.clone()], inp.unwrap, inp.center, &mut mag[r.clone()], &mut phase[r]);
         }
         if zero_hits > 0 {
             warnings.push(Warning::new("W.NUMERICAL.ZERO_ON_GRID", format!("{zero_hits} 个点的频率响应恰为 0（频率点落在传输零点上），幅值记为 \"-Inf\" dB，相位记为 \"NaN\"。")).path("/frequency"));

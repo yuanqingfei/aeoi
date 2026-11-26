@@ -1,7 +1,8 @@
 //! control.lti.c2d — continuous → discrete (zoh / foh / tustin with optional prewarp) (spec 10.8).
 use crate::{check_states, mimo_err};
 use aeoi_core::error::{modify_input, OpError, Warning};
-use aeoi_core::linalg::{cond2, expm, norm1};
+use aeoi_core::kernels::timeresp::hold;
+use aeoi_core::linalg::{cond2, norm1};
 use aeoi_core::lti::{eigenvalues, parse_lti, tf2ss_siso, Lti, SsData, C64};
 use aeoi_core::sysalg::{convert, lti_json, ss2tf, tf_normalize};
 use aeoi_core::{num, ExecCtx, HostCtx, Operator, Output};
@@ -27,25 +28,15 @@ pub struct Disc {
 
 /// Discretize one state-space system (formulas in the manifest; scipy cont2discrete state coordinates).
 pub fn discretize(s: &SsData, t: f64, method: &str, tw: f64) -> Result<Disc, OpError> {
-    let (n, m) = (s.a.nrows(), s.b.ncols());
+    let n = s.a.nrows();
     match method {
         "zoh" => {
-            let mut em = DMatrix::zeros(n + m, n + m);
-            em.view_mut((0, 0), (n, n)).copy_from(&(&s.a * t));
-            em.view_mut((0, n), (n, m)).copy_from(&(&s.b * t));
-            let (e, sq) = expm(&em);
-            Ok(Disc { ss: SsData { a: e.view((0, 0), (n, n)).into_owned(), b: e.view((0, n), (n, m)).into_owned(), c: s.c.clone(), d: s.d.clone(), ts: t }, squarings: sq, cond_ima: None })
+            let (phi, f1, _, sq) = hold(&s.a, &s.b, t, false);
+            Ok(Disc { ss: SsData { a: phi, b: f1, c: s.c.clone(), d: s.d.clone(), ts: t }, squarings: sq, cond_ima: None })
         }
         "foh" => {
-            let k = n + 2 * m;
-            let mut em = DMatrix::zeros(k, k);
-            em.view_mut((0, 0), (n, n)).copy_from(&(&s.a * t));
-            em.view_mut((0, n), (n, m)).copy_from(&(&s.b * t));
-            em.view_mut((n, n + m), (m, m)).copy_from(&DMatrix::identity(m, m));
-            let (e, sq) = expm(&em);
-            let m11 = e.view((0, 0), (n, n)).into_owned();
-            let m12 = e.view((0, n), (n, m)).into_owned();
-            let m13 = e.view((0, n + m), (n, m)).into_owned();
+            let (m11, m12, m13, sq) = hold(&s.a, &s.b, t, true);
+            let m13 = m13.unwrap();
             let bd = &m12 - &m13 + &m11 * &m13;
             let dd = &s.d + &s.c * &m13;
             Ok(Disc { ss: SsData { a: m11, b: bd, c: s.c.clone(), d: dd, ts: t }, squarings: sq, cond_ima: None })

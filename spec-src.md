@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.16-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.17-draft
 
-> 状态：Draft v0.4.16 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.17 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.17 没有新算子：从现有算子里抽出 10 个共享内核（sum、bracket、newton、quad、rk、spline、riccati、freqresp、timeresp、iir），为 12.3 清单的下一层做准备。纯重构，全部示例的输出逐位不变。作者决定：在 102 个目标函数全部完成之前不再发布，完成后发布 v0.5。
 >
 > v0.4.16 没有新算子：所有算子的数值核心都改为调用 AEOI 自己的内核（11.5 RI-3 完成）。新增内核：复数 LU 与奇异值、实 Schur、FFT、Cholesky；rustfft 与 nalgebra 的分解不再使用，nalgebra 只用作矩阵容器和做矩阵乘法。全部结果的变化都在容差类内（G-3），算子版本不变。
 >
@@ -2582,7 +2584,9 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 ### 11.5 算子之间的复用（v0.4.11，作者决定 2026-11-25）
 
 - RI-1 **一个算子用到另一个算子的计算时，参考实现 MUST 调用那个算子所基于的内核，也就是同一段代码。** MUST NOT 另写一份，也 MUST NOT 改调外部库里的同类功能。
-  - 内核放在 `aeoi-core::kernels`：`dense`（LU、Householder QR、1-范数条件数估计、补偿残差）、`svd`（单边 Jacobi）、`eig`（对称 Jacobi；Schur → 复 Schur → 三角回代）。
+  - 内核放在 `aeoi-core::kernels`（v0.4.17 起共 25 个，清单与依赖见 12.3）：`dense`（LU、Householder QR、Cholesky、1-范数条件数估计、补偿残差）、`svd`（单边 Jacobi）、`eig`（对称 Jacobi；Schur → 复 Schur → 三角回代）、`sum`、`schur`、`fft`、`filter`、`iir`、`lp`、`qp`、`bracket`、`newton`、`quad`、`rk`、`spline`、`riccati`、`freqresp`、`timeresp` 等。
+  - 内核不依赖表达式语言：被积函数、右端、方程组都以闭包传入；取消与超时以检查闭包传入。这样控制层和数值层的算子都能调用同一个内核。
+  - 规则同样适用于同一算子内部能被别的算子复用的部分：在第二个使用者出现之前就把它放进内核（v0.4.17 从现有算子里抽出 10 个）。
   - 对应的算子（`linalg.system.solve`、`linalg.decomp.svd`、`linalg.decomp.eig`）只是内核外面的一层：校验、输出格式、后置条件。
   - 理由：同一个计算出现两份实现，精度与行为就可能不一致，而 parity 和一致性套件只验证了其中一份。v0.4.11 正好有实例：nalgebra 的 SVD 和对称特征分解在分级矩阵上不准，被 `svd`、`eig` 的后置条件抓到；而控制算子当时还在用它们。
 - RI-2 **一个算子自身的核心算法可以来自外部库**，例如 v0.4.15 之前 `fft` 用 rustfft、`eig` 的实 Schur 用 nalgebra，但 MUST 写在 manifest 的 `backend` 里，并受 2.1 M-7a（跨平台逐位相同）约束。外部库给出的功能一旦有了 AEOI 自己的算子，其他算子 MUST 改用该算子的内核（RI-1）。
@@ -2644,11 +2648,42 @@ v0.4.16 把清单细化到每个 MATLAB 函数，并给出每个函数依赖的�
 顺序：
 1. ~~剩下的四批~~（v0.4.12 – v0.4.15 完成）。
 2. ~~控制算子迁移到共享内核（11.5 RI-3）~~（v0.4.16 完成）。
-3. 按 12.3 的依赖层自底向上实现：先抽出 10 个“待抽出”内核，再逐层做内核和算子；同一层内按 MATLAB 使用频率排（清单待作者确认）。
-4. polyval/roots、inv/det/norm、ode15s、filtfilt/freqz/pwelch、nyquist/rlocus、interp2/spline、lsqcurvefit。
-5. 其余。
+3. 按 12.3 的依赖层自底向上实现：~~先抽出 10 个“待抽出”内核~~（v0.4.17 完成），再逐层做内核和算子；同一层内按 MATLAB 使用频率排。
+4. 发布：102 个目标函数全部完成后发布 v0.5（作者决定 2026-11-25）；在此之前不打 tag。
+5. polyval/roots、inv/det/norm、ode15s、filtfilt/freqz/pwelch、nyquist/rlocus、interp2/spline、lsqcurvefit。
+6. 其余。
 
 ## 13. Changelog
+
+### v0.4.17-draft（2026-11-25）
+
+起因：作者确认 12.3 的清单与“先抽出 10 个内核”的顺序，并决定 102 个函数全部完成后才发布 v0.5。12.3 里有 10 个内核还藏在单个算子里，下一层的算子（nyquist、kalman、cheby、integral2、ode23……）都要用到它们，所以先抽出来。
+
+**规范改动**
+
+| # | 位置 | 改动 | 理由 |
+|---|---|---|---|
+| 1 | 11.5 RI-1 | 列出 25 个内核；内核以闭包接收被积函数、右端与取消检查，不依赖表达式语言；能被复用的部分在第二个使用者出现前就放进内核 | 控制层（没有表达式）与数值层要共用同一个内核 |
+| 2 | 12.2、12.3 | 10 个内核标为已有；发布计划改为“102 个完成后发布 v0.5” | 作者决定 |
+
+**已做的改动**
+
+| 内核 | 来自 | 内容 |
+|---|---|---|
+| `sum` | sysalg、fft | TwoSum、TwoProduct、Dot2、Neumaier |
+| `bracket` | fzero | Brent zeroin |
+| `newton` | fsolve | Powell dogleg 信赖域、后验 Newton 修正与 κ₁(J) |
+| `quad` | integral | GK(7, 15)、全局自适应、变量替换、再二分检验 |
+| `rk` | ode.ivp.solve | Dormand–Prince 5(4)、稠密输出、刚性检测 |
+| `spline` | interp1 | pchip / not-a-knot 斜率、dgtsv、PPoly 系数 |
+| `riccati` | lqr、dlqr | CARE 符号函数 + Newton–Kleinman + 精化增益；DARE 的 SDA + Newton–Hewer |
+| `freqresp` | bode、margin | 求值点、Horner 误差界、zpk 乘积、预解式、相位卷绕/展开 |
+| `timeresp` | step、lsim、c2d | 零阶/一阶保持离散化（增广 expm）、递推 |
+| `iir` | butter（及 filter 内核） | 原型、频率变换、双线性变换、zpk→tf/sos、设计流程 |
+
+**结果**
+
+- 每抽一个内核都重新生成全部示例：`output_hash` 一个都没有变；全部 Rust 测试通过；一致性 1111 / 0 / 291；45 种代理改写都被抓住。
 
 ### v0.4.16-draft（2026-11-25）
 

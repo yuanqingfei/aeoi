@@ -1,6 +1,6 @@
 graph BT
   libm["libm"]:::done
-  sum["sum"]:::extract
+  sum["sum"]:::done
   dense["dense"]:::done
   dense --> sum
   cdense["cdense"]:::done
@@ -37,36 +37,31 @@ graph BT
   lyap --> eig
   lyap --> cdense
   lyap --> sum
-  riccati["riccati"]:::extract
+  riccati["riccati"]:::done
   riccati --> schur
   riccati --> svd
   riccati --> lyap
-  freqresp["freqresp"]:::extract
+  freqresp["freqresp"]:::done
   freqresp --> lti
   freqresp --> cdense
-  timeresp["timeresp"]:::extract
+  timeresp["timeresp"]:::done
   timeresp --> lti
   timeresp --> expm
-  bracket["bracket"]:::extract
-  newton["newton"]:::extract
+  bracket["bracket"]:::done
+  newton["newton"]:::done
   newton --> dense
-  newton --> expr
-  quad["quad"]:::extract
-  quad --> expr
-  rk["rk"]:::extract
-  rk --> expr
-  spline["spline"]:::extract
+  quad["quad"]:::done
+  quad --> sum
+  rk["rk"]:::done
+  spline["spline"]:::done
   spline --> dense
-  iir["iir"]:::extract
+  iir["iir"]:::done
   iir --> poly
-  iir --> lti
   lsq["lsq"]:::new
   lsq --> dense
   lsq --> svd
-  lsq --> expr
   quasi["quasi"]:::new
   quasi --> dense
-  quasi --> expr
   stiff["stiff"]:::new
   stiff --> newton
   stiff --> dense

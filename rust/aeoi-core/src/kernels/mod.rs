@@ -17,3 +17,6 @@ pub mod quad;
 pub mod rk;
 pub mod spline;
 pub mod riccati;
+pub mod freqresp;
+pub mod timeresp;
+pub mod iir;
