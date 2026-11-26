@@ -16,7 +16,7 @@
         2
       ],
       "data": [
-        1.9999999999999996,
+        2.0,
         2.0
       ]
     },
@@ -28,11 +28,11 @@
       "data": [
         [
           -1.0,
-          0.9999999999999998
+          1.0
         ],
         [
           -1.0,
-          -0.9999999999999998
+          -1.0
         ]
       ]
     }
@@ -43,21 +43,21 @@
       "converged": true,
       "iterations": 0,
       "criterion": "一次扫描后 ln|det X̂|（列归一化）变化 < 1e-6",
-      "final_value": -0.4054651081081644
+      "final_value": -0.40546510810816466
     },
     "residual": {
-      "pole_placement_max_rel": 1.570092458683775e-16,
-      "M_imag_rel": 0.0,
+      "pole_placement_max_rel": 0.0,
+      "M_imag_rel": 3.204937810639273e-17,
       "definition": "eig(A−BK) 与期望极点最近匹配的最大相对差（以 max(1,|p|) 归一）；M_imag_rel = max|Im(XΛX⁻¹)|/‖·‖_F"
     },
     "condition": {
-      "cond_X_eigvec": 2.618033988749896,
+      "cond_X_eigvec": 2.618033988749895,
       "pbh_min_rel_sv": 0.7071067811865475,
-      "K_norm_fro": 2.82842712474619,
+      "K_norm_fro": 2.8284271247461903,
       "inputs": 1
     },
     "error_estimate": {
-      "poles_rel": 5.813203227122745e-16,
+      "poles_rel": 5.813203227122743e-16,
       "basis": "max(后验极点偏差, u·cond(X))；闭环极点的一阶扰动界 ∝ cond(X)·‖ΔA‖（Bauer–Fike）"
     },
     "checks": {
@@ -95,7 +95,7 @@
       "class": "approximate",
       "bound_kind": "a_posteriori_heuristic",
       "bound": {
-        "poles_rel": 5.813203227122745e-16
+        "poles_rel": 5.813203227122743e-16
       },
       "basis": "max(后验极点偏差, u·cond(X))；闭环极点的一阶扰动界 ∝ cond(X)·‖ΔA‖（Bauer–Fike）"
     },
@@ -113,8 +113,8 @@
     },
     "fingerprint": {
       "request": "sha256:03cb75e677cd411717fe432149eadcc60e9f3557180ce5f06503dc5519a53398",
-      "result": "sha256:6d3bca4667f58d0ef11c17fa215f096ec0009402eb40a696eb265eb118b283b4",
-      "output_hash": "sha256:8353eccf88599846e3653216dd6efce8df922a38183be90044a3afab0a59a59c",
+      "result": "sha256:c990b3d3708c9bfe7665a79c8b35ae5af5d5348aa998fb460e07c77db2086361",
+      "output_hash": "sha256:2d38474ebd5145bab7445dee524d58cd3c88d0a0ab220c2dc9288999784f983a",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.design.place@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -135,7 +135,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:fc645b827a90ff0e3685068d7b789a332d038da91170e7c0fda6697b6c25516a",
-    "output_hash": "sha256:8353eccf88599846e3653216dd6efce8df922a38183be90044a3afab0a59a59c",
+    "output_hash": "sha256:2d38474ebd5145bab7445dee524d58cd3c88d0a0ab220c2dc9288999784f983a",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -149,6 +149,6 @@
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.191034
+    "wall_ms": 0.26618699999999995
   }
 }

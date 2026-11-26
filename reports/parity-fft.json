@@ -4,11 +4,11 @@
   "error_cases": 8,
   "worst": {
     "python-control": {
-      "X_rel_normwise": 8.385993412405846e-16,
+      "X_rel_normwise": 1.013426562056805e-15,
       "frequency_rel": 2.1721754829622626e-16
     },
     "mpmath": {
-      "X_rel_normwise": 2.9011373416012436e-16,
+      "X_rel_normwise": 5.27763855699791e-16,
       "frequency_rel": 1.9120507646322144e-16
     }
   },

@@ -350,15 +350,15 @@ fn feedback_ss(s1: &SsData, s2: &SsData, sign: f64) -> Result<(SsData, f64), OpE
     let (rcond, einv) = if nu == 0 {
         (1.0, DMatrix::zeros(0, 0))
     } else {
-        let svd = e.clone().svd(false, false);
-        let smax = svd.singular_values.amax();
-        let smin = svd.singular_values.amin();
+        let sv = aeoi_core::kernels::nalg::singular_values(&e);
+        let smax = sv.iter().cloned().fold(0.0, f64::max);
+        let smin = sv.iter().cloned().fold(f64::INFINITY, f64::min);
         let rcond = if smax == 0.0 { 0.0 } else { smin / smax };
         let thr = nu as f64 * U * 1.0e4;
         if !rcond.is_finite() || rcond <= thr {
             return Err(algebraic_loop(rcond, nu));
         }
-        let inv = e.try_inverse().ok_or_else(|| algebraic_loop(rcond, nu))?;
+        let inv = aeoi_core::kernels::nalg::inverse(&e).ok_or_else(|| algebraic_loop(rcond, nu))?;
         (rcond, inv)
     };
     let (n1, n2) = (s1.a.nrows(), s2.a.nrows());

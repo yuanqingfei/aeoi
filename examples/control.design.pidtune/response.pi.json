@@ -53,16 +53,16 @@
       ],
       "data": [
         [
-          -2.0000000000000036,
+          -2.0,
           0.0
         ],
         [
-          -0.5000000000000018,
-          1.0789872855474705
+          -0.4999999999999999,
+          1.0789872855474678
         ],
         [
-          -0.5000000000000018,
-          -1.0789872855474705
+          -0.4999999999999999,
+          -1.0789872855474678
         ]
       ]
     },
@@ -189,8 +189,8 @@
     },
     "fingerprint": {
       "request": "sha256:f3e716b952a1546bc1e67facbeb04b273efaa11f44c7ef1afcb4c1740e5584a8",
-      "result": "sha256:90084581bf12527b30511a12fc4be30be118a4ec0d656d4a0f382da8b7418f7a",
-      "output_hash": "sha256:97b4a556e2ab81e590bd65dbf2ef58ba606bd56434827a03405c3cca0cec9a27",
+      "result": "sha256:5f1854e66789358c49b466b6b58cb9347d0d046e1da297abce10cebcf327e855",
+      "output_hash": "sha256:fa8c48f2c2e9bd2993d6dc5609a2ff0da17585cba7628864960e6dfad929e5a7",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.design.pidtune@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -211,7 +211,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:744a82fdebff6b17ca26d46950c718d6429e63f5a2190441313fb163b5f57485",
-    "output_hash": "sha256:97b4a556e2ab81e590bd65dbf2ef58ba606bd56434827a03405c3cca0cec9a27",
+    "output_hash": "sha256:fa8c48f2c2e9bd2993d6dc5609a2ff0da17585cba7628864960e6dfad929e5a7",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -225,6 +225,6 @@
     "seed": null
   },
   "timing": {
-    "wall_ms": 52.899390999999994
+    "wall_ms": 50.313004
   }
 }

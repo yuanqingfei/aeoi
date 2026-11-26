@@ -3,7 +3,7 @@
 //! `f64::sin`, `exp`, `powf`, `hypot`, … in Rust compile to calls of the C symbols `sin`, `exp`, `pow`,
 //! `hypot`, … . On a native target those symbols come from the system's C math library (glibc, Apple libm,
 //! the Windows UCRT), and the libraries round differently in the last bit. The calls are not only ours:
-//! nalgebra (SVD, matrix exponential, complex modulus via num-complex) and rustfft (twiddle factors) make
+//! nalgebra (matrix products, complex modulus via num-complex) and the AEOI kernels make
 //! them too. This crate defines the symbols in the binary itself and forwards them to the pure-Rust `libm`
 //! crate (a port of musl's libm; the same code that `compiler-builtins` uses on wasm32), so every caller in
 //! the binary computes the same bits on every platform.

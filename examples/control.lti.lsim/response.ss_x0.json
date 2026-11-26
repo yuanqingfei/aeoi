@@ -1254,7 +1254,7 @@
       "applicable": false
     },
     "residual": {
-      "half_step_state_rel": 2.7988427185767607e-15,
+      "half_step_state_rel": 2.8334966231892887e-15,
       "definition": "dt/2 重新离散化、同一插值输入，前 63 步偶数步状态与原递推之差 max‖Δx‖₂ / max‖x‖₂"
     },
     "condition": {

@@ -112,7 +112,7 @@
       "applicable": false
     },
     "residual": {
-      "identity_rel": 3.916849307650622e-16,
+      "identity_rel": 3.2590156193076793e-16,
       "definition": "在若干测试点上 ‖互联恒等式残差‖ / max(‖结果‖, ‖期望‖)"
     },
     "condition": {
@@ -120,7 +120,7 @@
       "algebraic_loop_rcond": null
     },
     "error_estimate": {
-      "identity_rel": 3.916849307650622e-16,
+      "identity_rel": 3.2590156193076793e-16,
       "basis": "多项式算术或块公式在测试点上的相对残差；不是严格上界。系数本身是有限次乘加。"
     },
     "checks": {
@@ -182,7 +182,7 @@
       "class": "approximate",
       "bound_kind": "a_priori",
       "bound": {
-        "identity_rel": 3.916849307650622e-16
+        "identity_rel": 3.2590156193076793e-16
       },
       "basis": "多项式算术或块公式在测试点上的相对残差；不是严格上界。系数本身是有限次乘加。"
     },

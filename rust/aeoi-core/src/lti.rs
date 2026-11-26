@@ -99,24 +99,24 @@ fn reflector(n: usize, t: usize) -> DMatrix<f64> {
     DMatrix::identity(n, n) - (&v * v.transpose()) * (2.0 / v.norm_squared())
 }
 
-/// Real Schur form A = Q T Qᵀ with a bounded number of QR iterations. nalgebra's implicit double-shift
-/// QR has no exceptional shifts and can cycle forever (e.g. companion matrices of even polynomials);
-/// on non-convergence retry on deterministic similarity transforms / shifts (spec M-7: still deterministic).
-/// The first attempt is bit-identical to nalgebra's `complex_eigenvalues`.
+/// Real Schur form A = Q T Qᵀ by the AEOI Schur kernel (kernels::schur: Hessenberg + Francis double-shift QR
+/// with exceptional shifts; v0.4.16 — nalgebra's Schur is no longer used). If the iteration budget is
+/// exhausted, retry on deterministic similarity transforms / shifts (spec M-7: still deterministic).
 pub fn schur_robust(a: &DMatrix<f64>) -> Option<(DMatrix<f64>, DMatrix<f64>)> {
-    use nalgebra::linalg::Schur;
     let n = a.nrows();
-    let maxit = 100 * n.max(10);
-    if let Some(s) = Schur::try_new(a.clone(), f64::EPSILON, maxit) {
-        return Some(s.unpack());
+    let run = |m: &DMatrix<f64>| -> Option<(DMatrix<f64>, DMatrix<f64>)> {
+        let (q, t) = crate::kernels::schur::real_schur(&crate::kernels::nalg::rows(m), n)?;
+        Some((DMatrix::from_row_slice(n, n, &q), DMatrix::from_row_slice(n, n, &t)))
+    };
+    if let Some(r) = run(a) {
+        return Some(r);
     }
     let scale = a.amax().max(f64::MIN_POSITIVE);
     for t in 1..=6 {
         let h = reflector(n, t);
         let sigma = if t % 2 == 0 { 0.0 } else { scale * (0.1 + 0.07 * t as f64) };
         let b = &h * a * &h + DMatrix::<f64>::identity(n, n) * sigma;
-        if let Some(s) = Schur::try_new(b, f64::EPSILON, maxit) {
-            let (q, tt) = s.unpack();
+        if let Some((q, tt)) = run(&b) {
             return Some((&h * q, tt - DMatrix::<f64>::identity(n, n) * sigma));
         }
     }

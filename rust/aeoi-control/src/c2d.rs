@@ -60,10 +60,9 @@ pub fn discretize(s: &SsData, t: f64, method: &str, tw: f64) -> Result<Disc, OpE
             if !kappa.is_finite() || kappa > 1e14 {
                 return Err(sing());
             }
-            let lu = ima.clone().lu();
-            let ad = lu.solve(&(DMatrix::<f64>::identity(n, n) + &s.a * alpha)).ok_or_else(sing)?;
-            let bd = lu.solve(&(&s.b * tw)).ok_or_else(sing)?;
-            let cd = ima.transpose().lu().solve(&s.c.transpose()).ok_or_else(sing)?.transpose();
+            let ad = aeoi_core::kernels::nalg::solve(&ima, &(DMatrix::<f64>::identity(n, n) + &s.a * alpha)).ok_or_else(sing)?;
+            let bd = aeoi_core::kernels::nalg::solve(&ima, &(&s.b * tw)).ok_or_else(sing)?;
+            let cd = aeoi_core::kernels::nalg::solve(&ima.transpose(), &s.c.transpose()).ok_or_else(sing)?.transpose();
             let dd = &s.d + &s.c * &bd * 0.5; // scipy gbt(α=½): D + ½·C·B_d = D + (T_w/2)·C(I−αA)⁻¹B
             Ok(Disc { ss: SsData { a: ad, b: bd, c: cd, d: dd, ts: t }, squarings: 0, cond_ima: Some(kappa) })
         }

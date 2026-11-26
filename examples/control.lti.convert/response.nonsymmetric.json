@@ -12,15 +12,15 @@
     "system": {
       "kind": "tf",
       "num": [
-        0.5000000000000053,
-        5.0000000000000195,
-        8.00000000000004
+        0.5000000000000107,
+        5.00000000000003,
+        8.000000000000018
       ],
       "den": [
         1.0,
-        6.000000000000004,
-        10.30000000000003,
-        3.0000000000000173
+        5.999999999999991,
+        10.29999999999999,
+        2.9999999999999973
       ],
       "ts": 0.0,
       "time_unit": "s"
@@ -33,7 +33,7 @@
       "applicable": false
     },
     "residual": {
-      "response_max_rel_discrepancy": 1.0834614708373917e-14,
+      "response_max_rel_discrepancy": 2.1544667491541923e-14,
       "definition": "在 9 个测试点（连续：jω，ω = 10^[-2..2]×max(1,max|p|)；离散：单位圆上 e^{jθ}）比较转换前后 G 的最大逐元素相对差（以 max|G| 归一），跳过离极点过近的点"
     },
     "condition": {
@@ -42,7 +42,7 @@
       "output_states": null
     },
     "error_estimate": {
-      "response_rel": 1.0834614708373917e-14,
+      "response_rel": 2.1544667491541923e-14,
       "basis": "后验：等于上述响应残差（非严格上界；对根与系数本身的误差不作保证）"
     },
     "checks": {
@@ -84,7 +84,7 @@
       "class": "approximate",
       "bound_kind": "a_posteriori_heuristic",
       "bound": {
-        "response_rel": 1.0834614708373917e-14
+        "response_rel": 2.1544667491541923e-14
       },
       "basis": "后验：等于上述响应残差（非严格上界；对根与系数本身的误差不作保证）"
     },
@@ -104,8 +104,8 @@
     },
     "fingerprint": {
       "request": "sha256:91af333af58eb71abbf21e90223c7a2d0d9b5e6dfd632f5368d0cd10692a8554",
-      "result": "sha256:0a7f1b7442ef5d168ccc2872db6ab9a65424f52cf777f0e4ce3c872e130d20f3",
-      "output_hash": "sha256:1292c603e7b50714525f57929ccc2bf7ecba369755b54b9740bd741baaf8d718",
+      "result": "sha256:5f4226ab45df5ef1923c8aa043e587478efc5b27adb707cc30367b5bf1a73da9",
+      "output_hash": "sha256:2cec3769721de470bb569e0fa091a3782a14fae54726572c83ef55d8e56e8d6f",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.lti.convert@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -126,7 +126,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:ad55d1ddb90942d8426a7834cd0c5c41e2a8c5b606fb190b8a5ce833308b3b39",
-    "output_hash": "sha256:1292c603e7b50714525f57929ccc2bf7ecba369755b54b9740bd741baaf8d718",
+    "output_hash": "sha256:2cec3769721de470bb569e0fa091a3782a14fae54726572c83ef55d8e56e8d6f",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -140,6 +140,6 @@
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.355544
+    "wall_ms": 0.23384
   }
 }

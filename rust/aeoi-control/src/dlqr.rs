@@ -16,7 +16,7 @@ operator_struct!(Dlqr, "control.design.dlqr");
 fn dare_residual(a: &DMatrix<f64>, b: &DMatrix<f64>, q: &DMatrix<f64>, r: &DMatrix<f64>, n: &DMatrix<f64>, x: &DMatrix<f64>) -> Option<(DMatrix<f64>, DMatrix<f64>)> {
     let rb = r + b.transpose() * x * b;
     let rhs = b.transpose() * x * a + n.transpose();
-    let k = rb.clone().cholesky().map(|c| c.solve(&rhs)).or_else(|| rb.lu().solve(&rhs))?;
+    let k = aeoi_core::kernels::nalg::cholesky(&rb).map(|c| aeoi_core::kernels::nalg::chol_solve(&c, &rhs)).or_else(|| aeoi_core::kernels::nalg::solve(&rb, &rhs))?;
     let res = a.transpose() * x * a - x - (a.transpose() * x * b + n) * &k + q;
     Some((symmetrize(&res), k))
 }
@@ -37,9 +37,9 @@ impl Operator for Dlqr {
         let LqrInput { a, b, q, r, n: nm, has_n } = inp;
         let nx = a.nrows();
         let mut warnings = Vec::new();
-        let chol = r.clone().cholesky().unwrap();
-        let rinv_bt = chol.solve(&b.transpose());
-        let rinv_nt = chol.solve(&nm.transpose());
+        let chol = aeoi_core::kernels::nalg::cholesky(&r).unwrap();
+        let rinv_bt = aeoi_core::kernels::nalg::chol_solve(&chol, &b.transpose());
+        let rinv_nt = aeoi_core::kernels::nalg::chol_solve(&chol, &nm.transpose());
         let abar = &a - &b * &rinv_nt;
         let qbar = symmetrize(&(&q - &nm * &rinv_nt));
         let g = symmetrize(&(&b * &rinv_bt));
@@ -86,9 +86,8 @@ impl Operator for Dlqr {
             ctx.check()?;
             iters += 1;
             let w = &id + &gk * &hk;
-            let lu = w.lu();
-            let wa = lu.solve(&ak).ok_or_else(|| OpError::new("E.NUMERICAL.SINGULAR", "SDA 迭代中 I + G·H 奇异。", "问题极度病态；尝试状态尺度归一化或在 Q 中加正则项。").path("/Q"))?;
-            let wg = lu.solve(&gk).unwrap();
+            let wa = aeoi_core::kernels::nalg::solve(&w, &ak).ok_or_else(|| OpError::new("E.NUMERICAL.SINGULAR", "SDA 迭代中 I + G·H 奇异。", "问题极度病态；尝试状态尺度归一化或在 Q 中加正则项。").path("/Q"))?;
+            let wg = aeoi_core::kernels::nalg::solve(&w, &gk).unwrap();
             let a_next = &ak * &wa;
             let g_next = symmetrize(&(&gk + &ak * wg * ak.transpose()));
             let h_next = symmetrize(&(&hk + ak.transpose() * &hk * &wa));
@@ -146,7 +145,7 @@ impl Operator for Dlqr {
         if scaled > 1e-8 {
             warnings.push(Warning::new("W.NUMERICAL.LARGE_RESIDUAL", format!("DARE 缩放残差 {scaled:.2e} 偏大。")).path("/A"));
         }
-        let s_psd = s.clone().symmetric_eigenvalues().min() >= -1e-10 * s_f;
+        let s_psd = aeoi_core::kernels::nalg::sym_eigenvalues(&s).iter().cloned().fold(f64::INFINITY, f64::min) >= -1e-10 * s_f;
         let cond_r = cond2(&r);
         let cond_s = cond2(&s);
         if cond_r > 1e8 {

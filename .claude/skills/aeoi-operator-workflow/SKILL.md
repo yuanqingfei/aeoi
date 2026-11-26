@@ -37,7 +37,7 @@ AEOI（AI Engineering Operator Interface Spec）是叠加在 MCP 之上的工程
    - 互斥选项一律报 `E.VALIDATION.OPTION_CONFLICT`（F-8），补丁只删除请求里已出现的字段。
    - 区分 DOMAIN（问题本身不成立，别调参）与 NUMERICAL（换数值处理可能成功）。
    - 数值阈值以 u 和范数表达，与尺度无关（X-4a）。
-   - 确定性 `platform_bitwise`：运算路径不得依赖运行时 CPU 特性（例如 rustfft 要用标量规划器）。
+   - 确定性 `platform_bitwise`：运算路径不得依赖运行时 CPU 特性（FFT、Schur 等都用 `aeoi-core::kernels` 自己的实现）。
    - 后置条件要能如实失败：失败时发 `W.EVIDENCE.POSTCONDITION_FAILED`，并在 GUARDS 里列出不可依赖的字段。
 3. **write_manifests.py**：`man(..., backend=)`、`ins`、`outs`、B3 条目、DESC（L-1 字段描述）、`RECEIPT[...]`、COVERAGE、GUARDS。约束：
    - `exactness.bound_kind` ∈ {rigorous, a_priori, a_posteriori_heuristic, none}；

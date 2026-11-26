@@ -3,7 +3,6 @@
 //! linalg.decomp.eig is the operator built on these; other operators needing eigen-decompositions call them.
 use crate::error::OpError;
 use crate::lti::{schur_robust, C64};
-use crate::ExecCtx;
 use nalgebra::DMatrix;
 
 /// Normalise: ‖v‖₂ = 1, largest-modulus entry (first on ties) real positive.
@@ -65,7 +64,17 @@ pub struct General {
     pub cond: Vec<f64>,
 }
 
-pub fn general(a: &DMatrix<f64>) -> Option<General> {
+/// Real Schur form plus its complex Schur form: eigenvalues from the real 2×2 blocks (exact conjugate pairs,
+/// Im > 0 first), `first[k]` marks the first row of a 2×2 block, (Uc, Tc) with A = Uc·Tc·Ucᴴ, Tc upper
+/// triangular (MATLAB rsf2csf on the real Schur form). Shared by linalg.decomp.eig and control.math.lyap.
+pub struct ComplexSchur {
+    pub lam: Vec<C64>,
+    pub first: Vec<bool>,
+    pub u: DMatrix<C64>,
+    pub t: DMatrix<C64>,
+}
+
+pub fn complex_schur(a: &DMatrix<f64>) -> Option<ComplexSchur> {
     let n = a.nrows();
     let (q, t) = schur_robust(a)?;
     // eigenvalues from the real quasi-triangular T (exact conjugate pairs)
@@ -113,6 +122,12 @@ pub fn general(a: &DMatrix<f64>) -> Option<General> {
             tc[(m, m - 1)] = C64::new(0.0, 0.0);
         }
     }
+    Some(ComplexSchur { lam, first: is_block_first, u: uc, t: tc })
+}
+
+pub fn general(a: &DMatrix<f64>) -> Option<General> {
+    let n = a.nrows();
+    let ComplexSchur { lam, first: is_block_first, u: uc, t: tc } = complex_schur(a)?;
     let ulp = f64::EPSILON;
     let smlnum = f64::MIN_POSITIVE * (n as f64 / ulp);
     const BIG: f64 = 1e150;
@@ -183,7 +198,7 @@ pub fn general(a: &DMatrix<f64>) -> Option<General> {
 pub const MAX_SWEEPS: usize = 60;
 
 /// Cyclic Jacobi for a symmetric matrix (row-major n×n): (eigenvalues, eigenvectors as columns-lists).
-pub fn sym_jacobi(a: &[f64], n: usize, ctx: &ExecCtx) -> Result<Option<(Vec<f64>, Vec<Vec<f64>>)>, OpError> {
+pub fn sym_jacobi(a: &[f64], n: usize, check: &dyn Fn() -> Result<(), OpError>) -> Result<Option<(Vec<f64>, Vec<Vec<f64>>)>, OpError> {
     let mut a = a.to_vec();
     let mut v: Vec<Vec<f64>> = (0..n).map(|k| (0..n).map(|i| if i == k { 1.0 } else { 0.0 }).collect()).collect();
     for _ in 0..MAX_SWEEPS {
@@ -223,7 +238,7 @@ pub fn sym_jacobi(a: &[f64], n: usize, ctx: &ExecCtx) -> Result<Option<(Vec<f64>
                 }
             }
         }
-        ctx.check()?;
+        check()?;
         if !rotated {
             return Ok(Some(((0..n).map(|k| a[k * n + k]).collect(), v)));
         }

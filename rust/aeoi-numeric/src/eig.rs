@@ -64,7 +64,7 @@ impl Operator for Eig {
         let mut warnings = Vec::new();
         let no_conv = || OpError::new("E.NUMERICAL.NO_CONVERGENCE", "迭代（对称：Jacobi 扫描；一般：Schur 的 QR 迭代，含确定性回退）未在上限内收敛。", "检查 A 的数值尺度（极大/极小元素）；可先缩放后重试。").path("/A");
         let (result, trust) = if symmetric {
-            let (ev, evec) = sym_jacobi(&i.a, n, ctx)?.ok_or_else(no_conv)?;
+            let (ev, evec) = sym_jacobi(&i.a, n, &|| ctx.check())?.ok_or_else(no_conv)?;
             let mut order: Vec<usize> = (0..n).collect();
             order.sort_by(|&x, &y| ev[x].partial_cmp(&ev[y]).unwrap().then(x.cmp(&y)));
             let vals: Vec<f64> = order.iter().map(|&k| ev[k]).collect();

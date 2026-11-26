@@ -477,14 +477,14 @@ V47="0.4.0"
 fft=man("signal.spectral.fft","Discrete Fourier transform","计算离散傅里叶变换（正变换或逆变换），并给出每个频点对应的频率。约定全部显式：符号 e^{−2πi·jk/n}、归一化（backward 缺省，与 MATLAB fft/ifft、numpy.fft 相同）、双边或单边、频率轴顺序（numpy fftfreq）。","analysis",["signal","spectral","fft"],
  ["x 为 f64 或 c128，形状 [n] 或 [m, n]（沿最后一维变换，每行一个通道）","n（变换长度）缺省为最后一维长度；更短则截断、更长则在末尾补零（= MATLAB fft(x, n)）","sides = one 只用于实数输入的正变换（返回 n/2 + 1 个非负频点）"],
  ["非均匀采样","窗函数与功率谱密度估计（另设算子）","三维及以上数组"],
- "定义：正变换 X_k = s·Σ_{j=0}^{n−1} x_j·e^{−2πi·jk/n}，逆变换 x_j = s'·Σ_k X_k·e^{+2πi·jk/n}；normalization = backward：s = 1、s' = 1/n；ortho：s = s' = 1/√n；forward：s = 1/n、s' = 1。快速算法：rustfft 6.4 标量规划器（混合基 Cooley–Tukey，素数长度 Bluestein/Rader），不使用运行时 SIMD 分派，结果只依赖输入与 n。频率轴：双边按 numpy.fft.fftfreq 顺序 f_k = k·fs/n（k < ⌈n/2⌉），其余为 (k − n)·fs/n；单边按 rfftfreq，f_k = k·fs/n，k = 0..⌊n/2⌋。后验检查：Parseval 能量恒等式（全部输出），以及在 8 个确定的频点上用 O(n) 补偿求和直接计算 DFT（抽查）",
+ "定义：正变换 X_k = s·Σ_{j=0}^{n−1} x_j·e^{−2πi·jk/n}，逆变换 x_j = s'·Σ_k X_k·e^{+2πi·jk/n}；normalization = backward：s = 1、s' = 1/n；ortho：s = s' = 1/√n；forward：s = 1/n、s' = 1。快速算法：aeoi-core kernels::fft（2 的幂用基 2；合数按最小素因子做混合基按时间抽取；素数 ≤ 31 直接 DFT，更大的素数用 Bluestein），旋转因子用 libm::cos/sin，不使用运行时 SIMD 分派，结果只依赖输入与 n。频率轴：双边按 numpy.fft.fftfreq 顺序 f_k = k·fs/n（k < ⌈n/2⌉），其余为 (k − n)·fs/n；单边按 rfftfreq，f_k = k·fs/n，k = 0..⌊n/2⌋。后验检查：Parseval 能量恒等式（全部输出），以及在 8 个确定的频点上用 O(n) 补偿求和直接计算 DFT（抽查）",
  [{"type":"paper","cite":"J. W. Cooley, J. W. Tukey, An algorithm for the machine calculation of complex Fourier series, Math. Comp. 19, 1965","doi":"10.1090/S0025-5718-1965-0178586-1"},
   {"type":"paper","cite":"L. Bluestein, A linear filtering approach to the computation of discrete Fourier transform, IEEE Trans. Audio Electroacoust. 18(4), 1970","doi":"10.1109/TAU.1970.1162132"},
   {"type":"textbook","cite":"N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §24（FFT 的舍入误差界）"}],
- "fft::transform (rustfft 6.4 scalar planner)","T1",{"max_input_elements":10000000,"max_output_values":10000000,"dft_spot_check_bins":8},
+ "fft::transform (aeoi-core kernels::fft)","T1",{"max_input_elements":10000000,"max_output_values":10000000,"dft_spot_check_bins":8},
  ["E.VALIDATION.SCHEMA","E.VALIDATION.SHAPE","E.VALIDATION.DTYPE","E.VALIDATION.NON_FINITE","E.VALIDATION.OPTION_CONFLICT","E.VALIDATION.ENCODING","E.RESOURCE.INPUT_TOO_LARGE","E.RESOURCE.OUTPUT_TOO_LARGE","E.RESOURCE.TIMEOUT","E.RESOURCE.CANCELLED","E.INTERNAL.PANIC"],
  ["W.PERFORMANCE.SPARSE_DENSIFIED"],
- sparse={"/x":{"policy":"densify","max_dense_elements":10000000}},ver=V47,backend=BACK_NUM("fft::transform"," + rustfft 6.4 (scalar planner)"))
+ sparse={"/x":{"policy":"densify","max_dense_elements":10000000}},ver=V47,backend=BACK_NUM("fft::transform"," + aeoi-core kernels::fft"))
 fft_in=ins("signal.spectral.fft",{"x":M,"n":{"type":"integer","minimum":1},
  "direction":{"enum":["forward","inverse"],"default":"forward","x-aeoi-provenance":"convention"},
  "normalization":{"enum":["backward","ortho","forward"],"default":"backward","x-aeoi-provenance":"convention"},
@@ -650,7 +650,7 @@ pfit_out=outs("fit.poly.polyfit",{"p":dict(M,description="系数 [d + 1]，最�
  ["p","degree","scaling","mu","residual_norm","dof","std_errors"],ver=V411)
 eigm=man("linalg.decomp.eig","Eigenvalues and eigenvectors","实方阵的特征值与特征向量（= MATLAB eig(A) / [V, D] = eig(A)）。A 精确对称时用对称算法：实特征值升序、正交特征向量；否则用一般算法：复特征值按实部升序、共轭对相邻（虚部为正的在前）。特征向量 2-范数为 1，最大模分量为正实数。结果带每个特征对的残差、特征值条件数与误差估计；可能亏损（重特征值）时警告。","analysis",["linalg","eigenvalues","eig","spectral"],
  ["A 为 [n, n] 实数方阵"],["广义特征值问题 eig(A, B)（0.4.0 未支持）","复数矩阵","大型稀疏矩阵的部分特征值（eigs）"],
- "structure = auto（缺省）：A 与 Aᵀ 逐位相等时用对称算法（循环双边 Jacobi：|a_pq| > ε·sqrt(|a_pp·a_qq|) 时旋转，至多 60 轮扫描），否则用一般算法：实 Schur 分解（nalgebra Schur，隐式双位移 QR，不收敛时做确定性相似变换后重试）→ 复 Schur 形（rsf2csf，Givens 消去 2×2 块）→ 上三角回代求特征向量（小除数按 LAPACK ztrevc 抬到 max(u·|λ|, 最小正规数)），共轭对的第二个向量取第一个的共轭；左特征向量同法求得，特征值条件数 1/|yᴴx|。排序：对称升序；一般按 (实部, |虚部|) 升序，共轭对虚部为正的在前。规一化：‖v‖₂ = 1，最大模分量（并列取下标最小）为正实数。",
+ "structure = auto（缺省）：A 与 Aᵀ 逐位相等时用对称算法（循环双边 Jacobi：|a_pq| > ε·sqrt(|a_pp·a_qq|) 时旋转，至多 60 轮扫描），否则用一般算法：实 Schur 分解（aeoi-core kernels::schur：Householder 化为 Hessenberg 形，Francis 双位移 QR，实特征值的 2×2 块按 LAPACK dlanv2 标准化；不收敛时做确定性相似变换后重试）→ 复 Schur 形（rsf2csf，Givens 消去 2×2 块）→ 上三角回代求特征向量（小除数按 LAPACK ztrevc 抬到 max(u·|λ|, 最小正规数)），共轭对的第二个向量取第一个的共轭；左特征向量同法求得，特征值条件数 1/|yᴴx|。排序：对称升序；一般按 (实部, |虚部|) 升序，共轭对虚部为正的在前。规一化：‖v‖₂ = 1，最大模分量（并列取下标最小）为正实数。",
  [{"type":"textbook","cite":"G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., JHU Press 2013, §7.5（QR 算法）、§7.6（特征向量）、§8.3（对称 QR）"},
   {"type":"textbook","cite":"J. W. Demmel, Applied Numerical Linear Algebra, SIAM 1997, §4.3、§5.2（扰动理论）"},
   {"type":"textbook","cite":"E. Anderson et al., LAPACK Users' Guide, 3rd ed., SIAM 1999, §4.8（特征问题的误差界）"}],
@@ -872,7 +872,7 @@ RECEIPT={
 }
 RECEIPT["ode.ivp.solve"]={"method_id":"aeoi:ode:dopri54","assumptions":[A("model","states、rhs、params、initial 准确描述要解的方程","caller"),A("expressions","每个 rhs 是合法的 AEOI 表达式，只引用已声明的名字（3.15）","error:E.VALIDATION.EXPRESSION"),A("smooth_nonstiff","f 在积分区间上足够光滑、问题非刚性","warning:W.NUMERICAL.STIFF_PROBLEM"),A("finite_rhs","f 在解经过的点上有限","error:E.NUMERICAL.NON_FINITE_EVALUATION"),A("tolerance_is_local","rtol/atol 控制每步的局部误差；全局误差可能更大，由重解估计","validation")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["all_finite","tolerance_consistent"]}
-RECEIPT["signal.spectral.fft"]={"method_id":"aeoi:fft:rustfft-scalar","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("uniform_sampling","x 是均匀采样序列；频率轴按 sample_rate_hz（或 cycles/sample）解释","caller"),A("conventions","符号、归一化、单双边、频率轴顺序按请求或规范默认","validation"),A("periodic_extension","DFT 把 x 视为周期 n 的序列；截断或补零改变频谱（泄漏），不是误差","caller")],
+RECEIPT["signal.spectral.fft"]={"method_id":"aeoi:fft:kernels-mixed-radix","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("uniform_sampling","x 是均匀采样序列；频率轴按 sample_rate_hz（或 cycles/sample）解释","caller"),A("conventions","符号、归一化、单双边、频率轴顺序按请求或规范默认","validation"),A("periodic_extension","DFT 把 x 视为周期 n 的序列；截断或补零改变频谱（泄漏），不是误差","caller")],
    "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["parseval","dft_spot_check","all_finite"]}
 RECEIPT["linalg.system.solve"]={"method_id":"aeoi:linsolve:lu-refine-or-householder-qr","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("not_underdetermined","m ≥ n","error:E.DOMAIN.UNDERDETERMINED"),A("full_rank","A 列满秩（方阵非奇异）","error:E.NUMERICAL.SINGULAR"),A("conditioning","κ·u ≪ 1，否则解没有有效数字（前向误差 ≈ κ·η）","warning:W.NUMERICAL.ILL_CONDITIONED"),A("row_major","A 按 row-major 录入","caller")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["backward_stable","all_finite"]}

@@ -243,17 +243,17 @@
       "applicable": false
     },
     "residual": {
-      "final_state_rel_discrepancy": 1.8012756886315806e-14,
+      "final_state_rel_discrepancy": 1.8012536723181837e-14,
       "definition": "‖x_{N−1}(逐步递推) − x(t_end)(一次性 expm 直接计算)‖₂ / ‖x(t_end)‖₂，取所有输入通道最大值"
     },
     "condition": {
       "norm1_A_dt": 0.5900000000000001,
       "expm_squarings": 0,
       "realization": "given ss",
-      "max_real_pole": -0.3636126373101288
+      "max_real_pole": -0.3636126373101275
     },
     "error_estimate": {
-      "y_abs": 1.492770435048583e-14,
+      "y_abs": 1.4927521894785488e-14,
       "basis": "启发式：max(N·u, 终点一致性偏差) × max|y|；expm 后向误差 ≤ u（Higham 2005）。非严格上界",
       "info_time_metrics_abs_s": 0.05,
       "info_basis": "指标按网格点定义（首个越过阈值的网格点，不插值），相对连续时间真值误差 ≤ dt"
@@ -283,15 +283,15 @@
         ],
         "data": [
           [
-            -2.8181936813449378,
-            0.555268133948228
+            -2.8181936813449315,
+            0.5552681339482376
           ],
           [
-            -2.8181936813449378,
-            -0.555268133948228
+            -2.8181936813449315,
+            -0.5552681339482376
           ],
           [
-            -0.3636126373101288,
+            -0.3636126373101275,
             0.0
           ]
         ]
@@ -338,7 +338,7 @@
       "class": "approximate",
       "bound_kind": "a_posteriori_heuristic",
       "bound": {
-        "y_abs": 1.492770435048583e-14
+        "y_abs": 1.4927521894785488e-14
       },
       "basis": "启发式：max(N·u, 终点一致性偏差) × max|y|；expm 后向误差 ≤ u（Higham 2005）。非严格上界"
     },

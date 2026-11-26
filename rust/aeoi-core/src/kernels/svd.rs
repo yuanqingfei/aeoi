@@ -2,7 +2,6 @@
 //! needing singular values or vectors call them.
 use crate::error::OpError;
 use crate::kernels::dense::qr_factor;
-use crate::ExecCtx;
 
 pub const MAX_SWEEPS: usize = 60;
 
@@ -77,7 +76,7 @@ pub fn nrm2(v: &[f64]) -> f64 {
 
 /// One-sided Jacobi on the columns g_0..g_{n−1} (each of length m, m ≥ n). Returns (G rotated, V) or None
 /// when the sweep limit is reached.
-pub fn jacobi(mut g: Vec<Vec<f64>>, m: usize, ctx: &ExecCtx) -> Result<Option<(Vec<Vec<f64>>, Vec<Vec<f64>>)>, OpError> {
+pub fn jacobi(mut g: Vec<Vec<f64>>, m: usize, check: &dyn Fn() -> Result<(), OpError>) -> Result<Option<(Vec<Vec<f64>>, Vec<Vec<f64>>)>, OpError> {
     let n = g.len();
     let mut v: Vec<Vec<f64>> = (0..n).map(|k| (0..n).map(|i| if i == k { 1.0 } else { 0.0 }).collect()).collect();
     let tol = (m as f64).sqrt() * f64::EPSILON;
@@ -109,7 +108,7 @@ pub fn jacobi(mut g: Vec<Vec<f64>>, m: usize, ctx: &ExecCtx) -> Result<Option<(V
                 }
             }
         }
-        ctx.check()?;
+        check()?;
         if !rotated {
             return Ok(Some((g, v)));
         }
@@ -128,3 +127,46 @@ pub fn orth_err(cols: &[Vec<f64>]) -> f64 {
     e
 }
 
+
+
+/// Thin SVD of a row-major m×n matrix: singular values descending (stable), u_k (m) and v_k (n) as column lists,
+/// p = min(m, n) triples; sign rule: the largest-modulus entry of u_k (first on ties) is positive.
+/// linalg.decomp.svd returns exactly this; every other operator needing an SVD calls it (spec 11.5 RI-1).
+pub struct Svd {
+    pub s: Vec<f64>,
+    pub u: Vec<Vec<f64>>,
+    pub v: Vec<Vec<f64>>,
+}
+
+pub fn svd_thin(a: &[f64], m: usize, n: usize, check: &dyn Fn() -> Result<(), OpError>) -> Result<Option<Svd>, OpError> {
+    let p = m.min(n);
+    let tall = m >= n;
+    let (rows, cols) = if tall { (m, n) } else { (n, m) };
+    let g: Vec<Vec<f64>> = (0..cols).map(|k| (0..rows).map(|r| if tall { a[r * n + k] } else { a[k * n + r] }).collect()).collect();
+    let Some((g, w)) = jacobi(g, rows, check)? else { return Ok(None) };
+    let sig: Vec<f64> = g.iter().map(|c| nrm2(c)).collect();
+    let mut order: Vec<usize> = (0..p).collect();
+    order.sort_by(|&x, &y| sig[y].partial_cmp(&sig[x]).unwrap().then(x.cmp(&y)));
+    let s: Vec<f64> = order.iter().map(|&k| sig[k]).collect();
+    let nz = s.iter().filter(|&&x| x > 0.0).count();
+    let mut left: Vec<Vec<f64>> = order[..nz].iter().map(|&k| g[k].iter().map(|x| x / sig[k]).collect()).collect();
+    if nz < p {
+        left = complete(&left, rows)[..p].to_vec();
+    }
+    let right: Vec<Vec<f64>> = order.iter().map(|&k| w[k].clone()).collect();
+    let (uu, vv) = if tall { (left, right) } else { (right, left) };
+    let mut u = Vec::with_capacity(p);
+    let mut v = Vec::with_capacity(p);
+    for k in 0..p {
+        let mut uk = uu[k].clone();
+        let mut vk = vv[k].clone();
+        if sign_fix(&mut uk) < 0.0 {
+            for z in vk.iter_mut() {
+                *z = -*z;
+            }
+        }
+        u.push(uk);
+        v.push(vk);
+    }
+    Ok(Some(Svd { s, u, v }))
+}

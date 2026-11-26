@@ -57,10 +57,10 @@
       "iterations": 3,
       "criterion": "‖Z_{k+1}−Z_k‖₁/‖Z_{k+1}‖₁ ≤ 1e-13 或停滞",
       "final_value": 0.0,
-      "newton_kleinman_steps": 2,
+      "newton_kleinman_steps": 1,
       "care_residual_compensated_fro": 3.476255146080469e-16,
-      "newton_kleinman_final_change_rel": 5.01754211090345e-17,
-      "sign_function_residual_fro": 2.4525628233156873e-15,
+      "newton_kleinman_final_change_rel": 2.2764309666621166e-16,
+      "sign_function_residual_fro": 1.368774871883577e-15,
       "symplectic_balancing_log2_range": [
         0.0,
         0.0
@@ -75,16 +75,16 @@
     },
     "condition": {
       "cond_R": 1.0,
-      "cond_S": 3.7320508075688807,
+      "cond_S": 3.732050807568877,
       "pbh_min_sv_rel_unstable_modes": 0.7071067811865475,
       "pbh_min_sv_rel_all_modes": 0.7071067811865475,
-      "sep_closed_loop_lyapunov": 0.647363319261565,
-      "hamiltonian_min_abs_real_rel": 0.4330127018922313,
+      "sep_closed_loop_lyapunov": 0.6473633192615645,
+      "hamiltonian_min_abs_real_rel": 0.4330127018922191,
       "hamiltonian_balanced": true
     },
     "error_estimate": {
-      "S_abs_fro": 8.510052258701883e-16,
-      "S_rel": 3.0087578301899986e-16,
+      "S_abs_fro": 8.510052258701886e-16,
+      "S_rel": 3.0087578301899996e-16,
       "basis": "一阶后验估计：Newton 修正量 ‖δS‖_F ≈ ‖Res‖_F / σ_min(I⊗A_clᵀ + A_clᵀ⊗I) + u‖S‖_F（Res 在 Newton–Kleinman 修正后用补偿算术计算，否则为 f64 残差），忽略二次项；非严格上界"
     },
     "checks": {
@@ -133,8 +133,8 @@
       "class": "approximate",
       "bound_kind": "a_posteriori_heuristic",
       "bound": {
-        "S_abs_fro": 8.510052258701883e-16,
-        "S_rel": 3.0087578301899986e-16
+        "S_abs_fro": 8.510052258701886e-16,
+        "S_rel": 3.0087578301899996e-16
       },
       "basis": "一阶后验估计：Newton 修正量 ‖δS‖_F ≈ ‖Res‖_F / σ_min(I⊗A_clᵀ + A_clᵀ⊗I) + u‖S‖_F（Res 在 Newton–Kleinman 修正后用补偿算术计算，否则为 f64 残差），忽略二次项；非严格上界"
     },

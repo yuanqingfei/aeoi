@@ -68,16 +68,16 @@
       ],
       "data": [
         [
-          -2.000000000000001,
+          -1.9999999999999996,
           0.0
         ],
         [
-          -0.5,
-          3.122498999199201
+          -0.49999999999999933,
+          3.1224989991991934
         ],
         [
-          -0.5,
-          -3.122498999199201
+          -0.49999999999999933,
+          -3.1224989991991934
         ]
       ]
     },
@@ -176,7 +176,7 @@
         },
         "settling_min": {
           "unit": "1",
-          "value": 0.6343723233782255
+          "value": 0.6343723233782257
         },
         "settling_max": {
           "unit": "1",
@@ -343,8 +343,8 @@
     },
     "fingerprint": {
       "request": "sha256:beb0742bbba4d085d10470edbc1e395b7d240688a267c9762d814e88156c15e3",
-      "result": "sha256:0c0b072650cc2ee097df821d08178d7fa06a6801d18fa9438fbfd36ee90c4861",
-      "output_hash": "sha256:6c3b154cdd81661953469ac9624d619091ccfdded60a4886a31bb9fad28fd5a5",
+      "result": "sha256:288b777a724ef50e0a59a43a6dbe02f872f1ee11a8412a5385f150c66fa23194",
+      "output_hash": "sha256:9c998bfebb9d64c723f837cd596b73c0e539f14634187936b62565082a286470",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.analysis.loopsens@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -365,7 +365,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T3",
     "input_hash": "sha256:be6e92a6cbc92a1e8c0fe21e88cb214a86112e5c1f97480cb97c8f54eaa04abc",
-    "output_hash": "sha256:6c3b154cdd81661953469ac9624d619091ccfdded60a4886a31bb9fad28fd5a5",
+    "output_hash": "sha256:9c998bfebb9d64c723f837cd596b73c0e539f14634187936b62565082a286470",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -379,6 +379,6 @@
     "seed": null
   },
   "timing": {
-    "wall_ms": 32.722784999999995
+    "wall_ms": 33.005973000000004
   }
 }

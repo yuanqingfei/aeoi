@@ -69,12 +69,12 @@
       "applicable": false
     },
     "residual": {
-      "final_state_rel_discrepancy": 2.210770817393173e-15,
+      "final_state_rel_discrepancy": 2.2412030476023137e-15,
       "definition": "‖x_{N−1}(逐步递推) − x(t_end)(一次性 expm 直接计算)‖₂ / ‖x(t_end)‖₂，取所有输入通道最大值"
     },
     "condition": {
       "dt": 0.02,
-      "max_real_or_modulus": -0.9397582783588792
+      "max_real_or_modulus": -0.9397582783588776
     },
     "error_estimate": {
       "y_abs": 1.4464090080176517e-14,

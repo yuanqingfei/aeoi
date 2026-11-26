@@ -121,7 +121,7 @@ impl Operator for PolesZeros {
                         ss.d.clone()
                     } else if rc > 1e-13 {
                         dc_method = if ts > 0.0 { "D + C(I−A)⁻¹B" } else { "D − C A⁻¹ B" };
-                        let x = m.lu().solve(&ss.b).unwrap();
+                        let x = aeoi_core::kernels::nalg::solve(&m, &ss.b).unwrap();
                         &ss.c * x + &ss.d
                     } else {
                         dc_method = "per_element_zpk_limit (A numerically singular)";

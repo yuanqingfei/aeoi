@@ -30,8 +30,8 @@
           2
         ],
         "data": [
-          7.06476151587624,
-          2.26476151587624
+          7.064761515876241,
+          2.264761515876241
         ]
       },
       "full_rank": true
@@ -71,10 +71,10 @@
           2
         ],
         "data": [
-          1.666666666666666,
-          1.8041124150158794e-16,
-          1.8041124150158794e-16,
-          6.666666666666664
+          1.6666666666666665,
+          2.3592239273284576e-16,
+          2.3592239273284576e-16,
+          6.666666666666666
         ]
       },
       "observability": {
@@ -87,7 +87,7 @@
           0.5666666666666668,
           0.125,
           0.125,
-          0.10416666666666666
+          0.10416666666666674
         ]
       }
     },
@@ -98,20 +98,20 @@
       "applicable": false
     },
     "residual": {
-      "controllability_rel_residual": 7.119997686835877e-17,
-      "observability_rel_residual": 2.5816843116640615e-17,
-      "separation_min": 1.1999999999999995,
+      "controllability_rel_residual": 6.2897636505805864e-18,
+      "observability_rel_residual": 5.755301632711286e-17,
+      "separation_min": 1.1999999999999997,
       "definition": "‖A W + W Aᵀ + BBᵀ‖_F / (2‖A‖_F‖W‖_F + ‖BBᵀ‖_F)（离散：‖A W Aᵀ − W + BBᵀ‖_F / (‖A‖²‖W‖+‖W‖+‖BBᵀ‖)），可观同理"
     },
     "condition": {
-      "ctrb_rank_tolerance": 3.13738435936461e-15,
+      "ctrb_rank_tolerance": 3.1373843593646105e-15,
       "obsv_rank_tolerance": 4.440892098500626e-16,
       "ctrb_sv_gap_at_rank": null,
       "obsv_sv_gap_at_rank": null,
-      "pbh_ctrb_min_rel_sv": 0.2442208482397884,
-      "pbh_obsv_min_rel_sv": 0.09983307187209489,
+      "pbh_ctrb_min_rel_sv": 0.24422084823978843,
+      "pbh_obsv_min_rel_sv": 0.09983307187209486,
       "pbh_threshold": 1e-10,
-      "ctrb_condition": 3.119428454762873,
+      "ctrb_condition": 3.119428454762872,
       "realization": "given ss"
     },
     "error_estimate": {
@@ -174,8 +174,8 @@
     },
     "fingerprint": {
       "request": "sha256:c2070194b581519bcdd13116d7fb6a5fe66365e5c690098bea91d26e1c227b94",
-      "result": "sha256:abc418c68b6d7ca75ae893ba9c9e6a9a6f328acf80d162b9b4439b8f359d8b36",
-      "output_hash": "sha256:4b88f480e4dff3988e44cce0b2f28f372d9420e371da7be0103ae969bdd37258",
+      "result": "sha256:963f6483826651dc5df82a3a5c05063e07a7dc4e261ae12cdbf7e50dcc36055b",
+      "output_hash": "sha256:bef6f9641a3eef69625bbb7d8642662130989cf7f148b2738559d68ba9fa9d45",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.analysis.ctrb_obsv@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -196,7 +196,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:6da5768803cb1a03a779b6e10dbf4d62d7825c430bfe6c21d6b2ae1067dd1c53",
-    "output_hash": "sha256:4b88f480e4dff3988e44cce0b2f28f372d9420e371da7be0103ae969bdd37258",
+    "output_hash": "sha256:bef6f9641a3eef69625bbb7d8642662130989cf7f148b2738559d68ba9fa9d45",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -210,6 +210,6 @@
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.269598
+    "wall_ms": 0.264691
   }
 }

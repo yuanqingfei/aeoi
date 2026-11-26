@@ -1,6 +1,8 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.15-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.16-draft
 
-> 状态：Draft v0.4.15 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.16 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+>
+> v0.4.16 没有新算子：所有算子的数值核心都改为调用 AEOI 自己的内核（11.5 RI-3 完成）。新增内核：复数 LU 与奇异值、实 Schur、FFT、Cholesky；rustfft 与 nalgebra 的分解不再使用，nalgebra 只用作矩阵容器和做矩阵乘法。全部结果的变化都在容差类内（G-3），算子版本不变。
 >
 > v0.4.15 新增数值积分 `calculus.quadrature.integral`（10.31，缺省 rel_tol 1e-10）与数据积分 `calculus.quadrature.trapz`（10.32，采样位置必须显式给出）。至此，作者定下的四批算子全部完成。
 >
@@ -103,7 +105,7 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
   "平台" = 目标三元组（`reproducibility.platform`）+ 运行时检测到的 CPU 特性集合（`reproducibility.cpu_features`）+ 超越函数所用的 C 数学库及版本（`reproducibility.libm`，v0.4 起，例如 `glibc 2.39`；见下段）。WebAssembly 构建（`wasm32-unknown-unknown`，目标三元组里没有 OS）的 `platform` 记为 `wasm32-unknown`；它与原生构建是不同的"平台"：超越函数走 Rust `libm` 而不是 glibc，矩阵乘法没有 AVX/FMA 内核，所以 `platform_bitwise` 不延伸到 wasm ↔ 原生（实测见 8.5）。v0.3 参考实现的 12 个算子都声明 `platform_bitwise`：nalgebra 的稠密乘法走 `matrixmultiply`，后者在运行时按 AVX/FMA 等特性选择内核。
 
   v0.4 把 libm 加进"平台"的依据：同一份源码、同一组 CPU 特性（x86_64-linux，avx/avx2/fma/avx512f），glibc 2.31（Ubuntu 20.04，WSL）与生成示例的环境（推断为 glibc 2.39）相比，`control.lti.pade` 的 `approximation.certificate.value` 差 1 ulp，`control.analysis.ctrb_obsv` 非对称示例的两个奇异值差 1–2 ulp，其余示例逐位相同。glibc 会动态链接，换系统而不重新编译也会改变它，所以 `libm` 在运行时读取。`build` 也要如实：参考实现的 `build` 曾在没有设置环境变量时写死 `rustc-1.85`，v0.4 改为由构建脚本记录实际编译器版本。v0.4 之前发布的示例没有 `libm`，与它们只能做容差比较，重新生成示例后恢复逐位比较。
-  v0.4.9 参考实现去掉了跨平台差异的两个来源。第一，**数学库**：原生构建在二进制内部定义 `sin`、`exp`、`pow`、`hypot`、`sincos` 等 C 符号，转给编入二进制的纯 Rust `libm`（crate `aeoi-libm`，`libm` 0.2.16，musl libm 的移植）。可执行文件里的定义优先于系统库（ELF、Mach-O、PE 都是这样），所以 nalgebra（SVD、矩阵指数、复数模长）和 rustfft（旋转因子）内部的调用也一起换掉了。`reproducibility.libm` 记为 `rust-libm 0.2.16`，不再随操作系统变化。实测 glibc 2.39 与 `libm` 0.2.16 在随机自变量上的不同率：`sin` 3%、`exp` 10%、`pow` 9%、`atan2` 26%、`log` 5%。第二，**矩阵乘法内核**：`matrixmultiply` 换成打过补丁的副本，固定用通用内核，即普通乘加、固定次序、不融合（`rust/vendor/matrixmultiply/AEOI-PATCH.md`）。另外，发布流水线在 5 个平台上的比较又找出两处：(a) 苹果平台上 LLVM 会把 `pow(10, x)` 改写成系统的 `__exp10(x)`，所以 `__exp10`/`exp10` 也要覆盖，并按 `pow(10, x)` 计算；(b) **编译期常量折叠**：参数为常量的 `f64::cos` 等，LLVM 在编译时就用*编译机*的 C 库算掉了。rustfft 固定尺寸蝶形的旋转因子就是这样，结果随“在哪个操作系统上编译”而变（macOS 11 个、Windows 16 个 FFT 用例），与 CPU 无关。rustfft 也换成补丁副本，旋转因子直接调用 `libm::cos/sin`（`rust/vendor/rustfft/AEOI-PATCH.md`）：`libm` 是普通 Rust 代码，折叠它就是精确的 IEEE 运算。此后参考实现的结果不再依赖 CPU 特性和操作系统，`cpu_features` 只作记录。43 个示例中有 9 个的 `output_hash` 变了，数值差都在各自的容差类内（最大是 `bode` 非对称状态空间示例，相对差 8.9e-12，T2），按 G-3 处理，算子版本不变。发布流水线已证实：在 Linux x86_64、Linux aarch64、macOS arm64、macOS x86_64、Windows x86_64 上各自构建的二进制，对全部 859 个 golden 请求给出完全相同的 `output_hash`；浏览器（wasm）版与 Linux 原生版 925 / 925 逐位相同。manifest 仍声明 `platform_bitwise`：这个承诺依然成立，只是比实际做到的弱。改成 `bitwise` 是对调用方的新承诺，按 G-2 要给每个算子升 MINOR 版本，所以留到各算子下一次升版本时一起做（开放问题 25）。
+  v0.4.9 参考实现去掉了跨平台差异的两个来源。第一，**数学库**：原生构建在二进制内部定义 `sin`、`exp`、`pow`、`hypot`、`sincos` 等 C 符号，转给编入二进制的纯 Rust `libm`（crate `aeoi-libm`，`libm` 0.2.16，musl libm 的移植）。可执行文件里的定义优先于系统库（ELF、Mach-O、PE 都是这样），所以 nalgebra（SVD、矩阵指数、复数模长）和 rustfft（旋转因子）内部的调用也一起换掉了。`reproducibility.libm` 记为 `rust-libm 0.2.16`，不再随操作系统变化。实测 glibc 2.39 与 `libm` 0.2.16 在随机自变量上的不同率：`sin` 3%、`exp` 10%、`pow` 9%、`atan2` 26%、`log` 5%。第二，**矩阵乘法内核**：`matrixmultiply` 换成打过补丁的副本，固定用通用内核，即普通乘加、固定次序、不融合（`rust/vendor/matrixmultiply/AEOI-PATCH.md`）。另外，发布流水线在 5 个平台上的比较又找出两处：(a) 苹果平台上 LLVM 会把 `pow(10, x)` 改写成系统的 `__exp10(x)`，所以 `__exp10`/`exp10` 也要覆盖，并按 `pow(10, x)` 计算；(b) **编译期常量折叠**：参数为常量的 `f64::cos` 等，LLVM 在编译时就用*编译机*的 C 库算掉了。rustfft 固定尺寸蝶形的旋转因子就是这样，结果随“在哪个操作系统上编译”而变（macOS 11 个、Windows 16 个 FFT 用例），与 CPU 无关。rustfft 也换成补丁副本，旋转因子直接调用 `libm::cos/sin`：`libm` 是普通 Rust 代码，折叠它就是精确的 IEEE 运算。（v0.4.16 起 FFT 改用 AEOI 自己的内核 `kernels::fft`，旋转因子同样调用 `libm::cos/sin`，rustfft 补丁副本已删除。）此后参考实现的结果不再依赖 CPU 特性和操作系统，`cpu_features` 只作记录。43 个示例中有 9 个的 `output_hash` 变了，数值差都在各自的容差类内（最大是 `bode` 非对称状态空间示例，相对差 8.9e-12，T2），按 G-3 处理，算子版本不变。发布流水线已证实：在 Linux x86_64、Linux aarch64、macOS arm64、macOS x86_64、Windows x86_64 上各自构建的二进制，对全部 859 个 golden 请求给出完全相同的 `output_hash`；浏览器（wasm）版与 Linux 原生版 925 / 925 逐位相同。manifest 仍声明 `platform_bitwise`：这个承诺依然成立，只是比实际做到的弱。改成 `bitwise` 是对调用方的新承诺，按 G-2 要给每个算子升 MINOR 版本，所以留到各算子下一次升版本时一起做（开放问题 25）。
 - M-7a **（v0.4.9）声明 `bitwise` 的前提**：超越函数 MUST 来自编入 build 的数学库（库名与版本记入 `reproducibility.libm` 和 `build`），MUST NOT 来自运行时的系统库，也 MUST NOT 在编译期用编译机的 C 库求值（常量折叠）；任何运算路径 MUST NOT 按运行时检测到的 CPU 特性分派。证据是在每个支持的平台上、用该平台上构建的二进制跑全部 golden 用例，`output_hash` 完全相同。理由：系统数学库各家舍入不同，而且会随系统升级改变（v0.4 实测 glibc 2.31 与 2.39 相差 1–2 ulp）。
 - M-8 `tolerance_class` MUST 取 7.2 表中的一个值。
 - M-9 **稀疏支持声明（v0.2 新增）**：manifest MUST 含 `sparse_support`，以输入字段的 JSON Pointer 为键，值为 `{"policy": "native" | "densify" | "reject", "max_dense_elements": <int>}`。未列出的矩阵字段视为 `reject`。`densify` 时算子 MUST 返回 `W.PERFORMANCE.SPARSE_DENSIFIED`；稠密化后元素数超过 `max_dense_elements` MUST 返回 `E.RESOURCE.INPUT_TOO_LARGE`。
@@ -2831,10 +2833,10 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. dt from th
       "iterations": 3,
       "criterion": "‖Z_{k+1}−Z_k‖₁/‖Z_{k+1}‖₁ ≤ 1e-13 或停滞",
       "final_value": 0.0,
-      "newton_kleinman_steps": 2,
+      "newton_kleinman_steps": 1,
       "care_residual_compensated_fro": 3.476255146080469e-16,
-      "newton_kleinman_final_change_rel": 5.01754211090345e-17,
-      "sign_function_residual_fro": 2.4525628233156873e-15,
+      "newton_kleinman_final_change_rel": 2.2764309666621166e-16,
+      "sign_function_residual_fro": 1.368774871883577e-15,
       "symplectic_balancing_log2_range": [
         0.0,
         0.0
@@ -2849,16 +2851,16 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. dt from th
     },
     "condition": {
       "cond_R": 1.0,
-      "cond_S": 3.7320508075688807,
+      "cond_S": 3.732050807568877,
       "pbh_min_sv_rel_unstable_modes": 0.7071067811865475,
       "pbh_min_sv_rel_all_modes": 0.7071067811865475,
-      "sep_closed_loop_lyapunov": 0.647363319261565,
-      "hamiltonian_min_abs_real_rel": 0.4330127018922313,
+      "sep_closed_loop_lyapunov": 0.6473633192615645,
+      "hamiltonian_min_abs_real_rel": 0.4330127018922191,
       "hamiltonian_balanced": true
     },
     "error_estimate": {
-      "S_abs_fro": 8.510052258701883e-16,
-      "S_rel": 3.0087578301899986e-16,
+      "S_abs_fro": 8.510052258701886e-16,
+      "S_rel": 3.0087578301899996e-16,
       "basis": "一阶后验估计：Newton 修正量 ‖δS‖_F ≈ ‖Res‖_F / σ_min(I⊗A_clᵀ + A_clᵀ⊗I) + u‖S‖_F（Res 在 Newton–Kleinman 修正后用补偿算术计算，否则为 f64 残差），忽略二次项；非严格上界"
     },
     "checks": {
@@ -2907,8 +2909,8 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. dt from th
       "class": "approximate",
       "bound_kind": "a_posteriori_heuristic",
       "bound": {
-        "S_abs_fro": 8.510052258701883e-16,
-        "S_rel": 3.0087578301899986e-16
+        "S_abs_fro": 8.510052258701886e-16,
+        "S_rel": 3.0087578301899996e-16
       },
       "basis": "一阶后验估计：Newton 修正量 ‖δS‖_F ≈ ‖Res‖_F / σ_min(I⊗A_clᵀ + A_clᵀ⊗I) + u‖S‖_F（Res 在 Newton–Kleinman 修正后用补偿算术计算，否则为 f64 残差），忽略二次项；非严格上界"
     },
@@ -4315,7 +4317,7 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. kappa from
       "singular_values": {
         "dtype": "f64",
         "shape": [2],
-        "data": [7.06476151587624, 2.26476151587624]
+        "data": [7.064761515876241, 2.264761515876241]
       },
       "full_rank": true
     },
@@ -4337,12 +4339,12 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. kappa from
       "controllability": {
         "dtype": "f64",
         "shape": [2, 2],
-        "data": [1.666666666666666, 1.8041124150158794e-16, 1.8041124150158794e-16, 6.666666666666664]
+        "data": [1.6666666666666665, 2.3592239273284576e-16, 2.3592239273284576e-16, 6.666666666666666]
       },
       "observability": {
         "dtype": "f64",
         "shape": [2, 2],
-        "data": [0.5666666666666668, 0.125, 0.125, 0.10416666666666666]
+        "data": [0.5666666666666668, 0.125, 0.125, 0.10416666666666674]
       }
     },
     "minimal": true
@@ -4352,20 +4354,20 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. kappa from
       "applicable": false
     },
     "residual": {
-      "controllability_rel_residual": 7.119997686835877e-17,
-      "observability_rel_residual": 2.5816843116640615e-17,
-      "separation_min": 1.1999999999999995,
+      "controllability_rel_residual": 6.2897636505805864e-18,
+      "observability_rel_residual": 5.755301632711286e-17,
+      "separation_min": 1.1999999999999997,
       "definition": "‖A W + W Aᵀ + BBᵀ‖_F / (2‖A‖_F‖W‖_F + ‖BBᵀ‖_F)（离散：‖A W Aᵀ − W + BBᵀ‖_F / (‖A‖²‖W‖+‖W‖+‖BBᵀ‖)），可观同理"
     },
     "condition": {
-      "ctrb_rank_tolerance": 3.13738435936461e-15,
+      "ctrb_rank_tolerance": 3.1373843593646105e-15,
       "obsv_rank_tolerance": 4.440892098500626e-16,
       "ctrb_sv_gap_at_rank": null,
       "obsv_sv_gap_at_rank": null,
-      "pbh_ctrb_min_rel_sv": 0.2442208482397884,
-      "pbh_obsv_min_rel_sv": 0.09983307187209489,
+      "pbh_ctrb_min_rel_sv": 0.24422084823978843,
+      "pbh_obsv_min_rel_sv": 0.09983307187209486,
       "pbh_threshold": 1e-10,
-      "ctrb_condition": 3.119428454762873,
+      "ctrb_condition": 3.119428454762872,
       "realization": "given ss"
     },
     "error_estimate": {
@@ -4428,8 +4430,8 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. kappa from
     },
     "fingerprint": {
       "request": "sha256:c2070194b581519bcdd13116d7fb6a5fe66365e5c690098bea91d26e1c227b94",
-      "result": "sha256:abc418c68b6d7ca75ae893ba9c9e6a9a6f328acf80d162b9b4439b8f359d8b36",
-      "output_hash": "sha256:4b88f480e4dff3988e44cce0b2f28f372d9420e371da7be0103ae969bdd37258",
+      "result": "sha256:963f6483826651dc5df82a3a5c05063e07a7dc4e261ae12cdbf7e50dcc36055b",
+      "output_hash": "sha256:bef6f9641a3eef69625bbb7d8642662130989cf7f148b2738559d68ba9fa9d45",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.analysis.ctrb_obsv@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -4450,7 +4452,7 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. kappa from
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:6da5768803cb1a03a779b6e10dbf4d62d7825c430bfe6c21d6b2ae1067dd1c53",
-    "output_hash": "sha256:4b88f480e4dff3988e44cce0b2f28f372d9420e371da7be0103ae969bdd37258",
+    "output_hash": "sha256:bef6f9641a3eef69625bbb7d8642662130989cf7f148b2738559d68ba9fa9d45",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
     "libm": "rust-libm 0.2.16",
@@ -4459,7 +4461,7 @@ conformance_compare:   # spec 9.4 CF-6; conformance/rules_control.py. kappa from
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.269598
+    "wall_ms": 0.264691
   }
 }
 ```
@@ -4857,7 +4859,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
       "closed_loop_poles": {
         "dtype": "c128",
         "shape": [3],
-        "data": [[-2.7963219032594417, 0.0], [-0.10183904837027921, 1.1916707956047328], [-0.10183904837027921, -1.1916707956047328]]
+        "data": [[-2.7963219032594417, 0.0], [-0.10183904837027924, 1.1916707956047328], [-0.10183904837027924, -1.1916707956047328]]
       }
     }
   },
@@ -5283,7 +5285,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
       "B": {
         "dtype": "f64",
         "shape": [2, 1],
-        "data": [0.019159959203993996, 0.3744246205637217]
+        "data": [0.019159959203993993, 0.3744246205637217]
       },
       "C": {
         "dtype": "f64",
@@ -5367,8 +5369,8 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     },
     "fingerprint": {
       "request": "sha256:b9508f2734c8aeec7cecd604c7c6b9c737851643b73787c8c9c4e48f8b706609",
-      "result": "sha256:6e54c3c76a781e6dce56daa439dc91a39f77a13d636a219f21d5014c9be1cdd4",
-      "output_hash": "sha256:dba22c18d22875927dfe4ecdf33bf0c537a4081e6b61c91bf9e64936e92a9935",
+      "result": "sha256:6499fa7244267783fede5defc543ad8d990a7e98fe430df9182294dd7c9810de",
+      "output_hash": "sha256:d1c61628733c7a25dc0a5046173cca1474f5e5394e215e9947dc619e6a6ecbcc",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.lti.c2d@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -5389,7 +5391,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:60558c9b03f398cd802969aafcc2fb47af2f618020659998b0c32b0f15479478",
-    "output_hash": "sha256:dba22c18d22875927dfe4ecdf33bf0c537a4081e6b61c91bf9e64936e92a9935",
+    "output_hash": "sha256:d1c61628733c7a25dc0a5046173cca1474f5e5394e215e9947dc619e6a6ecbcc",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
     "libm": "rust-libm 0.2.16",
@@ -5398,7 +5400,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.19500699999999999
+    "wall_ms": 0.252627
   }
 }
 ```
@@ -6557,12 +6559,12 @@ conformance_compare:   # spec 9.4 CF-6; rule_lyap in conformance/aeoi_conformanc
     "K": {
       "dtype": "f64",
       "shape": [1, 2],
-      "data": [1.9999999999999996, 2.0]
+      "data": [2.0, 2.0]
     },
     "achieved_poles": {
       "dtype": "c128",
       "shape": [2],
-      "data": [[-1.0, 0.9999999999999998], [-1.0, -0.9999999999999998]]
+      "data": [[-1.0, 1.0], [-1.0, -1.0]]
     }
   },
   "trust": {
@@ -6571,21 +6573,21 @@ conformance_compare:   # spec 9.4 CF-6; rule_lyap in conformance/aeoi_conformanc
       "converged": true,
       "iterations": 0,
       "criterion": "一次扫描后 ln|det X̂|（列归一化）变化 < 1e-6",
-      "final_value": -0.4054651081081644
+      "final_value": -0.40546510810816466
     },
     "residual": {
-      "pole_placement_max_rel": 1.570092458683775e-16,
-      "M_imag_rel": 0.0,
+      "pole_placement_max_rel": 0.0,
+      "M_imag_rel": 3.204937810639273e-17,
       "definition": "eig(A−BK) 与期望极点最近匹配的最大相对差（以 max(1,|p|) 归一）；M_imag_rel = max|Im(XΛX⁻¹)|/‖·‖_F"
     },
     "condition": {
-      "cond_X_eigvec": 2.618033988749896,
+      "cond_X_eigvec": 2.618033988749895,
       "pbh_min_rel_sv": 0.7071067811865475,
-      "K_norm_fro": 2.82842712474619,
+      "K_norm_fro": 2.8284271247461903,
       "inputs": 1
     },
     "error_estimate": {
-      "poles_rel": 5.813203227122745e-16,
+      "poles_rel": 5.813203227122743e-16,
       "basis": "max(后验极点偏差, u·cond(X))；闭环极点的一阶扰动界 ∝ cond(X)·‖ΔA‖（Bauer–Fike）"
     },
     "checks": {
@@ -6623,7 +6625,7 @@ conformance_compare:   # spec 9.4 CF-6; rule_lyap in conformance/aeoi_conformanc
       "class": "approximate",
       "bound_kind": "a_posteriori_heuristic",
       "bound": {
-        "poles_rel": 5.813203227122745e-16
+        "poles_rel": 5.813203227122743e-16
       },
       "basis": "max(后验极点偏差, u·cond(X))；闭环极点的一阶扰动界 ∝ cond(X)·‖ΔA‖（Bauer–Fike）"
     },
@@ -6641,8 +6643,8 @@ conformance_compare:   # spec 9.4 CF-6; rule_lyap in conformance/aeoi_conformanc
     },
     "fingerprint": {
       "request": "sha256:03cb75e677cd411717fe432149eadcc60e9f3557180ce5f06503dc5519a53398",
-      "result": "sha256:6d3bca4667f58d0ef11c17fa215f096ec0009402eb40a696eb265eb118b283b4",
-      "output_hash": "sha256:8353eccf88599846e3653216dd6efce8df922a38183be90044a3afab0a59a59c",
+      "result": "sha256:c990b3d3708c9bfe7665a79c8b35ae5af5d5348aa998fb460e07c77db2086361",
+      "output_hash": "sha256:2d38474ebd5145bab7445dee524d58cd3c88d0a0ab220c2dc9288999784f983a",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.design.place@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -6663,7 +6665,7 @@ conformance_compare:   # spec 9.4 CF-6; rule_lyap in conformance/aeoi_conformanc
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:fc645b827a90ff0e3685068d7b789a332d038da91170e7c0fda6697b6c25516a",
-    "output_hash": "sha256:8353eccf88599846e3653216dd6efce8df922a38183be90044a3afab0a59a59c",
+    "output_hash": "sha256:2d38474ebd5145bab7445dee524d58cd3c88d0a0ab220c2dc9288999784f983a",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
     "libm": "rust-libm 0.2.16",
@@ -6672,7 +6674,7 @@ conformance_compare:   # spec 9.4 CF-6; rule_lyap in conformance/aeoi_conformanc
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.191034
+    "wall_ms": 0.26618699999999995
   }
 }
 ```
@@ -7020,8 +7022,8 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     },
     "condition": {
       "cond_R": 1.0,
-      "cond_S": 3.5564061396358535,
-      "pbh_min_sv_rel_unstable_modes": 0.06862231995825939,
+      "cond_S": 3.556406139635854,
+      "pbh_min_sv_rel_unstable_modes": 0.0686223199582594,
       "closed_loop_spectral_radius": 0.9170745631140944,
       "unit_circle_unobservable_pbh_min": 0.4993761694389223,
       "sep_closed_loop_eig": 0.1589742456890928
@@ -7731,7 +7733,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
       "value": {
         "dtype": "f64",
         "shape": [1, 201],
-        "data": [0.0, 8.014623383568188e-05, 0.0006170872550474472, 0.0020025632332653703, 0.004560555703084328, 0.008550739838256171, "…(+193)…", -0.2356855250414371, -0.21350487846757818]
+        "data": [0.0, 8.01462338356819e-05, 0.0006170872550474474, 0.0020025632332653703, 0.004560555703084328, 0.008550739838256171, "…(+193)…", -0.2356855250414371, -0.21350487846757818]
       }
     },
     "x": null,
@@ -7744,7 +7746,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
       "applicable": false
     },
     "residual": {
-      "half_step_state_rel": 3.4170291212102266e-15,
+      "half_step_state_rel": 3.351265711480068e-15,
       "definition": "dt/2 重新离散化、同一插值输入，前 63 步偶数步状态与原递推之差 max‖Δx‖₂ / max‖x‖₂"
     },
     "condition": {
@@ -7846,8 +7848,8 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     },
     "fingerprint": {
       "request": "sha256:9c0a3f9b3f3511693805c17b02de36ea7e151654ccf3c879feeb3f64f751050f",
-      "result": "sha256:ccc0a85c86771186a432b1ac932bd1660a841a36c8674dc4579f2f9c29beb43d",
-      "output_hash": "sha256:68db5417d1fef762ec48361d624fea690242bde4b09bc97be6a8ceca0f0d14ff",
+      "result": "sha256:22f77be146a3bc609fd6b503f79dd38a2c4f2fb8d99d91b292b6090fafb38a37",
+      "output_hash": "sha256:2e72c07b6076d273f7a0aa2805d5bf11d759d3043b7952c131249266a8f84856",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.lti.lsim@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -7868,7 +7870,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:ce34829a277c3ed6e266a10517267d83bc5abbd49085839512ed92730b64273e",
-    "output_hash": "sha256:68db5417d1fef762ec48361d624fea690242bde4b09bc97be6a8ceca0f0d14ff",
+    "output_hash": "sha256:2e72c07b6076d273f7a0aa2805d5bf11d759d3043b7952c131249266a8f84856",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
     "libm": "rust-libm 0.2.16",
@@ -7877,7 +7879,7 @@ pass_rule: "all cases within tolerance; expected-error cases return the same cod
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.290309
+    "wall_ms": 0.328407
   }
 }
 ```
@@ -8240,7 +8242,7 @@ A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与�
     "closed_loop_poles": {
       "dtype": "c128",
       "shape": [5],
-      "data": [[-15.270851395996205, 0.0], [-0.776410556523517, 1.268733894459779], [-0.776410556523517, -1.268733894459779], [-0.6547445594814632, 0.12238809223611721], [-0.6547445594814632, -0.12238809223611721]]
+      "data": [[-15.270851395996168, 0.0], [-0.7764105565235186, 1.2687338944597795], [-0.7764105565235186, -1.2687338944597795], [-0.6547445594814618, 0.12238809223611916], [-0.6547445594814618, -0.12238809223611916]]
     },
     "design": {
       "method": "frequency_point",
@@ -8380,8 +8382,8 @@ A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与�
     },
     "fingerprint": {
       "request": "sha256:39a98124a4cb673ab377f84530911e53aa82c97372224b2978fbb1f93016871e",
-      "result": "sha256:be9fc14bcb206a349f82f62b75e4e72f9f64f3afa920e4384bbf784b60c83958",
-      "output_hash": "sha256:5ccbb0f7bf8d87ecd1b098511bc2616b1896ae3545c9efca4154840cba90ec4a",
+      "result": "sha256:cbd3a02c3870a9dec7bf34a3104b5cc24642a020672c42e885945c2028d0ab2b",
+      "output_hash": "sha256:9b2a57af0a65430bdf252dbecdfad6945f61ba8a36f16973dd19cca3ffff0c2a",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.design.pidtune@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -8402,7 +8404,7 @@ A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与�
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:3c9e2fed8c66d0d90b66092c29189647ea03d3b29555af3790d7a016ac989e40",
-    "output_hash": "sha256:5ccbb0f7bf8d87ecd1b098511bc2616b1896ae3545c9efca4154840cba90ec4a",
+    "output_hash": "sha256:9b2a57af0a65430bdf252dbecdfad6945f61ba8a36f16973dd19cca3ffff0c2a",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
     "libm": "rust-libm 0.2.16",
@@ -8411,7 +8413,7 @@ A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与�
     "seed": null
   },
   "timing": {
-    "wall_ms": 56.353704
+    "wall_ms": 51.933640000000004
   }
 }
 ```
@@ -8523,7 +8525,7 @@ case_families:
 - FT-2 **布局与长度**。`x` 为 f64、c128（i64 按实数处理），形状 `[n]` 或 `[m, n]`：沿最后一维变换，每行一个通道（与 `lsim` 的 `[nu, nt]` 相同）；更高维 → `E.VALIDATION.SHAPE`，bool → `E.VALIDATION.DTYPE`。`n` 缺省为最后一维长度；更小则截断、更大则在末尾补零（= MATLAB `fft(x, n)`）；`result.input_length` 回显原长度，二者不同即表示截断或补零。
 - FT-3 **单边谱**。`sides = one` 只用于实数输入的正变换：返回 k = 0…⌊n/2⌋ 共 ⌊n/2⌋ + 1 个频点，且 MUST 与双边结果的前 ⌊n/2⌋ + 1 个频点逐位相同（参考实现由同一次变换截取）。复数输入（dtype c128，与虚部是否为 0 无关）或逆变换写 `sides = one` → `E.VALIDATION.OPTION_CONFLICT`（F-8）：负频率不是正频率的共轭时不能省略。
 - FT-4 **频率轴总是返回**。`result.frequency` 给出每个输出频点的频率：给了 `sample_rate_hz` 时单位 Hz，否则 `cycles/sample`。双边按 numpy `fftfreq` 顺序：f_k = k·fs/n（k < ⌈n/2⌉），其余 f_k = (k − n)·fs/n；n 为偶数时 Nyquist 频点 k = n/2 标为 −fs/2。单边按 `rfftfreq`：f_k = k·fs/n。实现 MUST NOT 做 `fftshift`。把频点下标误当频率，是 FFT 最常见的用法错误，所以算子不把这一步留给调用方。
-- FT-5 **确定性**。`determinism = platform_bitwise`。快速算法的运算路径只能由 x 和 n 决定，MUST NOT 依赖运行时检测到的 CPU 特性（SIMD 分派会让同一平台描述下的结果因 CPU 不同而变）。参考实现用 rustfft 6.4 的标量规划器（混合基 Cooley–Tukey，素数长度 Rader/Bluestein）。
+- FT-5 **确定性**。`determinism = platform_bitwise`。快速算法的运算路径只能由 x 和 n 决定，MUST NOT 依赖运行时检测到的 CPU 特性（SIMD 分派会让同一平台描述下的结果因 CPU 不同而变）。参考实现用 `aeoi-core::kernels::fft`（v0.4.16 起；之前是 rustfft 6.4 的标量规划器）：2 的幂用基 2，合数按最小素因子做混合基按时间抽取，素数 ≤ 31 直接 DFT，更大的素数用 Bluestein。
 - FT-6 **后置条件**。`parseval`：Σ|out|²（单边时镜像频点计两次）与 sc²·n·Σ|in|² 的相对差 ≤ 64·(⌈log₂n⌉ + 1)·u，覆盖全部输出（`full`）；它查不出频点错位（换位不改变能量）。`dft_spot_check`：在 {0, 1, n−1, ⌊n/2⌋, ⌊n/3⌋, ⌊n/4⌋, ⌊2n/3⌋, ⌊3n/4⌋} 上用 O(n) 补偿求和直接计算 DFT（j·k mod n 先做整数约化），与 FFT 之差 ≤ 64·(⌈log₂n⌉ + 1)·u·sc·Σ|x_j|，覆盖 `sampled`，所以 claim 为 `spot_checked`（E-12）。`exactness.bound_kind = a_priori`：‖ΔX‖₂/‖X‖₂ ≲ c·log₂n·u（Higham 2002 定理 24.2，基 2 严格；其它分解常数更大，c 取 10 作估计）。
 
 **Manifest** — `examples/signal.spectral.fft/manifest.json`
@@ -8543,7 +8545,7 @@ case_families:
     "siso_only": false
   },
   "provenance": {
-    "algorithm": "定义：正变换 X_k = s·Σ_{j=0}^{n−1} x_j·e^{−2πi·jk/n}，逆变换 x_j = s'·Σ_k X_k·e^{+2πi·jk/n}；normalization = backward：s = 1、s' = 1/n；ortho：s = s' = 1/√n；forward：s = 1/n、s' = 1。快速算法：rustfft 6.4 标量规划器（混合基 Cooley–Tukey，素数长度 Bluestein/Rader），不使用运行时 SIMD 分派，结果只依赖输入与 n。频率轴：双边按 numpy.fft.fftfreq 顺序 f_k = k·fs/n（k < ⌈n/2⌉），其余为 (k − n)·fs/n；单边按 rfftfreq，f_k = k·fs/n，k = 0..⌊n/2⌋。后验检查：Parseval 能量恒等式（全部输出），以及在 8 个确定的频点上用 O(n) 补偿求和直接计算 DFT（抽查）",
+    "algorithm": "定义：正变换 X_k = s·Σ_{j=0}^{n−1} x_j·e^{−2πi·jk/n}，逆变换 x_j = s'·Σ_k X_k·e^{+2πi·jk/n}；normalization = backward：s = 1、s' = 1/n；ortho：s = s' = 1/√n；forward：s = 1/n、s' = 1。快速算法：aeoi-core kernels::fft（2 的幂用基 2；合数按最小素因子做混合基按时间抽取；素数 ≤ 31 直接 DFT，更大的素数用 Bluestein），旋转因子用 libm::cos/sin，不使用运行时 SIMD 分派，结果只依赖输入与 n。频率轴：双边按 numpy.fft.fftfreq 顺序 f_k = k·fs/n（k < ⌈n/2⌉），其余为 (k − n)·fs/n；单边按 rfftfreq，f_k = k·fs/n，k = 0..⌊n/2⌋。后验检查：Parseval 能量恒等式（全部输出），以及在 8 个确定的频点上用 O(n) 补偿求和直接计算 DFT（抽查）",
     "references": [
       {
         "type": "paper",
@@ -8566,7 +8568,7 @@ case_families:
     }
   },
   "backend": {
-    "library": "aeoi-numeric (pure Rust) + rustfft 6.4 (scalar planner)",
+    "library": "aeoi-numeric (pure Rust) + aeoi-core kernels::fft",
     "routine": "fft::transform",
     "binding": "native",
     "license": "MIT OR Apache-2.0",
@@ -8628,7 +8630,7 @@ case_families:
     }
   },
   "receipt": {
-    "method_id": "aeoi:fft:rustfft-scalar",
+    "method_id": "aeoi:fft:kernels-mixed-radix",
     "assumptions": [
       {
         "id": "finite",
@@ -8802,7 +8804,7 @@ case_families:
     "X": {
       "dtype": "c128",
       "shape": [51],
-      "data": [[3.091971123581061e-14, 0.0], [7.735827995380404e-15, 8.96590016479734e-15], [1.7230993885139242e-15, 2.3736907687814027e-14], [-8.645759934959147e-15, 3.9552922969366874e-15], [-4.761404154601001e-15, -5.874032909248751e-15], [-2.2373742683544112e-15, -50.000000000000014], "…(+43)…", [-1.942257000487916e-15, 2.3152189965588898e-14], [-2.503552920529728e-14, 0.0]]
+      "data": [[2.886579864025407e-14, 0.0], [8.304484218916516e-15, 6.806570754641806e-15], [-7.647261335697242e-16, 2.2397737023364496e-14], [-1.0265118504173177e-14, 3.744599789747149e-15], [-8.36244487817511e-15, -3.740133681101642e-15], [5.329070518200751e-15, -50.000000000000014], "…(+43)…", [-2.3412191890504303e-15, 2.3142176533380074e-14], [-2.531308496145357e-14, -3.3174998192104144e-30]]
     },
     "frequency": {
       "unit": "Hz",
@@ -8828,7 +8830,7 @@ case_families:
     },
     "residual": {
       "parseval_rel": 0.0,
-      "dft_spot_rel": 4.776162573867406e-17,
+      "dft_spot_rel": 2.2324262693087578e-17,
       "definition": "Parseval：|Σ|out|² − sc²·n·Σ|in|²| / (sc²·n·Σ|in|²)，各通道取最大；抽查：5 个频点上直接 DFT 与 FFT 之差 / (sc·Σ|x_j|)"
     },
     "condition": {
@@ -8854,13 +8856,13 @@ case_families:
         "parseval_rel": 5.684341886080802e-14,
         "dft_spot_rel": 5.684341886080802e-14
       },
-      "planner": "rustfft 6.4 FftPlannerScalar"
+      "planner": "aeoi-core kernels::fft (radix-2 / mixed radix / Bluestein)"
     }
   },
   "receipt": {
     "format": "aeoi-receipt/1",
     "method": {
-      "id": "aeoi:fft:rustfft-scalar",
+      "id": "aeoi:fft:kernels-mixed-radix",
       "routine": "fft::transform",
       "provenance": "aeoi://operators/signal.spectral.fft/0.4.0/manifest#/provenance"
     },
@@ -8914,8 +8916,8 @@ case_families:
     },
     "fingerprint": {
       "request": "sha256:2835386cddebdadc7ea80184708a4956cd434c037ade3bce1568972002d4d1a1",
-      "result": "sha256:aad58d46bc58387f98d51aacdaa7b534fd0b53e1c0530582c2d2858ccd624fb2",
-      "output_hash": "sha256:e452b4e20ff87d18599792035db0adb1fae3a967e4b700ba8279b7c1e4c27c81",
+      "result": "sha256:bea39031b9f2efdc911639397ee55806eebed826b5d49dfaf8be742b473e996e",
+      "output_hash": "sha256:cdc0bbcef66028e3df83f5044a369c3aa4d1b2f60b136a89c0e47603046ea8ae",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of signal.spectral.fft@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -8936,7 +8938,7 @@ case_families:
     "determinism": "platform_bitwise",
     "tolerance_class": "T1",
     "input_hash": "sha256:46926d1dba512d42ad0915662fc8eacdc902878b56685ed5f19e56c67720a289",
-    "output_hash": "sha256:e452b4e20ff87d18599792035db0adb1fae3a967e4b700ba8279b7c1e4c27c81",
+    "output_hash": "sha256:cdc0bbcef66028e3df83f5044a369c3aa4d1b2f60b136a89c0e47603046ea8ae",
     "platform": "x86_64-linux",
     "cpu_features": ["avx", "avx2", "fma", "avx512f"],
     "libm": "rust-libm 0.2.16",
@@ -8945,7 +8947,7 @@ case_families:
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.215849
+    "wall_ms": 0.227056
   }
 }
 ```
@@ -11005,7 +11007,7 @@ case_families:
     "siso_only": false
   },
   "provenance": {
-    "algorithm": "structure = auto（缺省）：A 与 Aᵀ 逐位相等时用对称算法（循环双边 Jacobi：|a_pq| > ε·sqrt(|a_pp·a_qq|) 时旋转，至多 60 轮扫描），否则用一般算法：实 Schur 分解（nalgebra Schur，隐式双位移 QR，不收敛时做确定性相似变换后重试）→ 复 Schur 形（rsf2csf，Givens 消去 2×2 块）→ 上三角回代求特征向量（小除数按 LAPACK ztrevc 抬到 max(u·|λ|, 最小正规数)），共轭对的第二个向量取第一个的共轭；左特征向量同法求得，特征值条件数 1/|yᴴx|。排序：对称升序；一般按 (实部, |虚部|) 升序，共轭对虚部为正的在前。规一化：‖v‖₂ = 1，最大模分量（并列取下标最小）为正实数。",
+    "algorithm": "structure = auto（缺省）：A 与 Aᵀ 逐位相等时用对称算法（循环双边 Jacobi：|a_pq| > ε·sqrt(|a_pp·a_qq|) 时旋转，至多 60 轮扫描），否则用一般算法：实 Schur 分解（aeoi-core kernels::schur：Householder 化为 Hessenberg 形，Francis 双位移 QR，实特征值的 2×2 块按 LAPACK dlanv2 标准化；不收敛时做确定性相似变换后重试）→ 复 Schur 形（rsf2csf，Givens 消去 2×2 块）→ 上三角回代求特征向量（小除数按 LAPACK ztrevc 抬到 max(u·|λ|, 最小正规数)），共轭对的第二个向量取第一个的共轭；左特征向量同法求得，特征值条件数 1/|yᴴx|。排序：对称升序；一般按 (实部, |虚部|) 升序，共轭对虚部为正的在前。规一化：‖v‖₂ = 1，最大模分量（并列取下标最小）为正实数。",
     "references": [
       {
         "type": "textbook",
@@ -15289,8 +15291,8 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
   - 内核放在 `aeoi-core::kernels`：`dense`（LU、Householder QR、1-范数条件数估计、补偿残差）、`svd`（单边 Jacobi）、`eig`（对称 Jacobi；Schur → 复 Schur → 三角回代）。
   - 对应的算子（`linalg.system.solve`、`linalg.decomp.svd`、`linalg.decomp.eig`）只是内核外面的一层：校验、输出格式、后置条件。
   - 理由：同一个计算出现两份实现，精度与行为就可能不一致，而 parity 和一致性套件只验证了其中一份。v0.4.11 正好有实例：nalgebra 的 SVD 和对称特征分解在分级矩阵上不准，被 `svd`、`eig` 的后置条件抓到；而控制算子当时还在用它们。
-- RI-2 **一个算子自身的核心算法可以来自外部库**，例如 `fft` 用 rustfft，`eig` 的实 Schur 用 nalgebra，但 MUST 写在 manifest 的 `backend` 里，并受 2.1 M-7a（跨平台逐位相同）约束。外部库给出的功能一旦有了 AEOI 自己的算子，其他算子 MUST 改用该算子的内核（RI-1）。
-- RI-3 **迁移**（已知违反项）：v0.4.11 审计时，控制算子与 `aeoi-core` 的 `linalg`、`sysalg` 里还有约 45 处直接调用 nalgebra 的 LU、SVD、Cholesky、对称特征分解或 QR（`bode`、`c2d`、`connect`、`ctrb_obsv`、`dlqr`、`lqr`、`lyap`、`place`、`poles_zeros`、`step`）。它们要逐一改用内核。结果的末几位会变：在容差类内按 G-3 处理，超出容差的按 G-2 升版本。计划在四批新算子之后完成（12.2）。
+- RI-2 **一个算子自身的核心算法可以来自外部库**，例如 v0.4.15 之前 `fft` 用 rustfft、`eig` 的实 Schur 用 nalgebra，但 MUST 写在 manifest 的 `backend` 里，并受 2.1 M-7a（跨平台逐位相同）约束。外部库给出的功能一旦有了 AEOI 自己的算子，其他算子 MUST 改用该算子的内核（RI-1）。
+- RI-3 **迁移**（已知违反项）：v0.4.11 审计时，控制算子与 `aeoi-core` 的 `linalg`、`sysalg` 里还有约 45 处直接调用 nalgebra 的 LU、SVD、Cholesky、对称特征分解或 QR（`bode`、`c2d`、`connect`、`ctrb_obsv`、`dlqr`、`lqr`、`lyap`、`place`、`poles_zeros`、`step`）。它们要逐一改用内核。结果的末几位会变：在容差类内按 G-3 处理，超出容差的按 G-2 升版本。**v0.4.16 已完成**：上述调用、`fft` 的 rustfft、`eig` 与 `lti` 的 nalgebra Schur 全部改为 `aeoi-core::kernels`（新增 `cdense`、`schur`、`fft`、`nalg` 适配层，`dense` 加了 Cholesky）。仍在用的外部数值代码只有：nalgebra 作矩阵容器与矩阵乘法（经打补丁的 `matrixmultiply`，固定通用内核）、`libm`（经 `aeoi-libm`）。检查办法：在 `rust/` 下搜 `.svd(`、`.lu()`、`try_inverse`、`.qr()`、`.cholesky()`、`symmetric_eigen`、`Schur::`，结果应为空。
 
 ## 12. 开放问题与下一步
 
@@ -15351,12 +15353,52 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 | 合计 | | 约 100 | 约 45（45%） |
 
 顺序：
-1. 剩下的四批：`butter` + `filter`、`fzero`/`fsolve`、`fminsearch`/`fmincon`/`linprog`、`integral`/`trapz`。
-2. 控制算子迁移到共享内核（11.5 RI-3）。
-3. polyval/roots、inv/det/norm、ode15s、filtfilt/freqz/pwelch、nyquist/rlocus、interp2/spline、lsqcurvefit。
-4. 其余。
+1. ~~剩下的四批~~（v0.4.12 – v0.4.15 完成）。
+2. ~~控制算子迁移到共享内核（11.5 RI-3）~~（v0.4.16 完成）。
+3. 列出约 100 个目标算子与共享内核的完整清单和依赖图，按依赖从底层往上实现；同一层内按 MATLAB 使用频率排。
+4. polyval/roots、inv/det/norm、ode15s、filtfilt/freqz/pwelch、nyquist/rlocus、interp2/spline、lsqcurvefit。
+5. 其余。
 
 ## 13. Changelog
+
+### v0.4.16-draft（2026-11-25）
+
+起因：作者定下规则——算子之间有依赖时 MUST 用 AEOI 自己的实现，不得重写，也不得改调外部库；已有算子一次性检查并改正（11.5 RI-1 – RI-3）。本版没有新算子。
+
+**规范改动**
+
+| # | 位置 | 改动 | 理由 |
+|---|---|---|---|
+| 1 | 11.5 RI-3 | 迁移完成；写明仍在用的外部数值代码（nalgebra 只作容器与矩阵乘法，`libm`）和检查办法 | 让以后的审计可以机械地做 |
+| 2 | 10.x FT-5、2.1 | 参考实现的 FFT 改为 `kernels::fft`；rustfft 补丁副本删除 | — |
+| 3 | 12.2 | 下一步：先列 100 个目标算子与内核的依赖图，再自底向上实现 | 作者建议 |
+
+**已做的改动**
+
+| 位置 | 改动 |
+|---|---|
+| `kernels::dense` | 加 Cholesky 与 `chol_solve`、`Lu::entry` |
+| `kernels::cdense`（新） | 复数 LU（按 cabs1 选主元）、复数 Jacobi 奇异值、复数 Householder QR 的完整 Q（zgeqr2/zlarfg 约定） |
+| `kernels::svd` | 加 `svd_thin`；迭代内核改收一个检查闭包（不再依赖 ExecCtx），这样控制层也能调用 |
+| `kernels::eig` | `complex_schur` 从 `general` 拆出，供 `sysalg` 的 Lyapunov 求解器复用 |
+| `kernels::schur`（新） | 实 Schur：Householder 化为 Hessenberg 形，Francis 双位移 QR（第 10、20 次迭代用特例位移，预算 max(30n, 100)），之后按 LAPACK dlanv2 把实特征值的 2×2 块标准化为上三角 |
+| `kernels::fft`（新） | 基 2、混合基按时间抽取、小素数直接 DFT、大素数 Bluestein；旋转因子用 `libm::cos/sin` 并按 (n, 方向) 缓存 |
+| `kernels::nalg`（新） | nalgebra `DMatrix` 与内核之间的适配层（solve、inverse、Cholesky、奇异值、对称特征、QR、复数版本） |
+| `aeoi-core` linalg、sysalg、lti | cond2、Padé、Lyapunov、补基、行压缩、PBH、Schur 全部改调内核 |
+| `aeoi-control` | bode、c2d、connect、ctrb_obsv、dlqr、lqr、lyap、place、poles_zeros、step 全部改调内核 |
+| `aeoi-numeric` | `fft` 改用 `kernels::fft`；`eig`、`svd` 改用新接口；去掉 rustfft 依赖 |
+
+**开发中发现的问题**
+
+| # | 问题 | 处理 |
+|---|---|---|
+| 1 | 自写 Schur 后 `eig` 的 parity `general_companion` 失败：实特征值的 2×2 块没有标准化，后续 rsf2csf 得到的向量与参考的取法不同 | 按 dlanv2 的实数情形旋转成上三角块 |
+| 2 | Bluestein 的 Parseval 误差 3%：旋转因子缓存只按 n 作键，正变换与逆变换的旋转因子互相覆盖 | 缓存键改为 (n, 方向) |
+
+**结果**
+
+- 38 个示例的 `output_hash` 变了，数值差都在各自的容差类内（G-3）；parity 最坏值：`fft` 对 mpmath 5.3e-16，`eig` 值误差 / 容差 0.0013，`lqr` 的病态 R 极点相对差 6.4e-8（容差 2.0e-7）。
+- 全部 Rust 测试通过；一致性 1111 / 0 / 291；45 种代理改写都被抓住。
 
 ### v0.4.15-draft（2026-11-25）
 

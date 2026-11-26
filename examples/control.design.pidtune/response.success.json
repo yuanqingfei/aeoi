@@ -55,24 +55,24 @@
       ],
       "data": [
         [
-          -15.270851395996205,
+          -15.270851395996168,
           0.0
         ],
         [
-          -0.776410556523517,
-          1.268733894459779
+          -0.7764105565235186,
+          1.2687338944597795
         ],
         [
-          -0.776410556523517,
-          -1.268733894459779
+          -0.7764105565235186,
+          -1.2687338944597795
         ],
         [
-          -0.6547445594814632,
-          0.12238809223611721
+          -0.6547445594814618,
+          0.12238809223611916
         ],
         [
-          -0.6547445594814632,
-          -0.12238809223611721
+          -0.6547445594814618,
+          -0.12238809223611916
         ]
       ]
     },
@@ -223,8 +223,8 @@
     },
     "fingerprint": {
       "request": "sha256:39a98124a4cb673ab377f84530911e53aa82c97372224b2978fbb1f93016871e",
-      "result": "sha256:be9fc14bcb206a349f82f62b75e4e72f9f64f3afa920e4384bbf784b60c83958",
-      "output_hash": "sha256:5ccbb0f7bf8d87ecd1b098511bc2616b1896ae3545c9efca4154840cba90ec4a",
+      "result": "sha256:cbd3a02c3870a9dec7bf34a3104b5cc24642a020672c42e885945c2028d0ab2b",
+      "output_hash": "sha256:9b2a57af0a65430bdf252dbecdfad6945f61ba8a36f16973dd19cca3ffff0c2a",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.design.pidtune@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -245,7 +245,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:3c9e2fed8c66d0d90b66092c29189647ea03d3b29555af3790d7a016ac989e40",
-    "output_hash": "sha256:5ccbb0f7bf8d87ecd1b098511bc2616b1896ae3545c9efca4154840cba90ec4a",
+    "output_hash": "sha256:9b2a57af0a65430bdf252dbecdfad6945f61ba8a36f16973dd19cca3ffff0c2a",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -259,6 +259,6 @@
     "seed": null
   },
   "timing": {
-    "wall_ms": 56.353704
+    "wall_ms": 51.933640000000004
   }
 }

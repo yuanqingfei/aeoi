@@ -4,7 +4,7 @@
   "worst_relative_error": {
     "coefficients": 0.0,
     "crossover_margin_bandwidth": 9.727774141765622e-13,
-    "step_metrics": 1.0969793476823535e-12
+    "step_metrics": 1.1035089866566532e-12
   },
   "tolerances": {
     "coefficients": 1e-10,

@@ -35,9 +35,9 @@
           3
         ],
         "data": [
-          113.77821776266732,
-          3.1548896151689294,
-          0.5777839277470139
+          113.77821776266734,
+          3.154889615168934,
+          0.5777839277470135
         ]
       },
       "full_rank": true
@@ -68,9 +68,9 @@
           3
         ],
         "data": [
-          6.222882140270601,
-          0.780411335932045,
-          0.04118270328628747
+          6.2228821402706,
+          0.7804113359320453,
+          0.041182703286287294
         ]
       },
       "full_rank": true
@@ -83,15 +83,15 @@
           3
         ],
         "data": [
-          1.0969387755102094,
-          -5.967448757360216e-16,
-          -1.1802721088435406,
-          -5.967448757360216e-16,
-          0.6318027210884352,
-          -0.4999999999999986,
-          -1.1802721088435406,
-          -0.4999999999999986,
-          2.4136054421768702
+          1.0969387755101931,
+          9.853229343548264e-16,
+          -1.1802721088435302,
+          9.853229343548264e-16,
+          0.6318027210884367,
+          -0.5000000000000038,
+          -1.1802721088435302,
+          -0.5000000000000038,
+          2.413605442176874
         ]
       },
       "observability": {
@@ -101,15 +101,15 @@
           3
         ],
         "data": [
-          1.7325042517006857,
-          1.1147959183673497,
-          0.1762329931972793,
-          1.1147959183673497,
-          0.7191751700680287,
-          0.11479591836734715,
-          0.1762329931972793,
-          0.11479591836734715,
-          0.019132653061224518
+          1.732504251700682,
+          1.1147959183673466,
+          0.176232993197279,
+          1.1147959183673466,
+          0.7191751700680261,
+          0.11479591836734686,
+          0.176232993197279,
+          0.11479591836734686,
+          0.019132653061224494
         ]
       }
     },
@@ -120,20 +120,20 @@
       "applicable": false
     },
     "residual": {
-      "controllability_rel_residual": 1.8534303948730277e-16,
-      "observability_rel_residual": 3.693934606021644e-17,
-      "separation_min": 0.7272252746202555,
+      "controllability_rel_residual": 4.839514431540262e-16,
+      "observability_rel_residual": 3.258387359847856e-17,
+      "separation_min": 0.7272252746202537,
       "definition": "‖A W + W Aᵀ + BBᵀ‖_F / (2‖A‖_F‖W‖_F + ‖BBᵀ‖_F)（离散：‖A W Aᵀ − W + BBᵀ‖_F / (‖A‖²‖W‖+‖W‖+‖BBᵀ‖)），可观同理"
     },
     "condition": {
-      "ctrb_rank_tolerance": 7.579151823655693e-14,
-      "obsv_rank_tolerance": 4.145272218994257e-15,
+      "ctrb_rank_tolerance": 7.579151823655695e-14,
+      "obsv_rank_tolerance": 4.145272218994256e-15,
       "ctrb_sv_gap_at_rank": null,
       "obsv_sv_gap_at_rank": null,
-      "pbh_ctrb_min_rel_sv": 0.03315985386592323,
-      "pbh_obsv_min_rel_sv": 0.004095208831130304,
+      "pbh_ctrb_min_rel_sv": 0.03315985386592325,
+      "pbh_obsv_min_rel_sv": 0.004095208831130315,
       "pbh_threshold": 1e-10,
-      "ctrb_condition": 196.92174236540166,
+      "ctrb_condition": 196.92174236540183,
       "realization": "given ss"
     },
     "error_estimate": {
@@ -196,8 +196,8 @@
     },
     "fingerprint": {
       "request": "sha256:4336a9324825408cde8f8d422524ce4aa3cc702a4c82bf5e3701bd696b0a725d",
-      "result": "sha256:c500a09aa53a2820b2971447218cb0d97ca845dd9d47513ea821a58eb0597980",
-      "output_hash": "sha256:63328e0f4805bd081d065ec1ef02213c88b2c547244f18711020cd0ab825c1fe",
+      "result": "sha256:198fa9f4be6a6aceb3f212e442325af288500c66079d346c9f6553d0ad6e4fd2",
+      "output_hash": "sha256:969893373de982f233670ca1ab22aa5b071817814f94a802cfebc290742d8276",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.analysis.ctrb_obsv@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -218,7 +218,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:d00e1360a61133b97b0e831a1549821e5941f191a9ea8787072c90eeab66ce7e",
-    "output_hash": "sha256:63328e0f4805bd081d065ec1ef02213c88b2c547244f18711020cd0ab825c1fe",
+    "output_hash": "sha256:969893373de982f233670ca1ab22aa5b071817814f94a802cfebc290742d8276",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -232,6 +232,6 @@
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.385486
+    "wall_ms": 0.23849900000000002
   }
 }

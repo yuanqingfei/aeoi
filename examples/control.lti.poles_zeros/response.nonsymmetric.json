@@ -16,15 +16,15 @@
       ],
       "data": [
         [
-          -2.8181936813449378,
-          0.555268133948228
+          -2.8181936813449315,
+          0.5552681339482376
         ],
         [
-          -2.8181936813449378,
-          -0.555268133948228
+          -2.8181936813449315,
+          -0.5552681339482376
         ],
         [
-          -0.3636126373101288,
+          -0.3636126373101275,
           0.0
         ]
       ]
@@ -36,7 +36,7 @@
       ],
       "data": [
         [
-          -8.000000000000002,
+          -8.0,
           0.0
         ],
         [
@@ -67,9 +67,9 @@
           3
         ],
         "data": [
-          2.872375032294857,
-          2.872375032294857,
-          0.3636126373101288
+          2.872375032294853,
+          2.872375032294853,
+          0.3636126373101275
         ]
       }
     },
@@ -79,8 +79,8 @@
         3
       ],
       "data": [
-        0.9811370902682469,
-        0.9811370902682469,
+        0.9811370902682461,
+        0.9811370902682461,
         1.0
       ]
     },
@@ -98,7 +98,7 @@
         "cond_D_reduced": 1.0
       },
       "dcgain_method": "D − C A⁻¹ B",
-      "max_pole_modulus": 2.872375032294857
+      "max_pole_modulus": 2.872375032294853
     },
     "error_estimate": {
       "basis": "未给出逐根误差界：特征值/多项式根对扰动的敏感度取决于（未计算的）特征向量条件数；重根的误差可达 O(u^{1/k})"
@@ -156,8 +156,8 @@
     },
     "fingerprint": {
       "request": "sha256:fffdeada438dcd5f544abf5e56dc2e2c221c76a0586a65b34ece82901384d2bd",
-      "result": "sha256:b87556264465922e0396f24bb434415873c3be9d7f44b5750953f8a130a5871b",
-      "output_hash": "sha256:c24e028be4ef0460dc5307f9edc603842812bc169143f1edaa29d4fcf868ebd7",
+      "result": "sha256:a12892d2bdf1986802d59f2360fd315a292dba59891970409f4ed4cebdf4b869",
+      "output_hash": "sha256:bca6d30f87d24fd2aec76fe3b8192e0b9706d041877c7427f2e71d05945a429c",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.lti.poles_zeros@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -178,7 +178,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:3a3cbd532418c0d41dd9266f0ee687f5bb0423aed07fa3b7115cd1816883afd9",
-    "output_hash": "sha256:c24e028be4ef0460dc5307f9edc603842812bc169143f1edaa29d4fcf868ebd7",
+    "output_hash": "sha256:bca6d30f87d24fd2aec76fe3b8192e0b9706d041877c7427f2e71d05945a429c",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -192,6 +192,6 @@
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.230303
+    "wall_ms": 0.254599
   }
 }

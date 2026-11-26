@@ -36,8 +36,8 @@
           1
         ],
         "data": [
-          0.005249022000451664,
-          0.1067081046053096,
+          0.005249022000451663,
+          0.10670810460530959,
           0.10254207552184842
         ]
       },
@@ -74,7 +74,7 @@
       "applicable": false
     },
     "residual": {
-      "pole_mapping_max_rel": 6.358389842764979e-15,
+      "pole_mapping_max_rel": 4.833695451032077e-15,
       "definition": "eig(A_d) 与 exp(λ·ts)（λ ∈ eig(A)）逐个最近匹配的最大相对差（以 max(1,|·|) 归一）"
     },
     "condition": {
@@ -135,8 +135,8 @@
     },
     "fingerprint": {
       "request": "sha256:49f66a0db6a2fb4ae3042320ce7b68c38e63e5b9816f66821203cd58e8bd0e0e",
-      "result": "sha256:526cbc70dd0ca9ef7ee609924afbeea615b18463798a166e954320adb0d8e984",
-      "output_hash": "sha256:69ba707081b55c4c5a39abbd1081613d904b19f01fa6562129e0b770d2aec861",
+      "result": "sha256:3445a1abf4cc486eaf6d57d6d950f18d0a5c2cdd0702c433733827d81fa445de",
+      "output_hash": "sha256:19000e6e6daab1182df77a1407f3b4fd28b8aaa62e4c9b80de7e05d932541026",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.lti.c2d@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -157,7 +157,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:85b8d504588dda7c405a2036363f1d29efce9dab13683b95fec0bd86ccfaa4a1",
-    "output_hash": "sha256:69ba707081b55c4c5a39abbd1081613d904b19f01fa6562129e0b770d2aec861",
+    "output_hash": "sha256:19000e6e6daab1182df77a1407f3b4fd28b8aaa62e4c9b80de7e05d932541026",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -171,6 +171,6 @@
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.18908799999999998
+    "wall_ms": 0.248
   }
 }

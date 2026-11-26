@@ -68,8 +68,8 @@
     },
     "condition": {
       "cond_R": 1.0,
-      "cond_S": 3.5564061396358535,
-      "pbh_min_sv_rel_unstable_modes": 0.06862231995825939,
+      "cond_S": 3.556406139635854,
+      "pbh_min_sv_rel_unstable_modes": 0.0686223199582594,
       "closed_loop_spectral_radius": 0.9170745631140944,
       "unit_circle_unobservable_pbh_min": 0.4993761694389223,
       "sep_closed_loop_eig": 0.1589742456890928

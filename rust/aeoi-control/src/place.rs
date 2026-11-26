@@ -28,7 +28,8 @@ fn complete_c(m: &DMatrix<C64>) -> DMatrix<C64> {
     let mut aug = DMatrix::<C64>::zeros(n, m.ncols() + n);
     aug.view_mut((0, 0), (n, m.ncols())).copy_from(m);
     aug.view_mut((0, m.ncols()), (n, n)).copy_from(&DMatrix::<C64>::identity(n, n));
-    aug.qr().q()
+    let k = aug.ncols().min(n);
+    aeoi_core::kernels::nalg::cq_full(&aug.columns(0, k).into_owned())
 }
 
 fn log_abs_det_normalized(x: &DMatrix<C64>) -> f64 {
@@ -39,9 +40,7 @@ fn log_abs_det_normalized(x: &DMatrix<C64>) -> f64 {
             c /= C64::new(nn, 0.0);
         }
     }
-    let lu = xn.lu();
-    let u = lu.u();
-    (0..u.nrows()).map(|i| u[(i, i)].norm().ln()).sum()
+    aeoi_core::kernels::nalg::clog_abs_det(&xn)
 }
 
 impl Operator for Place {
@@ -73,8 +72,8 @@ impl Operator for Place {
         }
         check_conjugate(&poles, "/poles")?;
         // B full column rank
-        let sv = b.clone().svd(false, false).singular_values;
-        let smax = sv.max();
+        let sv = aeoi_core::kernels::nalg::singular_values(&b);
+        let smax = sv.iter().cloned().fold(0.0, f64::max);
         let rank = sv.iter().filter(|s| **s > smax * n.max(m) as f64 * f64::EPSILON).count();
         if rank < m {
             return Err(OpError::new("E.VALIDATION.RANK_DEFICIENT", format!("B 的列线性相关（rank = {rank} < m = {m}），多余的输入不提供额外自由度且使增益不唯一。"), "去掉线性相关的输入列（并相应去掉 K 的行），或合并执行器。").path("/B")
@@ -201,9 +200,9 @@ impl Operator for Place {
                     let wr = wv.map(|c| c.re);
                     let wi = wv.map(|c| c.im);
                     let g = &wr * wr.transpose() + &wi * wi.transpose();
-                    let eig = g.symmetric_eigen();
-                    let k = eig.eigenvalues.imax();
-                    let cvec = eig.eigenvectors.column(k).into_owned();
+                    let (evals, evecs) = aeoi_core::kernels::nalg::sym_eigen(&g).expect("symmetric Jacobi");
+                    let k = (0..evals.len()).fold(0, |b, j| if evals[j] > evals[b] { j } else { b });
+                    let cvec = evecs.column(k).into_owned();
                     let sr = s.map(|c| c.re);
                     cplx(&DMatrix::from_column_slice(n, 1, (sr * cvec).as_slice())).column(0).into_owned()
                 } else {
@@ -227,12 +226,12 @@ impl Operator for Place {
         // M = X Λ X⁻¹ (real), K = Z⁻¹ U0ᵀ (A − M)
         let lam = DMatrix::<C64>::from_diagonal(&DVector::from_vec(poles.clone()));
         let xl = &x * &lam;
-        let mt = x.transpose().lu().solve(&xl.transpose()).ok_or_else(|| OpError::new("E.NUMERICAL.SINGULAR", "特征向量矩阵 X 奇异，无法构造闭环矩阵。", "极点过于接近或系统接近不可控；把重复/相近的极点错开后重试。").path("/poles"))?;
+        let mt = aeoi_core::kernels::nalg::csolve(&x.transpose(), &xl.transpose()).ok_or_else(|| OpError::new("E.NUMERICAL.SINGULAR", "特征向量矩阵 X 奇异，无法构造闭环矩阵。", "极点过于接近或系统接近不可控；把重复/相近的极点错开后重试。").path("/poles"))?;
         let mc = mt.transpose();
         let mnorm = mc.norm().max(f64::MIN_POSITIVE);
         let imag_rel = mc.iter().map(|c| c.im.abs()).fold(0.0, f64::max) / mnorm;
         let mreal = mc.map(|c| c.re);
-        let k = z.lu().solve(&(u0.transpose() * (&a - &mreal))).ok_or_else(|| OpError::new("E.NUMERICAL.SINGULAR", "Z（B 的 QR 因子）奇异。", "检查 B 是否列满秩。").path("/B"))?;
+        let k = aeoi_core::kernels::nalg::solve(&z, &(u0.transpose() * (&a - &mreal))).ok_or_else(|| OpError::new("E.NUMERICAL.SINGULAR", "Z（B 的 QR 因子）奇异。", "检查 B 是否列满秩。").path("/B"))?;
         let mut achieved = eigenvalues(&(&a - &b * &k));
         sort_poles(&mut achieved);
         let mut want = poles.clone();
@@ -256,8 +255,8 @@ impl Operator for Place {
             let nn = c.norm();
             c /= C64::new(nn, 0.0);
         }
-        let svx = xn.svd(false, false).singular_values;
-        let cond_x = svx.max() / svx.min().max(f64::MIN_POSITIVE);
+        let svx = aeoi_core::kernels::nalg::csingular_values(&xn);
+        let cond_x = svx.iter().cloned().fold(0.0, f64::max) / svx.iter().cloned().fold(f64::INFINITY, f64::min).max(f64::MIN_POSITIVE);
         if place_err > 1e-6 {
             warnings.push(Warning::new("W.NUMERICAL.PLACEMENT_INACCURATE", format!("达成极点与期望极点的最大相对偏差 {place_err:.2e}（问题病态：cond(X) = {cond_x:.2e}）。")).path("/poles"));
         }

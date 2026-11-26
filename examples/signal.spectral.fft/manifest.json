@@ -24,7 +24,7 @@
     "siso_only": false
   },
   "provenance": {
-    "algorithm": "定义：正变换 X_k = s·Σ_{j=0}^{n−1} x_j·e^{−2πi·jk/n}，逆变换 x_j = s'·Σ_k X_k·e^{+2πi·jk/n}；normalization = backward：s = 1、s' = 1/n；ortho：s = s' = 1/√n；forward：s = 1/n、s' = 1。快速算法：rustfft 6.4 标量规划器（混合基 Cooley–Tukey，素数长度 Bluestein/Rader），不使用运行时 SIMD 分派，结果只依赖输入与 n。频率轴：双边按 numpy.fft.fftfreq 顺序 f_k = k·fs/n（k < ⌈n/2⌉），其余为 (k − n)·fs/n；单边按 rfftfreq，f_k = k·fs/n，k = 0..⌊n/2⌋。后验检查：Parseval 能量恒等式（全部输出），以及在 8 个确定的频点上用 O(n) 补偿求和直接计算 DFT（抽查）",
+    "algorithm": "定义：正变换 X_k = s·Σ_{j=0}^{n−1} x_j·e^{−2πi·jk/n}，逆变换 x_j = s'·Σ_k X_k·e^{+2πi·jk/n}；normalization = backward：s = 1、s' = 1/n；ortho：s = s' = 1/√n；forward：s = 1/n、s' = 1。快速算法：aeoi-core kernels::fft（2 的幂用基 2；合数按最小素因子做混合基按时间抽取；素数 ≤ 31 直接 DFT，更大的素数用 Bluestein），旋转因子用 libm::cos/sin，不使用运行时 SIMD 分派，结果只依赖输入与 n。频率轴：双边按 numpy.fft.fftfreq 顺序 f_k = k·fs/n（k < ⌈n/2⌉），其余为 (k − n)·fs/n；单边按 rfftfreq，f_k = k·fs/n，k = 0..⌊n/2⌋。后验检查：Parseval 能量恒等式（全部输出），以及在 8 个确定的频点上用 O(n) 补偿求和直接计算 DFT（抽查）",
     "references": [
       {
         "type": "paper",
@@ -47,7 +47,7 @@
     }
   },
   "backend": {
-    "library": "aeoi-numeric (pure Rust) + rustfft 6.4 (scalar planner)",
+    "library": "aeoi-numeric (pure Rust) + aeoi-core kernels::fft",
     "routine": "fft::transform",
     "binding": "native",
     "license": "MIT OR Apache-2.0",
@@ -118,7 +118,7 @@
     }
   },
   "receipt": {
-    "method_id": "aeoi:fft:rustfft-scalar",
+    "method_id": "aeoi:fft:kernels-mixed-radix",
     "assumptions": [
       {
         "id": "finite",

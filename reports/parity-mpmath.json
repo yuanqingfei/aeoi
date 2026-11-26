@@ -27,7 +27,7 @@
             "poles_tol": 9.384020145500553e-6,
             "S_rel_fro": 0.0,
             "K_rel_fro": 0.0,
-            "poles_rel": 1.1259240761170818e-8
+            "poles_rel": 1.3733472572813116e-8
           }
         },
         "ill_conditioned_R_extreme": {
@@ -35,9 +35,9 @@
           "passed": 8,
           "max": {
             "poles_tol": 2.0466930396527544e-7,
-            "S_rel_fro": 3.0994037449395475e-19,
+            "S_rel_fro": 0.0,
             "K_rel_fro": 0.0,
-            "poles_rel": 2.7391893116172177e-8
+            "poles_rel": 6.416425233042667e-8
           }
         },
         "ill_conditioned_R_hp": {
@@ -47,7 +47,7 @@
             "poles_tol": 9.805721482153515e-9,
             "S_rel_fro": 0.0,
             "K_rel_fro": 0.0,
-            "poles_rel": 1.46171514513301e-10
+            "poles_rel": 2.4020470189645647e-10
           }
         }
       }
@@ -60,14 +60,14 @@
           "cases": 3,
           "passed": 3,
           "max": {
-            "X_rel_fro": 4.4040056129725355e-15
+            "X_rel_fro": 6.385880626880625e-14
           }
         },
         "discrete_rho_near_1": {
           "cases": 8,
           "passed": 8,
           "max": {
-            "X_rel_fro": 6.737866450887111e-15
+            "X_rel_fro": 2.7960779418497674e-13
           }
         },
         "discrete_rho_near_1_nonsymmetric_Q": {

@@ -49,15 +49,15 @@
       ],
       "data": [
         [
-          0.1211958931427529,
+          0.12119589314275259,
           0.0
         ],
         [
-          0.2874572061989327,
+          0.28745720619893333,
           0.0
         ],
         [
-          0.45114271392879,
+          0.4511427139287889,
           0.0
         ]
       ]
@@ -81,15 +81,15 @@
     },
     "condition": {
       "cond_R": 1.0,
-      "cond_S": 7.5279575105707455,
+      "cond_S": 7.527957510570739,
       "pbh_min_sv_rel_unstable_modes": null,
-      "closed_loop_spectral_radius": 0.45114271392879,
+      "closed_loop_spectral_radius": 0.4511427139287889,
       "unit_circle_unobservable_pbh_min": "Inf",
-      "sep_closed_loop_eig": 0.7964702516689659
+      "sep_closed_loop_eig": 0.7964702516689669
     },
     "error_estimate": {
-      "S_abs_fro": 6.761633607277796e-15,
-      "S_rel": 4.69302071443924e-16,
+      "S_abs_fro": 6.761633607277787e-15,
+      "S_rel": 4.693020714439234e-16,
       "basis": "启发式：‖Res‖_F / min|λ_iλ̄_j − 1|（λ ∈ eig(A_cl)），A_cl 非正规时偏乐观；非严格上界"
     },
     "checks": {
@@ -133,8 +133,8 @@
       "class": "approximate",
       "bound_kind": "a_posteriori_heuristic",
       "bound": {
-        "S_abs_fro": 6.761633607277796e-15,
-        "S_rel": 4.69302071443924e-16
+        "S_abs_fro": 6.761633607277787e-15,
+        "S_rel": 4.693020714439234e-16
       },
       "basis": "启发式：‖Res‖_F / min|λ_iλ̄_j − 1|（λ ∈ eig(A_cl)），A_cl 非正规时偏乐观；非严格上界"
     },
@@ -155,8 +155,8 @@
     },
     "fingerprint": {
       "request": "sha256:503d5f2490927dce159657489ab78a475c8f625a9b34d4f6692e836fb4e4a2db",
-      "result": "sha256:9c704897d20f07b3f1009f7da9cb9520ad395eb1e7ee1a2795600efd370944c5",
-      "output_hash": "sha256:410ea071d18bc21ac20da624191c99db62f920e16e85303adea789ade936094a",
+      "result": "sha256:73078bf43834a9e30d238ac92160ab226005310950b4b34e31ae5aa5d711aec2",
+      "output_hash": "sha256:5dfe5f29e5d5e750a0fc32a4b1842fc407f9c94fd13a9c890a1d4667631937a2",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.design.dlqr@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -177,7 +177,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:b2b24fa4c1b698143ccb98cc0d83a4151e5106401d77ce87561f37823e6064f1",
-    "output_hash": "sha256:410ea071d18bc21ac20da624191c99db62f920e16e85303adea789ade936094a",
+    "output_hash": "sha256:5dfe5f29e5d5e750a0fc32a4b1842fc407f9c94fd13a9c890a1d4667631937a2",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -191,6 +191,6 @@
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.19921899999999998
+    "wall_ms": 0.25463800000000003
   }
 }

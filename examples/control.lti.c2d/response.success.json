@@ -31,7 +31,7 @@
           1
         ],
         "data": [
-          0.019159959203993996,
+          0.019159959203993993,
           0.3744246205637217
         ]
       },
@@ -128,8 +128,8 @@
     },
     "fingerprint": {
       "request": "sha256:b9508f2734c8aeec7cecd604c7c6b9c737851643b73787c8c9c4e48f8b706609",
-      "result": "sha256:6e54c3c76a781e6dce56daa439dc91a39f77a13d636a219f21d5014c9be1cdd4",
-      "output_hash": "sha256:dba22c18d22875927dfe4ecdf33bf0c537a4081e6b61c91bf9e64936e92a9935",
+      "result": "sha256:6499fa7244267783fede5defc543ad8d990a7e98fe430df9182294dd7c9810de",
+      "output_hash": "sha256:d1c61628733c7a25dc0a5046173cca1474f5e5394e215e9947dc619e6a6ecbcc",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.lti.c2d@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -150,7 +150,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:60558c9b03f398cd802969aafcc2fb47af2f618020659998b0c32b0f15479478",
-    "output_hash": "sha256:dba22c18d22875927dfe4ecdf33bf0c537a4081e6b61c91bf9e64936e92a9935",
+    "output_hash": "sha256:d1c61628733c7a25dc0a5046173cca1474f5e5394e215e9947dc619e6a6ecbcc",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -164,6 +164,6 @@
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.19500699999999999
+    "wall_ms": 0.252627
   }
 }

@@ -2,13 +2,12 @@
 //!
 //! X_k = s·Σ_j x_j e^{−2πi·jk/n} (forward) / x_j = s'·Σ_k X_k e^{+2πi·jk/n} (inverse); normalization
 //! backward (s = 1, s' = 1/n; MATLAB and numpy), ortho (1/√n both) or forward (s = 1/n, s' = 1).
-//! rustfft's *scalar* planner: no run-time SIMD dispatch, so the arithmetic depends only on x and n.
+//! The transform itself is aeoi-core kernels::fft (own radix-2 / mixed-radix / Bluestein; v0.4.16, was rustfft).
 //! Post-conditions: Parseval (all outputs) and a direct O(n) compensated DFT at 8 fixed bins (sampled).
 use aeoi_core::error::{modify_input, OpError, Warning};
 use aeoi_core::matrix::{parse_array, to_real_matrix, Array, Elems};
 use aeoi_core::{num, ExecCtx, HostCtx, Operator, Output};
 use nalgebra::Complex;
-use rustfft::{FftDirection, FftPlannerScalar};
 use serde_json::{json, Value};
 
 operator_struct!(Fft, "signal.spectral.fft");
@@ -173,8 +172,6 @@ impl Operator for Fft {
         let n = i.n;
         let m = i.rows.len();
         let sc = scale(n, i.inverse, i.norm);
-        let mut planner = FftPlannerScalar::<f64>::new();
-        let plan = planner.plan_fft(n, if i.inverse { FftDirection::Inverse } else { FftDirection::Forward });
         let n_out = if i.one_sided { n / 2 + 1 } else { n };
         let (mut parseval_worst, mut spot_worst) = (0.0f64, 0.0f64);
         let mut out = Vec::with_capacity(m * n_out);
@@ -183,8 +180,7 @@ impl Operator for Fft {
         let tol_spot = 64.0 * (lg + 1.0) * U;
         let bins = spot_bins(n, n_out);
         for row in &i.rows {
-            let mut buf = row.clone();
-            plan.process(&mut buf);
+            let mut buf = aeoi_core::kernels::fft::fft(row, i.inverse);
             if sc != 1.0 {
                 for z in buf.iter_mut() {
                     *z *= sc;
@@ -236,7 +232,7 @@ impl Operator for Fft {
             "checks": {"parseval": parseval_ok, "dft_spot_check": spot_ok, "all_finite": finite},
             "accuracy_grade": "B",
             "credentials": Value::Null,
-            "derived": {"scale": sc, "spot_bins": bins, "tolerances": {"parseval_rel": tol_parseval, "dft_spot_rel": tol_spot}, "planner": "rustfft 6.4 FftPlannerScalar"}
+            "derived": {"scale": sc, "spot_bins": bins, "tolerances": {"parseval_rel": tol_parseval, "dft_spot_rel": tol_spot}, "planner": "aeoi-core kernels::fft (radix-2 / mixed radix / Bluestein)"}
         });
         Ok(Output { result, trust, warnings: Vec::new() })
     }

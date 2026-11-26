@@ -2,15 +2,15 @@
   "reference": "exact eigenvalues / eigenvectors / condition numbers of the stored matrix (mpmath 50 digits); numpy (LAPACK dsyevd / dgeev) values recorded. Not MATLAB.",
   "cases": 28,
   "error_cases": 6,
-  "worst_value_error_over_tolerance": 0.0016313244716074776,
-  "worst_vector_angle_over_tolerance": 4.0002506320868684e-6,
+  "worst_value_error_over_tolerance": 0.0012878877407427455,
+  "worst_vector_angle_over_tolerance": 3.843952375316904e-6,
   "tolerance": "|Δλ_k| ≤ 1e-12·‖A‖_F·max(1, cond_k) (1e-4·‖A‖_F if cond_k > 1e8); sin∠(v̂_k, v_k) ≤ 1e-10·max(1, ‖A‖_F/gap_k)·max(1, cond_k) for simple, well separated eigenvalues",
   "cases_detail": [
     {
       "family": "general_companion",
       "n": 3,
       "structure": "general",
-      "backward_error": 4.906317505094898e-16,
+      "backward_error": 1.9474600139335977e-17,
       "max_condition_true": 23.366642891095847
     },
     {
@@ -24,21 +24,21 @@
       "family": "general_equal_real_parts",
       "n": 3,
       "structure": "general",
-      "backward_error": 1.2733803363445589e-16,
+      "backward_error": 3.3367220076455946e-16,
       "max_condition_true": 6.995755337672968
     },
     {
       "family": "general_frank6",
       "n": 6,
       "structure": "general",
-      "backward_error": 2.330425507221546e-15,
+      "backward_error": 1.7933053029063048e-15,
       "max_condition_true": 56.69535399334812
     },
     {
       "family": "general_graded_warns",
       "n": 3,
       "structure": "general",
-      "backward_error": 3.2866833096231347e-26,
+      "backward_error": 4.895060248492782e-27,
       "max_condition_true": 373524485292.4558
     },
     {
@@ -52,21 +52,21 @@
       "family": "general_random",
       "n": 3,
       "structure": "general",
-      "backward_error": 1.1946551853100685e-15,
+      "backward_error": 5.165601631987979e-16,
       "max_condition_true": 2.2942592692081876
     },
     {
       "family": "general_random",
       "n": 6,
       "structure": "general",
-      "backward_error": 1.1131386108078674e-15,
+      "backward_error": 5.487341543629446e-16,
       "max_condition_true": 1.814899846374734
     },
     {
       "family": "general_random",
       "n": 15,
       "structure": "general",
-      "backward_error": 2.119054795173706e-15,
+      "backward_error": 7.655212793218802e-16,
       "max_condition_true": 7.941392865869419
     },
     {
@@ -87,14 +87,14 @@
       "family": "general_values_only",
       "n": 5,
       "structure": "general",
-      "backward_error": 7.368008884977205e-16,
+      "backward_error": 4.858048922160947e-16,
       "max_condition_true": 2.861077542310345
     },
     {
       "family": "symmetric_forced_general",
       "n": 4,
       "structure": "general",
-      "backward_error": 9.312719463506984e-16,
+      "backward_error": 7.27852661162966e-16,
       "max_condition_true": 1.0
     },
     {

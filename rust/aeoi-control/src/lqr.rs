@@ -6,7 +6,7 @@ use aeoi_core::sysalg::{lyap_bs, pbh, Dot2, LyapKind};
 use aeoi_core::lti::{eigenvalues, C64};
 use aeoi_core::matrix::{complex_vector, dense_real, parse_array, to_real_matrix};
 use aeoi_core::{num, opt_num, ExecCtx, HostCtx, Operator, OperatorMeta, Output};
-use nalgebra::DMatrix;
+use nalgebra::{DMatrix, DVector};
 use serde_json::{json, Value};
 
 pub struct Lqr {
@@ -93,8 +93,8 @@ pub(crate) fn parse_lq(meta: &OperatorMeta, args: &Value, host: &HostCtx) -> Res
             warnings.push(Warning::new("W.VALIDATION.SYMMETRIZED", format!("{name} 有 {asym:.2e} 的相对不对称（在容差内），已对称化。")).path(&format!("/{name}")));
         }
     }
-    if r.clone().cholesky().is_none() {
-        let ev = r.clone().symmetric_eigenvalues();
+    if aeoi_core::kernels::nalg::cholesky(&r).is_none() {
+        let ev = DVector::from_vec(aeoi_core::kernels::nalg::sym_eigenvalues(&r));
         return Err(OpError::new("E.DOMAIN.R_NOT_POSITIVE_DEFINITE", format!("R 不是正定矩阵（最小特征值 {:.3e}）。LQR 要求每个控制输入都有正的代价。", ev.min()), "R 必须对称正定，例如 R = ρI（ρ > 0）。调 Q 无法解决该问题。")
             .path("/R")
             .detail("min_eigenvalue", json!(ev.min()))
@@ -107,7 +107,7 @@ pub(crate) fn parse_lq(meta: &OperatorMeta, args: &Value, host: &HostCtx) -> Res
     w.view_mut((0, nx), (nx, m)).copy_from(&nmat);
     w.view_mut((nx, 0), (m, nx)).copy_from(&nmat.transpose());
     w.view_mut((nx, nx), (m, m)).copy_from(&r);
-    let wmin = w.clone().symmetric_eigenvalues().min();
+    let wmin = aeoi_core::kernels::nalg::sym_eigenvalues(&w).iter().cloned().fold(f64::INFINITY, f64::min);
     if wmin < -1e-10 * w.norm().max(1e-300) {
         return Err(OpError::new("E.DOMAIN.WEIGHT_NOT_PSD", format!("代价权重 [[Q,N],[Nᵀ,R]] 不是半正定（最小特征值 {wmin:.3e}），代价函数无下界。"), "检查 Q（需半正定）与交叉项 N（过大会破坏半正定）。")
             .path(if has_n { "/N" } else { "/Q" })
@@ -136,9 +136,9 @@ impl Operator for Lqr {
         let LqrInput { a, b, q, r, n: nm, has_n: inp_has_n } = inp;
         let (nx, m) = (a.nrows(), b.ncols());
         let mut warnings = Vec::new();
-        let chol = r.clone().cholesky().unwrap();
-        let rinv_bt = chol.solve(&b.transpose()); // R⁻¹Bᵀ
-        let rinv_nt = chol.solve(&nm.transpose()); // R⁻¹Nᵀ
+        let chol = aeoi_core::kernels::nalg::cholesky(&r).unwrap();
+        let rinv_bt = aeoi_core::kernels::nalg::chol_solve(&chol, &b.transpose()); // R⁻¹Bᵀ
+        let rinv_nt = aeoi_core::kernels::nalg::chol_solve(&chol, &nm.transpose()); // R⁻¹Nᵀ
         let abar = &a - &b * &rinv_nt;
         let qbar = symmetrize(&(&q - &nm * &rinv_nt));
         let g = symmetrize(&(&b * &rinv_bt));
@@ -151,7 +151,7 @@ impl Operator for Lqr {
             let mut mm = DMatrix::<C64>::zeros(nx, nx + m);
             mm.view_mut((0, 0), (nx, nx)).copy_from(&(a.map(|x| C64::new(x, 0.0)) - DMatrix::<C64>::identity(nx, nx) * *lam));
             mm.view_mut((0, nx), (nx, m)).copy_from(&b.map(|x| C64::new(x, 0.0)));
-            let smin = mm.svd(false, false).singular_values.min() / ab_norm;
+            let smin = aeoi_core::kernels::nalg::csingular_values(&mm).iter().cloned().fold(f64::INFINITY, f64::min) / ab_norm;
             pbh_all = pbh_all.min(smin);
             if lam.re >= -1e-10 * a.norm().max(1.0) {
                 pbh_unstable = Some(pbh_unstable.unwrap_or(f64::INFINITY).min(smin));
@@ -237,12 +237,11 @@ impl Operator for Lqr {
             while iters < max_it {
                 ctx.check()?;
                 iters += 1;
-                let lu = z.clone().lu();
-                let zinv = lu.try_inverse().ok_or_else(|| {
+                let zinv = aeoi_core::kernels::nalg::inverse(&z).ok_or_else(|| {
                     OpError::new("E.NUMERICAL.SINGULAR", "符号函数迭代中矩阵奇异。", "检查 Hamiltonian 是否有接近零的特征值（系统接近不可镇定/不可检测）；可在 Q 中加小正则项。").path("/Q")
                 })?;
                 let c = if scaling {
-                    let u = z.clone().lu().u();
+                    let u = aeoi_core::kernels::nalg::lu_u(&z);
                     let logdet: f64 = (0..2 * nx).map(|i| u[(i, i)].abs().ln()).sum();
                     (-logdet / (2 * nx) as f64).exp()
                 } else {
@@ -275,8 +274,7 @@ impl Operator for Lqr {
             let mut rhs = DMatrix::zeros(2 * nx, nx);
             rhs.view_mut((0, 0), (nx, nx)).copy_from(&(-(z.view((0, 0), (nx, nx)) + &id)));
             rhs.view_mut((nx, 0), (nx, nx)).copy_from(&(-z.view((nx, 0), (nx, nx)).into_owned()));
-            let svd = lhs.svd(true, true);
-            let sb = svd.solve(&rhs, 1e-14).map_err(|_| OpError::new("E.NUMERICAL.SINGULAR", "由符号函数求 S 的最小二乘问题失败。", "问题可能极度病态。"))?;
+            let sb = aeoi_core::kernels::nalg::svd_solve(&lhs, &rhs, 1e-14).ok_or_else(|| OpError::new("E.NUMERICAL.SINGULAR", "由符号函数求 S 的最小二乘问题失败。", "问题可能极度病态。"))?;
             Ok((sb, iters, last_diff))
         };
         let h0 = {
@@ -302,7 +300,7 @@ impl Operator for Lqr {
         // arithmetic; ΔX solves (A−BK)ᵀΔX + ΔX(A−BK) + E = 0 (Bartels–Stewart), X ← X + ΔX — algebraically the
         // Newton step, but the Lyapunov solve now only has to get the small correction right.
         // Stop when ‖ΔX‖_F ≤ 2ε‖X‖_F or when ‖ΔX‖ stops decreasing below 1e-8‖X‖_F (rounding floor; that step is not applied).
-        let gain = |x: &DMatrix<f64>| chol.solve(&(b.transpose() * x + nm.transpose()));
+        let gain = |x: &DMatrix<f64>| aeoi_core::kernels::nalg::chol_solve(&chol, &(b.transpose() * x + nm.transpose()));
         let hurwitz = |x: &DMatrix<f64>| eigenvalues(&(&a - &b * gain(x))).iter().all(|p| p.re < 0.0);
         let max_ref = self.meta.manifest["limits"]["max_states_for_refinement"].as_u64().unwrap_or(200) as usize;
         let max_nk = self.meta.manifest["limits"]["max_newton_iterations"].as_u64().unwrap_or(20) as usize;
@@ -364,7 +362,7 @@ impl Operator for Lqr {
         let mut cl = eigenvalues(&acl);
         sort_poles(&mut cl);
         let cl_stable = cl.iter().all(|p| p.re < 0.0);
-        let s_eigs = s.clone().symmetric_eigenvalues();
+        let s_eigs = DVector::from_vec(aeoi_core::kernels::nalg::sym_eigenvalues(&s));
         let s_psd = s_eigs.min() >= -1e-10 * s.norm().max(1e-300);
         if imag_suspect {
             let margin = cl.iter().map(|p| -p.re).fold(f64::INFINITY, f64::min);
@@ -386,8 +384,8 @@ impl Operator for Lqr {
         // first-order a-posteriori error estimate via sep of the closed-loop Lyapunov operator
         let (sep, est) = if nx <= 20 {
             let l = lyap_operator(&(&abar - &g * &s));
-            let sv = l.svd(false, false).singular_values;
-            let sep = sv.min();
+            let sv = aeoi_core::kernels::nalg::singular_values(&l);
+            let sep = sv.iter().cloned().fold(f64::INFINITY, f64::min);
             // compensated residual after refinement (the f64 residual sits at its rounding floor), plus the f64 representation error of S
             let r_est = if res_dd.is_finite() { res_dd } else { res_f };
             (Some(sep), if sep > 0.0 { Some(r_est / sep + 0.5 * f64::EPSILON * s_f) } else { None })
@@ -524,7 +522,7 @@ fn care_residual_kform(a: &DMatrix<f64>, b: &DMatrix<f64>, q: &DMatrix<f64>, r: 
 /// K = R⁻¹(Bᵀ(S + S_lo) + Nᵀ) with iterative refinement (S_lo: low-order part of S kept from the last Newton step): the Cholesky solve alone has forward error ~cond(R)·u
 /// (1e-4 at cond(R) = 1e12); corrections K ← K + R⁻¹(P − RK) with P and the residual in compensated arithmetic
 /// reach ~u while cond(R)·u < 1. At most 4 corrections, stopping when they stop shrinking.
-fn gain_refined(chol: &nalgebra::Cholesky<f64, nalgebra::Dyn>, r: &DMatrix<f64>, b: &DMatrix<f64>, nm: &DMatrix<f64>, s: &DMatrix<f64>, s_lo: &DMatrix<f64>) -> DMatrix<f64> {
+fn gain_refined(chol: &DMatrix<f64>, r: &DMatrix<f64>, b: &DMatrix<f64>, nm: &DMatrix<f64>, s: &DMatrix<f64>, s_lo: &DMatrix<f64>) -> DMatrix<f64> {
     let (n, m) = (s.nrows(), b.ncols());
     let mut ph = DMatrix::<f64>::zeros(m, n);
     let mut pl = DMatrix::<f64>::zeros(m, n);
@@ -541,7 +539,7 @@ fn gain_refined(chol: &nalgebra::Cholesky<f64, nalgebra::Dyn>, r: &DMatrix<f64>,
             pl[(i, j)] = lo;
         }
     }
-    let mut k = chol.solve(&ph);
+    let mut k = aeoi_core::kernels::nalg::chol_solve(chol, &ph);
     let mut prev = f64::INFINITY;
     for _ in 0..4 {
         let mut res = DMatrix::<f64>::zeros(m, n);
@@ -557,7 +555,7 @@ fn gain_refined(chol: &nalgebra::Cholesky<f64, nalgebra::Dyn>, r: &DMatrix<f64>,
                 res[(i, j)] = h + lo;
             }
         }
-        let dk = chol.solve(&res);
+        let dk = aeoi_core::kernels::nalg::chol_solve(chol, &res);
         let dn = dk.norm();
         if !dn.is_finite() || dn >= prev || dn == 0.0 {
             break;

@@ -196,7 +196,7 @@ impl Operator for Bode {
                         dc.clone()
                     } else {
                         let m = DMatrix::<C64>::identity(n, n) * s - &ac;
-                        let x = m.clone().lu().solve(&bc).ok_or_else(|| pole_err(k, inp.w[k]))?;
+                        let x = aeoi_core::kernels::nalg::csolve(&m, &bc).ok_or_else(|| pole_err(k, inp.w[k]))?;
                         if use_svd {
                             let kappa = cond2_c(&m);
                             if !kappa.is_finite() || kappa * U * n as f64 >= 0.5 {

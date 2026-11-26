@@ -42,7 +42,8 @@ pub fn complete_basis(m: &DMatrix<f64>) -> DMatrix<f64> {
     let mut aug = DMatrix::zeros(n, m.ncols() + n);
     aug.view_mut((0, 0), (n, m.ncols())).copy_from(m);
     aug.view_mut((0, m.ncols()), (n, n)).copy_from(&DMatrix::identity(n, n));
-    aug.qr().q()
+    let k = aug.ncols().min(n);
+    crate::kernels::nalg::q_full(&aug.columns(0, k).into_owned())
 }
 
 /// Orthonormal basis of the leading `r` left singular directions plus completion: returns (U_full, rank).
@@ -51,11 +52,9 @@ fn row_compress(m: &DMatrix<f64>, tol: f64) -> (DMatrix<f64>, usize) {
     if m.ncols() == 0 || p == 0 {
         return (DMatrix::identity(p, p), 0);
     }
-    let svd = m.clone().svd(true, false);
-    let u = svd.u.unwrap();
-    let mut idx: Vec<usize> = (0..svd.singular_values.len()).collect();
-    idx.sort_by(|&a, &b| svd.singular_values[b].partial_cmp(&svd.singular_values[a]).unwrap());
-    let r = idx.iter().filter(|&&k| svd.singular_values[k] > tol).count();
+    let Some((sv, u, _)) = crate::kernels::nalg::svd_thin(m) else { return (DMatrix::identity(p, p), 0) };
+    let idx: Vec<usize> = (0..sv.len()).collect(); // already descending
+    let r = idx.iter().filter(|&&k| sv[k] > tol).count();
     if r == 0 {
         return (DMatrix::identity(p, p), 0);
     }
@@ -148,7 +147,7 @@ pub fn invariant_zeros(ss: &SsData) -> Result<(Vec<C64>, ZerosInfo), ZerosInfo> 
         return Ok((eigenvalues(&a3), info));
     }
     info.cond_d_reduced = crate::linalg::cond2(&d3);
-    match d3.clone().lu().solve(&c3) {
+    match crate::kernels::nalg::solve(&d3, &c3) {
         Some(x) if x.iter().all(|v| v.is_finite()) => Ok((eigenvalues(&(&a3 - &b3 * x)), info)),
         _ => Err(info),
     }
@@ -170,7 +169,7 @@ pub fn normal_rank_deficient(ss: &SsData) -> bool {
         let mut bound = ss.d.norm();
         if n > 0 {
             let si_a = DMatrix::<C64>::identity(n, n) * s - cplx(&ss.a);
-            match si_a.clone().lu().solve(&cplx(&ss.b)) {
+            match crate::kernels::nalg::csolve(&si_a, &cplx(&ss.b)) {
                 Some(x) => {
                     g += cplx(&ss.c) * &x;
                     bound += ss.c.norm() * x.norm();
@@ -181,7 +180,7 @@ pub fn normal_rank_deficient(ss: &SsData) -> bool {
                 }
             }
         }
-        let sv = g.svd(false, false).singular_values;
+        let sv = crate::kernels::nalg::csingular_values(&g);
         let smin = sv.iter().cloned().fold(f64::INFINITY, f64::min);
         if sv.len() < r || !(smin <= 1e-11 * bound.max(f64::MIN_POSITIVE)) {
             deficient = false;
@@ -326,7 +325,7 @@ pub fn eval_tf(sys: &Lti, s: C64) -> Option<DMatrix<C64>> {
                 return Some(cplx(d));
             }
             let m = DMatrix::<C64>::identity(n, n) * s - cplx(a);
-            let x = m.lu().solve(&cplx(b))?;
+            let x = crate::kernels::nalg::csolve(&m, &cplx(b))?;
             Some(cplx(c) * x + cplx(d))
         }
     }
@@ -410,10 +409,9 @@ impl LyapSchur {
         }
         let ac = cplx(a);
         // complex Schur from the robust real Schur: A = Q R Qᵀ, then triangularize R's 2×2 blocks
-        let (qr, rr) = crate::lti::schur_robust(a).ok_or(f64::NAN)?;
-        let schur = nalgebra::linalg::Schur::try_new(cplx(&rr), f64::EPSILON, 1000 * n.max(10)).ok_or(f64::NAN)?;
-        let (uz, mut t) = schur.unpack();
-        let u = cplx(&qr) * uz;
+        // the complex Schur form of linalg.decomp.eig's kernel (real Schur + rsf2csf), spec 11.5 RI-1
+        let cs = crate::kernels::eig::complex_schur(a).ok_or(f64::NAN)?;
+        let (u, mut t) = (cs.u, cs.t);
         for i in 0..n {
             for j in 0..i {
                 t[(i, j)] = C64::new(0.0, 0.0);
@@ -667,7 +665,7 @@ pub fn pbh(a: &DMatrix<f64>, b: &DMatrix<f64>, lam: C64) -> f64 {
     let mut mm = DMatrix::<C64>::zeros(n, n + m);
     mm.view_mut((0, 0), (n, n)).copy_from(&(cplx(a) - DMatrix::<C64>::identity(n, n) * lam));
     mm.view_mut((0, n), (n, m)).copy_from(&cplx(b));
-    mm.svd(false, false).singular_values.min() / scale
+    crate::kernels::nalg::csingular_values(&mm).iter().cloned().fold(f64::INFINITY, f64::min) / scale
 }
 
 /// SISO tf → ss in controllable canonical form (re-export for operators).

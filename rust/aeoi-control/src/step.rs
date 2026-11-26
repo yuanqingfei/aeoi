@@ -249,7 +249,7 @@ impl Operator for Step {
             Some(ss.d.clone())
         } else {
             let m = if continuous { -ss.a.clone() } else { DMatrix::identity(nx, nx) - &ss.a };
-            m.lu().solve(&ss.b).map(|x| &ss.c * x + &ss.d).filter(|g| g.iter().all(|v| v.is_finite()))
+            aeoi_core::kernels::nalg::solve(&m, &ss.b).map(|x| &ss.c * x + &ss.d).filter(|g| g.iter().all(|v| v.is_finite()))
         };
         if !stable {
             let what = if inp.impulse { "脉冲响应不衰减或发散" } else { "阶跃响应发散或不收敛，step_info 置为 null" };

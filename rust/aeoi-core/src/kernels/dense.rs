@@ -51,6 +51,10 @@ pub fn lu_factor(a: &[f64], n: usize) -> Lu {
 }
 
 impl Lu {
+    /// Entry (i, j) of the combined factor (U on and above the diagonal, L multipliers below).
+    pub fn entry(&self, i: usize, j: usize) -> f64 {
+        self.lu[i * self.n + j]
+    }
     /// Solve A x = b.
     pub fn solve(&self, b: &[f64]) -> Vec<f64> {
         let n = self.n;
@@ -309,3 +313,48 @@ pub fn at_r_dd(a: &[f64], m: usize, n: usize, r: &[f64]) -> Vec<f64> {
         .collect()
 }
 
+
+/// Cholesky A = L·Lᵀ of a symmetric row-major n×n matrix (lower triangle used); None unless every pivot is
+/// positive. L is row-major lower triangular.
+pub fn cholesky(a: &[f64], n: usize) -> Option<Vec<f64>> {
+    let mut l = vec![0.0; n * n];
+    for j in 0..n {
+        let mut d = a[j * n + j];
+        for k in 0..j {
+            d -= l[j * n + k] * l[j * n + k];
+        }
+        if !(d > 0.0) {
+            return None;
+        }
+        let djj = d.sqrt();
+        l[j * n + j] = djj;
+        for i in j + 1..n {
+            let mut s = a[i * n + j];
+            for k in 0..j {
+                s -= l[i * n + k] * l[j * n + k];
+            }
+            l[i * n + j] = s / djj;
+        }
+    }
+    Some(l)
+}
+
+/// Solve (L·Lᵀ) x = b with the factor from `cholesky`.
+pub fn chol_solve(l: &[f64], n: usize, b: &[f64]) -> Vec<f64> {
+    let mut y = b.to_vec();
+    for i in 0..n {
+        let mut s = y[i];
+        for k in 0..i {
+            s -= l[i * n + k] * y[k];
+        }
+        y[i] = s / l[i * n + i];
+    }
+    for i in (0..n).rev() {
+        let mut s = y[i];
+        for k in i + 1..n {
+            s -= l[k * n + i] * y[k];
+        }
+        y[i] = s / l[i * n + i];
+    }
+    y
+}

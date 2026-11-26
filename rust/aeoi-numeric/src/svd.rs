@@ -73,36 +73,7 @@ impl Operator for Svd {
         let (m, n) = (i.m, i.n);
         let p = m.min(n);
         let afro = nrm2(&i.a);
-        // columns of A (m ≥ n) or of Aᵀ (m < n)
-        let tall = m >= n;
-        let (rows, cols) = if tall { (m, n) } else { (n, m) };
-        let g: Vec<Vec<f64>> = (0..cols).map(|k| (0..rows).map(|r| if tall { i.a[r * n + k] } else { i.a[k * n + r] }).collect()).collect();
-        let (g, w) = jacobi(g, rows, ctx)?.ok_or_else(|| OpError::new("E.NUMERICAL.NO_CONVERGENCE", format!("Jacobi SVD 在 {MAX_SWEEPS} 轮扫描内未收敛。"), "检查 A 的数值尺度（极大/极小元素）；可先缩放后重试。").path("/A"))?;
-        let sig: Vec<f64> = g.iter().map(|c| nrm2(c)).collect();
-        let mut order: Vec<usize> = (0..p).collect();
-        order.sort_by(|&x, &y| sig[y].partial_cmp(&sig[x]).unwrap().then(x.cmp(&y)));
-        let s: Vec<f64> = order.iter().map(|&k| sig[k]).collect();
-        // left vectors of the transformed problem: g_k/σ_k; zero σ completed afterwards
-        let nz = s.iter().filter(|&&x| x > 0.0).count();
-        let mut left: Vec<Vec<f64>> = order[..nz].iter().map(|&k| g[k].iter().map(|x| x / sig[k]).collect()).collect();
-        if nz < p {
-            left = complete(&left, rows)[..p].to_vec();
-        }
-        let right: Vec<Vec<f64>> = order.iter().map(|&k| w[k].clone()).collect();
-        let (uu, vv) = if tall { (left, right) } else { (right, left) };
-        let mut ucols: Vec<Vec<f64>> = Vec::with_capacity(p);
-        let mut vcols: Vec<Vec<f64>> = Vec::with_capacity(p);
-        for k in 0..p {
-            let mut u = uu[k].clone();
-            let mut v = vv[k].clone();
-            if sign_fix(&mut u) < 0.0 {
-                for z in v.iter_mut() {
-                    *z = -*z;
-                }
-            }
-            ucols.push(u);
-            vcols.push(v);
-        }
+        let aeoi_core::kernels::svd::Svd { s, u: ucols, v: vcols } = svd_thin(&i.a, m, n, &|| ctx.check())?.ok_or_else(|| OpError::new("E.NUMERICAL.NO_CONVERGENCE", format!("Jacobi SVD 在 {MAX_SWEEPS} 轮扫描内未收敛。"), "检查 A 的数值尺度（极大/极小元素）；可先缩放后重试。").path("/A"))?;
         // reconstruction residual ‖A − U·diag(s)·Vᵀ‖_F / ‖A‖_F
         let mut rsq = 0.0f64;
         for r in 0..m {

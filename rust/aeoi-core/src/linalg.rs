@@ -10,8 +10,8 @@ pub fn cond2(a: &DMatrix<f64>) -> f64 {
     if a.is_empty() {
         return 1.0;
     }
-    let s = a.clone().svd(false, false).singular_values;
-    let (mx, mn) = (s.max(), s.min());
+    let s = crate::kernels::nalg::singular_values(a);
+    let (mx, mn) = (s[0], s[s.len() - 1]);
     if mn == 0.0 {
         f64::INFINITY
     } else {
@@ -20,8 +20,11 @@ pub fn cond2(a: &DMatrix<f64>) -> f64 {
 }
 
 pub fn cond2_c(a: &DMatrix<Complex<f64>>) -> f64 {
-    let s = a.clone().svd(false, false).singular_values;
-    let (mx, mn) = (s.max(), s.min());
+    if a.is_empty() {
+        return 1.0;
+    }
+    let s = crate::kernels::nalg::csingular_values(a);
+    let (mx, mn) = (s[0], s[s.len() - 1]);
     if mn == 0.0 {
         f64::INFINITY
     } else {
@@ -84,7 +87,7 @@ pub fn expm(a: &DMatrix<f64>) -> (DMatrix<f64>, u32) {
 fn solve_pade(u: &DMatrix<f64>, v: &DMatrix<f64>) -> DMatrix<f64> {
     let p = v + u;
     let q = v - u;
-    q.lu().solve(&p).expect("Padé denominator singular")
+    crate::kernels::nalg::solve(&q, &p).expect("Padé denominator singular")
 }
 
 /// Kronecker product.
@@ -115,7 +118,7 @@ pub fn lyap_solve(m: &DMatrix<f64>, c: &DMatrix<f64>) -> Option<DMatrix<f64>> {
     let n = m.nrows();
     let l = lyap_operator(m);
     let rhs = nalgebra::DVector::from_column_slice(c.as_slice()); // nalgebra storage is column-major
-    let x = l.lu().solve(&rhs)?;
+    let x = crate::kernels::nalg::solve(&l, &DMatrix::from_column_slice(rhs.len(), 1, rhs.as_slice()))?;
     Some(DMatrix::from_column_slice(n, n, x.as_slice()))
 }
 

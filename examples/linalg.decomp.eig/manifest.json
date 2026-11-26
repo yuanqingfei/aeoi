@@ -23,7 +23,7 @@
     "siso_only": false
   },
   "provenance": {
-    "algorithm": "structure = auto（缺省）：A 与 Aᵀ 逐位相等时用对称算法（循环双边 Jacobi：|a_pq| > ε·sqrt(|a_pp·a_qq|) 时旋转，至多 60 轮扫描），否则用一般算法：实 Schur 分解（nalgebra Schur，隐式双位移 QR，不收敛时做确定性相似变换后重试）→ 复 Schur 形（rsf2csf，Givens 消去 2×2 块）→ 上三角回代求特征向量（小除数按 LAPACK ztrevc 抬到 max(u·|λ|, 最小正规数)），共轭对的第二个向量取第一个的共轭；左特征向量同法求得，特征值条件数 1/|yᴴx|。排序：对称升序；一般按 (实部, |虚部|) 升序，共轭对虚部为正的在前。规一化：‖v‖₂ = 1，最大模分量（并列取下标最小）为正实数。",
+    "algorithm": "structure = auto（缺省）：A 与 Aᵀ 逐位相等时用对称算法（循环双边 Jacobi：|a_pq| > ε·sqrt(|a_pp·a_qq|) 时旋转，至多 60 轮扫描），否则用一般算法：实 Schur 分解（aeoi-core kernels::schur：Householder 化为 Hessenberg 形，Francis 双位移 QR，实特征值的 2×2 块按 LAPACK dlanv2 标准化；不收敛时做确定性相似变换后重试）→ 复 Schur 形（rsf2csf，Givens 消去 2×2 块）→ 上三角回代求特征向量（小除数按 LAPACK ztrevc 抬到 max(u·|λ|, 最小正规数)），共轭对的第二个向量取第一个的共轭；左特征向量同法求得，特征值条件数 1/|yᴴx|。排序：对称升序；一般按 (实部, |虚部|) 升序，共轭对虚部为正的在前。规一化：‖v‖₂ = 1，最大模分量（并列取下标最小）为正实数。",
     "references": [
       {
         "type": "textbook",

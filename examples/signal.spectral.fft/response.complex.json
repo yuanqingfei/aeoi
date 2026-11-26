@@ -21,31 +21,31 @@
         ],
         [
           -2.0906028553828462e-16,
-          8.659560562354932e-17
+          8.65956056235493e-17
         ],
         [
           2.82842712474619,
-          -6.061692393648453e-16
+          -5.195736337412959e-16
         ],
         [
           2.0906028553828462e-16,
-          8.659560562354932e-17
+          8.659560562354934e-17
         ],
         [
           8.659560562354929e-17,
           8.659560562354932e-17
         ],
         [
-          3.586907429118602e-17,
-          8.659560562354932e-17
-        ],
-        [
-          0.0,
+          3.5869074291186004e-17,
           8.659560562354934e-17
         ],
         [
-          -3.586907429118602e-17,
-          8.659560562354932e-17
+          0.0,
+          0.0
+        ],
+        [
+          -3.5869074291186004e-17,
+          8.65956056235493e-17
         ]
       ]
     },
@@ -84,7 +84,7 @@
     },
     "residual": {
       "parseval_rel": 0.0,
-      "dft_spot_rel": 9.184850993605151e-17,
+      "dft_spot_rel": 6.123233995736766e-17,
       "definition": "Parseval：|Σ|out|² − sc²·n·Σ|in|²| / (sc²·n·Σ|in|²)，各通道取最大；抽查：7 个频点上直接 DFT 与 FFT 之差 / (sc·Σ|x_j|)"
     },
     "condition": {
@@ -118,13 +118,13 @@
         "parseval_rel": 2.842170943040401e-14,
         "dft_spot_rel": 2.842170943040401e-14
       },
-      "planner": "rustfft 6.4 FftPlannerScalar"
+      "planner": "aeoi-core kernels::fft (radix-2 / mixed radix / Bluestein)"
     }
   },
   "receipt": {
     "format": "aeoi-receipt/1",
     "method": {
-      "id": "aeoi:fft:rustfft-scalar",
+      "id": "aeoi:fft:kernels-mixed-radix",
       "routine": "fft::transform",
       "provenance": "aeoi://operators/signal.spectral.fft/0.4.0/manifest#/provenance"
     },
@@ -178,8 +178,8 @@
     },
     "fingerprint": {
       "request": "sha256:85aa56b593ef7f81ea3f46988492a38c7871f485b49cd70fc50004dd537d9425",
-      "result": "sha256:237bad72125a6e176ca933dbf97bba13346e3f6ebd7fd697aa2a3281d80de451",
-      "output_hash": "sha256:aee412abbf611d70504a6c3437cf22dfd05e780f7b947ee6cbc998551b7c10c2",
+      "result": "sha256:cf76bd8274345582d1bcaf615d9dfa9cb827eda6c45f3740f897016e5046faf7",
+      "output_hash": "sha256:95155647826f96b2f82e10ba5833f1d76dd7de6119d48cf8fb6a479425666ea4",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of signal.spectral.fft@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -200,7 +200,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T1",
     "input_hash": "sha256:eb497c67cf9b27fc6ddf3c1d1365252d14c9ed86f2513bcf1e99d0ab19a2bec8",
-    "output_hash": "sha256:aee412abbf611d70504a6c3437cf22dfd05e780f7b947ee6cbc998551b7c10c2",
+    "output_hash": "sha256:95155647826f96b2f82e10ba5833f1d76dd7de6119d48cf8fb6a479425666ea4",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -214,6 +214,6 @@
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.206562
+    "wall_ms": 0.201118
   }
 }

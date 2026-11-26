@@ -99,7 +99,7 @@ impl Operator for Lyap {
         if rel > 1e-10 {
             warnings.push(Warning::new("W.NUMERICAL.LARGE_RESIDUAL", format!("相对残差 {rel:.2e} 偏大。")).path("/A"));
         }
-        let x_psd = if q_symmetric { Some(x.clone().symmetric_eigenvalues().min() >= -1e-10 * xn) } else { None };
+        let x_psd = if q_symmetric { Some(aeoi_core::kernels::nalg::sym_eigenvalues(&x).iter().cloned().fold(f64::INFINITY, f64::min) >= -1e-10 * xn) } else { None };
         let result = json!({"X": dense_real(&x)});
         let convergence = if refined.triggered {
             json!({"applicable": true, "converged": refined.last_correction_rel <= 1e-12, "iterations": refined.steps,

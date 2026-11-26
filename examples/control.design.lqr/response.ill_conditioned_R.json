@@ -61,8 +61,8 @@
       "final_value": 1.386404645187181e-16,
       "newton_kleinman_steps": 1,
       "care_residual_compensated_fro": 2.0679163814986566e-16,
-      "newton_kleinman_final_change_rel": 3.9612187480302017e-16,
-      "sign_function_residual_fro": 2.211852923485529e-11,
+      "newton_kleinman_final_change_rel": 3.284629317061811e-17,
+      "sign_function_residual_fro": 2.2118529230397144e-11,
       "symplectic_balancing_log2_range": [
         -2.0,
         10.0

@@ -19,7 +19,7 @@
     },
     "phase_margin": {
       "unit": "deg",
-      "value": 77.80948435480713
+      "value": 77.80948435480707
     },
     "stability_margin": {
       "unit": "1",
@@ -31,7 +31,7 @@
     },
     "gain_crossover_frequency": {
       "unit": "rad/s",
-      "value": 16.351390920722732
+      "value": 16.351390920722714
     },
     "stability_margin_frequency": {
       "unit": "rad/s",
@@ -41,8 +41,8 @@
       "phase": [],
       "gain": [
         {
-          "w_rad_s": 16.351390920722732,
-          "phase_margin_deg": 77.80948435480713
+          "w_rad_s": 16.351390920722714,
+          "phase_margin_deg": 77.80948435480707
         }
       ],
       "stability": []
@@ -54,7 +54,7 @@
       "applicable": false
     },
     "residual": {
-      "gain_crossing_max_abs_ln_mag": 0.0,
+      "gain_crossing_max_abs_ln_mag": 2.2204460492503128e-16,
       "phase_crossing_max_abs_sin_arg": 0.0,
       "definition": "增益交越处 |ln|G(jω)||、相位交越处 |Im G|/|G| 的最大值（理想为 0）"
     },
@@ -81,15 +81,15 @@
         ],
         "data": [
           [
-            -9.509032271738812,
-            5.67324676194156
+            -9.509032271738796,
+            5.673246761941559
           ],
           [
-            -9.509032271738812,
-            -5.67324676194156
+            -9.509032271738796,
+            -5.673246761941559
           ],
           [
-            -1.9819354565223863,
+            -1.9819354565223855,
             0.0
           ]
         ]
@@ -152,8 +152,8 @@
     },
     "fingerprint": {
       "request": "sha256:8ee5497b0a2ea930615c96a853a553657a67893b0ddfe71e47f15aeb8d3a1ace",
-      "result": "sha256:311a24e3299c4d504e3f77d6f811f049363da473f45a25928796aa59fdee9725",
-      "output_hash": "sha256:d426ccfd3e6e9cf7459c08cc409ed39706b6d9ea9c3b83965b78a17bfd025fb9",
+      "result": "sha256:7b52cafc386cc115abbcfbbcb44d1fc086c97cfda48c73c315770b574e96446e",
+      "output_hash": "sha256:82d0053ee5aa50c7cf0aab7da71887e9f5704df8e214b2681da625067b5c8aac",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.analysis.margin@0.3.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -174,7 +174,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T3",
     "input_hash": "sha256:2dd0f76899a3e0c86bbdb118b5a512cbd5e2e065e4fe05766d0240e22a55528a",
-    "output_hash": "sha256:d426ccfd3e6e9cf7459c08cc409ed39706b6d9ea9c3b83965b78a17bfd025fb9",
+    "output_hash": "sha256:82d0053ee5aa50c7cf0aab7da71887e9f5704df8e214b2681da625067b5c8aac",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -188,6 +188,6 @@
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.37715699999999996
+    "wall_ms": 0.50545
   }
 }

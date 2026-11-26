@@ -231,8 +231,8 @@
         ],
         "data": [
           0.0,
-          8.014623383568188e-05,
-          0.0006170872550474472,
+          8.01462338356819e-05,
+          0.0006170872550474474,
           0.0020025632332653703,
           0.004560555703084328,
           0.008550739838256171,
@@ -406,7 +406,7 @@
           0.093667860699465,
           0.06306360256848019,
           0.03183089691898169,
-          0.0002817295216282779,
+          0.0002817295216282778,
           -0.03126874791767395,
           -0.06250536684216755,
           -0.09311609108761955,
@@ -444,7 +444,7 @@
       "applicable": false
     },
     "residual": {
-      "half_step_state_rel": 3.4170291212102266e-15,
+      "half_step_state_rel": 3.351265711480068e-15,
       "definition": "dt/2 重新离散化、同一插值输入，前 63 步偶数步状态与原递推之差 max‖Δx‖₂ / max‖x‖₂"
     },
     "condition": {
@@ -546,8 +546,8 @@
     },
     "fingerprint": {
       "request": "sha256:9c0a3f9b3f3511693805c17b02de36ea7e151654ccf3c879feeb3f64f751050f",
-      "result": "sha256:ccc0a85c86771186a432b1ac932bd1660a841a36c8674dc4579f2f9c29beb43d",
-      "output_hash": "sha256:68db5417d1fef762ec48361d624fea690242bde4b09bc97be6a8ceca0f0d14ff",
+      "result": "sha256:22f77be146a3bc609fd6b503f79dd38a2c4f2fb8d99d91b292b6090fafb38a37",
+      "output_hash": "sha256:2e72c07b6076d273f7a0aa2805d5bf11d759d3043b7952c131249266a8f84856",
       "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
       "stable_across": "request: all platforms and builds of control.lti.lsim@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
     },
@@ -568,7 +568,7 @@
     "determinism": "platform_bitwise",
     "tolerance_class": "T2",
     "input_hash": "sha256:ce34829a277c3ed6e266a10517267d83bc5abbd49085839512ed92730b64273e",
-    "output_hash": "sha256:68db5417d1fef762ec48361d624fea690242bde4b09bc97be6a8ceca0f0d14ff",
+    "output_hash": "sha256:2e72c07b6076d273f7a0aa2805d5bf11d759d3043b7952c131249266a8f84856",
     "platform": "x86_64-linux",
     "cpu_features": [
       "avx",
@@ -582,6 +582,6 @@
     "seed": null
   },
   "timing": {
-    "wall_ms": 0.290309
+    "wall_ms": 0.328407
   }
 }

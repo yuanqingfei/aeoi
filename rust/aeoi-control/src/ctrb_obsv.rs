@@ -33,7 +33,7 @@ fn num_rank(m: &DMatrix<f64>, rtol: Option<f64>) -> (usize, Vec<f64>, f64, Optio
     if m.is_empty() {
         return (0, vec![], 0.0, None);
     }
-    let mut sv: Vec<f64> = m.clone().svd(false, false).singular_values.iter().cloned().collect();
+    let mut sv: Vec<f64> = aeoi_core::kernels::nalg::singular_values(&m);
     sv.sort_by(|a, b| b.partial_cmp(a).unwrap());
     let rt = rtol.unwrap_or(m.nrows().max(m.ncols()) as f64 * f64::EPSILON);
     let tol = sv[0] * rt;
