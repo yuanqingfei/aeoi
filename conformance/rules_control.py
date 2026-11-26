@@ -457,6 +457,99 @@ def rule_pidtune(case, env, manifest, req=None, expected=None):
     return out
 
 
+# ---------------------------------------------------------------- control.lti.convert (profile 10.4 CV-7, CV-8)
+def _poly_rows(x):
+    """tf num/den: a flat list (SISO) or [ny][nu] nested lists (MIMO) -> [ny][nu] list of 1-D arrays."""
+    if x and isinstance(x[0], list):
+        return [[np.array(c, dtype=float) for c in row] for row in x]
+    return [[np.array(x, dtype=float)]]
+
+
+def _lti_any(sysd, kind=None):
+    """Normalise an LtiSystem JSON (or a golden `expected` dict without `kind`) to (kind, data)."""
+    kind = kind or sysd.get("kind") or ("ss" if "A" in sysd else "zpk" if "z" in sysd else "tf")
+    if kind == "tf":
+        return kind, (_poly_rows(sysd["num"]), _poly_rows(sysd["den"]))
+    if kind == "zpk":
+        return kind, (arr(sysd["z"]).ravel().astype(complex) if len(sysd["z"]) else np.array([], dtype=complex),
+                      arr(sysd["p"]).ravel().astype(complex) if len(sysd["p"]) else np.array([], dtype=complex), num(sysd["k"]))
+    A, B, C, D = (arr(sysd[x]) for x in "ABCD")
+    n = int(np.sqrt(A.size)) if A.size else 0
+    D = D.reshape(D.shape if D.ndim == 2 else (1, 1))
+    return kind, (A.reshape(n, n), B.reshape(n, D.shape[1]), C.reshape(D.shape[0], n), D)
+
+
+def _lti_poles(k, d):
+    if k == "tf":
+        return np.concatenate([np.roots(den) for row in d[1] for den in row] or [np.array([])])
+    if k == "zpk":
+        return d[1]
+    return np.linalg.eigvals(d[0]) if d[0].size else np.array([])
+
+
+def _lti_eval(k, d, s):
+    if k == "tf":
+        return np.array([[np.polyval(nu_, s) / np.polyval(de, s) for nu_, de in zip(nr, dr)] for nr, dr in zip(*d)])
+    if k == "zpk":
+        return np.array([[d[2] * np.prod(s - d[0]) / np.prod(s - d[1])]])
+    A, B, C, D = d
+    n = A.shape[0]
+    return (C @ np.linalg.solve(s * np.eye(n) - A, B) + D) if n else D.astype(complex)
+
+
+def _convert_points(poles, ts):
+    """CV-7: nine test points, skipping those within 1e-6·max(1,|s|) of an input pole."""
+    S = 1.0 if ts > 0 else max([1.0] + [abs(p) for p in poles])
+    pts = []
+    for k in range(9):
+        x = -2.0 + k / 2.0
+        s = np.exp(1j * min(10.0 ** x, 3.0)) if ts > 0 else 1j * (10.0 ** x) * S
+        if not any(abs(s - p) < 1e-6 * max(1.0, abs(s)) for p in poles):
+            pts.append(s)
+    return pts
+
+
+def _discrepancy(k_in, d_in, k_out, d_out, pts):
+    worst = 0.0
+    for s in pts:
+        ga, gb = _lti_eval(k_in, d_in, s), _lti_eval(k_out, d_out, s)
+        if ga.shape != gb.shape:
+            return float("inf")
+        worst = max(worst, float(np.max(np.abs(ga - gb))) / max(float(np.max(np.abs(ga))), 1e-300))
+    return worst
+
+
+_CV2 = {("tf", "ss", False): "controllable_canonical", ("tf", "ss", True): "block_diagonal_controllable_canonical",
+        ("zpk", "ss", False): "controllable_canonical", ("ss", "tf", False): "ss2tf_characteristic_polynomial",
+        ("ss", "tf", True): "ss2tf_characteristic_polynomial", ("zpk", "tf", False): "expanded_product",
+        ("tf", "zpk", False): "polynomial_roots", ("ss", "zpk", False): "invariant_zeros_eigenvalues_markov_gain"}
+
+
+def rule_convert(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = expected or case["expected"]; r = env["result"]
+    g, to = r["system"], req["to"]
+    k_in, d_in = _lti_any(req["system"])
+    ts = num(req["system"].get("ts", 0.0))
+    if g.get("kind") != to:
+        return [fail("response of the returned system vs the input, at the CV-7 test points  [CV-8]", f"system.kind {g.get('kind')} != to = {to}")]
+    k_out, d_out = _lti_any(g)
+    k_ref, d_ref = _lti_any(e, to)
+    pts = _convert_points(_lti_poles(k_in, d_in), ts)
+    dr = _discrepancy(k_in, d_in, k_ref, d_ref, pts)
+    di = _discrepancy(k_in, d_in, k_out, d_out, pts)
+    tol = max(1e-8, 10.0 * dr)
+    out = [check("response of the returned system vs the INPUT system at the CV-7 test points (recomputed by the runner): "
+                 "max|ΔG|/max|G| ≤ max(1e-8, 10·d_ref), d_ref = same measure for the reference system  [CV-8]", di, tol)]
+    ny, nu = (len(d_in[0]), len(d_in[0][0])) if k_in == "tf" else (1, 1) if k_in == "zpk" else d_in[3].shape
+    want = "identity" if k_in == to else _CV2.get((k_in, to, ny * nu > 1))
+    out.append(("realization as fixed by CV-2", r.get("realization") == want, None, None, f"got {r.get('realization')}, CV-2 gives {want}"))
+    out.append(("system.ts equals the input's ts  [CV-8]", num(g.get("ts")) == ts, None, None, f"got {g.get('ts')}, input {ts}"))
+    if to == "ss":
+        n_out, n_ref = d_out[0].shape[0], d_ref[0].shape[0]
+        out.append(("state count equals the reference realization's  [CV-2, CV-8]", n_out == n_ref, None, None, f"got {n_out}, reference {n_ref}"))
+    return out
+
+
 RULES = {
     "control.lti.poles_zeros": rule_poles_zeros,
     "control.lti.bode": rule_bode,
@@ -465,4 +558,5 @@ RULES = {
     "control.lti.c2d": rule_c2d,
     "control.lti.lsim": rule_lsim,
     "control.design.pidtune": rule_pidtune,
+    "control.lti.convert": rule_convert,
 }

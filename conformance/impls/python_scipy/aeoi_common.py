@@ -32,7 +32,7 @@ import aeoi_hash as H  # noqa: E402
 
 SPEC = "aeoi/0.4"
 IMPL_NAME = "aeoi-pyscipy"
-IMPL_VERSION = "0.2.0"
+IMPL_VERSION = "0.3.0"
 U = 2.0 ** -53          # unit roundoff
 EPS = 2.0 ** -52        # machine epsilon
 

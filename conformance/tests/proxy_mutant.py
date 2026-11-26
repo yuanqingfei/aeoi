@@ -194,6 +194,20 @@ def m_roots_unsorted(r):                    # roots in reverse order (radii and 
     r["multiplicity"] = r["multiplicity"][::-1]
 
 
+def m_convert_gain_wrong(r):               # returned system off by a factor 1 + 1e-6 (one coefficient set scaled)
+    g = r["system"]
+    if g["kind"] == "zpk":
+        g["k"] = g["k"] * (1 + 1e-6)
+    elif g["kind"] == "ss":
+        g["C"]["data"] = [v * (1 + 1e-6) if isinstance(v, float) else v for v in g["C"]["data"]]
+    else:
+        g["num"] = [[[c * (1 + 1e-6) for c in e] for e in row] for row in g["num"]] if isinstance(g["num"][0], list) else [c * (1 + 1e-6) for c in g["num"]]
+
+
+def m_convert_realization_mislabeled(r):    # correct system, wrong realization label
+    r["realization"] = "identity" if r.get("realization") != "identity" else "controllable_canonical"
+
+
 def m_eig_vectors_swapped(r):               # eigenvector columns 0 and 1 exchanged (labels no longer match)
     v = r.get("vectors")
     if v and v["shape"][0] > 1:
@@ -338,6 +352,8 @@ MUTANTS = {
     "roots_value_wrong": ("fit.poly.roots", m_roots_value_wrong),
     "roots_radius_understated": ("fit.poly.roots", m_roots_radius_understated),
     "roots_unsorted": ("fit.poly.roots", m_roots_unsorted),
+    "convert_gain_wrong": ("control.lti.convert", m_convert_gain_wrong),
+    "convert_realization_mislabeled": ("control.lti.convert", m_convert_realization_mislabeled),
     "eig_vectors_swapped": ("linalg.decomp.eig", m_eig_vectors_swapped),
     "eig_pair_order": ("linalg.decomp.eig", m_eig_pair_order),
     "eig_value_wrong": ("linalg.decomp.eig", m_eig_value_wrong),

@@ -12,6 +12,11 @@ compare:
   "tf coefficients": "‖Δ‖₁/max(‖ref‖₁,‖den‖₁) ≤ 1e-10·max(1, Π(1+|λ_i|)/‖den‖₁)  (λ = roots(den); coefficient-from-eigenvalue bound)"
   "zpk zeros/poles": "nearest-match |Δ|/max(1,|r|) ≤ 1e-10·max(1, κ_r) (Wilkinson root condition of the reference polynomial)"
   "zpk gain k": "rel ≤ 1e-10"
+conformance_compare:   # spec 9.4 CF-6; profile 10.4 CV-8; conformance/rules_control.py. No trust.* value of the implementation is used
+  response: "max over the CV-7 test points of max|G_impl − G_input| / max|G_input|, recomputed by the runner from the request; ≤ max(1e-8, 10·d_ref), d_ref = the same measure for the golden expected system"
+  realization: "equal to the CV-2 table"
+  system.ts: "equal to the input"
+  ss result: "state count equal to the reference realization's (A, B, C themselves are not compared: realization-independent, V-5)"
 case_families:   # n = golden cases
   - {name: improper, n: 1, expect: E.DOMAIN.IMPROPER_SYSTEM}
   - {name: memory_order_nonsymmetric, n: 1, note: "non-symmetric matrices; the column-major (A(:)) request must deviate > 1e3 × tolerance"}

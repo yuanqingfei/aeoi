@@ -869,7 +869,7 @@ A=lambda i,st,by:{"id":i,"statement":st,"enforced_by":by}
 LTI_A=[A("lti_model","输入系统准确描述被研究对象（单位、符号、row-major 录入）","caller"),A("proper","系统为 proper（deg num ≤ deg den）","error:E.DOMAIN.IMPROPER_SYSTEM"),A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE")]
 RECEIPT={
  "control.lti.bode":{"method_id":"aeoi:bode:horner-or-complex-lu","assumptions":LTI_A+[A("grid","频率网格与单位为调用方所需（rad/s 或 Hz）","caller"),A("no_pole_on_grid","频点不落在极点上","warning:W.NUMERICAL.NEAR_POLE")],
-   "exactness":{"class":"approximate","bound_kind":"a_priori"},"postconditions":["all_finite","frequencies_strictly_increasing"]},
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["all_finite","frequencies_strictly_increasing"]},
  "control.lti.step":{"method_id":"aeoi:step:zoh-expm-pade13-recursion","assumptions":LTI_A+[A("zoh_exact","阶跃输入在 ZOH 下无离散化误差（只有 expm 与递推舍入）","validation"),A("grid","时间网格足以分辨动态","warning:W.ACCURACY.GRID_TOO_COARSE")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["all_finite"]},
  "control.lti.impulse":{"method_id":"aeoi:impulse:zoh-expm-pade13-recursion","assumptions":LTI_A+[A("convention","python-control 冲激约定（连续 x0 = B、忽略 D；离散按 discrete_scaling）","validation"),A("grid","时间网格足以分辨动态","warning:W.ACCURACY.GRID_TOO_COARSE")],

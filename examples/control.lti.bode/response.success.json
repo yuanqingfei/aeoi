@@ -146,7 +146,7 @@
     ],
     "exactness": {
       "class": "approximate",
-      "bound_kind": "a_priori",
+      "bound_kind": "a_posteriori_heuristic",
       "bound": {
         "rel_max": 3.2196467714129563e-15,
         "magnitude_db_abs": 2.7965496530045342e-14,

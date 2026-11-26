@@ -1,6 +1,6 @@
 # AEOI — AI Engineering Operator Interface
 
-面向 AI Agent 的工程计算算子接口规范（v0.4.20-draft）及其 Rust 参考实现，以一个 MCP stdio 服务器提供。每个结果都带容差类、后置条件检查、不可依赖字段的标注、带修复补丁的结构化错误，以及可重放的收据。改动历史见 `CHANGELOG.md`；给 AI agent 的入口见 `AGENTS.md`。
+面向 AI Agent 的工程计算算子接口规范（v0.4.21-draft）及其 Rust 参考实现，以一个 MCP stdio 服务器提供。每个结果都带容差类、后置条件检查、不可依赖字段的标注、带修复补丁的结构化错误，以及可重放的收据。改动历史见 `CHANGELOG.md`；给 AI agent 的入口见 `AGENTS.md`。
 
 ## 目标与进度
 

@@ -163,3 +163,165 @@ fft、linsolve、interp1 第一次运行就全部通过；integral 第一次有 
 | PY-30 | 9.4 CF-11 给出同源的机械判定（用例引擎里的库例程名作为完整词出现在 `backend` 里）；运行器按此实现，不再因为 `aeoi-pyscipy` 含 “scipy” 就判同源 |
 | PY-31 | 运行器按 CF-8 用 `manifest.schema.json` 校验每个 manifest，不通过时该算子全部用例判失败 |
 | PY-32 | 新条款 4.1 E-11a：profile 点名的后置条件是每个实现 MUST 声明的最小集合（运行器还没有机械检查） |
+
+## 第二轮（control.lti.bode、step、convert，fit.poly.roots）
+
+2026-11-26，规范 v0.4.20-draft。范围：`control.lti.bode`（10.1）、`control.lti.step`（10.2）、`control.lti.convert`（10.4）、`fit.poly.roots`（10.34）。
+三个控制算子共用新模块 `aeoi_lti.py`（`LtiSystem` 的解析、校验、表示转换、频率响应、极点、DC 增益、improper 报错）；数值内核在 `aeoi_kernels.py`（自写 Parlett–Reinsch 平衡、Householder Hessenberg、Francis 双位移 QR、实/复 LU、Padé 缩放平方 expm、友矩阵求根）。结果路径上没有 python-control、scipy.signal、numpy.roots、LAPACK 特征值。
+只读了 `spec-v0.4.md`、这四份 profile 与其链接的 `examples/<op>/`（含 manifest.json、parity.yaml）、`schemas/`、`golden/**/<op>/**`、`conformance/README.md`、`conformance/aeoi_hash.py`、本目录。没有读 `rust/`、`write_manifests.py`、`gen_golden_*.py`、`regen_examples.py`、`conformance/rules_*.py`、`conformance/tests/`（只运行了 `test_runner_catches_mutants.py` 看退出码）、`docs/reference-impl.md`、`roadmap/`，也没有读运行器源码。
+
+### 结果
+
+| 算子 | golden 通过 / 失败 / 跳过 | method-policy | 默认值用例 | 退出码 |
+|---|---|---|---|---|
+| `control.lti.bode` | 103 / 0 / 0 | 1 | 0 | 0 |
+| `control.lti.step` | 89 / 0 / 0 | 1 | 0 | 0 |
+| `control.lti.convert` | 2 / 0 / 74（套件没有 convert 的数值规则，见 PY-60） | 1 | 3 | 0 |
+| `fit.poly.roots` | 20 / 0 / 0 | 1 | 0 | 0 |
+| 九个算子一起 | 454 / 0 / 74 | | | 0 |
+
+bode、step、convert、roots 第一次运行就全部通过（convert 的 74 个跳过除外）。能一次通过，有两处靠的不是 profile 正文：step 的指标细节靠我对 python-control `step_info` 源码的了解（PY-50，只读 profile 会失败 40 / 89），convert 的 MIMO ss→tf 警告靠 parity.yaml 与 golden（PY-57，只读 profile 正文会失败 8 个）。两处都做了反向实验确认：把实现改回 profile 正文的读法再跑套件。convert 的数值另用 parity.yaml 的 `compare` 公式自查：74 个成功用例全部在容差内（最坏用掉容差的 7.3e-4），2 个错误用例的码相同。
+
+标 **[LTI]** 的条目针对 3.1 T-5/T-6、3.10 R-5 – R-9、D-1/D-2 的共享 LTI 表示，影响所有控制算子（bode、step、convert，以及 poles_zeros、margin、c2d、impulse、lsim、stepinfo、组合算子等）。
+
+### 共享的 LTI 表示
+
+- **PY-33** **[LTI]** 全部控制算子 · 3.1 表格与 T-5、`common.schema.json#/$defs/LtiSystem` · 措辞 · 读
+  3.1 写“`ts` 与 `time_unit` 必填”，schema 只要求 `ts`，`time_unit` 是带默认值 `"s"` 的 `const`。我按 schema 处理（省略视为 `s`），返回的系统总是写出 `time_unit`。
+- **PY-34** **[LTI]** 全部控制算子 · 3.3 R-2、`$defs/Polynomial`、`$defs/Complex` · 措辞 · 读
+  R-2 规定输入里的非有限值报 `E.VALIDATION.NON_FINITE`，而 tf 系数、zpk 零极点在 schema 里是 `number`，字符串 `"NaN"` 先在 schema 层失败，得到 `E.VALIDATION.SCHEMA`。同一个 NaN，在 ss 的 `Matrix` 里是 `NON_FINITE`，在 tf 里是 `SCHEMA`。我照 schema 走（tf/zpk 报 SCHEMA）。
+- **PY-35** **[LTI]** 全部控制算子 · 3.1 T-5（共轭配对，相对容差 1e-12） · 措辞 · 读
+  “相对容差 1e-12”没有说相对于什么（|z|？max(1,|z|)？），也没有说配对是否一一对应（两个 1+2j 配一个 1−2j 算不算合格），虚部极小（如 1e-300）的值是否也要配对。我的做法：虚部非零的每个值，按 |w − z̄| ≤ 1e-12·|z| 找一个尚未用过的伙伴，一一配对；失败报 `NOT_CONJUGATE` 并给“补上共轭”的补丁。
+- **PY-36** **[LTI]** 全部控制算子 · 3.10 R-5、T-5 · 措辞 · 读
+  `num`/`den` 写成 [1][1] 嵌套数组的 tf 算 SISO 还是 MIMO，没有规定；返回 tf 时用平铺还是嵌套也只说了“MIMO 用嵌套”。我按维数判断：1×1 一律当 SISO，返回平铺形式。
+- **PY-37** **[LTI]** 全部控制算子 · 3.1 T-5、3.10 R-6 · 措辞 · 读
+  MIMO tf→ss“逐通道块对角”没有规定块的顺序（按 (i, j) 行主序还是列主序），也没有规定每块用哪一列 B、哪一行 C。只比较不变量时不影响结果，但返回的 `A` 不同实现之间不同。我按 (i, j) 行主序排块。
+- **PY-38** **[LTI]** convert、step、bode（zpk 输入）· 3.10 R-6 · 歧义 · 读
+  R-6 的 `realization` 枚举里没有 zpk→ss 的条目。step 与 convert 遇到 zpk 都要先得到状态空间实现。我先乘积展开成 tf，再用可控标准型，`realization` 写 `controllable_canonical`。也可以按每个实极点、每对共轭极点做级联实现（数值上更好），但枚举里没有对应的值。
+- **PY-39** **[LTI]** step（以及 stepinfo、loopsens、margin）· 3.10 D-2、3.12 I-12、X-4a · 歧义 · 读
+  “渐近稳定：连续 Re λ < 0，离散 |λ| < 1”是对精确特征值的定义。算出的特征值带舍入：积分器 1/s 的可控标准型特征值可能是 ±1e-17。X-4a 要求阈值与尺度无关并用 u 表示，但这里没有给出阈值。我的做法：|Re λ| ≤ 100·u·max(‖A‖₁, 1)（离散：|λ| ≥ 1 − 同一量）算作不是渐近稳定。
+- **PY-40** **[LTI]** step · 10.2、3.12 I-12、D-2 · 歧义 · 读
+  “零 DC 增益通道”没有数值判据。tf/zpk 输入时 DC 增益可以精确为 0；ss 输入时 D − CA⁻¹B 是算出来的，真 0 会变成 1e-17 之类。我的做法：tf/zpk 要求精确为 0；ss 用 |g| ≤ 1e3·n·u·(|C||A⁻¹B| + |D|)。
+- **PY-41** **[LTI]** convert（ss→zpk），以及 poles_zeros · 3.10 R-8 · 歧义 · 读
+  “k 取首个**非零** Markov 参数 C·A^{r−1}·B”。在浮点下，理论上为 0 的 CB 可能算成 1e-17，这时 r 与 k 都会错（k 差十几个数量级，零点个数也错）。规范没有给判断“非零”的阈值（X-4a 要求有）。我用 |h_i| > 1e3·n·u·‖C‖·‖A^{i−1}B‖。另外 R-8 只规定了 k，零点的算法（R-9 的“法秩判定在两个确定性的一般位置点上”）只说了退化判定，没有说怎么求不变零点；我对 SISO 用零动态 N^T(A − B h_r⁻¹ C A^r)N 的特征值，D ≠ 0 时用 eig(A − BC/d)。
+- **PY-42** **[LTI]** convert（ss→zpk）、poles_zeros · 3.10 R-9 与 10.4 · **矛盾** · 读
+  R-9：系统矩阵不是满法秩（“例如传递函数恒为零”）时 MUST 返回 `E.DOMAIN.DEGENERATE_SYSTEM`，MUST NOT 返回空集合冒充“没有零点”。10.4：“传递函数恒为零的 ss→zpk 返回 k = 0、无零点（与 python-control 一致），结构退化 → `DEGENERATE_SYSTEM`”。对 SISO，法秩不足恰好等价于 G ≡ 0，所以 10.4 里的“结构退化”在 SISO 上没有剩下的情形。我按 10.4（返回 k = 0、`z: []`），manifest 不声明 `DEGENERATE_SYSTEM`，因为我从不发它。
+- **PY-43** **[LTI]** convert · 3.1 T-6、3.10 R-7 · 措辞 · 读
+  T-6 说去掉前导零 MUST 发 `W.VALIDATION.LEADING_ZEROS_STRIPPED`；R-7 的 ss→tf 在 D = 0 时也“去除前导零”。示例 `response.nonsymmetric.json` 没有这个警告，所以 T-6 只管输入。规范没写明。我只对输入发。另外 R-7 的 `normalize` 只对 tf→tf 有作用（ss→tf、zpk→tf 的分母本来就是首一），`normalize = false` 时 ss→tf 是否应保留别的首项，没有说。
+- **PY-44** **[LTI]** bode、step、convert · 10.1、10.2、10.4 全文；4.1 E-11a · 歧义 · 读
+  这三份 profile 没有条款编号（只有“语义要点”），因此无法像 RT-3、FT-6 那样引用；也没有点名任何后置条件。E-11a 的“最小集合”于是为空：bode、step 的后置条件只出现在参考 manifest 里（`all_finite`、`frequencies_strictly_increasing`），convert 的 `response_consistent` 只出现在核心规范 E-12 的举例里。我照这些名字声明了（见下表），但它们不是 profile 要求的。
+
+### 10.1 control.lti.bode
+
+- **PY-45** bode · 10.1“误差估计 > 1e-6 时 `W.NUMERICAL.NEAR_POLE`” · 歧义 · 读
+  没有说是哪一个误差估计：相对误差、dB 绝对误差（≈ 8.686 × 相对）还是相位度数（≈ 57.3 × 相对）。三者阈值相同、尺度差 1–2 个数量级。参考示例的 `error_estimate` 三个都有。我用相对误差 `rel_max`。ss 的估计 profile 写“SVD 条件数”，我用 1-范数条件数（由批量 LU 求显式逆），在 basis 里写明。
+- **PY-46** bode · 10.1 相位约定 · 歧义 · 读
+  频点恰为零点时相位是 `NaN`（output schema），但 unwrap 规则“每点取与前一点之差的主值累加”遇到 NaN 怎么接下去没有规定：下一点相对哪一点展开？首点就是 NaN 时“首个频点”指哪个？我的做法：跳过 NaN，下一个有限点相对上一个有限点展开；第一个有限点落在 (c−180, c+180]。
+- **PY-47** bode · 10.1 频点、`input.schema.json` logspace · 歧义 · 读
+  logspace 的公式没写（`10^(a + k(b−a)/(n−1))`，还是端点精确取 min、max）；`unit = Hz` 时是先在 Hz 上取对数网格再乘 2π，还是先换算再取网格（结果差几个 ulp，而 `w` 按相对 1e-14 比较）。golden 里 logspace 只出现在报错用例，所以套件没有检验。我用前一种公式，Hz 在最后乘 2π。
+- **PY-48** bode · 10.1“频点恰为极点：`E.NUMERICAL.POLE_ON_GRID`” · 歧义 · 读
+  “恰为”是浮点意义上分母精确为 0，还是带容差？ss 表示下等价于消去时出现精确 0 主元吗？我按精确：tf 分母值 == 0、zpk 某个 s − p == 0、ss 出现 0 主元。离极点 1e-300 的频点会走 `NEAR_POLE` 而不是报错。另外 explicit 频点无序时“remediation 给出排序后的 patch”：有重复频点时只排序的补丁套用后仍然报 GRID（CF-9 要求套用后通过），所以我的补丁排序并去重。
+- **PY-49** bode · 4.3 R-2、9.4 CF-7 · 歧义 · 读
+  参考 manifest 的 `bound_kind` 是 `a_priori`；10.1 自己说 ss 路径的估计是“启发式”。`bound_kind` 是每个方法一个值，同一方法的 tf 路径（一阶 Horner 先验界）与 ss 路径（启发式）强度不同，枚举里也没有“先验但非严格”。CF-7 又要求 `a_priori` 的 bound 不大于“该用例的验收容差”，而 bode 的验收容差逐频点随 κ(ω) 变化，收据的 bound 是全网格最大值：两者怎么比没有说。我写 `a_priori`，basis 写明 ss 是启发式（与 PY-15 / 开放问题 30 同类）。
+
+### 10.2 control.lti.step
+
+- **PY-50** step · 10.2 第三条“定义与 python-control 0.10 `step_info` 一致” · **阻塞** · 读 + 运行
+  profile 只定义了上升时间、调节时间、峰值（与 3.12 I-10）。`settling_min`、`settling_max`、`overshoot`、`undershoot` 没有定义，只能去看 python-control 的源码。关键细节是 `settling_min = min(min(y[i_hi:]), y∞)`、`settling_max = max(max(y[i_hi:]), y∞)`（包括 y∞），以及 `undershoot` 只在与 y∞ 反号时非零、`overshoot` 用 max(sgn·y)。我凭对 python-control 公开源码的了解实现（开源，净室规则允许，但它正是 golden 引擎）。反向实验：把 `settling_min/max` 改成只取 y[i_hi:] 的最小/最大，step 失败 40 / 89（“info values relative ≤ 1e-9”）。规范应写出全部指标的公式。按 CF-11 的机械判定这些用例算“独立通过”，但定义本身与 golden 同源。
+- **PY-51** step · 10.2、`output.schema.json` 的 `info` · 歧义 · 读
+  `info` 在 output schema 里只是 `type: [object, array, null]`，字段名、每个字段的形式（`{unit, value}`，`steady_state` 另有 `source: "dcgain"`）、单位（`"1"`、`"%"`、`"s"`）、某个指标不存在时写 `null` 还是 `{unit, value: null}`，都只出现在示例响应里；`y` 的单位 `"1"` 也是。golden 的期望值用的是 python-control 的键名（`RiseTime`、`SettlingMin`，SISO 也是 [[{…}]]），与线上格式不同，靠运行器映射。`step_info.enabled = false` 时 `info` 是什么也没写（我返回 null）。我照示例响应的键名写。
+- **PY-52** step · 10.2 第二条“离散系统 MUST 满足 dt = ts” · 措辞 · 读
+  profile 写等号，参考 manifest 的前提写“相对误差 1e-9”。我用相对 1e-9，并以 dt 作网格步长。
+- **PY-53** step · 10.2 `decimated`：“取下标 round(k(N−1)/(M−1))” · 措辞 · 读
+  round 的平局规则（四舍五入还是银行家舍入）没写；Python 的 `round` 是后者。golden 里只有 N − 1 被 M − 1 整除的用例，测不出来。我用 floor(x + 0.5)。
+- **PY-54** step · 10.2 `COMPUTE_LIMIT` 的 remediation、9.4 CF-9 · 措辞 · 读
+  “把 dt 放大到满足上限”没有给出取值规则（示例取 0.05 = 0.1/最快极点模）；也没说补丁后的请求还要满足 `OUTPUT_TOO_LARGE`（CF-9 要求套用补丁后通过校验，`return_samples = all` 时只满足计算上限的 dt 仍可能触发 `OUTPUT_TOO_LARGE`）。离散系统的 dt 不能改，该给什么补丁也没写。我的做法：dt 取 max(满足两个上限所需的值, 0.1/max|p|) 向上取到 {1, 2, 5}×10^k；离散系统改为缩短 t_final 的补丁。
+- **PY-55** step · `input.schema.json` 的 `time.mode = auto`（“启发式网格（见 manifest）”） · 歧义 · 读
+  参考 manifest 里没有任何启发式的描述，规范其他地方也没有。parity 不测（excluded），但这是一个公开的输入模式，不同实现的结果会完全不同。我自定：连续系统 t_final = 7/最慢稳定极点实部（没有稳定极点时 10 s），dt = t_final/1000；离散系统 dt = ts。总是发 `W.ACCURACY.AUTO_GRID`。
+- **PY-56** step · 10.2 第三条、output schema“元素可为 null（该通道不稳定或 DC 增益无穷）” · 歧义 · 读
+  MIMO 时“不稳定”是整个系统（eig(A)）还是逐通道？某个不稳定模态可能在某个通道里不可见，该通道的阶跃响应是收敛的。`W.DOMAIN.NOT_SETTLED` 与 `W.ACCURACY.GRID_TOO_COARSE` 在参考 manifest 里声明了，step 的 profile 却没有说何时发（I-12 只为 stepinfo 规定了 NOT_SETTLED）；上升阈值从未达到时上升时间是什么也没写。我的做法：按整个系统判稳定，不稳定时所有通道为 null；没进调节带时 `settling_time` 为 null 并发 `NOT_SETTLED`；上升阈值没达到时 `rise_time` 为 null；dt·max|p| > π 时发 `GRID_TOO_COARSE`。
+
+### 10.4 control.lti.convert
+
+- **PY-57** convert · 10.4 第一条、3.10 R-6、`parity.yaml` 的 `ss_to_tf_mimo` · 歧义（只读 profile 正文会失败） · 读 + 运行
+  profile 正文只在“MIMO tf→ss 为逐元素块对角”时提到 `W.DOMAIN.NONMINIMAL_REALIZATION`；R-6 的“MIMO 转换得到非最小实现时”没有说共享分母的 ss→tf 算不算“实现”。parity.yaml 与 golden 期望 MIMO ss→tf 也发这个警告。反向实验：不对 ss→tf 发，8 个 `ss_to_tf_mimo` 用例失败（CF-4 预期警告）。我按 parity.yaml 发。
+- **PY-58** convert · 10.4 第一条“非 proper 的 tf → `E.DOMAIN.IMPROPER_SYSTEM`” · 歧义 · 读
+  这句不分目标表示。improper tf 转 tf 或 zpk 在数学上没有问题（只有 ss 实现不存在），I-7 也允许组合算子接受 improper。我照字面一律报错（golden 只有 to = ss 的用例）。
+- **PY-59** convert · 10.4 trust、4.1 E-12（`response_consistent`，`test_points`）、开放问题 13 · 歧义 · 读
+  离散系统的测试点只写了“单位圆上”，没有给角度；“跳过离极点过近的点”没有给距离；`response_consistent` 何时为 false 没写（profile 只说 > 1e-6 时发 `CONVERSION_DISCREPANCY`；组合算子 I-9 用的是 1e-5）。我的做法：θ_k = π(k + ½)/9；距输入系统极点 ≤ 1e-8·max(1,|s|) 的点去掉；`response_consistent` 与警告用同一阈值 1e-6。
+- **PY-60** convert · 9.4 CF-6、CF-2，`parity.yaml` · 歧义（套件） · 运行
+  convert 的 parity.yaml 有 `compare` 但没有 `conformance_compare`，套件也没有 convert 的数值规则，所以 74 个成功用例全部记为 skip，只检查错误码、预期警告、指纹与收据（记为跳过的用例也检查预期警告，见 PY-57）；数值错误（包括第 0 章的列主序回归）不会被发现。我用 parity.yaml 的 `compare` 公式自查了全部 golden（tf 系数按 Π(1+|λ|)/‖den‖₁ 缩放、zpk 按 Wilkinson κ 最近匹配、ss 矩阵相对 Frobenius 1e-12），最坏用掉容差的 7.3e-4。
+
+### 10.34 fit.poly.roots
+
+- **PY-61** roots · 10.34 RT-2 · 措辞 · 读
+  规范性条款 RT-2 写“经 `kernels::schur` 求特征值……与 `control.lti.poles_zeros`、`signal.filter.filter` 用的是同一个求根内核（11.5 RI-1）”。`kernels::schur` 是 Rust 参考实现的内部名字，RI-1 按第 11 章只约束参考实现；profile 末尾还引用 `aeoi-numeric/tests/parity_poly.rs`。对第二实现，这一句里什么是要求（友矩阵特征值？Schur 形？）不清楚。我用平衡后的友矩阵 + 自写 Francis 双位移 QR（只求特征值），其余按 RT-2。
+- **PY-62** roots · 10.34 RT-5、RT-7 · 歧义 · 读
+  `multiplicity` 定义为“每个根所在分支的根数”，RT-5 又说“末尾 0 系数给出的精确零根不算簇”。精确零根的 `multiplicity` 是 1 还是 k 没写；golden 的 `multiplicity_true` 对 x²·(…) 的零根写 2，parity 规则说“真重根必须在至少同样大小的簇里”。我报 k（零根个数），不发 `CLUSTERED_ROOTS`。q 自己的根的圆盘与 0 重叠时是否合并，也没写（我不合并）。
+- **PY-63** roots · 10.34 RT-5 · 措辞 · 读
+  警告 `details.clusters` 的 `center`、`radius` 没有定义。我取簇内近似值的平均作中心，半径 = max_j(|z_j − c| + r_j)，与 `response.cluster.json` 的数值一致。
+- **PY-64** roots · 10.34 RT-4、4.3 R-2、9.4 CF-7 · 歧义 · 读
+  RT-4 规定 `bound_kind = rigorous`，CF-7 要求 rigorous 的 bound 不大于该用例的验收容差。包含半径是严格的，但按设计比验收容差（简单根 32u·q̃/|q′| + 2u|r|）宽：半径含 m·γ_{4m+4} 量级的因子，簇的半径更是 u^{1/k} 量级（示例 1.4e-6）。照 CF-7 字面，每个有根簇的用例都是“声明本身不合规”；套件显然没这样判。规范应说明 CF-7 对包含半径类的界如何适用（例如只比较孤立根，或改为 claim check）。
+- **PY-65** roots · 7.1 V-3、V-3a、9.4 CF-11 · 措辞（套件） · 运行
+  roots 的 golden 放在 `golden/python-control/fit.poly.roots/`，`reference_env.engine` 却是 “numpy.roots / mpmath.polyroots (60 digits)”，比较对象是 mpmath 真值。V-3 要求目录名就是引擎名，V-3a 要求高精度参考用 `golden/mpmath/`。运行器按目录把 20 个用例记为 “python-control (independent)”（PY-30 同类，新实例）。
+
+### 新增：无法只从规范推出的 manifest 字段（第二轮）
+
+| 字段 | bode | step | convert | roots |
+|---|---|---|---|---|
+| `version` | profile 开头（0.2.0） | 同（0.2.0） | 同（0.3.0） | 同（0.4.0） |
+| `tolerance_class` | profile 开头（T3） | T2 | T2（parity.yaml 写 “T1/T2”，profile 写 T2） | T2 |
+| `receipt.postconditions` | **照抄参考 manifest**（`all_finite`、`frequencies_strictly_increasing`；profile 未点名，PY-44） | **照抄参考 manifest**（`all_finite`） | 名字取自核心 E-12 的举例（`response_consistent`） | RT-6 点名，照写 |
+| `receipt.coverage` | 未声明（缺省 full） | 未声明 | `test_points`（E-12 举例，profile 没写） | 未声明（RT-6 没写） |
+| `receipt.guards` | 自定 | 自定 | `/system`（E-13 举例“组合算子的 response_consistent → /system”类推） | RT-6 写明，照写 |
+| `receipt.exactness.bound_kind` | **照抄参考 manifest**（`a_priori`；PY-49） | 自定（`a_posteriori_heuristic`） | 自定（`a_posteriori_heuristic`） | RT-4 规定 `rigorous` |
+| `errors[]` | 按实际会发的码；`E.RESOURCE.TIMEOUT`、`E.VALIDATION.SPARSE_STRUCTURE` 不发所以不列 | 同；`W.DOMAIN.INFINITE_DC_GAIN` 不发所以不列 | 同；`DEGENERATE_SYSTEM` 不发（PY-42），另加 `E.NUMERICAL.NO_CONVERGENCE`（自写 QR 的迭代上限） | 同；参考列的 `NON_FINITE_EVALUATION` 不发，另加 `NO_CONVERGENCE` |
+| `warnings[]` | 按实际会发的码 | 同；`GRID_TOO_COARSE`、`NOT_SETTLED` 的触发条件自定（PY-56） | 同 | 同 |
+| `limits` | `max_frequency_points` 取自 schema；`max_states` = 200 自定 | 10⁷ / 10⁶ 取自 profile；其余自定 | 自定 | `max_degree` 500 取自 RT-1 |
+| `applicability.preconditions` | 自写；zpk 的 proper 定义（零点数 ≤ 极点数）只在参考 manifest 里 | 自写；`dt = ts` 的容差取自参考 manifest（PY-52） | 自写 | 自写 |
+| `accuracy_grade`、`conformance` | C / L1（7.3：没有凭证报 C） | 同 | 同 | 同 |
+| `determinism` | `platform_bitwise`（自定：numpy 的 `log10`/`arctan2`/`cos`/`sin` 按 CPU 特性分派 SIMD 内核或调用系统 libm，M-7a 不允许声明 `bitwise`） | `platform_bitwise`（numpy matmul 走 OpenBLAS DYNAMIC_ARCH，按 CPU 分派） | `platform_bitwise` | `platform_bitwise`（RT-8 规定） |
+| `sparse_support` | `{}`（全部 reject；参考是 densify） | 同 | 同 | `{}` |
+| `backend.binding` | `native`（M-6：数值核心是本语言代码 + numpy 逐元素） | `native`（小矩阵乘法走 OpenBLAS，严格说是 ffi；M-6 对“少量 BLAS 调用”没有说法） | `native` | `native` |
+| `provenance.references`、`title`、`description`、`category`、`tags`、`not_for` | 自写 | 自写 | 自写 | 自写 |
+| `input_schema`、`output_schema` | profile 链接的 schema，内联 | 同；`info` 的结构 schema 里没有（PY-51） | 同 | 同 |
+
+## 处理结果（第二轮，v0.4.21-draft，2026-11-26）
+
+同第一轮：每条先对照参考实现（Rust）的实际行为核实，再决定改规范、改套件，还是列入开放问题 31。bode、step、convert 三份 profile 改写为编号条款（BD-1 – BD-8、ST-1 – ST-9、CV-1 – CV-8），条款内容取自参考实现的代码，而不是 python-control。
+
+| 发现 | 处理 |
+|---|---|
+| PY-33 | 3.1 表格：`time_unit` 可省略（缺省 `"s"`），返回的系统总是写出 |
+| PY-34 | T-5 写明：tf/zpk 的非有限值在 schema 层失败（`SCHEMA`），ss 的 `Matrix` 走 R-2（`NON_FINITE`）；两条路径的码不同是有意的 |
+| PY-35 | T-5 写明共轭配对判定：τ = 1e-12·max(1, \|c\|)，\|Im c\| ≤ τ 视为实数，其余一一配对（你的 \|z\| 在 \|z\| < 1 时比参考严） |
+| PY-36 | T-5：1×1 嵌套按 SISO，返回一维形式 |
+| PY-37 | R-6、CV-2：块按 (i, j) 行主序，块 (i, j) 只占 B 的第 j 列、C 的第 i 行（与你的做法相同） |
+| PY-38 | R-6、CV-2：zpk→ss 先展开成 tf 再用可控标准型，`realization = controllable_canonical`（与你的做法相同） |
+| PY-39 | ST-5：用算出的极点严格判定，不设容差；与尺度无关的阈值列入开放问题 31 |
+| PY-40 | ST-5：算出的 y∞ 恰为 0 才算零 DC 增益；阈值同上，开放问题 31 |
+| PY-41 | R-8 改写：k = C·A^{r−1}·B，r = #极点 − #零点，零点个数来自 R-9 的约化，不判断 Markov 参数是否为零；R-9 写明约化算法与秩容差 |
+| PY-42 | R-9 限定为返回零点集合的算子；CV-5：convert 的 SISO G ≡ 0 写成 k = 0 的 zpk（与你的做法相同）；约化得不到方的可逆 D_r 时仍为 `DEGENERATE_SYSTEM` |
+| PY-43 | CV-6：T-6 的警告只针对输入；`normalize` 只影响 tf→tf。ss→tf 的 `normalize = false` 列入开放问题 31 |
+| PY-44 | 三份 profile 改为编号条款，后置条件点名：bode `all_finite`、`frequencies_strictly_increasing`（BD-7）；step `all_finite`（ST-8）；convert `response_consistent`（CV-7） |
+| PY-45 | BD-5：阈值针对相对误差；ss 的估计方法写明 |
+| PY-46 | BD-6：NaN 点不更新展开的参考点 |
+| PY-47 | BD-1：logspace 在输入单位上生成，最后换算（Hz × 2π） |
+| PY-48 | BD-1、BD-3：显式频点的补丁排序并去重；“恰为极点”的判据写明 |
+| PY-49 | BD-5：manifest 的 `bound_kind` 取各输入类型中最弱者，参考 manifest 改为 `a_posteriori_heuristic`（你的 manifest 同步修改） |
+| PY-50 | ST-6：全部指标在 profile 里给出定义（含 settling_min/max 包括 y∞、overshoot/undershoot 的符号约定），不再需要参考 python-control 源码 |
+| PY-51 | ST-7：`info` 字段名与形式写明；golden 用 python-control 键名由运行器映射 |
+| PY-52 | ST-1：dt 与 ts 的相对容差 1e-9 |
+| PY-53 | ST-4：四舍五入取平局远离零 |
+| PY-54 | ST-3：补丁取值公式，以及 `COMPUTE_LIMIT` 与 `OUTPUT_TOO_LARGE` 的先后 |
+| PY-55 | ST-2：`auto` 网格公式写明（仍不参与 parity） |
+| PY-56 | ST-5：按整个系统判稳定，不稳定时全部通道为 null；ST-6：`NOT_SETTLED` 与未达上升阈值的处理写明 |
+| PY-57 | CV-3：MIMO ss→tf 也发 `NONMINIMAL_REALIZATION`；R-6 同步 |
+| PY-58 | CV-1：improper 输入在解析阶段就报错，与目标表示无关；理由写明 |
+| PY-59 | CV-7：测试点公式（连续与离散）、跳过距离 1e-6·max(1, \|s\|)、`response_consistent` 与警告共用阈值 1e-6，全部跳过时为 true |
+| PY-60 | 套件新增 `rule_convert`（CV-8）：由请求独立重算被测结果与输入系统的响应差，容差 max(1e-8, 10·d_ref)；另查 `realization`、`ts`、ss 的状态数。convert 的 parity.yaml 加 `conformance_compare`；两个代理变异（增益差 1e-6、`realization` 标错）。两个实现的 76 个成功用例现在都按数值判定 |
+| PY-61 | RT-2：“经 `kernels::schur`”改为只约束参考实现，第二实现可用任何后向稳定的特征值算法 |
+| PY-62 | RT-5：k 个精确零根各自 `multiplicity = k`、半径 0，不进入簇，也不与 q 的圆盘合并（与你的做法相同） |
+| PY-63 | RT-5：簇中心 = 簇内近似根的平均，半径 = max(\|z_j − c\| + r_j)（与你的做法相同） |
+| PY-64 | 9.4 CF-7 加例外：逐元素的包含区域不与验收容差比大小，而由规则核查真值在区域内；RT-4 引用之 |
+| PY-65 | 开放问题 31（与 PY-30 同类，等统一迁移 golden 目录时处理） |

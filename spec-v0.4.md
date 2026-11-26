@@ -1,6 +1,6 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.20-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.21-draft
 
-> 状态：Draft v0.4.20 · 2026-11-26 · 作者：Qingfei Yuan（草拟协助：Grok Bot、Claude）
+> 状态：Draft v0.4.21 · 2026-11-26 · 作者：Qingfei Yuan（草拟协助：Grok Bot、Claude）
 >
 > SPDX-License-Identifier: CC-BY-4.0 · © 2026 Qingfei Yuan。规范文本按 CC-BY-4.0 许可（`LICENSE-CC-BY-4.0`）；规范中的代码片段、JSON Schema 与参考实现按 MIT OR Apache-2.0 许可（`LICENSE-MIT`、`LICENSE-APACHE`）。
 >
@@ -118,7 +118,7 @@ CLI / 其他语言绑定 ──────────┘   参考实现：Rust
 | 稀疏矩阵 | `{"format":"csr"|"csc","dtype","shape","indptr","indices","data"}` | 3.5 |
 | 物理量 | `{"unit": "<UCUM>", "value": <标量或数组>}` | 见 3.2 |
 | 多项式 | 实系数数组，**降幂** | `[1, 1.2, 4]` = s² + 1.2s + 4 |
-| LTI 系统 | `{"kind":"tf"|"ss"|"zpk", ..., "ts", "time_unit"}` | `ts=0` 连续，`ts>0` 离散；`ts` 与 `time_unit` 必填 |
+| LTI 系统 | `{"kind":"tf"|"ss"|"zpk", ..., "ts", "time_unit"}` | `ts=0` 连续，`ts>0` 离散；`ts` 必填，`time_unit` 可省略（缺省 `"s"`，v0.4 只有这一个取值）；返回的系统总是写出两者（R-5） |
 
 `schemas/common.schema.json` 中 `Matrix` = `oneOf [DenseMatrix, DenseMatrixB64, MatrixRef, SparseMatrix]`，四个分支以必填字段（`data` / `data_b64` / `uri` / `format`）互斥区分。
 
@@ -127,7 +127,7 @@ CLI / 其他语言绑定 ──────────┘   参考实现：Rust
 - T-2 `dtype` 取 `f64`、`c128`、`i64`、`bool`。v0.2 不支持 f32 输入。复数元素 MUST 为 `[re, im]`。
 - T-3 元素个数 MUST 等于 `shape` 各维乘积（内联：`data.length`；二进制：解码字节数 = 元素数 × 元素字节数）；违反返回 `E.VALIDATION.SHAPE`。`dtype` 与算子要求不符返回 `E.VALIDATION.DTYPE`。
 - T-4 FFI 到 Fortran 列主序库时，转置 MUST 在 backend 包装层完成，且 MUST 有往返单元测试。（另见第 0 章内存序规则。）
-- T-5 LTI 表示：`tf` 支持 SISO（`num`/`den` 为一维多项式）与 MIMO（二维多项式数组）；`zpk` 中复数零极点 MUST 共轭成对（相对容差 1e-12，否则 `E.VALIDATION.NOT_CONJUGATE`）；`ss` 的 `A,B,C,D` 维数 MUST 一致。内部转换（如 tf→ss）MUST 在 trust 中注明所用 realization（v0.2：controllable canonical form，与 scipy `tf2ss` 约定一致；MIMO tf 为逐通道块对角实现）。
+- T-5 LTI 表示：`tf` 支持 SISO（`num`/`den` 为一维多项式）与 MIMO（二维多项式数组）；`zpk` 中复数零极点 MUST 共轭成对，否则 `E.VALIDATION.NOT_CONJUGATE`（v0.4.21 起写明判定，PY-35：对每个值 c，容差 τ = 1e-12·max(1, |c|)；|Im c| ≤ τ 的值视为实数，不需要伙伴；其余每个值 MUST 有一个尚未配对的伙伴 w，|w − c̄| ≤ τ，一一配对）。SISO 与 MIMO 按维数区分：`num`/`den` 是 1×1 嵌套数组时按 SISO 处理，返回时用一维形式（PY-36）。tf/zpk 的系数与零极点在 schema 里是 `number`，非有限值在 schema 层就失败，得到 `E.VALIDATION.SCHEMA`；ss 的 `Matrix` 允许 `"NaN"` 等字符串，由 R-2 报 `E.VALIDATION.NON_FINITE`（PY-34：两条路径的码不同是有意的，修复方式相同）；`ss` 的 `A,B,C,D` 维数 MUST 一致。内部转换（如 tf→ss）MUST 在 trust 中注明所用 realization（v0.2：controllable canonical form，与 scipy `tf2ss` 约定一致；MIMO tf 为逐通道块对角实现）。
 - T-6 **多项式前导零**：前导零 MUST 被去除并返回 `W.VALIDATION.LEADING_ZEROS_STRIPPED`（v0.1 规定为报错，实践中前导零常来自数值计算，报错对 Agent 不友好）。分母全零返回 `E.VALIDATION.ZERO_DENOMINATOR`。
 
 ### 3.2 单位
@@ -235,10 +235,10 @@ CLI / 其他语言绑定 ──────────┘   参考实现：Rust
 
 **返回系统的算子**
 - R-5 返回 LTI 系统的算子（`convert`、`c2d`）MUST 在 `result.system` 中返回完整的 `LtiSystem`（含 `ts`、`time_unit`），可直接作为下一个算子的输入。MIMO tf 用嵌套数组 `num[i][j]`、`den[i][j]`（`[ny][nu]`）。
-- R-6 状态空间实现不唯一。返回 ss 的算子 MUST 用 `realization` 字段（枚举）说明所用实现：`identity`、`controllable_canonical`（scipy `tf2ss` 约定：A 第一行为 −a₁…−aₙ，B = e₁）、`block_diagonal_controllable_canonical`（MIMO tf 逐元素）、`ss2tf_characteristic_polynomial`、`expanded_product`、`polynomial_roots`、`invariant_zeros_eigenvalues_markov_gain`，以及 v0.3.5 的 `polynomial_product`、`polynomial_sum`、`polynomial_feedback`、`series_block`、`parallel_block`、`feedback_block`、`pid_closed_form`、`pade_coefficients`。v0.3 不做最小实现（minreal）；MIMO 转换得到非最小实现时 MUST 给 `W.DOMAIN.NONMINIMAL_REALIZATION`。
+- R-6 状态空间实现不唯一。返回 ss 的算子 MUST 用 `realization` 字段（枚举）说明所用实现：`identity`、`controllable_canonical`（scipy `tf2ss` 约定：A 第一行为 −a₁…−aₙ，B = e₁；zpk→ss 先乘积展开成 tf 再用它，PY-38）、`block_diagonal_controllable_canonical`（MIMO tf 逐元素；块按 (i, j) 行主序，块 (i, j) 只占 B 的第 j 列、C 的第 i 行，10.4 CV-2）、`ss2tf_characteristic_polynomial`、`expanded_product`、`polynomial_roots`、`invariant_zeros_eigenvalues_markov_gain`，以及 v0.3.5 的 `polynomial_product`、`polynomial_sum`、`polynomial_feedback`、`series_block`、`parallel_block`、`feedback_block`、`pid_closed_form`、`pade_coefficients`。v0.3 不做最小实现（minreal）；MIMO 转换得到非最小实现时 MUST 给 `W.DOMAIN.NONMINIMAL_REALIZATION`：MIMO tf→ss 与 MIMO ss→tf（共享分母）都属于这种情形（10.4 CV-3）。
 - R-7 ss→tf 约定（与 scipy `ss2tf` 一致）：den = det(sI − A)（由特征值展开），numᵢⱼ = det(sI − A + bⱼcᵢ) + (dᵢⱼ − 1)·den；所有元素共享同一分母；首项系数精确置为 dᵢⱼ 后去除前导零；`normalize = true`（默认）时分母为首一。
-- R-8 zpk 在 v0.3 只表示 SISO；MIMO → zpk MUST 返回 `E.DOMAIN.MIMO_NOT_SUPPORTED`（remediation 建议 `to: "tf"` 或逐通道调用）。ss→zpk 的增益 k 取首个非零 Markov 参数 C·A^{r−1}·B（r = 相对阶），不经多项式。
-- R-9 零点 = 不变零点（Rosenbrock 系统矩阵降秩的有限 s）。系统矩阵不是满法秩（例如传递函数恒为零）时零点无定义，MUST 返回 `E.DOMAIN.DEGENERATE_SYSTEM`，MUST NOT 返回空集合冒充"没有零点"。法秩判定在两个确定性的一般位置点上计算 G(s) 的奇异值（与尺度无关的阈值，X-4a）。
+- R-8 zpk 在 v0.3 只表示 SISO；MIMO → zpk MUST 返回 `E.DOMAIN.MIMO_NOT_SUPPORTED`（remediation 建议 `to: "tf"` 或逐通道调用）。ss→zpk 的增益 k = C·A^{r−1}·B，r = #极点 − #零点（零点个数来自 R-9 的约化，不对 Markov 参数本身做“是否为零”的判断；r = 0 时 k = D），不经多项式。v0.4.21 写明（PY-41）：此前写“首个非零 Markov 参数”，在浮点下需要一个阈值，规范没有给。
+- R-9 零点 = 不变零点（Rosenbrock 系统矩阵降秩的有限 s）。返回零点集合的算子（`poles_zeros`）在系统矩阵不是满法秩（例如传递函数恒为零）时，零点无定义，MUST 返回 `E.DOMAIN.DEGENERATE_SYSTEM`，MUST NOT 返回空集合冒充"没有零点"。`convert` 返回的是表示而不是零点集合，SISO 的 G ≡ 0 写成 k = 0 的 zpk（10.4 CV-5，PY-42）。法秩判定（v0.4.21 写明）：在 s_k = (1 + ‖A‖_F)·(0.6180339887 + 1.2360679775·k·j)，k = 1, 2 两点上计算 G(s_k) = C(s_kI − A)⁻¹B + D 的奇异值，两点上都有 σ_min ≤ 1e-11·(‖D‖_F + ‖C‖_F·‖(s_kI − A)⁻¹B‖_F) 才判为不满秩。零点的求法：对 (A, B, C, D) 及其对偶各做一次秩揭示约化（Emami-Naeini – Van Dooren；秩判定容差 10·(n + max(m, p))·u·‖[A B; C D]‖_F），使约化后的 D_r 方且可逆，零点 = eig(A_r − B_r·D_r⁻¹·C_r)；约化得不到方的可逆 D_r 时同样返回 `DEGENERATE_SYSTEM`。
 
 **离散时间**
 - D-1 `ts > 0` 为离散系统；频率一律 rad/s，离散系统的有效频段为 [0, π/ts]。
@@ -734,7 +734,7 @@ v0.4 新增码：`METHOD_UNAVAILABLE` 由算子返回（3.14 MS-6）：`exec.met
   - 高精度参考（如 mpmath）与其他参考引擎用同一个 κ 缩放容差：它们提供更准的参考值，不提高要求。`parity.yaml` 中为参考实现自己写的更严目标（如“1e-12 不放宽”）不是一致性门槛；`conformance_compare` 写明一致性实际用的容差。
   - 状态空间实现的不变量（v0.4.2，以 `c2d` 为例）：运行器在自己选的点（离散系统取单位圆上若干点，避开参考极点）上比较传递函数值，再比较极点集合与 D；A、B、C 本身不比较，因为相似变换得到的实现同样正确。返回传递函数时，分子分母先同除以分母首项系数（二者只确定到一个公共因子）再比较系数。
   - 4.3 R-5 的 `verify` 用 ‖·‖∞ 做重放比较，`parity.yaml` 用 `rel_fro`；两种范数并存，一致性套件用后者（12.1 第 14 项）。
-- CF-7 **验收容差与自报误差界。** 验收容差由套件决定（CF-6），是“合规下限”。被测实现的收据里 `exactness.bound_kind` 为 `rigorous` 或 `a_priori` 且 `bound` 是数值时，`bound` MUST 不大于该用例的验收容差，否则声明本身不合规；`a_posteriori_heuristic` 与 `none` 只作信息记录，通过与否只看实际偏差。个别用例上确有理由的更宽偏差 MUST 登记在声明的 `known_deviations`（用例、实际偏差、原因），记为“带偏差通过”，不计入“完全通过”。典型情形：病态问题上，没有精化的后向稳定算法的前向误差超出 κ 缩放容差，而运行器独立复核的后向误差（如 `lqr` 的 CARE 残差）合格（12.1 第 23 项）。运行器用 `--known-deviations` 读入；只有数值偏差可以登记，结构性失败（形状、错误码、指纹）不行。
+- CF-7 **验收容差与自报误差界。** 验收容差由套件决定（CF-6），是“合规下限”。被测实现的收据里 `exactness.bound_kind` 为 `rigorous` 或 `a_priori` 且 `bound` 是数值时，`bound` MUST 不大于该用例的验收容差，否则声明本身不合规；`a_posteriori_heuristic` 与 `none` 只作信息记录，通过与否只看实际偏差。例外（v0.4.21，PY-64）：误差界是逐元素的包含区域（如 RT-4 的包含半径，`bound` 是半径而不是全局误差）时，不与验收容差比较大小，而是由规则核查声明本身：每个真值 MUST 落在声明的区域里（claim check）；这比“界不大于容差”更强，也适用于根簇这种半径本来就远大于容差的情形。个别用例上确有理由的更宽偏差 MUST 登记在声明的 `known_deviations`（用例、实际偏差、原因），记为“带偏差通过”，不计入“完全通过”。典型情形：病态问题上，没有精化的后向稳定算法的前向误差超出 κ 缩放容差，而运行器独立复核的后向误差（如 `lqr` 的 CARE 残差）合格（12.1 第 23 项）。运行器用 `--known-deviations` 读入；只有数值偏差可以登记，结构性失败（形状、错误码、指纹）不行。
 - CF-8 **收据与 manifest 的机械核查。** 运行器不采信自报：
   - manifest 通过 `schemas/manifest.schema.json`（运行器逐个校验；不通过时该算子的全部用例判失败），`provenance.clean_room.declared` 为 true（第 0 章）；响应通过 envelope schema 与该算子的 output schema（`parity.yaml` 的 `pass_rule`）。
   - 响应里出现的每个 `E.*`、`W.*` 码 MUST 在该 manifest 中声明（E-7、5.1；框架级码见 E-7a）。
@@ -835,6 +835,7 @@ Rust 参考实现的结构、运行方式、已知限制与内核复用规则（
 28. **（v0.4.19 新，第二实现发现）尚未规定的细节**：见 `conformance/impls/python_scipy/SPEC_FINDINGS.md`。未处理的有：未配置 data root 时拒绝 `ref` 的码（PY-5，参考实现用 `REF_FORBIDDEN` / `REF_UNSUPPORTED`）；缺必填字段时违规 path 指向哪里（PY-6）；各 `DOMAIN` 码的 `retryable`（PY-8）；dry-run 信封的 `status` 等字段（PY-9）；manifest 的 `bound_kind: none` 与收据 `none_reported` 的关系（PY-10）；一般语法错误给不出补丁时 EX-6 与 X-5 的冲突（PY-13）；`variable`/`params` 的名字错误该填哪个 path 与 position（PY-14）。
 29. **（v0.4.19 新，PY-27）放宽容差的补丁可能掩盖发散**：IN-5 的“放宽到 1e-6”补丁套到发散积分（1/x 在 [1, ∞)）上，结果“收敛”为 36.62，只靠 `refinement_consistent` 不成立把 claim 降为 `unverified`。CF-9 只要求套用补丁后通过校验，套件会接受。可选：没有奇点证据时不给放宽补丁；或规定套用放宽补丁后 MUST 检查 `refinement_consistent`。
 30. **（v0.4.19 新，PY-15）用估计常数写成的“先验界”**：FT-6 把 c = 10 的估计归为 `bound_kind = a_priori`，强于实际（对 Bluestein 与混合基没有证明）。可选：改为 `a_posteriori_heuristic`，或给出有证明的常数。
+31. **（v0.4.21 新，第二实现第二轮）尚未规定的细节**：bode、step、convert、roots 的 profile 与 3.1/3.10 已按第二轮发现改写（BD-1 – BD-8、ST-1 – ST-9、CV-1 – CV-8、T-5、R-6、R-8、R-9、CF-7，处理表见 `SPEC_FINDINGS.md`）。仍未处理的有：零 DC 增益与稳定性用算出的值、不设容差（ST-5，PY-39/40：确定但不与尺度无关，X-4a 要求的阈值留待以后）；R-7 的 `normalize = false` 对 ss→tf 无意义（PY-43 后半）；roots 的 golden 目录名不符合 V-3（PY-65，与 PY-30 同类，等统一迁移 golden 时处理）。
 
 ### 12.2 下一步
 

@@ -48,6 +48,8 @@ PROXY_EXPECT = {
     "roots_value_wrong": ("fit.poly.roots", "simple roots vs mpmath truth"),
     "roots_radius_understated": ("fit.poly.roots", "claim: every true root lies within error_radius"),
     "roots_unsorted": ("fit.poly.roots", "roots sorted"),
+    "convert_gain_wrong": ("control.lti.convert", "response of the returned system vs the INPUT"),
+    "convert_realization_mislabeled": ("control.lti.convert", "realization as fixed by CV-2"),
     "eig_vectors_swapped": ("linalg.decomp.eig", "recomputed by the runner"),
     "eig_pair_order": ("linalg.decomp.eig", "ordering"),
     "eig_value_wrong": ("linalg.decomp.eig", "values vs exact eigenvalues"),

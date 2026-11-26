@@ -2,6 +2,44 @@
 
 > 从规范第 13 章移出（v0.4.18）。每个版本：起因、规范改动、已做的改动、开发中发现的问题、结果。最新的在前。
 
+## v0.4.21-draft（2026-11-26）
+
+起因：第二实现第二轮。Python 实现只读规范，新增 `control.lti.bode`、`step`、`convert` 与 `fit.poly.roots`（共享层 `aeoi_lti.py`；数值内核自写，结果路径上没有 python-control、scipy.signal、numpy.roots、LAPACK 特征值）。它报告了 33 处发现（PY-33 – PY-65），其中阻塞 3 处：step 的指标定义只能去读 python-control 源码（PY-50）；convert 的 MIMO ss→tf 警告只出现在 parity.yaml 里（PY-57）；套件没有 convert 的数值规则，76 个成功用例全部记为跳过（PY-60）。
+
+**规范改动**
+
+| # | 位置 | 改动 | 理由 |
+|---|---|---|---|
+| 1 | `profiles/10.01-bode.md` | 不编号的“语义要点”改为 BD-1 – BD-8：频点生成与补丁、tf/zpk/ss 的求值与误差界、极点/零点判据、相对误差阈值、NaN 处的相位展开、后置条件 | PY-44 – PY-49 |
+| 2 | `profiles/10.02-step.md` | 改为 ST-1 – ST-9：ZOH、网格与 dt 容差、计算量补丁、抽样舍入、稳定性与 y∞、全部阶跃指标的定义、info 字段、后置条件 | PY-50 – PY-56；此前定义的一半在 python-control 源码里 |
+| 3 | `profiles/10.04-convert.md` | 改为 CV-1 – CV-8：improper 输入与目标无关、各路径与 `realization` 表（含 MIMO 块的顺序与位置、zpk→ss）、非最小实现警告的两种情形、G ≡ 0、前导零与归一化、测试点公式、一致性判定 | PY-37、PY-38、PY-42、PY-43、PY-57 – PY-60 |
+| 4 | 3.1 表格、T-5 | `time_unit` 可省略；共轭配对判定写明（τ = 1e-12·max(1, \|c\|)，一一配对）；1×1 嵌套按 SISO；tf/zpk 与 ss 非有限值报不同的码是有意的 | PY-33 – PY-36 |
+| 5 | 3.10 R-6、R-8、R-9 | R-6：MIMO 块顺序、zpk→ss、MIMO ss→tf 也是非最小；R-8：k = C·A^{r−1}·B，r 取自零点个数，不再判断 Markov 参数是否“非零”；R-9：只约束返回零点集合的算子，写明法秩检验与约化算法、容差 | PY-38、PY-41、PY-42 |
+| 6 | 9.4 CF-7 | 逐元素的包含区域（如 roots 的半径）不与验收容差比大小，改由规则核查真值在区域内 | PY-64 |
+| 7 | `profiles/10.34-roots.md` | RT-2 的内核名只约束参考实现；精确零根的 multiplicity 与簇的中心、半径写明；RT-4 引用 CF-7 的例外 | PY-61 – PY-64 |
+| 8 | 12.1 | 开放问题 31：第二轮尚未处理的细节（零 DC 增益与稳定性的阈值、ss→tf 的 `normalize = false`、roots 的 golden 目录名） | — |
+
+**已做的改动**
+
+| 位置 | 改动 |
+|---|---|
+| `conformance/rules_control.py` | `rule_convert`：运行器由请求独立重算被测结果相对输入系统的频率响应差（CV-7 的测试点），容差 max(1e-8, 10·d_ref)，d_ref 是 golden 期望系统的同一量；另查 `realization`、`ts`、ss 的状态数 |
+| `examples/control.lti.convert/parity.yaml` | 加 `conformance_compare` |
+| 代理变异 | `convert_gain_wrong`、`convert_realization_mislabeled`（共 52 种） |
+| `write_manifests.py` | bode 的 `bound_kind` 由 `a_priori` 改为 `a_posteriori_heuristic`（ss 路径的估计是启发式，取最弱者）；示例响应随之更新（结果与指纹不变） |
+| `conformance/impls/python_scipy/` | 新增 bode、step、convert、roots 与共享层 `aeoi_lti.py`、`aeoi_kernels.py`；`SPEC_FINDINGS.md` 第二轮与处理表 |
+
+**开发中发现的问题**
+
+- 参考实现的 convert 对 SISO 的 G ≡ 0 返回 k = 0，而 R-9 要求 `DEGENERATE_SYSTEM`：两者针对的对象不同（表示与零点集合），矛盾在措辞上，行为没有改。
+- convert 的 profile 只在 MIMO tf→ss 处提到非最小实现警告，参考实现对 MIMO ss→tf 也发；规范落后于实现。
+
+**结果**
+
+- 参考实现：1227 通过 / 0 失败 / 217 跳过（共 1444 个用例；convert 的 76 个成功用例由跳过变为按数值判定）。
+- 第二实现：9 个算子 528 通过 / 0 失败 / 0 跳过（第二轮报告时 454 / 0 / 74）。
+- 有数值规则的算子：27 / 39。
+
 ## v0.4.20-draft（2026-11-26）
 
 起因：按 12.3 的依赖层自底向上加算子，第一批是作者选定的 `polyval` + `roots`。两者都建在已有的 `aeoi-core::poly` 内核上（`roots` 用的求根代码与 `poles_zeros`、`filter` 相同），算子本身很薄；工作量在于把精度如实报告出来。
