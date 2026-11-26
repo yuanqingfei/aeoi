@@ -1,0 +1,51 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "linalg.decomp.qr",
+ "operator_version": "0.4.0",
+ "case_family": "rank_deficient",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    5,
+    3
+   ],
+   "data": [
+    -0.49120957473948645,
+    -0.8595878873791526,
+    1.2279662000188187,
+    -0.10503124503619199,
+    -0.8132004305501694,
+    1.5213696160641468,
+    1.9776127449632774,
+    -1.3394447854536617,
+    4.6565023158706005,
+    1.0317414560114972,
+    0.6613938092229203,
+    -0.29104616243434345,
+    1.4299157254236061,
+    -0.1626563296430768,
+    1.7552283847097598
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "mpmath",
+  "mpmath": "1.4.1",
+  "dps": 50,
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261129,
+  "method": "partial-pivoting LU (first maximal pivot), QR (mpmath.qr, R_ii ≥ 0), Cholesky (mpmath.cholesky of the upper triangle) of the stored f64 data at 50 digits",
+  "note": "high-precision truth; NOT MATLAB output"
+ },
+ "expected": {
+  "m": 5,
+  "n": 3,
+  "mode": "econ",
+  "unique": false,
+  "kappa2_true": null,
+  "Q_true": null,
+  "R_true": null
+ }
+}

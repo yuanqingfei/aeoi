@@ -1,0 +1,55 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.decomp.chol",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.VALIDATION.NOT_SYMMETRIC",
+    "category": "validation",
+    "retryable": true,
+    "message": "A 不对称：|a[0][1] − a[1][0]| = 1.000e0，超过舍入容差 10·n·u·max|a| = 4.441e-15。Cholesky 只对对称矩阵有定义（MATLAB 会悄悄只用上三角）。",
+    "agent_hint": "检查 A 的录入；如果 A 应当对称、误差来自数据，可以用 (A + Aᵀ)/2。",
+    "details": {
+      "path": "/A",
+      "max_asymmetry": 1.0,
+      "at": [
+        0,
+        1
+      ]
+    },
+    "remediation": [
+      {
+        "id": "symmetrize",
+        "kind": "modify_input",
+        "description": "用 (A + Aᵀ)/2 代替 A（改变了数据，需要确认）",
+        "confidence": "medium",
+        "requires_user_confirmation": true,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/A/data",
+            "value": [
+              2.0,
+              0.5,
+              0.5,
+              2.0
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.15121700000000002
+  }
+}

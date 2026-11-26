@@ -1,0 +1,151 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "linalg.decomp.qr",
+  "version": "0.4.0",
+  "title": "QR factorization",
+  "description": "实矩阵的 QR 分解（= MATLAB qr）：A = Q·R。Householder 变换（LAPACK dgeqr2 约定），任意形状。缺省为经济型（Q 为 [m, k]，R 为 [k, n]，k = min(m, n)，同 numpy），mode = \"full\" 时 Q 为 [m, m]、R 为 [m, n]。R 的对角元归一化为非负（满秩时分解唯一；MATLAB 不归一化，符号可能不同）。不选列主元：秩亏时 R 不揭示秩。",
+  "category": "analysis",
+  "tags": [
+    "linalg",
+    "qr",
+    "factorization",
+    "householder",
+    "decomposition"
+  ],
+  "applicability": {
+    "preconditions": [
+      "A 为 [m, n] 实数矩阵"
+    ],
+    "not_for": [
+      "带列主元的秩揭示 QR（MATLAB [Q, R, P] = qr(A)，以后考虑）",
+      "求数值秩（用 linalg.subspace.rank）",
+      "最小二乘（直接用 linalg.system.solve）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "Householder QR：H_k = I − τ_k v_k v_kᵀ，β = −sign(α)·‖[α; x]‖₂（dlarfg），k = min(m, n) 个反射，与 linalg.system.solve 的超定路径、polyfit 同一内核。Q 由反射作用到单位向量得到（经济型前 k 列，full 为全部 m 列）。之后对每个 R_ii < 0 的 i，把 R 的第 i 行与 Q 的第 i 列同时变号（精确运算）。重构残差 ‖A − Q·R‖_F/‖A‖_F 与 ‖QᵀQ − I‖_max",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §9（LU）、§10（Cholesky）、§19（QR）"
+      },
+      {
+        "type": "textbook",
+        "cite": "G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., Johns Hopkins 2013, §3.2、§4.2、§5.2"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "decomp::qr",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {
+    "/A": {
+      "policy": "densify",
+      "max_dense_elements": 4000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_dimension": 2000,
+    "max_output_elements": 2000000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/linalg.decomp.qr/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.RESOURCE.OUTPUT_TOO_LARGE",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "linalg_decomp_qr",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:qr:householder-signfix",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "unique",
+        "statement": "满列秩时分解唯一；秩亏时 Q 的部分列与 R 不唯一",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "reconstructs",
+      "orthonormal",
+      "all_finite"
+    ],
+    "coverage": {
+      "reconstructs": "full",
+      "orthonormal": "full",
+      "all_finite": "full"
+    },
+    "guards": {
+      "reconstructs": [
+        "/Q",
+        "/R"
+      ],
+      "orthonormal": [
+        "/Q"
+      ]
+    }
+  }
+}

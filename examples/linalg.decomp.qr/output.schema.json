@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.decomp.qr/0.4.0/output",
+  "type": "object",
+  "required": [
+    "Q",
+    "R",
+    "mode",
+    "sign_convention"
+  ],
+  "properties": {
+    "Q": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "正交列 [m, k]（econ）或正交矩阵 [m, m]（full）"
+    },
+    "R": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "上三角/上梯形 [k, n]（econ）或 [m, n]（full），对角元 ≥ 0"
+    },
+    "mode": {
+      "enum": [
+        "econ",
+        "full"
+      ]
+    },
+    "sign_convention": {
+      "enum": [
+        "r_diag_nonnegative"
+      ]
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "error",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.decomp.chol",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": null,
+  "trust": null,
+  "receipt": null,
+  "reproducibility": null,
+  "error": {
+    "code": "E.DOMAIN.NOT_POSITIVE_DEFINITE",
+    "category": "domain",
+    "retryable": true,
+    "message": "A 不是正定矩阵：第 1 列的主元 d = -3.000e0 ≤ 0（A 的前 2 阶顺序主子式不正定）。半正定（奇异）矩阵也会在这里失败。",
+    "agent_hint": "检查 A 是否应当正定（协方差、刚度、质量矩阵等）；只是想判断正定性或处理半正定矩阵时，用特征分解（linalg.decomp.eig）。",
+    "details": {
+      "path": "/A",
+      "failed_column": 1,
+      "pivot": -3.0
+    },
+    "remediation": [
+      {
+        "id": "not_pd",
+        "kind": "ask_user",
+        "description": "A 应当是正定的吗？是数据问题，还是模型本身允许半正定/不定？",
+        "confidence": "high",
+        "requires_user_confirmation": true
+      }
+    ]
+  },
+  "warnings": [],
+  "timing": {
+    "wall_ms": 0.11849900000000001
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.decomp.qr",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "Q": {
+      "dtype": "f64",
+      "shape": [
+        3,
+        3
+      ],
+      "data": [
+        0.16903085094570325,
+        0.8970852271450607,
+        0.4082482904638627,
+        0.50709255283711,
+        0.27602622373694136,
+        -0.8164965809277263,
+        0.8451542547285166,
+        -0.34503277967117696,
+        0.40824829046386313
+      ]
+    },
+    "R": {
+      "dtype": "f64",
+      "shape": [
+        3,
+        2
+      ],
+      "data": [
+        5.916079783099615,
+        7.437357441610946,
+        0.0,
+        0.828078671210825,
+        0.0,
+        0.0
+      ]
+    },
+    "mode": "full",
+    "sign_convention": "r_diag_nonnegative"
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "reconstruction": 1.1231613620445955e-16,
+      "threshold": 3.3306690738754696e-14,
+      "definition": "‖A − Q·R‖_F / ‖A‖_F（补偿算术），阈值 100·max(m, n)·u",
+      "orthonormality": 2.220446049250313e-16
+    },
+    "error_estimate": {
+      "basis": "因子本身的前向误差 ≲ κ(A)·u（扰动理论）；重构残差是后向误差"
+    },
+    "checks": {
+      "orthonormal": true,
+      "all_finite": true,
+      "reconstructs": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:qr:householder-signfix",
+      "routine": "decomp::qr",
+      "provenance": "aeoi://operators/linalg.decomp.qr/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "unique",
+        "statement": "满列秩时分解唯一；秩亏时 Q 的部分列与 R 不唯一",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": "因子本身的前向误差 ≲ κ(A)·u（扰动理论）；重构残差是后向误差"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "reconstructs": true,
+        "orthonormal": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "reconstructs": "full",
+        "orthonormal": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:b00ccd5cc8197fe5ac565391ee6273c20fd1d7e7c5b621bc9446edc8420ad744",
+      "result": "sha256:c3bd390cf59a9d452bdb6963206d9901297ee6b5d3f729cbccb728ecf5f9663f",
+      "output_hash": "sha256:bae14ac5c29b232ff2e76dcfe993f7598b82ff6ab43d7831b9a2eddcd06eb58b",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.decomp.qr@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:a03bd1f29a32fd2e51f70bd4e638b7440bf3829af87049917b3e821db6206482",
+    "output_hash": "sha256:bae14ac5c29b232ff2e76dcfe993f7598b82ff6ab43d7831b9a2eddcd06eb58b",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.206212
+  }
+}

@@ -1,0 +1,42 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "linalg.decomp.lu",
+ "operator_version": "0.4.0",
+ "case_family": "random",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    1,
+    1
+   ],
+   "data": [
+    -0.5739565716674372
+   ]
+  }
+ },
+ "reference_env": {
+  "engine": "mpmath",
+  "mpmath": "1.4.1",
+  "dps": 50,
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261129,
+  "method": "partial-pivoting LU (first maximal pivot), QR (mpmath.qr, R_ii ≥ 0), Cholesky (mpmath.cholesky of the upper triangle) of the stored f64 data at 50 digits",
+  "note": "high-precision truth; NOT MATLAB output"
+ },
+ "expected": {
+  "n": 1,
+  "perm_true": [
+   0
+  ],
+  "L_true": [
+   1.0
+  ],
+  "U_true": [
+   -0.5739565716674372
+  ],
+  "kappa1_true": 1.0,
+  "zero_pivot_true": null
+ }
+}

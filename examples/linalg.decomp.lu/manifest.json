@@ -1,0 +1,150 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "linalg.decomp.lu",
+  "version": "0.4.0",
+  "title": "LU factorization with partial pivoting",
+  "description": "实方阵的 LU 分解（= MATLAB [L, U, P] = lu(A)）：A[perm, :] = L·U，L 为单位下三角，U 为上三角，perm 是 0 起始的行置换向量（P·A = L·U 中 P 的第 i 行是 e_{perm[i]}ᵀ）。部分选主元，与 linalg.system.solve、inv、det 同一内核。奇异矩阵（某步主元为 0）照样给出分解并发警告。",
+  "category": "analysis",
+  "tags": [
+    "linalg",
+    "lu",
+    "factorization",
+    "decomposition"
+  ],
+  "applicability": {
+    "preconditions": [
+      "A 为 [n, n] 实数方阵"
+    ],
+    "not_for": [
+      "矩形矩阵（0.4.0 未支持）",
+      "解方程组（直接用 linalg.system.solve）",
+      "稀疏 LU"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "LU 分解 P·A = L·U，部分选主元：每列取 |a_ik| 最大的第一行（LAPACK dgetf2 顺序）；某步主元恰为 0 时跳过消元（该列对角线以下已全为 0），U 的该对角元为 0，发 W.NUMERICAL.ZERO_PIVOT。重构残差 ‖A[perm, :] − L·U‖_F/‖A‖_F 用补偿算术（Dot2）计算；增长因子 ρ = max|u_ij|/max|a_ij|",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §9（LU）、§10（Cholesky）、§19（QR）"
+      },
+      {
+        "type": "textbook",
+        "cite": "G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., Johns Hopkins 2013, §3.2、§4.2、§5.2"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "decomp::lu",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {
+    "/A": {
+      "policy": "densify",
+      "max_dense_elements": 4000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_dimension": 2000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/linalg.decomp.lu/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.NUMERICAL.ZERO_PIVOT",
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "linalg_decomp_lu",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:lu:partial-pivoting",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "square",
+        "statement": "A 为方阵",
+        "enforced_by": "error:E.VALIDATION.SHAPE"
+      },
+      {
+        "id": "growth",
+        "statement": "部分选主元的增长因子不大（否则分解不是后向稳定的）",
+        "enforced_by": "check:reconstructs"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "reconstructs",
+      "all_finite"
+    ],
+    "coverage": {
+      "reconstructs": "full",
+      "all_finite": "full"
+    },
+    "guards": {
+      "reconstructs": [
+        "/L",
+        "/U",
+        "/perm"
+      ]
+    }
+  }
+}

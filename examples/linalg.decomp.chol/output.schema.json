@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.decomp.chol/0.4.0/output",
+  "type": "object",
+  "required": [
+    "R",
+    "triangle",
+    "asymmetry"
+  ],
+  "properties": {
+    "R": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "triangle = upper：上三角 R，RᵀR = A；lower：下三角 L，L·Lᵀ = A"
+    },
+    "triangle": {
+      "enum": [
+        "upper",
+        "lower"
+      ]
+    },
+    "asymmetry": {
+      "type": "number",
+      "description": "max|a_ij − a_ji|/max|a_ij|（只读上三角，下三角被忽略）"
+    }
+  }
+}

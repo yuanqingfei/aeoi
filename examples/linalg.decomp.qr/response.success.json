@@ -1,0 +1,147 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.decomp.qr",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "Q": {
+      "dtype": "f64",
+      "shape": [
+        3,
+        2
+      ],
+      "data": [
+        0.16903085094570325,
+        0.8970852271450607,
+        0.50709255283711,
+        0.27602622373694136,
+        0.8451542547285166,
+        -0.34503277967117696
+      ]
+    },
+    "R": {
+      "dtype": "f64",
+      "shape": [
+        2,
+        2
+      ],
+      "data": [
+        5.916079783099615,
+        7.437357441610946,
+        0.0,
+        0.828078671210825
+      ]
+    },
+    "mode": "econ",
+    "sign_convention": "r_diag_nonnegative"
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "reconstruction": 1.1231613620445955e-16,
+      "threshold": 3.3306690738754696e-14,
+      "definition": "‖A − Q·R‖_F / ‖A‖_F（补偿算术），阈值 100·max(m, n)·u",
+      "orthonormality": 5.551115123125783e-17
+    },
+    "error_estimate": {
+      "basis": "因子本身的前向误差 ≲ κ(A)·u（扰动理论）；重构残差是后向误差"
+    },
+    "checks": {
+      "orthonormal": true,
+      "all_finite": true,
+      "reconstructs": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:qr:householder-signfix",
+      "routine": "decomp::qr",
+      "provenance": "aeoi://operators/linalg.decomp.qr/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "unique",
+        "statement": "满列秩时分解唯一；秩亏时 Q 的部分列与 R 不唯一",
+        "enforced_by": "caller"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": "因子本身的前向误差 ≲ κ(A)·u（扰动理论）；重构残差是后向误差"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "reconstructs": true,
+        "orthonormal": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "reconstructs": "full",
+        "orthonormal": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:2e1f8b52cbf5f8efa8bdea5c32747fa60c4d8ab49d057a96ce2b63b3c91c3448",
+      "result": "sha256:e0d9958bfaf38f249795ecf0fb7e2b2904e8db5816519e7306b6c3af7f041a3b",
+      "output_hash": "sha256:dc8508442c11d58a51d6841392b01e79f84600f7a23ff61d52c2475801e86192",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.decomp.qr@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:0a270cc59a2283e71065c376d615273752c74ee2fca5f9beb1961a6ea45aa772",
+    "output_hash": "sha256:dc8508442c11d58a51d6841392b01e79f84600f7a23ff61d52c2475801e86192",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.192219
+  }
+}

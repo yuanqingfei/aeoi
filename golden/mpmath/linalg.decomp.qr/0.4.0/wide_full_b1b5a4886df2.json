@@ -1,0 +1,59 @@
+{
+ "spec": "aeoi/0.4",
+ "operator": "linalg.decomp.qr",
+ "operator_version": "0.4.0",
+ "case_family": "wide_full",
+ "request": {
+  "A": {
+   "dtype": "f64",
+   "shape": [
+    2,
+    4
+   ],
+   "data": [
+    -2.294288791952889,
+    -0.06448430355221262,
+    -0.5042168062007143,
+    -0.4532714850744252,
+    -0.24942689976503504,
+    -1.1535654329947609,
+    0.09675697932434503,
+    0.8628529194912168
+   ]
+  },
+  "mode": "full"
+ },
+ "reference_env": {
+  "engine": "mpmath",
+  "mpmath": "1.4.1",
+  "dps": 50,
+  "numpy": "2.5.3",
+  "python": "3.13.18",
+  "seed": 20261129,
+  "method": "partial-pivoting LU (first maximal pivot), QR (mpmath.qr, R_ii ≥ 0), Cholesky (mpmath.cholesky of the upper triangle) of the stored f64 data at 50 digits",
+  "note": "high-precision truth; NOT MATLAB output"
+ },
+ "expected": {
+  "m": 2,
+  "n": 4,
+  "mode": "full",
+  "unique": true,
+  "kappa2_true": 2.0425481570162236,
+  "Q_true": [
+   -0.9941422432457715,
+   0.10807960119405138,
+   -0.10807960119405138,
+   -0.9941422432457715
+  ],
+  "R_true": [
+   2.30780736613935,
+   0.18878346213685487,
+   0.4908057710604803,
+   0.3573595315434977,
+   0.0,
+   1.139838689476992,
+   -0.1506857518047006,
+   -0.9067879383136407
+  ]
+ }
+}

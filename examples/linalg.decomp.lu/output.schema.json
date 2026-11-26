@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.decomp.lu/0.4.0/output",
+  "type": "object",
+  "required": [
+    "L",
+    "U",
+    "perm",
+    "perm_sign",
+    "growth_factor",
+    "zero_pivot"
+  ],
+  "properties": {
+    "L": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "单位下三角 [n, n]"
+    },
+    "U": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "上三角 [n, n]"
+    },
+    "perm": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "description": "0 起始的行置换：A[perm, :] = L·U"
+    },
+    "perm_sign": {
+      "enum": [
+        -1,
+        1
+      ],
+      "description": "置换的符号（det(P)）"
+    },
+    "growth_factor": {
+      "type": "number",
+      "description": "max|u_ij|/max|a_ij|"
+    },
+    "zero_pivot": {
+      "description": "第一个恰为 0 的主元所在步（0 起始），没有则为 null"
+    }
+  }
+}

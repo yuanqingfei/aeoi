@@ -1,0 +1,162 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok_with_warnings",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.decomp.lu",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "L": {
+      "dtype": "f64",
+      "shape": [
+        2,
+        2
+      ],
+      "data": [
+        1.0,
+        0.0,
+        0.5,
+        1.0
+      ]
+    },
+    "U": {
+      "dtype": "f64",
+      "shape": [
+        2,
+        2
+      ],
+      "data": [
+        2.0,
+        4.0,
+        0.0,
+        0.0
+      ]
+    },
+    "perm": [
+      1,
+      0
+    ],
+    "perm_sign": -1,
+    "growth_factor": 1.0,
+    "zero_pivot": 1
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "reconstruction": 0.0,
+      "threshold": 2.220446049250313e-14,
+      "definition": "‖A[perm, :] − L·U‖_F / ‖A‖_F（补偿算术），阈值 100·n·u",
+      "growth_factor": 1.0,
+      "note": "增长因子大（如 Wilkinson 矩阵的 2^(n−1)）时部分选主元不是后向稳定的，reconstructs 会如实失败"
+    },
+    "error_estimate": {
+      "basis": "因子本身的前向误差 ≲ κ(A)·u（扰动理论）；重构残差是后向误差"
+    },
+    "checks": {
+      "all_finite": true,
+      "reconstructs": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:lu:partial-pivoting",
+      "routine": "decomp::lu",
+      "provenance": "aeoi://operators/linalg.decomp.lu/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "square",
+        "statement": "A 为方阵",
+        "enforced_by": "error:E.VALIDATION.SHAPE"
+      },
+      {
+        "id": "growth",
+        "statement": "部分选主元的增长因子不大（否则分解不是后向稳定的）",
+        "enforced_by": "check:reconstructs"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": "因子本身的前向误差 ≲ κ(A)·u（扰动理论）；重构残差是后向误差"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "reconstructs": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "reconstructs": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:a75e75cad49b4c4852ca0cce11c9f25aa93a33434b8cea61aaea70f59bf6f87e",
+      "result": "sha256:59b50dbb46eab669948067be203ca622081dd2075f9d75774793f63e5a5fe096",
+      "output_hash": "sha256:70c21359c42cc155fb6b0bf51a32e5464170789efdab4e697bc403ce4d801bb4",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.decomp.lu@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [
+    {
+      "code": "W.NUMERICAL.ZERO_PIVOT",
+      "message": "第 1 步的主元恰好为 0：A 奇异，U 的对角元 u_11 = 0。分解本身仍然成立（A[perm, :] = L·U），但不能用 U 回代求解。",
+      "path": "/A",
+      "details": {
+        "zero_pivot_step": 1
+      }
+    }
+  ],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:e975fc11252c736a1cfad2cf1db29cbe098c52e3b1348d1ffccad6519eb2a4a9",
+    "output_hash": "sha256:70c21359c42cc155fb6b0bf51a32e5464170789efdab4e697bc403ce4d801bb4",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.19281600000000002
+  }
+}

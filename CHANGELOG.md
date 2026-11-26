@@ -2,6 +2,46 @@
 
 > 从规范第 13 章移出（v0.4.18）。每个版本：起因、规范改动、已做的改动、开发中发现的问题、结果。最新的在前。
 
+## v0.4.24-draft（2026-11-26）
+
+起因：第四批，三个分解：`lu`、`qr`、`chol`。三个内核早已被别的算子使用，这一批把它们直接交给调用方；逼出的是输出约定。
+
+作者的决定（2026-11-26）：
+
+- `lu` 返回 0 起始的 `perm`（A[perm, :] = L·U），不返回置换矩阵；只支持方阵。
+- `qr` 缺省为经济型，`mode = "full"` 可选；R 的对角元归一化为非负。
+- `chol` 缺省返回上三角，`triangle = "lower"` 可选；先检查对称；不正定时报新码并指出失败的列。
+
+**规范改动**
+
+| # | 位置 | 改动 | 理由 |
+|---|---|---|---|
+| 1 | `profiles/10.42-lu.md`（新） | LU-1 – LU-5；奇异时照常返回并发 `W.NUMERICAL.ZERO_PIVOT`；增长因子作结果字段 | 部分选主元在增长大时不是后向稳定的 |
+| 2 | `profiles/10.43-qr.md`（新） | QR-1 – QR-5；经济型缺省；R_ii ≥ 0 使满秩时分解唯一 | Householder 的符号不唯一，不归一化就无法比较两个实现 |
+| 3 | `profiles/10.44-chol.md`（新） | CH-1 – CH-5；只读上三角，但先检查对称 | MATLAB 悄悄忽略下三角，录错的元素不会被发现 |
+| 4 | 5.1 | 新码 `E.DOMAIN.NOT_POSITIVE_DEFINITE`、`W.NUMERICAL.ZERO_PIVOT` | — |
+| 5 | 第 10 章索引 | 加 10.42 – 10.44 | — |
+
+**已做的改动**
+
+| 位置 | 改动 |
+|---|---|
+| `kernels::dense` | `qr_factor` 支持 m < n（k = min(m, n) 个反射；m ≥ n 逐位不变）；`cholesky_detail` 返回失败的列与主元（`cholesky` 改为调用它）；`Lu::perm` |
+| `aeoi-numeric/src/decomp.rs`（新） | 三个算子；重构残差用补偿算术 |
+| `scripts/golden/gen_golden_decomp.py`（新） | LU 真值按同一选主元规则逐步求出（近似并列的用例拒收）；QR 用 mpmath.qr（宽矩阵由前 m 列求 Q，再 R = QᵀA）并核对残差 < 1e-40；Cholesky 对上三角构成的矩阵求 |
+| `conformance/rules_numeric.py` | `rule_lu`、`rule_qr`、`rule_chol`：对真值；结构（三角、单位对角、R_ii ≥ 0）；运行器用有理数精确重算重构残差 |
+| 代理变异 | `lu_perm_swapped`、`qr_sign_not_normalised`、`chol_wrong_triangle`（共 66 种） |
+
+**开发中发现的问题**
+
+- Hilbert 矩阵的 LU 在部分选主元时有近似并列的候选主元（真值与浮点的选择可能不同），从 LU 的 golden 里去掉，换成 κ₁ = 2.1e10 的随机病态矩阵。
+- QR 的输出上限最初是 10⁷ 个元素，而维数上限 2000 使完整 Q 最多 4×10⁶，这个错误码永远不会出现；改为 2×10⁶。
+
+**结果**
+
+- 39 个新 golden 用例（26 个成功、13 个错误）全部通过；最坏用掉容差：lu 4.9e-5、qr 2.8e-4、chol 1.1e-4。
+- 目标进度 52 / 102（51%），49 个算子。
+
 ## v0.4.23-draft（2026-11-26）
 
 起因：第三批，SVD 之上的五个函数：`rank`、`null`/`orth`、`pinv`、`norm`、`cond`。

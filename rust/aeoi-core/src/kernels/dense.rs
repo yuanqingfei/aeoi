@@ -51,6 +51,10 @@ pub fn lu_factor(a: &[f64], n: usize) -> Lu {
 }
 
 impl Lu {
+    /// Row permutation: row i of P·A is row perm()[i] of A (0-based).
+    pub fn perm(&self) -> &[usize] {
+        &self.piv
+    }
     /// Sign of the row permutation P (+1 or −1), from the cycle structure of `piv`.
     pub fn perm_sign(&self) -> i64 {
         let mut seen = vec![false; self.n];
@@ -175,7 +179,7 @@ pub fn inverse_refined(lu: &Lu, a: &[f64], n: usize, max_steps: usize, check: &d
     Ok((x_all, eta_worst, steps_max))
 }
 
-// ------------------------------------------------------------------ Householder QR (m ≥ n)
+// ------------------------------------------------------------------ Householder QR (any m, n; v0.4.24: m < n too)
 pub struct Qr {
     m: usize,
     n: usize,
@@ -186,8 +190,9 @@ pub struct Qr {
 /// dgeqr2/dlarfg: H = I − τ v vᵀ, v = [1; v₂], β = −sign(α)·‖[α; x]‖₂ (dlapy2 order: hypot).
 pub fn qr_factor(a: &[f64], m: usize, n: usize) -> Qr {
     let mut a = a.to_vec();
-    let mut tau = vec![0.0; n];
-    for k in 0..n {
+    let kmax = m.min(n);
+    let mut tau = vec![0.0; kmax];
+    for k in 0..kmax {
         let alpha = a[k * n + k];
         let mut xnorm = 0.0f64; // dnrm2 of a[k+1..m, k] with scaling
         {
@@ -242,7 +247,7 @@ impl Qr {
     pub fn qt(&self, b: &[f64]) -> Vec<f64> {
         let (m, n) = (self.m, self.n);
         let mut y = b.to_vec();
-        for k in 0..n {
+        for k in 0..self.tau.len() {
             if self.tau[k] == 0.0 {
                 continue;
             }
@@ -262,7 +267,7 @@ impl Qr {
     pub fn q_apply(&self, b: &[f64]) -> Vec<f64> {
         let (m, n) = (self.m, self.n);
         let mut y = b.to_vec();
-        for k in (0..n).rev() {
+        for k in (0..self.tau.len()).rev() {
             if self.tau[k] == 0.0 {
                 continue;
             }
@@ -391,6 +396,12 @@ pub fn at_r_dd(a: &[f64], m: usize, n: usize, r: &[f64]) -> Vec<f64> {
 /// Cholesky A = L·Lᵀ of a symmetric row-major n×n matrix (lower triangle used); None unless every pivot is
 /// positive. L is row-major lower triangular.
 pub fn cholesky(a: &[f64], n: usize) -> Option<Vec<f64>> {
+    cholesky_detail(a, n).ok()
+}
+
+/// Cholesky L·Lᵀ = A reading the lower triangle of `a` (row-major); on failure the 0-based column j whose
+/// pivot d_j = a_jj − Σ l_jk² is not > 0, and d_j. Shared by `cholesky` and linalg.decomp.chol (RI-1).
+pub fn cholesky_detail(a: &[f64], n: usize) -> Result<Vec<f64>, (usize, f64)> {
     let mut l = vec![0.0; n * n];
     for j in 0..n {
         let mut d = a[j * n + j];
@@ -398,7 +409,7 @@ pub fn cholesky(a: &[f64], n: usize) -> Option<Vec<f64>> {
             d -= l[j * n + k] * l[j * n + k];
         }
         if !(d > 0.0) {
-            return None;
+            return Err((j, d));
         }
         let djj = d.sqrt();
         l[j * n + j] = djj;
@@ -410,7 +421,7 @@ pub fn cholesky(a: &[f64], n: usize) -> Option<Vec<f64>> {
             l[i * n + j] = s / djj;
         }
     }
-    Some(l)
+    Ok(l)
 }
 
 /// Solve (L·Lᵀ) x = b with the factor from `cholesky`.

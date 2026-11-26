@@ -1,0 +1,20 @@
+# Parity test spec — linalg.decomp.lu 0.4.0 (AEOI v0.4.24-draft)
+operator: linalg.decomp.lu
+references:
+  - {engine: mpmath, role: high_precision_reference, status: active, generator: scripts/golden/gen_golden_decomp.py,
+     golden_store: "golden/mpmath/linalg.decomp.lu/0.4.0/*.json",
+     note: "truth for the stored f64 data at 50 digits; NOT MATLAB output"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_decomp"
+tolerance_class: T1
+compare:
+  perm, zero_pivot: exact (the truth uses the same first-maximal-pivot rule; cases with near-ties are rejected by the generator)
+  L, U: "‖ΔL‖_F/‖L‖_F, ‖ΔU‖_F/‖U‖_F ≤ 1e-12·max(1, κ₁/100)"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py. No trust.* value of the implementation is used as a tolerance
+  perm: "exact"
+  L, U: "same bound as compare"
+  recomputed: "the runner checks the structure (L unit lower, U upper) and recomputes ‖A[perm, :] − L·U‖_F/‖A‖_F in exact rational arithmetic (≤ 100·n·u)"
+case_families:
+  - {name: "random n = 1, 2, 5, 20 / integer / needs_pivoting / Wilkinson growth 40 (growth 2^39, still exact) / ill_conditioned 1e10", n: 8}
+  - {name: "singular_rank1 / singular_zero_column", n: 2, expect_warning: W.NUMERICAL.ZERO_PIVOT}
+  - {name: errors, n: 4, expect: "SHAPE, DTYPE, NON_FINITE, SCHEMA"}

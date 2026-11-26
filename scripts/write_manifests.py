@@ -945,6 +945,42 @@ B3.update({"linalg.subspace.rank":(rk,rk_in,rk_out),"linalg.subspace.basis":(bs,
 DESC.update({op:{"A":"矩阵 [m, n]，row-major（MATLAB 是 column-major，先转置再展平）","tol":"可选：秩判定阈值（奇异值 > tol 的个数）。不给时用 MATLAB 缺省 max(m, n)·eps(σ_max)。阈值是建模选择（数据的噪声水平），不要代用户编一个"} for op in ("linalg.subspace.rank","linalg.subspace.basis","linalg.matrix.pinv")})
 DESC.update({"linalg.matrix.norm":{"x":"向量 [n]（[1, n]、[n, 1] 也按向量处理，同 MATLAB）或矩阵 [m, n]，row-major","p":"范数类型：向量可为任意 p ≥ 1、\"inf\"、\"-inf\"、\"fro\"；矩阵为 1、2（缺省）、\"inf\"、\"fro\""},
  "linalg.matrix.cond":{"A":"矩阵 [m, n]，row-major；p ≠ 2 时必须是方阵","p":"范数：2（缺省，σ_max/σ_min）、1、\"inf\"、\"fro\""}})
+
+# ---- v0.4.24: linalg.decomp.lu, linalg.decomp.qr, linalg.decomp.chol (kernel dense)
+V424="0.4.0"
+DEC_ERR=MAT_ERR[:4]+["E.VALIDATION.DIGEST_MISMATCH","E.VALIDATION.REF_UNSUPPORTED","E.VALIDATION.REF_FORBIDDEN"]
+LUREF=[{"type":"textbook","cite":"N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §9（LU）、§10（Cholesky）、§19（QR）"},
+  {"type":"textbook","cite":"G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., Johns Hopkins 2013, §3.2、§4.2、§5.2"}]
+lu=man("linalg.decomp.lu","LU factorization with partial pivoting","实方阵的 LU 分解（= MATLAB [L, U, P] = lu(A)）：A[perm, :] = L·U，L 为单位下三角，U 为上三角，perm 是 0 起始的行置换向量（P·A = L·U 中 P 的第 i 行是 e_{perm[i]}ᵀ）。部分选主元，与 linalg.system.solve、inv、det 同一内核。奇异矩阵（某步主元为 0）照样给出分解并发警告。","analysis",["linalg","lu","factorization","decomposition"],
+ ["A 为 [n, n] 实数方阵"],["矩形矩阵（0.4.0 未支持）","解方程组（直接用 linalg.system.solve）","稀疏 LU"],
+ "LU 分解 P·A = L·U，部分选主元：每列取 |a_ik| 最大的第一行（LAPACK dgetf2 顺序）；某步主元恰为 0 时跳过消元（该列对角线以下已全为 0），U 的该对角元为 0，发 W.NUMERICAL.ZERO_PIVOT。重构残差 ‖A[perm, :] − L·U‖_F/‖A‖_F 用补偿算术（Dot2）计算；增长因子 ρ = max|u_ij|/max|a_ij|",
+ LUREF,"decomp::lu (LU partial pivoting)","T1",{"max_dimension":2000},DEC_ERR+TAIL_ERR,["W.NUMERICAL.ZERO_PIVOT","W.PERFORMANCE.SPARSE_DENSIFIED"],
+ sparse={"/A":{"policy":"densify","max_dense_elements":4000000}},ver=V424,backend=BACK_NUM("decomp::lu"))
+lu_in=ins("linalg.decomp.lu",{"A":M},["A"],{"x-aeoi-shape-constraints":["A: [n, n]"]},ver=V424)
+lu_out=outs("linalg.decomp.lu",{"L":dict(M,description="单位下三角 [n, n]"),"U":dict(M,description="上三角 [n, n]"),
+ "perm":{"type":"array","items":{"type":"integer","minimum":0},"description":"0 起始的行置换：A[perm, :] = L·U"},
+ "perm_sign":{"enum":[-1,1],"description":"置换的符号（det(P)）"},"growth_factor":{"type":"number","description":"max|u_ij|/max|a_ij|"},
+ "zero_pivot":{"description":"第一个恰为 0 的主元所在步（0 起始），没有则为 null"}},["L","U","perm","perm_sign","growth_factor","zero_pivot"],ver=V424)
+qr=man("linalg.decomp.qr","QR factorization","实矩阵的 QR 分解（= MATLAB qr）：A = Q·R。Householder 变换（LAPACK dgeqr2 约定），任意形状。缺省为经济型（Q 为 [m, k]，R 为 [k, n]，k = min(m, n)，同 numpy），mode = \"full\" 时 Q 为 [m, m]、R 为 [m, n]。R 的对角元归一化为非负（满秩时分解唯一；MATLAB 不归一化，符号可能不同）。不选列主元：秩亏时 R 不揭示秩。","analysis",["linalg","qr","factorization","householder","decomposition"],
+ ["A 为 [m, n] 实数矩阵"],["带列主元的秩揭示 QR（MATLAB [Q, R, P] = qr(A)，以后考虑）","求数值秩（用 linalg.subspace.rank）","最小二乘（直接用 linalg.system.solve）"],
+ "Householder QR：H_k = I − τ_k v_k v_kᵀ，β = −sign(α)·‖[α; x]‖₂（dlarfg），k = min(m, n) 个反射，与 linalg.system.solve 的超定路径、polyfit 同一内核。Q 由反射作用到单位向量得到（经济型前 k 列，full 为全部 m 列）。之后对每个 R_ii < 0 的 i，把 R 的第 i 行与 Q 的第 i 列同时变号（精确运算）。重构残差 ‖A − Q·R‖_F/‖A‖_F 与 ‖QᵀQ − I‖_max",
+ LUREF,"decomp::qr (Householder, sign-normalised)","T1",{"max_dimension":2000,"max_output_elements":2000000},DEC_ERR+["E.RESOURCE.OUTPUT_TOO_LARGE"]+TAIL_ERR,["W.PERFORMANCE.SPARSE_DENSIFIED"],
+ sparse={"/A":{"policy":"densify","max_dense_elements":4000000}},ver=V424,backend=BACK_NUM("decomp::qr"))
+qr_in=ins("linalg.decomp.qr",{"A":M,"mode":{"enum":["econ","full"],"default":"econ","x-aeoi-provenance":"convention"}},["A"],{"x-aeoi-shape-constraints":["A: [m, n]"]},ver=V424)
+qr_out=outs("linalg.decomp.qr",{"Q":dict(M,description="正交列 [m, k]（econ）或正交矩阵 [m, m]（full）"),"R":dict(M,description="上三角/上梯形 [k, n]（econ）或 [m, n]（full），对角元 ≥ 0"),
+ "mode":{"enum":["econ","full"]},"sign_convention":{"enum":["r_diag_nonnegative"]}},["Q","R","mode","sign_convention"],ver=V424)
+ch=man("linalg.decomp.chol","Cholesky factorization","对称正定矩阵的 Cholesky 分解（= MATLAB chol）：缺省返回上三角 R，RᵀR = A；triangle = \"lower\" 时返回下三角 L，L·Lᵀ = A。只读 A 的上三角（同 MATLAB），但先检查对称：不对称超出舍入时报错（MATLAB 不检查，会悄悄忽略下三角）。不正定时报错并指出失败的列。","analysis",["linalg","cholesky","chol","factorization","positive-definite"],
+ ["A 为 [n, n] 实对称正定矩阵"],["半正定或不定矩阵（用 LDLᵀ 或特征分解；以后考虑）","判断正定性的唯一手段（舍入可能使接近奇异的正定矩阵分解失败）"],
+ "对称检查：max|a_ij − a_ji| ≤ 10·n·u·max|a_ij|，否则 E.VALIDATION.NOT_SYMMETRIC（补丁 (A + Aᵀ)/2，要用户确认）。按列的 Cholesky（与 lqr、dlqr 使用的同一内核）作用在上三角上：d_j = a_jj − Σ_{k<j} r_kj²，d_j ≤ 0 时 E.DOMAIN.NOT_POSITIVE_DEFINITE（details：列 j 与 d_j）。重构残差 ‖A − RᵀR‖_F/‖A‖_F",
+ LUREF,"decomp::chol (column Cholesky)","T1",{"max_dimension":2000},DEC_ERR+["E.VALIDATION.NOT_SYMMETRIC","E.DOMAIN.NOT_POSITIVE_DEFINITE"]+TAIL_ERR,["W.PERFORMANCE.SPARSE_DENSIFIED"],
+ sparse={"/A":{"policy":"densify","max_dense_elements":4000000}},ver=V424,backend=BACK_NUM("decomp::chol"))
+ch_in=ins("linalg.decomp.chol",{"A":M,"triangle":{"enum":["upper","lower"],"default":"upper","x-aeoi-provenance":"convention"}},["A"],{"x-aeoi-shape-constraints":["A: [n, n]，对称"]},ver=V424)
+ch_out=outs("linalg.decomp.chol",{"R":dict(M,description="triangle = upper：上三角 R，RᵀR = A；lower：下三角 L，L·Lᵀ = A"),"triangle":{"enum":["upper","lower"]},
+ "asymmetry":{"type":"number","description":"max|a_ij − a_ji|/max|a_ij|（只读上三角，下三角被忽略）"}},["R","triangle","asymmetry"],ver=V424)
+B3.update({"linalg.decomp.lu":(lu,lu_in,lu_out),"linalg.decomp.qr":(qr,qr_in,qr_out),"linalg.decomp.chol":(ch,ch_in,ch_out)})
+DESC.update({"linalg.decomp.lu":{"A":"方阵 [n, n]，row-major（MATLAB 是 column-major，先转置再展平）"},
+ "linalg.decomp.qr":{"A":"矩阵 [m, n]，row-major","mode":"econ（缺省：Q 为 [m, min(m, n)]）或 full（Q 为 [m, m]）；高瘦矩阵的 full 输出很大"},
+ "linalg.decomp.chol":{"A":"对称正定方阵 [n, n]，row-major","triangle":"upper（缺省，同 MATLAB：RᵀR = A）或 lower（L·Lᵀ = A）"}})
 ALL_OPS={"control.lti.bode":(bode,bode_in,bode_out),"control.lti.step":(step,step_in,step_out),"control.design.lqr":(lqr,lqr_in,lqr_out)}|B2|B3
 for op,props in DESC.items():
     for (m_,i_,o_) in [ALL_OPS[op]]:
@@ -1019,6 +1055,12 @@ RECEIPT["linalg.matrix.norm"]={"method_id":"aeoi:norm:compensated-or-svd","assum
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["decomposition_checked","all_finite"]}
 RECEIPT["linalg.matrix.cond"]={"method_id":"aeoi:cond:svd-or-lu-inverse","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("accuracy","cond 很大时（接近 1/u）只有量级有意义","warning:W.NUMERICAL.ILL_CONDITIONED")],
    "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["decomposition_checked"]}
+RECEIPT["linalg.decomp.lu"]={"method_id":"aeoi:lu:partial-pivoting","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("square","A 为方阵","error:E.VALIDATION.SHAPE"),A("growth","部分选主元的增长因子不大（否则分解不是后向稳定的）","check:reconstructs")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["reconstructs","all_finite"]}
+RECEIPT["linalg.decomp.qr"]={"method_id":"aeoi:qr:householder-signfix","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("unique","满列秩时分解唯一；秩亏时 Q 的部分列与 R 不唯一","caller")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["reconstructs","orthonormal","all_finite"]}
+RECEIPT["linalg.decomp.chol"]={"method_id":"aeoi:chol:column","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("symmetric","A 对称（舍入以内）","error:E.VALIDATION.NOT_SYMMETRIC"),A("positive_definite","A 正定","error:E.DOMAIN.NOT_POSITIVE_DEFINITE")],
+   "exactness":{"class":"approximate","bound_kind":"a_posteriori_heuristic"},"postconditions":["reconstructs","all_finite"]}
 RECEIPT["fit.poly.polyval"]={"method_id":"aeoi:polyval:compensated-horner","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("no_overflow","求值过程不溢出","error:E.NUMERICAL.NON_FINITE_EVALUATION"),A("no_underflow","误差界不考虑下溢（结果的量级在 1e-290 以上时成立）","caller"),A("coefficients_exact","误差界针对给定的 f64 系数；系数本身的误差经 condition 放大","caller")],
    "exactness":{"class":"approximate","bound_kind":"rigorous"},"postconditions":["horner_consistent"]}
 RECEIPT["fit.poly.roots"]={"method_id":"aeoi:roots:companion-eig-newton-inclusion","assumptions":[A("finite","所有输入数值有限","error:E.VALIDATION.NON_FINITE"),A("nonzero","p 不是零多项式","error:E.DOMAIN.ZERO_POLYNOMIAL"),A("coefficients_exact","根与半径针对给定的 f64 系数；系数本身的误差另经根的条件数放大","caller"),A("clusters","簇内各根的位置不能单独确定","warning:W.ACCURACY.CLUSTERED_ROOTS")],
@@ -1065,6 +1107,7 @@ COVERAGE.update({"control.design.pid":{"formula_matches":"test_points"},"control
  "ode.ivp.solve":{"tolerance_consistent":"full"},
  "linalg.system.solve":{"backward_stable":"full"},
  "linalg.matrix.inv":{"backward_stable":"full","forward_error_below_one":"full"},
+ "linalg.decomp.lu":{"reconstructs":"full","all_finite":"full"},"linalg.decomp.qr":{"reconstructs":"full","orthonormal":"full","all_finite":"full"},"linalg.decomp.chol":{"reconstructs":"full","all_finite":"full"},
  "linalg.subspace.rank":{"svd_reconstructs":"full","rank_well_separated":"full"},"linalg.subspace.basis":{"svd_reconstructs":"full","rank_well_separated":"full","orthonormal":"full","null_residual":"full"},
  "linalg.matrix.pinv":{"svd_reconstructs":"full","rank_well_separated":"full","penrose":"full"},"linalg.matrix.norm":{"decomposition_checked":"full","all_finite":"full"},"linalg.matrix.cond":{"decomposition_checked":"full"},"linalg.matrix.det":{"significant":"full"},
  "interp.grid.interp1":{"pieces_interpolate":"full","spline_c2":"full","local_bounds":"full"},
@@ -1094,6 +1137,9 @@ GUARDS["linalg.subspace.basis"]={"svd_reconstructs":["/rank","/s","/orth","/null
 GUARDS["linalg.matrix.pinv"]={"svd_reconstructs":["/X","/rank","/cond_r"],"rank_well_separated":["/X","/rank"],"penrose":["/X"]}
 GUARDS["linalg.matrix.norm"]={"decomposition_checked":["/norm"]}
 GUARDS["linalg.matrix.cond"]={"decomposition_checked":["/cond","/rcond"]}
+GUARDS["linalg.decomp.lu"]={"reconstructs":["/L","/U","/perm"]}
+GUARDS["linalg.decomp.qr"]={"reconstructs":["/Q","/R"],"orthonormal":["/Q"]}
+GUARDS["linalg.decomp.chol"]={"reconstructs":["/R"]}
 GUARDS["fit.poly.roots"]={"backward_stable":["/roots","/error_radius"],"radii_finite":["/error_radius","/multiplicity"]}
 GUARDS["calculus.quadrature.integral"]={"tolerance_met":["/value","/error_estimate"],"refinement_consistent":["/value","/error_estimate"]}
 GUARDS["optim.linear.linprog"]={"kkt":["/x","/fval","/lambda"]}

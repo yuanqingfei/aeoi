@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.decomp.qr/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "A"
+  ],
+  "properties": {
+    "A": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "矩阵 [m, n]，row-major"
+    },
+    "mode": {
+      "enum": [
+        "econ",
+        "full"
+      ],
+      "default": "econ",
+      "x-aeoi-provenance": "convention",
+      "description": "econ（缺省：Q 为 [m, min(m, n)]）或 full（Q 为 [m, m]）；高瘦矩阵的 full 输出很大"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  },
+  "x-aeoi-shape-constraints": [
+    "A: [m, n]"
+  ]
+}

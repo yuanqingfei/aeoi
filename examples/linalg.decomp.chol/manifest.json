@@ -1,0 +1,149 @@
+{
+  "spec": "aeoi/0.4",
+  "id": "linalg.decomp.chol",
+  "version": "0.4.0",
+  "title": "Cholesky factorization",
+  "description": "对称正定矩阵的 Cholesky 分解（= MATLAB chol）：缺省返回上三角 R，RᵀR = A；triangle = \"lower\" 时返回下三角 L，L·Lᵀ = A。只读 A 的上三角（同 MATLAB），但先检查对称：不对称超出舍入时报错（MATLAB 不检查，会悄悄忽略下三角）。不正定时报错并指出失败的列。",
+  "category": "analysis",
+  "tags": [
+    "linalg",
+    "cholesky",
+    "chol",
+    "factorization",
+    "positive-definite"
+  ],
+  "applicability": {
+    "preconditions": [
+      "A 为 [n, n] 实对称正定矩阵"
+    ],
+    "not_for": [
+      "半正定或不定矩阵（用 LDLᵀ 或特征分解；以后考虑）",
+      "判断正定性的唯一手段（舍入可能使接近奇异的正定矩阵分解失败）"
+    ],
+    "siso_only": false
+  },
+  "provenance": {
+    "algorithm": "对称检查：max|a_ij − a_ji| ≤ 10·n·u·max|a_ij|，否则 E.VALIDATION.NOT_SYMMETRIC（补丁 (A + Aᵀ)/2，要用户确认）。按列的 Cholesky（与 lqr、dlqr 使用的同一内核）作用在上三角上：d_j = a_jj − Σ_{k<j} r_kj²，d_j ≤ 0 时 E.DOMAIN.NOT_POSITIVE_DEFINITE（details：列 j 与 d_j）。重构残差 ‖A − RᵀR‖_F/‖A‖_F",
+    "references": [
+      {
+        "type": "textbook",
+        "cite": "N. J. Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., SIAM 2002, §9（LU）、§10（Cholesky）、§19（QR）"
+      },
+      {
+        "type": "textbook",
+        "cite": "G. H. Golub, C. F. Van Loan, Matrix Computations, 4th ed., Johns Hopkins 2013, §3.2、§4.2、§5.2"
+      }
+    ],
+    "clean_room": {
+      "declared": true,
+      "sources": "仅公开文献与开源许可兼容的参考；算子命名沿用 MATLAB 的公开函数名，参考数据只来自开源实现（python-control/scipy/mpmath），没有使用 MATLAB 生成数据"
+    }
+  },
+  "backend": {
+    "library": "aeoi-numeric (pure Rust)",
+    "routine": "decomp::chol",
+    "binding": "native",
+    "license": "MIT OR Apache-2.0",
+    "version": "0.4.0"
+  },
+  "determinism": "platform_bitwise",
+  "tolerance_class": "T1",
+  "sparse_support": {
+    "/A": {
+      "policy": "densify",
+      "max_dense_elements": 4000000
+    }
+  },
+  "encodings": {
+    "input": [
+      "json",
+      "b64",
+      "ref"
+    ],
+    "output": [
+      "json",
+      "b64"
+    ]
+  },
+  "limits": {
+    "max_dimension": 2000
+  },
+  "input_schema": {
+    "$ref": "./input.schema.json"
+  },
+  "output_schema": {
+    "$ref": "./output.schema.json"
+  },
+  "conformance": {
+    "target": "L3",
+    "current": "L2"
+  },
+  "accuracy_grade": {
+    "target": "A",
+    "current": "B"
+  },
+  "credentials": "aeoi://operators/linalg.decomp.chol/0.4.0/credentials",
+  "errors": [
+    "E.VALIDATION.SCHEMA",
+    "E.VALIDATION.SHAPE",
+    "E.VALIDATION.DTYPE",
+    "E.VALIDATION.NON_FINITE",
+    "E.VALIDATION.DIGEST_MISMATCH",
+    "E.VALIDATION.REF_UNSUPPORTED",
+    "E.VALIDATION.REF_FORBIDDEN",
+    "E.VALIDATION.NOT_SYMMETRIC",
+    "E.DOMAIN.NOT_POSITIVE_DEFINITE",
+    "E.RESOURCE.INPUT_TOO_LARGE",
+    "E.RESOURCE.TIMEOUT",
+    "E.INTERNAL.PANIC",
+    "E.VALIDATION.METHOD_UNAVAILABLE"
+  ],
+  "warnings": [
+    "W.PERFORMANCE.SPARSE_DENSIFIED"
+  ],
+  "mcp": {
+    "tool_name": "linalg_decomp_chol",
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  "receipt": {
+    "method_id": "aeoi:chol:column",
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "symmetric",
+        "statement": "A 对称（舍入以内）",
+        "enforced_by": "error:E.VALIDATION.NOT_SYMMETRIC"
+      },
+      {
+        "id": "positive_definite",
+        "statement": "A 正定",
+        "enforced_by": "error:E.DOMAIN.NOT_POSITIVE_DEFINITE"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "a_posteriori_heuristic"
+    },
+    "postconditions": [
+      "reconstructs",
+      "all_finite"
+    ],
+    "coverage": {
+      "reconstructs": "full",
+      "all_finite": "full"
+    },
+    "guards": {
+      "reconstructs": [
+        "/R"
+      ]
+    }
+  }
+}

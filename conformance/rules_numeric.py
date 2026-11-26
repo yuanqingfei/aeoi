@@ -685,7 +685,68 @@ def rule_cond(case, env, manifest, req=None, expected=None):
             check("rcond = 1/cond of the returned value  [CN-4]", abs(num(r.get("rcond")) * g - 1.0), 4 * U)]
 
 
-RULES = {"linalg.subspace.rank": rule_rank, "linalg.subspace.basis": rule_basis, "linalg.matrix.pinv": rule_pinv, "linalg.matrix.norm": rule_norm, "linalg.matrix.cond": rule_cond, "linalg.matrix.inv": rule_inv, "linalg.matrix.det": rule_det, "signal.spectral.fft": rule_fft, "ode.ivp.solve": rule_ode, "linalg.system.solve": rule_linsolve, "interp.grid.interp1": rule_interp1,
+# ---------------------------------------------------------------- v0.4.24: lu, qr, chol (profiles 10.42 – 10.44)
+def _exact_rel_resid(X, Y, B):
+    """‖X·Y − B‖_F / ‖B‖_F with X·Y − B in exact rational arithmetic."""
+    Xf = [[Fraction(float(v)) for v in row] for row in X]; Yf = [[Fraction(float(v)) for v in row] for row in Y]
+    num_ = Fraction(0); den = Fraction(0)
+    for i in range(len(Xf)):
+        for j in range(len(Yf[0])):
+            d = sum(Xf[i][k] * Yf[k][j] for k in range(len(Yf))) - Fraction(float(B[i][j]))
+            num_ += d * d; den += Fraction(float(B[i][j])) ** 2
+    return math.sqrt(float(num_ / den)) if den else math.sqrt(float(num_))
+
+
+def _rel_fro(a, b):
+    nb = float(np.linalg.norm(b)); d = float(np.linalg.norm(np.asarray(a) - np.asarray(b)))
+    return d / nb if nb else d
+
+
+def rule_lu(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = case["expected"]; r = env["result"]; n = int(e["n"])
+    L = arr(r["L"]).reshape(n, n); Uu = arr(r["U"]).reshape(n, n); A = arr(req["A"]).reshape(n, n)
+    t = 1e-12 * max(1.0, (e["kappa1_true"] or 1.0) / 100.0)
+    d = max(_rel_fro(L, np.array(e["L_true"]).reshape(n, n)), _rel_fro(Uu, np.array(e["U_true"]).reshape(n, n)))
+    out = [check("L, U vs the truth: ‖Δ‖_F/‖·‖_F ≤ 1e-12·max(1, κ₁/100)  [LU-2]", d, t),
+           ("perm equals the partial-pivoting permutation  [LU-2]", r.get("perm") == e["perm_true"], None, None, f"got {r.get('perm')}, want {e['perm_true']}"),
+           ("L unit lower triangular, U upper triangular  [LU-3]", bool(np.all(np.triu(L, 1) == 0) and np.all(np.diag(L) == 1) and np.all(np.tril(Uu, -1) == 0)), None, None, "structure")]
+    if n <= 40:
+        out.append(check("‖A[perm, :] − L·U‖_F/‖A‖_F, recomputed exactly by the runner  [LU-4]", _exact_rel_resid(L, Uu, A[r["perm"], :]), 100 * n * U))
+    return out
+
+
+def rule_qr(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = case["expected"]; r = env["result"]
+    m, n = int(e["m"]), int(e["n"]); k = min(m, n); full = e["mode"] == "full"
+    Q = arr(r["Q"]); R = arr(r["R"]); A = arr(req["A"]).reshape(m, n)
+    qc = m if full else k
+    if Q.shape != (m, qc) or R.shape != (qc, n):
+        return [fail("Q, R shapes for the mode  [QR-2]", f"got {Q.shape}, {R.shape}")]
+    out = [("R upper triangular with R_ii ≥ 0  [QR-3]", bool(np.all(np.tril(R, -1) == 0) and np.all(np.diag(R)[:k] >= 0)), None, None, "structure / sign")]
+    if e["unique"]:
+        t = 1e-12 * max(1.0, (e["kappa2_true"] or 1.0) / 100.0)
+        d = max(_rel_fro(Q, np.array(e["Q_true"]).reshape(m, qc)), _rel_fro(R, np.array(e["R_true"]).reshape(qc, n)))
+        out.insert(0, check("Q, R vs the truth (unique for full column rank): ‖Δ‖_F/‖·‖_F ≤ 1e-12·max(1, κ₂/100)  [QR-3]", d, t))
+    out.append(check("‖A − Q·R‖_F/‖A‖_F, recomputed by the runner  [QR-4]", float(np.linalg.norm(A - Q @ R)) / max(float(np.linalg.norm(A)), np.finfo(float).tiny), 100 * max(m, n) * U))
+    out.append(check("‖QᵀQ − I‖_max, recomputed by the runner  [QR-4]", float(np.max(np.abs(Q.T @ Q - np.eye(qc)))), 100 * max(m, n) * U))
+    return out
+
+
+def rule_chol(case, env, manifest, req=None, expected=None):
+    req = req or case["request"]; e = case["expected"]; r = env["result"]; n = int(e["n"])
+    R = arr(r["R"]).reshape(n, n); A = arr(req["A"]).reshape(n, n); S = np.triu(A) + np.triu(A, 1).T
+    lower = e["triangle"] == "lower"
+    t = 1e-12 * max(1.0, (e["kappa1_true"] or 1.0) / 100.0)
+    tri_ok = bool(np.all(np.triu(R, 1) == 0)) if lower else bool(np.all(np.tril(R, -1) == 0))
+    out = [check("R vs the truth: ‖ΔR‖_F/‖R‖_F ≤ 1e-12·max(1, κ₁/100)  [CH-3]", _rel_fro(R, np.array(e["R_true"]).reshape(n, n)), t),
+           ("triangle as requested (upper: RᵀR = A; lower: L·Lᵀ = A)  [CH-1]", tri_ok and r.get("triangle") == e["triangle"], None, None, f"triangle {r.get('triangle')}")]
+    if n <= 40:
+        X, Y = (R, R.T) if lower else (R.T, R)
+        out.append(check("‖S − RᵀR‖_F/‖S‖_F, recomputed exactly by the runner (S from the upper triangle)  [CH-4]", _exact_rel_resid(X, Y, S), 100 * n * U))
+    return out
+
+
+RULES = {"linalg.decomp.lu": rule_lu, "linalg.decomp.qr": rule_qr, "linalg.decomp.chol": rule_chol, "linalg.subspace.rank": rule_rank, "linalg.subspace.basis": rule_basis, "linalg.matrix.pinv": rule_pinv, "linalg.matrix.norm": rule_norm, "linalg.matrix.cond": rule_cond, "linalg.matrix.inv": rule_inv, "linalg.matrix.det": rule_det, "signal.spectral.fft": rule_fft, "ode.ivp.solve": rule_ode, "linalg.system.solve": rule_linsolve, "interp.grid.interp1": rule_interp1,
          "fit.poly.polyfit": rule_polyfit, "linalg.decomp.eig": rule_eig, "linalg.decomp.svd": rule_svd,
          "signal.design.butter": rule_butter, "signal.filter.filter": rule_filter,
          "nonlinear.root.fzero": rule_fzero, "nonlinear.system.fsolve": rule_fsolve,

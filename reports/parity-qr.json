@@ -1,0 +1,63 @@
+{
+  "operator": "linalg.decomp.qr",
+  "reference": "truth for the stored data: mpmath 50 digits. Not MATLAB.",
+  "cases": 13,
+  "error_cases": 4,
+  "worst_error_over_tolerance": 0.00028488363915198453,
+  "tolerance": "R_ii ≥ 0; unique cases (full column rank of the leading k columns): ‖ΔQ‖_F/‖Q‖_F, ‖ΔR‖_F/‖R‖_F ≤ 1e-12·max(1, κ₂/100); rank-deficient: post-conditions only",
+  "cases_detail": [
+    {
+      "factor_rel_error": 2.1722866501229847e-16,
+      "kappa2_true": 1395300357.7543786,
+      "family": "graded_columns",
+      "reconstruction": 1.488221533482269e-16
+    },
+    {
+      "factor_rel_error": 2.1450952572833093e-11,
+      "kappa2_true": 15257575698.870047,
+      "family": "hilbert_8",
+      "reconstruction": 1.2503813924759598e-16
+    },
+    {
+      "unique": false,
+      "family": "rank_deficient",
+      "reconstruction": 1.8358702251782028e-16
+    },
+    {
+      "factor_rel_error": 0.0,
+      "kappa2_true": 1.0,
+      "family": "scalar_negative",
+      "reconstruction": 0.0
+    },
+    {
+      "factor_rel_error": 2.550078911960079e-16,
+      "kappa2_true": 14.035883294043192,
+      "family": "square",
+      "reconstruction": 2.65501796280154e-16
+    },
+    {
+      "factor_rel_error": 2.293336802521051e-16,
+      "kappa2_true": 2.499139109775161,
+      "family": "tall",
+      "reconstruction": 2.145004251725579e-16
+    },
+    {
+      "factor_rel_error": 2.8488363915198453e-16,
+      "kappa2_true": 5.318556074524808,
+      "family": "tall_full",
+      "reconstruction": 2.636750766386955e-16
+    },
+    {
+      "factor_rel_error": 1.7034478123921013e-16,
+      "kappa2_true": 8.714243568705696,
+      "family": "wide",
+      "reconstruction": 2.533016010942743e-16
+    },
+    {
+      "factor_rel_error": 2.355138688025663e-16,
+      "kappa2_true": 2.0425481570162236,
+      "family": "wide_full",
+      "reconstruction": 2.663088223063196e-16
+    }
+  ]
+}

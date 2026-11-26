@@ -470,3 +470,28 @@ fn subspace_examples() {
     assert_eq!(call("linalg.matrix.norm", &read("examples/linalg.matrix.norm/request.json"))["result"]["norm"], 5.0);
     assert_eq!(call("linalg.matrix.norm", &read("examples/linalg.matrix.norm/request.matrix.json"))["result"]["norm"], 7.0);
 }
+
+/// v0.4.24: lu / qr / chol examples — bitwise on the same platform, plus what each example shows.
+#[test]
+fn decomp_examples() {
+    let cases: [(&str, &[(&str, &str)], &str); 3] = [
+        ("linalg.decomp.lu", &[("request.json", "response.success.json"), ("request.singular.json", "response.singular.json")], "E.VALIDATION.SHAPE"),
+        ("linalg.decomp.qr", &[("request.json", "response.success.json"), ("request.full.json", "response.full.json")], "E.VALIDATION.SHAPE"),
+        ("linalg.decomp.chol", &[("request.json", "response.success.json")], "E.DOMAIN.NOT_POSITIVE_DEFINITE"),
+    ];
+    for (op, pairs, err) in cases {
+        let dir = format!("examples/{op}");
+        for (rq, rs) in pairs.iter() {
+            let env = call(op, &read(&format!("{dir}/{rq}")));
+            assert!(env["status"] == "ok" || env["status"] == "ok_with_warnings", "{op} {rq}: {}", env["error"]);
+            assert_hash_on_same_platform(&env, &read(&format!("{dir}/{rs}")), &format!("{op} {rq}: bitwise example"));
+        }
+        let e = call(op, &read(&format!("{dir}/request.error.json")));
+        assert_eq!(e["error"]["code"], err, "{op}");
+    }
+    let s = call("linalg.decomp.lu", &read("examples/linalg.decomp.lu/request.singular.json"));
+    assert!(s["warnings"].as_array().unwrap().iter().any(|w| w["code"] == "W.NUMERICAL.ZERO_PIVOT"));
+    let a = call("linalg.decomp.chol", &read("examples/linalg.decomp.chol/request.asymmetric.json"));
+    assert_eq!(a["error"]["code"], "E.VALIDATION.NOT_SYMMETRIC");
+    assert_eq!(a["error"]["remediation"][0]["requires_user_confirmation"], true);
+}

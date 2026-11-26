@@ -1,0 +1,80 @@
+{
+  "operator": "linalg.decomp.lu",
+  "reference": "truth for the stored data: mpmath 50 digits. Not MATLAB.",
+  "cases": 14,
+  "error_cases": 4,
+  "worst_error_over_tolerance": 0.000048785007307113134,
+  "tolerance": "perm and zero_pivot exact; ‖ΔL‖_F/‖L‖_F and ‖ΔU‖_F/‖U‖_F ≤ 1e-12·max(1, κ₁/100)",
+  "cases_detail": [
+    {
+      "factor_rel_error": 6.385465255840139e-11,
+      "kappa1_true": 20625558532.55387,
+      "growth_factor": 1.0,
+      "family": "ill_conditioned_1e10",
+      "reconstruction": 2.9937854871143716e-17
+    },
+    {
+      "factor_rel_error": 0.0,
+      "kappa1_true": 31.5,
+      "growth_factor": 0.8571428571428571,
+      "family": "integer",
+      "reconstruction": 0.0
+    },
+    {
+      "factor_rel_error": 0.0,
+      "kappa1_true": 4.0,
+      "growth_factor": 1.0,
+      "family": "needs_pivoting",
+      "reconstruction": 5.7735026918962575e-21
+    },
+    {
+      "factor_rel_error": 3.54927556222922e-16,
+      "kappa1_true": 1130.5983644992748,
+      "growth_factor": 2.6948869404694107,
+      "family": "random",
+      "reconstruction": 2.0991787741877775e-16
+    },
+    {
+      "factor_rel_error": 4.8785007307113135e-17,
+      "kappa1_true": 19.588199665293274,
+      "growth_factor": 1.085465793898191,
+      "family": "random",
+      "reconstruction": 6.022702842495791e-17
+    },
+    {
+      "factor_rel_error": 0.0,
+      "kappa1_true": 6.403244915843845,
+      "growth_factor": 1.0,
+      "family": "random",
+      "reconstruction": 1.8675316335153924e-17
+    },
+    {
+      "factor_rel_error": 0.0,
+      "kappa1_true": 1.0,
+      "growth_factor": 1.0,
+      "family": "random",
+      "reconstruction": 0.0
+    },
+    {
+      "factor_rel_error": 0.0,
+      "kappa1_true": null,
+      "growth_factor": 1.0,
+      "family": "singular_rank1",
+      "reconstruction": 0.0
+    },
+    {
+      "factor_rel_error": 0.0,
+      "kappa1_true": null,
+      "growth_factor": 1.0,
+      "family": "singular_zero_column",
+      "reconstruction": 1.2412670766236365e-17
+    },
+    {
+      "factor_rel_error": 0.0,
+      "kappa1_true": 40.0,
+      "growth_factor": 549755813888.0,
+      "family": "wilkinson_growth_40",
+      "reconstruction": 0.0
+    }
+  ]
+}

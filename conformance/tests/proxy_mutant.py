@@ -200,6 +200,22 @@ def m_cond_reciprocal(r):                   # returns rcond in the cond field
         r["cond"], r["rcond"] = 1.0 / r["cond"], r["cond"]
 
 
+def m_lu_perm_swapped(r):                  # first two entries of perm exchanged (factors unchanged)
+    if len(r["perm"]) > 1:
+        r["perm"][0], r["perm"][1] = r["perm"][1], r["perm"][0]
+
+
+def m_qr_sign_not_normalised(r):            # Q column 0 and R row 0 negated: still A = QR, but R_00 < 0
+    n = r["R"]["shape"][1]; qc = r["Q"]["shape"][1]
+    r["R"]["data"][:n] = [-v for v in r["R"]["data"][:n]]
+    r["Q"]["data"] = [-v if i % qc == 0 else v for i, v in enumerate(r["Q"]["data"])]
+
+
+def m_chol_wrong_triangle(r):               # returns the transpose of what was asked for
+    n = r["R"]["shape"][0]; d = r["R"]["data"]
+    r["R"]["data"] = [d[j * n + i] for i in range(n) for j in range(n)]
+
+
 def m_interp1_one_ulp(r):                   # every value one ulp up: inside the tolerance, but node hits are no longer exact
     import math
     r["yq"]["data"] = [math.nextafter(v, math.inf) if isinstance(v, float) else v for v in r["yq"]["data"]]
@@ -392,6 +408,9 @@ MUTANTS = {
     "ode_overclaims": ("ode.ivp.solve", m_ode_overclaims),
     "linsolve_x_wrong": ("linalg.system.solve", m_linsolve_x_wrong),
     "linsolve_overclaims": ("linalg.system.solve", m_linsolve_overclaims),
+    "lu_perm_swapped": ("linalg.decomp.lu", m_lu_perm_swapped),
+    "qr_sign_not_normalised": ("linalg.decomp.qr", m_qr_sign_not_normalised),
+    "chol_wrong_triangle": ("linalg.decomp.chol", m_chol_wrong_triangle),
     "rank_off_by_one": ("linalg.subspace.rank", m_rank_off_by_one),
     "rank_overclaims": ("linalg.subspace.rank", m_rank_overclaims),
     "basis_null_scaled": ("linalg.subspace.basis", m_basis_null_scaled),

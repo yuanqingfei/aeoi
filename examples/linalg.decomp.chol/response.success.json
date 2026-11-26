@@ -1,0 +1,138 @@
+{
+  "spec": "aeoi/0.4",
+  "status": "ok",
+  "dry_run": false,
+  "operator": {
+    "id": "linalg.decomp.chol",
+    "version": "0.4.0",
+    "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0"
+  },
+  "request_id": null,
+  "result": {
+    "R": {
+      "dtype": "f64",
+      "shape": [
+        3,
+        3
+      ],
+      "data": [
+        2.0,
+        1.0,
+        1.0,
+        0.0,
+        2.0,
+        1.0,
+        0.0,
+        0.0,
+        2.0
+      ]
+    },
+    "triangle": "upper",
+    "asymmetry": 0.0
+  },
+  "trust": {
+    "convergence": {
+      "applicable": false
+    },
+    "residual": {
+      "reconstruction": 0.0,
+      "threshold": 3.3306690738754696e-14,
+      "definition": "‖A − RᵀR‖_F / ‖A‖_F（A 取上三角对称化，补偿算术），阈值 100·n·u"
+    },
+    "error_estimate": {
+      "basis": "因子本身的前向误差 ≲ κ(A)·u（扰动理论）；重构残差是后向误差"
+    },
+    "checks": {
+      "all_finite": true,
+      "reconstructs": true
+    },
+    "accuracy_grade": "B",
+    "credentials": null
+  },
+  "receipt": {
+    "format": "aeoi-receipt/1",
+    "method": {
+      "id": "aeoi:chol:column",
+      "routine": "decomp::chol",
+      "provenance": "aeoi://operators/linalg.decomp.chol/0.4.0/manifest#/provenance"
+    },
+    "assumptions": [
+      {
+        "id": "finite",
+        "statement": "所有输入数值有限",
+        "enforced_by": "error:E.VALIDATION.NON_FINITE"
+      },
+      {
+        "id": "symmetric",
+        "statement": "A 对称（舍入以内）",
+        "enforced_by": "error:E.VALIDATION.NOT_SYMMETRIC"
+      },
+      {
+        "id": "positive_definite",
+        "statement": "A 正定",
+        "enforced_by": "error:E.DOMAIN.NOT_POSITIVE_DEFINITE"
+      }
+    ],
+    "exactness": {
+      "class": "approximate",
+      "bound_kind": "none_reported",
+      "bound": null,
+      "basis": "因子本身的前向误差 ≲ κ(A)·u（扰动理论）；重构残差是后向误差"
+    },
+    "evidence": {
+      "claim": "verified",
+      "postconditions": {
+        "reconstructs": true,
+        "all_finite": true
+      },
+      "failed": [],
+      "convergence": null,
+      "accuracy_grade": "B",
+      "tolerance_class": "T1",
+      "credentials": null,
+      "coverage": {
+        "reconstructs": "full",
+        "all_finite": "full"
+      }
+    },
+    "fingerprint": {
+      "request": "sha256:e307278983ad707d5b41a6d649e30cfee48bbb58aa733a1e5874c6849eda27d0",
+      "result": "sha256:390213b08eebad25103387682b74c51cc9780db1ce2c66b749194a7a67bbcce6",
+      "output_hash": "sha256:8790f28613d3d860efb597d2f159e00a038ceb95e6561d6d8d678ccbb584fda4",
+      "scheme": "request = sha256(JCS({operator, version, input_hash})); result = sha256(JCS({request, output_hash}))",
+      "stable_across": "request: all platforms and builds of linalg.decomp.chol@0.4.0; result: same build + platform guaranteed (platform_bitwise, P-7), other platforms only when the result is bitwise equal"
+    },
+    "replay": {
+      "build": "aeoi-numeric 0.3.0+nogit nalgebra-0.33 matrixmultiply-0.3.11-portable libm-0.2.16 rustc-1.97.0",
+      "platform": "x86_64-linux",
+      "libm": "rust-libm 0.2.16",
+      "verify": {
+        "mcp_tool": "aeoi_verify",
+        "cli": "aeoi-call verify <operator> <request.json> <envelope.json>",
+        "wasm": "verify(operator, request, envelope)"
+      }
+    }
+  },
+  "warnings": [],
+  "error": null,
+  "reproducibility": {
+    "determinism": "platform_bitwise",
+    "tolerance_class": "T1",
+    "input_hash": "sha256:3f6ea1efd410ad59380f7f3da6fe6d48f5998e7ed7752d068314a91fd4e5af32",
+    "output_hash": "sha256:8790f28613d3d860efb597d2f159e00a038ceb95e6561d6d8d678ccbb584fda4",
+    "platform": "x86_64-linux",
+    "cpu_features": [
+      "avx",
+      "avx2",
+      "fma",
+      "avx512f"
+    ],
+    "libm": "rust-libm 0.2.16",
+    "blas": "none (pure Rust nalgebra 0.33 + matrixmultiply portable kernel, single-threaded)",
+    "threads": 1,
+    "seed": null
+  },
+  "timing": {
+    "wall_ms": 0.165768
+  }
+}

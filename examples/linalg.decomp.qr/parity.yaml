@@ -1,0 +1,19 @@
+# Parity test spec — linalg.decomp.qr 0.4.0 (AEOI v0.4.24-draft)
+operator: linalg.decomp.qr
+references:
+  - {engine: mpmath, role: high_precision_reference, status: active, generator: scripts/golden/gen_golden_decomp.py,
+     golden_store: "golden/mpmath/linalg.decomp.qr/0.4.0/*.json",
+     note: "truth for the stored f64 data at 50 digits; NOT MATLAB output"}
+  - {engine: MATLAB, role: ground_truth, status: planned}
+runner: "cargo test --release -p aeoi-numeric --test parity_decomp"
+tolerance_class: T1
+compare:
+  sign: "R_ii ≥ 0"
+  Q, R: "unique cases: ‖ΔQ‖_F/‖Q‖_F, ‖ΔR‖_F/‖R‖_F ≤ 1e-12·max(1, κ₂/100) (κ₂ of the leading k columns); rank-deficient: post-conditions only"
+conformance_compare:   # spec 9.4 CF-6; conformance/rules_numeric.py. No trust.* value of the implementation is used as a tolerance
+  Q, R: "same bound as compare; shapes [m, k]/[k, n] (econ) or [m, m]/[m, n] (full)"
+  recomputed: "‖A − QR‖_F/‖A‖_F and ‖QᵀQ − I‖_max recomputed by the runner (≤ 100·max(m, n)·u); R upper triangular with R_ii ≥ 0"
+case_families:
+  - {name: "tall / square / wide / tall_full / wide_full / scalar_negative / Hilbert 8 / graded columns (1 … 1e-9)", n: 8}
+  - {name: rank_deficient, n: 1, note: "factors not unique: checked by recomputation only"}
+  - {name: errors, n: 4, expect: "SHAPE, DTYPE, SCHEMA, OUTPUT_TOO_LARGE (1500×1 with mode = full)"}

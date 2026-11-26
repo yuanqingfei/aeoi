@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aeoi://schemas/linalg.decomp.chol/0.4.0/input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "A"
+  ],
+  "properties": {
+    "A": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/Matrix",
+      "description": "对称正定方阵 [n, n]，row-major"
+    },
+    "triangle": {
+      "enum": [
+        "upper",
+        "lower"
+      ],
+      "default": "upper",
+      "x-aeoi-provenance": "convention",
+      "description": "upper（缺省，同 MATLAB：RᵀR = A）或 lower（L·Lᵀ = A）"
+    },
+    "exec": {
+      "$ref": "aeoi://schemas/common/0.4#/$defs/ExecOptions"
+    }
+  },
+  "x-aeoi-shape-constraints": [
+    "A: [n, n]，对称"
+  ]
+}
