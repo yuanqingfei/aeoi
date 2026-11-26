@@ -1,50 +1,21 @@
-# AI Engineering Operator Interface Spec（AEOI）v0.4.17-draft
+# AI Engineering Operator Interface Spec（AEOI）v0.4.18-draft
 
-> 状态：Draft v0.4.17 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot）
+> 状态：Draft v0.4.18 · 2026-11-25 · 作者：Qingfei Yuan（草拟协助：Grok Bot、Claude）
 >
-> v0.4.17 没有新算子：从现有算子里抽出 10 个共享内核（sum、bracket、newton、quad、rk、spline、riccati、freqresp、timeresp、iir），为 12.3 清单的下一层做准备。纯重构，全部示例的输出逐位不变。作者决定：在 102 个目标函数全部完成之前不再发布，完成后发布 v0.5。
->
-> v0.4.16 没有新算子：所有算子的数值核心都改为调用 AEOI 自己的内核（11.5 RI-3 完成）。新增内核：复数 LU 与奇异值、实 Schur、FFT、Cholesky；rustfft 与 nalgebra 的分解不再使用，nalgebra 只用作矩阵容器和做矩阵乘法。全部结果的变化都在容差类内（G-3），算子版本不变。
->
-> v0.4.15 新增数值积分 `calculus.quadrature.integral`（10.31，缺省 rel_tol 1e-10）与数据积分 `calculus.quadrature.trapz`（10.32，采样位置必须显式给出）。至此，作者定下的四批算子全部完成。
->
-> v0.4.14 新增线性规划 `optim.linear.linprog`（10.28）、带约束的非线性最小化 `optim.local.fmincon`（10.29）、无导数最小化 `optim.local.fminsearch`（10.30），以及共享的 LP 与 QP 内核。每个优化结果都声明只是局部最优，并用 KKT 残差验证。
->
-> v0.4.13 新增单变量求根 `nonlinear.root.fzero`（10.26）与非线性方程组 `nonlinear.system.fsolve`（10.27）。表达式语言增加了自动微分（3.15 EX-8）。不收敛时报错，并给出目前最好的点。
->
-> v0.4.12 新增滤波器设计 `signal.design.butter`（10.24）与滤波 `signal.filter.filter`（10.25）；截止频率必须显式写明单位。同时定下两条：目标是约 100 个常用工程计算函数（12.3）；算子之间的复用必须调用同一内核（11.5）。
->
-> v0.4.11 新增三个算子：多项式拟合 `fit.poly.polyfit`（10.21，带标准误差；病态时警告并建议中心化缩放，须用户确认）、特征分解 `linalg.decomp.eig`（10.22）与奇异值分解 `linalg.decomp.svd`（10.23）。后两者的特征向量、奇异向量本身不唯一，规范给出排序与规一化约定，一致性规则只比较不变量。
->
-> v0.4.10 新增两个算子：线性方程组 `linalg.system.solve`（10.19，对应 `A\b`，带迭代精化、条件数估计和后向误差）和一维插值 `interp.grid.interp1`（10.20，范围外缺省报错）。
->
-> v0.4.9 为分发做准备：参考实现把纯 Rust 数学库编入二进制，并让矩阵乘法固定使用通用内核，结果不再依赖操作系统的数学库和 CPU 特性（2.1，新条款 M-7a）。9 个示例的末几位变了，都在容差类内。之后是多平台发布流水线、Claude Desktop 一键安装包（MCPB）和 MCP 公开目录登记（12.2 第 6 项）。
->
-> v0.4.8 新增第 23 个算子 `ode.ivp.solve`（10.18，对应 `ode45`），并为它定下表达式语言（3.15）：右端 f(t, y) 作为数据传递，语法、优先级、函数表、求值顺序与上限都写进规范，算子只解析和求值，不执行代码。状态和参数按名字给出。方法照抄 scipy RK45 的步长决策；rtol/atol 只约束局部误差，所以算子用 tol/10 重解来估计全局误差，超出 100 倍容差时把 `y` 标为不可依赖。一致性规则对照精确解而不是参考求解器的步长序列，并由运行器检查 `tolerance_consistent` 的声明是否属实。一致性规则覆盖 10 / 23 = 43% 的算子。
->
-> v0.4.7 进入控制以外的第一个领域：`signal.spectral.fft`（10.17）。约定（归一化、单双边、频率轴顺序）全部显式并回显，频率轴总是返回；运算路径不得依赖运行时 CPU 特性。实现放在新 crate `aeoi-numeric`，前端改用跨领域注册表 `aeoi-ops`；`operator.build` 报告实现所在的 crate。一致性规则覆盖 9 / 22 = 41% 的算子。
->
-> v0.4.6 新增第 21 个算子 `control.design.pidtune`（10.16）：第一个满足 A-4 的整定算子。指标是给定 ωc（必填）与相位裕度；PI 为唯一封闭解，PID 用 Ti = 4·Td 固定多出的自由度并规定取最小 Td 根的扫描法；闭环不稳定时报错而不返回控制器。一致性规则覆盖 8 / 21 = 38% 的算子。
->
-> v0.4.5 新增第 20 个算子 `control.lti.lsim`（任意输入的响应，10.15）：输入按 [nu, nt] 给出并可用 b64 / ref；采样之间按 foh（缺省）或 zoh 解释，不按数据自动选择；`x0` 只用于 ss，因为 tf/zpk 没有状态坐标。一致性规则覆盖 7 / 20 = 35% 的算子。
->
-> v0.4.4 定下开放问题 20、21：`lyap` 的 Q 可以不对称，实现必须按原样求解、不得对称化 Q，`lyap` 不发 `W.VALIDATION.SYMMETRIZED`；一致性套件从 golden 用例派生“省略默认值 / 写出默认值”的变体，结果必须与原请求逐位相同。
->
-> v0.4.3 定下开放问题 22、23：一致性套件按 10.x 规定的分支比较 `bode` 相位，不再取模；`parity.yaml` 里高精度参考的“1e-12 不放宽”是参考实现自己的目标，一致性对所有参考引擎用同一个 κ 缩放容差，确有理由的超差按 CF-7 登记。
->
-> v0.4.2 给一致性套件补了 5 个算子的数值规则（`poles_zeros`、`bode`、`step`、`lqr`、`c2d`），连同 `lyap` 共 6 个，占 19 个算子的 32%；参考实现全部通过。CF-2、CF-6、CF-8 据此写得更具体：容差类取自套件而非被测实现的 manifest，状态空间实现比较哪些不变量，列主序检查怎么判定。
->
-> v0.4.1 定下开放问题 19：所有 schema 里的 `$ref` 改为标准 JSON Schema 2020-12 写法（3.9 J-1 – J-3），去掉参考实现、校验脚本和一致性套件里的三处简写兼容代码。线协议标识仍是 `aeoi/0.4`，示例结果与 `output_hash` 不变。
->
-> v0.4 为第二个实现和不同的计算方法在规范里留出位置，增加两组条款：同一算子可以登记多个计算方法，请求用 `exec.method_policy` 约束所用的方法（3.14，规则 MS-1 – MS-11）；换一个实现是否等价于参考实现，由跨实现一致性的判定规则回答（9.4，规则 CF-1 – CF-12）。**3.14 的 schema 字段（`method_policy`、`alternatives`、`method_selection`）与参考实现的方法解析、重放、宿主策略合并已经加上；9.4 有一致性套件 v0.1（只覆盖 `lyap`）。**参考实现的每个算子仍只登记一个方法，多方法的路径由单元测试用合成 manifest 覆盖（第 13 章 v0.4-draft 有改动清单）。线协议标识升为 `aeoi/0.4`，核心 schema 的 `$id` 升为 `/0.4`（与 v0.3 的做法相同，12.1 第 15 项）：标识已经改到 `schemas/`、`examples/`、`write_manifests.py` 与 Rust 的 `aeoi_core::SPEC` 常量里，**Rust 在标识改动后的 `cargo test` 结果与改动前相同（见第 13 章 v0.4-draft）**。信封字段只增不减，`input_hash`、`fingerprint` 都不含 `spec`，所以除标识外结果字节不变；v0.3 的消费者若校验 `spec` 或 schema `$id` 需要同步更新（0.x 期间 MINOR 可破坏，G-4）。不认识 `method_policy` 的旧实现会按 3.3 R-4 返回 `E.VALIDATION.SCHEMA`，不会静默忽略硬约束。以下 v0.3.x 各段是各自版本当时的陈述，按原样保留。
->
-> v0.3.6 根据 EngDesign 真模型运行（`reports/design-live.md`）补规则：回路里的系统按角色命名（对象、控制器、反馈通路），一次调用得到开环与闭环（新算子 `control.analysis.loopsens`），带宽字段名写明 Hz 或 rad/s（3.13 K-1 – K-6）；互斥选项的冲突统一报错并给出只删除已出现字段的补丁（F-8）；抽样或压缩数据上的检查不算“已验证”（E-12、E-13，新 claim `spot_checked`）；Agent 循环在回合用完之前必须提交（8.4 AL-1 – AL-3）。线协议标识仍为 `aeoi/0.3`：信封只增加可选字段，位置参数调用的 `series`/`feedback` 结果字节不变。
->
-> v0.3.5 补上系统组合、定义默认值与近似误差这三处 v0.3.4 写不清楚的规则，并据此增加 6 个算子（串联、并联、反馈、PID、阶跃指标、Padé）。线协议标识仍为 `aeoi/0.3`：信封只在 `receipt.evidence` 上增加可选的 `approximation`（旧消费者忽略即可），已发布的 12 个算子的 `result` 与 `output_hash` 不变。
 > SPDX-License-Identifier: CC-BY-4.0 · © 2026 Qingfei Yuan。规范文本按 CC-BY-4.0 许可（`LICENSE-CC-BY-4.0`）；规范中的代码片段、JSON Schema 与参考实现按 MIT OR Apache-2.0 许可（`LICENSE-MIT`、`LICENSE-APACHE`）。
-> 定位：叠加在 MCP 之上的"工程计算语义层"。MCP 负责传输与工具调用；AEOI 规定工程算子如何描述自己、如何表达带物理意义的输入输出、如何报告结果可信度、如何报错、如何复现、如何证明与参考实现一致。
-> 冻结条件：用 5–10 个真实控制算子跑通后再升级为 v1.0。v0.x 期间任何条款都可能被修改。
-> v0.3.1 相对 v0.3 的改动（面向 LLM 函数调用的可消费性，线协议标识仍为 `aeoi/0.3`，向后兼容）及 v0.3、v0.2 的改动见第 13 章 Changelog。v0.3.1 新增 LLM 端到端测试台 `aeoi-web`（8.4、11 章）。v0.3 的 Rust 参考实现（第 11 章）共 12 个控制算子 + MCP stdio server，全部测试通过：v0.2 的 `control.lti.bode`、`control.lti.step`、`control.design.lqr`，以及 v0.3 新增的 `control.lti.convert`、`control.lti.poles_zeros`、`control.analysis.ctrb_obsv`、`control.analysis.margin`、`control.lti.c2d`、`control.lti.impulse`、`control.math.lyap`、`control.design.place`、`control.design.dlqr`。
+>
+> 定位：叠加在 MCP 之上的“工程计算语义层”。MCP 负责传输与工具调用；AEOI 规定工程算子如何描述自己、如何表达带物理意义的输入输出、如何报告结果可信度、如何报错、如何复现、如何证明与参考实现一致。
+>
+> 冻结条件：v0.x 期间任何条款都可能被修改；102 个目标函数完成后发布 v0.5，经第二实现与真实使用反馈修订后冻结 v1.0。
+
+**文档结构**（v0.4.18 起拆分；只读本文与 `profiles/` 就应能写出一个实现）
+
+| 文档 | 内容 | 性质 |
+|---|---|---|
+| 本文 | 约定、manifest、类型、信封与收据、错误、可复现性、凭证、MCP 与绑定、治理与一致性、开放问题 | 规范性 |
+| [`profiles/`](profiles/) | 第 10 章：每个算子一份契约（条款、示例、parity 规格） | 规范性 |
+| [`docs/reference-impl.md`](docs/reference-impl.md) | Rust 参考实现：结构、运行、内核复用（RI-1 – RI-3）、各绑定的实现、评测结果 | 说明性 |
+| [`CHANGELOG.md`](CHANGELOG.md) | 每个版本的起因、改动与结果；已解决的开放问题 | 说明性 |
 
 ## 0. 约定
 
@@ -52,8 +23,8 @@
 - JSON Schema 一律使用 Draft 2020-12。完整 schema 文件见 `schemas/`，`$id` 形如 `aeoi://schemas/common/0.4`。
 - 本文中 `spec` 版本标识写作 `aeoi/0.4`（v0.3.x 为 `aeoi/0.3`）。
 - **净室原则（normative）**：算子实现 MUST 仅依据公开文献、教科书、标准与开源许可兼容的代码；MUST NOT 反编译、反汇编、阅读或复制 MATLAB（或任何闭源软件）的实现代码、`.p` 文件、二进制或未公开文档。MATLAB 只作为黑盒 ground truth，通过其公开 API 生成对照数据。每个 manifest MUST 带 `provenance.clean_room.declared = true`。
-- **与 MATLAB 的关系（v0.3.6 澄清）**：算子的命名与分类沿用 MATLAB Control System Toolbox 的**公开函数名**（`series`、`feedback`、`margin`、`stepinfo`、`pade`、`loopsens` 等），以便工程师和模型按熟悉的名字找到算子；定义与方程写在本规范里，不依赖任何 MATLAB 文档。到 v0.3.6 为止，**所有参考数据都来自开源实现**（python-control、scipy、mpmath），没有一条由 MATLAB 生成；`matlab/` 目录下的脚本只是留给有 MATLAB 许可的第三方复核用的生成器。
-- **示例数值说明**：第 10 章示例的响应由 Rust 参考实现（`aeoi-control 0.3.0`）实际输出（`regen_examples.py`）；其数值另与 python-control 0.10.2 / scipy 1.18.1 / numpy 2.5.5 在 box 上的计算结果比对（`cargo test`）。**两者都不是 MATLAB 输出。** `timing` 为 box 上的实测值，仅供参考。
+- **与 MATLAB 的关系**：算子的命名与分类沿用 MATLAB Control System Toolbox 的**公开函数名**（`series`、`feedback`、`margin`、`stepinfo`、`pade`、`loopsens` 等），以便工程师和模型按熟悉的名字找到算子；定义与方程写在本规范里，不依赖任何 MATLAB 文档。到 v0.3.6 为止，**所有参考数据都来自开源实现**（python-control、scipy、mpmath），没有一条由 MATLAB 生成；`matlab/` 目录下的脚本只是留给有 MATLAB 许可的第三方复核用的生成器。
+- **示例数值说明**：第 10 章（`profiles/`）示例的响应由 Rust 参考实现实际输出（`regen_examples.py`）；其数值另与 python-control 0.10.2 / scipy 1.18.1 / numpy 2.5.5 在 box 上的计算结果比对（`cargo test`）。**两者都不是 MATLAB 输出。** `timing` 为 box 上的实测值，仅供参考。
 
 > ### ⚠ 内存序（MUST，最常见的静默错误）
 >
@@ -69,10 +40,10 @@
 ## 1. 架构与术语
 
 ```
-Agent ──MCP(JSON-RPC, stdio)──▶ aeoi-mcp ──▶ Registry ──▶ dyn Operator (Rust, aeoi-control)
-                             │                              └─ pure Rust (nalgebra 0.33)；FFI 后端为可选（v0.2 未用）
-Python (PyO3, 计划) ─────────┤
-C ABI (cdylib, 计划) ────────┘     所有入口共享同一 manifest、schema、信封与错误码（aeoi-core）
+Agent ──MCP (JSON-RPC, stdio)──▶ MCP server ──▶ 注册表 ──▶ 算子（validate → execute → 信封）
+LLM 函数调用绑定 ─────────────┤
+浏览器（WebAssembly）─────────┤   所有入口共享同一 manifest、schema、信封、收据与错误码
+CLI / 其他语言绑定 ──────────┘   参考实现：Rust（docs/reference-impl.md）
 ```
 
 | 术语 | 含义 |
@@ -106,13 +77,11 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
 
   "平台" = 目标三元组（`reproducibility.platform`）+ 运行时检测到的 CPU 特性集合（`reproducibility.cpu_features`）+ 超越函数所用的 C 数学库及版本（`reproducibility.libm`，v0.4 起，例如 `glibc 2.39`；见下段）。WebAssembly 构建（`wasm32-unknown-unknown`，目标三元组里没有 OS）的 `platform` 记为 `wasm32-unknown`；它与原生构建是不同的"平台"：超越函数走 Rust `libm` 而不是 glibc，矩阵乘法没有 AVX/FMA 内核，所以 `platform_bitwise` 不延伸到 wasm ↔ 原生（实测见 8.5）。v0.3 参考实现的 12 个算子都声明 `platform_bitwise`：nalgebra 的稠密乘法走 `matrixmultiply`，后者在运行时按 AVX/FMA 等特性选择内核。
 
-  v0.4 把 libm 加进"平台"的依据：同一份源码、同一组 CPU 特性（x86_64-linux，avx/avx2/fma/avx512f），glibc 2.31（Ubuntu 20.04，WSL）与生成示例的环境（推断为 glibc 2.39）相比，`control.lti.pade` 的 `approximation.certificate.value` 差 1 ulp，`control.analysis.ctrb_obsv` 非对称示例的两个奇异值差 1–2 ulp，其余示例逐位相同。glibc 会动态链接，换系统而不重新编译也会改变它，所以 `libm` 在运行时读取。`build` 也要如实：参考实现的 `build` 曾在没有设置环境变量时写死 `rustc-1.85`，v0.4 改为由构建脚本记录实际编译器版本。v0.4 之前发布的示例没有 `libm`，与它们只能做容差比较，重新生成示例后恢复逐位比较。
-  v0.4.9 参考实现去掉了跨平台差异的两个来源。第一，**数学库**：原生构建在二进制内部定义 `sin`、`exp`、`pow`、`hypot`、`sincos` 等 C 符号，转给编入二进制的纯 Rust `libm`（crate `aeoi-libm`，`libm` 0.2.16，musl libm 的移植）。可执行文件里的定义优先于系统库（ELF、Mach-O、PE 都是这样），所以 nalgebra（SVD、矩阵指数、复数模长）和 rustfft（旋转因子）内部的调用也一起换掉了。`reproducibility.libm` 记为 `rust-libm 0.2.16`，不再随操作系统变化。实测 glibc 2.39 与 `libm` 0.2.16 在随机自变量上的不同率：`sin` 3%、`exp` 10%、`pow` 9%、`atan2` 26%、`log` 5%。第二，**矩阵乘法内核**：`matrixmultiply` 换成打过补丁的副本，固定用通用内核，即普通乘加、固定次序、不融合（`rust/vendor/matrixmultiply/AEOI-PATCH.md`）。另外，发布流水线在 5 个平台上的比较又找出两处：(a) 苹果平台上 LLVM 会把 `pow(10, x)` 改写成系统的 `__exp10(x)`，所以 `__exp10`/`exp10` 也要覆盖，并按 `pow(10, x)` 计算；(b) **编译期常量折叠**：参数为常量的 `f64::cos` 等，LLVM 在编译时就用*编译机*的 C 库算掉了。rustfft 固定尺寸蝶形的旋转因子就是这样，结果随“在哪个操作系统上编译”而变（macOS 11 个、Windows 16 个 FFT 用例），与 CPU 无关。rustfft 也换成补丁副本，旋转因子直接调用 `libm::cos/sin`：`libm` 是普通 Rust 代码，折叠它就是精确的 IEEE 运算。（v0.4.16 起 FFT 改用 AEOI 自己的内核 `kernels::fft`，旋转因子同样调用 `libm::cos/sin`，rustfft 补丁副本已删除。）此后参考实现的结果不再依赖 CPU 特性和操作系统，`cpu_features` 只作记录。43 个示例中有 9 个的 `output_hash` 变了，数值差都在各自的容差类内（最大是 `bode` 非对称状态空间示例，相对差 8.9e-12，T2），按 G-3 处理，算子版本不变。发布流水线已证实：在 Linux x86_64、Linux aarch64、macOS arm64、macOS x86_64、Windows x86_64 上各自构建的二进制，对全部 859 个 golden 请求给出完全相同的 `output_hash`；浏览器（wasm）版与 Linux 原生版 925 / 925 逐位相同。manifest 仍声明 `platform_bitwise`：这个承诺依然成立，只是比实际做到的弱。改成 `bitwise` 是对调用方的新承诺，按 G-2 要给每个算子升 MINOR 版本，所以留到各算子下一次升版本时一起做（开放问题 25）。
-- M-7a **（v0.4.9）声明 `bitwise` 的前提**：超越函数 MUST 来自编入 build 的数学库（库名与版本记入 `reproducibility.libm` 和 `build`），MUST NOT 来自运行时的系统库，也 MUST NOT 在编译期用编译机的 C 库求值（常量折叠）；任何运算路径 MUST NOT 按运行时检测到的 CPU 特性分派。证据是在每个支持的平台上、用该平台上构建的二进制跑全部 golden 用例，`output_hash` 完全相同。理由：系统数学库各家舍入不同，而且会随系统升级改变（v0.4 实测 glibc 2.31 与 2.39 相差 1–2 ulp）。
+- M-7a **声明 `bitwise` 的前提**：超越函数 MUST 来自编入 build 的数学库（库名与版本记入 `reproducibility.libm` 和 `build`），MUST NOT 来自运行时的系统库，也 MUST NOT 在编译期用编译机的 C 库求值（常量折叠）；任何运算路径 MUST NOT 按运行时检测到的 CPU 特性分派。证据是在每个支持的平台上、用该平台上构建的二进制跑全部 golden 用例，`output_hash` 完全相同。理由：系统数学库各家舍入不同，而且会随系统升级改变（v0.4 实测 glibc 2.31 与 2.39 相差 1–2 ulp）。
 - M-8 `tolerance_class` MUST 取 7.2 表中的一个值。
-- M-9 **稀疏支持声明（v0.2 新增）**：manifest MUST 含 `sparse_support`，以输入字段的 JSON Pointer 为键，值为 `{"policy": "native" | "densify" | "reject", "max_dense_elements": <int>}`。未列出的矩阵字段视为 `reject`。`densify` 时算子 MUST 返回 `W.PERFORMANCE.SPARSE_DENSIFIED`；稠密化后元素数超过 `max_dense_elements` MUST 返回 `E.RESOURCE.INPUT_TOO_LARGE`。
-- M-10 **编码与上限（v0.2 新增）**：manifest MUST 含 `encodings {input: [...], output: [...]}`（取值 `json`、`b64`、`ref`），以及 `limits`（算子特有的规模上限，如 `max_grid_points`、`max_states`）。上限检查 MUST 在主计算前完成。
-- M-11 **方法登记（v0.4）**：`receipt`（4.3 R-1）的现有字段描述 `default` 方法；同一算子的其他计算方法登记在可选的 `receipt.alternatives[]`（3.14 MS-1）。没有 `alternatives` 的算子只有一个方法，manifest 与行为和 v0.3 完全相同。
+- M-9 **稀疏支持声明**：manifest MUST 含 `sparse_support`，以输入字段的 JSON Pointer 为键，值为 `{"policy": "native" | "densify" | "reject", "max_dense_elements": <int>}`。未列出的矩阵字段视为 `reject`。`densify` 时算子 MUST 返回 `W.PERFORMANCE.SPARSE_DENSIFIED`；稠密化后元素数超过 `max_dense_elements` MUST 返回 `E.RESOURCE.INPUT_TOO_LARGE`。
+- M-10 **编码与上限**：manifest MUST 含 `encodings {input: [...], output: [...]}`（取值 `json`、`b64`、`ref`），以及 `limits`（算子特有的规模上限，如 `max_grid_points`、`max_states`）。上限检查 MUST 在主计算前完成。
+- M-11 **方法登记**：`receipt`（4.3 R-1）的现有字段描述 `default` 方法；同一算子的其他计算方法登记在可选的 `receipt.alternatives[]`（3.14 MS-1）。没有 `alternatives` 的算子只有一个方法，manifest 与行为和 v0.3 完全相同。
 
 ### 2.2 片段（`control.design.lqr` 0.3.0 实际 manifest 节选）
 
@@ -159,7 +128,7 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
 - T-3 元素个数 MUST 等于 `shape` 各维乘积（内联：`data.length`；二进制：解码字节数 = 元素数 × 元素字节数）；违反返回 `E.VALIDATION.SHAPE`。`dtype` 与算子要求不符返回 `E.VALIDATION.DTYPE`。
 - T-4 FFI 到 Fortran 列主序库时，转置 MUST 在 backend 包装层完成，且 MUST 有往返单元测试。（另见第 0 章内存序规则。）
 - T-5 LTI 表示：`tf` 支持 SISO（`num`/`den` 为一维多项式）与 MIMO（二维多项式数组）；`zpk` 中复数零极点 MUST 共轭成对（相对容差 1e-12，否则 `E.VALIDATION.NOT_CONJUGATE`）；`ss` 的 `A,B,C,D` 维数 MUST 一致。内部转换（如 tf→ss）MUST 在 trust 中注明所用 realization（v0.2：controllable canonical form，与 scipy `tf2ss` 约定一致；MIMO tf 为逐通道块对角实现）。
-- T-6 **多项式前导零（v0.2 修改）**：前导零 MUST 被去除并返回 `W.VALIDATION.LEADING_ZEROS_STRIPPED`（v0.1 规定为报错，实践中前导零常来自数值计算，报错对 Agent 不友好）。分母全零返回 `E.VALIDATION.ZERO_DENOMINATOR`。
+- T-6 **多项式前导零**：前导零 MUST 被去除并返回 `W.VALIDATION.LEADING_ZEROS_STRIPPED`（v0.1 规定为报错，实践中前导零常来自数值计算，报错对 Agent 不友好）。分母全零返回 `E.VALIDATION.ZERO_DENOMINATOR`。
 
 ### 3.2 单位
 
@@ -183,7 +152,7 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
 - O-2 MATLAB 侧对 `[ny,nu,nw]` 数组的正确展平是 `reshape(permute(X,[3 2 1]),1,[])`。
 - O-3 实现 SHOULD 在错误提示中提醒内存序（v0.2 的 `E.DOMAIN.NOT_STABILIZABLE` 的 `agent_hint` 会提示"含行列顺序：row-major"），因为不可镇定、不稳定等"意外"结果常由转置错误引起。
 
-### 3.5 稀疏矩阵（v0.2 新增）
+### 3.5 稀疏矩阵
 
 ```json
 { "format": "csr", "dtype": "f64", "shape": [3, 3],
@@ -198,7 +167,7 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
 - S-5 算子按 manifest `sparse_support`（M-9）处理：`native` 直接使用；`densify` 稠密化并返回 warning；`reject` 返回 `E.VALIDATION.DTYPE` 并在 remediation 中给出稠密化补丁。
 - S-6 `structure`（`general`/`symmetric`/…）只是声明，算子 MUST NOT 据此跳过校验（例如 `lqr` 仍检查 Q 的对称性）。
 
-### 3.6 大矩阵传输（v0.2 新增）
+### 3.6 大矩阵传输
 
 | 编码 | 字段 | 适用规模（SHOULD） |
 |---|---|---|
@@ -213,13 +182,13 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
 - L-5 输出编码：`exec.output_encoding` ∈ `json`（默认）| `b64`。`b64` 时结果中的每个稠密数组替换为 `DenseMatrixB64`（含 `sha256`），标量与小型结构不变。`output_hash` 与编码无关（3.7）。
 - L-6 服务端上限（参考实现默认值，宿主可调）：单个数组解码后 ≤ 64 MiB；内联 JSON 数组 ≤ 10⁶ 元素。超限返回 `E.RESOURCE.INPUT_TOO_LARGE`，remediation 建议换用 `ref`。
 
-### 3.7 哈希与编码无关性（v0.2 新增）
+### 3.7 哈希与编码无关性
 
 - H-1 计算 `input_hash` 前，每个数组 MUST 被替换为 `{"$array": {"dtype","shape","sparse": bool, "sha256"}}`，其中稠密数组的 `sha256` 是 row-major 小端原始缓冲区的 SHA-256（与 L-2 的 `sha256` 字段同值）。因此同一矩阵用 `json`、`b64`、`ref` 三种方式传入，`input_hash` 完全相同（参考实现有测试）。
 - H-2 稀疏数组的摘要基于其规范 CSR 形式（排序、合并重复项后的 `indptr/indices/data`），`sparse: true`。**稀疏与稠密表示的同一矩阵 `input_hash` 不同**（有意如此：v0.2 不为哈希而稠密化大型稀疏矩阵）。
 - H-3 `structure` 与 `duplicates` 等纯声明字段不进入数组摘要。
 
-### 3.8 安全注意事项（v0.2 新增）
+### 3.8 安全注意事项
 
 - SEC-1 `file://` 解析 MUST 先规范化路径（解析 `..` 与符号链接，`canonicalize`），再判断是否位于 data root 之内；MUST NOT 只做字符串前缀比较。
 - SEC-2 MUST 在读取/解码前检查声明大小（`byte_length`、`shape` 乘积 × 元素字节数）是否超过上限，防止内存耗尽；读取后再次核对实际长度。
@@ -248,13 +217,13 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
 "Matrix": { "oneOf": [ {"$ref": "#/$defs/DenseMatrix"}, {"$ref": "#/$defs/DenseMatrixB64"}, {"$ref": "#/$defs/MatrixRef"}, {"$ref": "#/$defs/SparseMatrix"} ] }
 ```
 
-**引用写法（v0.4.1 新增，规范性）**
+**引用写法（规范性）**
 
 - J-1 schema 里的 `$ref` MUST 是标准 JSON Schema 2020-12 引用：只按 `$id` 与 JSON Pointer 就能解析，不需要任何 AEOI 专用规则。同一文件内写 `#/$defs/<Name>`；引用核心 schema（`schemas/*.schema.json`）的定义写 `<$id>#/$defs/<Name>`，例如 `{"$ref": "aeoi://schemas/common/0.4#/$defs/Matrix"}`。v0.4 及以前用过的简写 `aeoi://schemas/common/0.4/Matrix`（把定义名当作 `$id` 下的路径）不是合法引用：实现 MUST NOT 在发布的 schema 里使用它，消费者与一致性套件按无法解析处理（9.4）。
 - J-2 引用核心 schema 时，`$id` 中的版本 MUST 与 manifest 的 `spec` 一致（`aeoi/0.4` 对应 `aeoi://schemas/<name>/0.4`）。
 - J-3 J-1 管的是独立发布的 schema 文件（如 `examples/<id>/input.schema.json`）。M-1 要求通过 MCP 资源返回的 manifest 是内联后的形式，MCP 工具的 `inputSchema`、`outputSchema` 同样 SHOULD 内联，不含指向其他文档的 `$ref`：多数 MCP 客户端不会去取外部 schema。
 
-### 3.10 多输出结果、系统输出与离散时间约定（v0.3 新增）
+### 3.10 多输出结果、系统输出与离散时间约定
 
 实现第二批算子时发现 v0.2 没有规定以下内容，各算子各写各的会让 Agent 无法泛化。以下条款为规范性要求。
 
@@ -284,7 +253,7 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
 - O-2 互相矛盾的选项组合 MUST 返回 `E.VALIDATION.OPTION_CONFLICT`，remediation 给出去掉冲突项的 patch（例：`prewarp_frequency` 只对 `tustin` 有意义）。MUST NOT 静默忽略选项。
 - O-3 方程约定 MUST 写清符号：`lyap` 连续为 A X + X Aᵀ + Q = 0，离散为 A X Aᵀ − X + Q = 0（= python-control `lyap(A, Q)` / `dlyap(A, Q)`，= scipy `solve_continuous_lyapunov(A, −Q)` / `solve_discrete_lyapunov(A, Q)`）；`dlqr` 的 u = −Kx，代价 Σ xᵀQx + uᵀRu + 2xᵀNu。
 
-### 3.11 面向 LLM 函数调用的可消费性（v0.3.1 新增）
+### 3.11 面向 LLM 函数调用的可消费性
 
 用云端 LLM（Gemini 函数调用）端到端调用 12 个算子时发现：规范里对"人/程序"足够的信息，模型不一定看得到——函数调用接口只接受 JSON Schema 的子集，未知关键字会被丢弃；`oneOf` 校验失败时 jsonschema 只给出"不符合任何分支"，模型无从修正。以下条款为规范性要求（F = function-calling；v0.3.1-draft 早期文本曾记作 M-1 – M-6，与第 2 章 manifest 规则 M-1 – M-6 重号，已改名）：
 
@@ -303,13 +272,13 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
   - `"convention"`：指标或互联的**定义参数**，规范给出默认值，默认值是算子语义的一部分。省略时用默认，MUST 在结果里回显实际使用的值；覆盖时回显覆盖值。绑定层 MUST NOT 要求 `_user_quote`，系统提示词 MUST NOT 把用默认值说成“假设了用户没给的物理量”。v0.3.5：`feedback.sign` 默认 −1，`stepinfo.rise_time_limits` 默认 `[0.1, 0.9]`，`stepinfo.settling_threshold` 默认 `0.02`，PID 的 `form` 默认 `parallel`，`Ki`/`Kd`/`Td`/`Tf` 默认 0（该项不出现）。
   - `"supplied"`：没有安全默认、但**不是**必须从用户原话逐字摘出的数。调用方必须给出；缺失是 schema 错误，remediation 只有 `ask_user`。绑定层 MUST NOT 加 `_user_quote`：这个数可以是设计选择（PID 的 `Kp`、Padé 的 `order`），也可以是从题目里别的数算出来的（Padé 的 `delay`，例如由 t2−τ 得到，原话里没有这个数）。系统提示词 MUST 写明：不得填“常用值”；用户和题目都没给出、也推不出来时先问。设计评测没有用户可问时，评测提示词 MAY 宣布一个回退（例如“order 没写就用 10 并在说明里声明”）；这个回退写在提示词里，MUST NOT 写进算子的默认值。
 
-- F-8 **互斥选项的冲突由算子报告（v0.3.6）。** EngDesign 运行里，XG_12 先在 `form=standard` 下夹带 `Ki`/`Kd`，改成 parallel 后又写了 `Ti: 0`，得到的是 schema 的原话“0 is less than or equal to the minimum of 0”，前 4 步才得到一个控制器；XG_02 也因多余的 `Ti=0` 浪费了一回合。规则：
+- F-8 **互斥选项的冲突由算子报告。** EngDesign 运行里，XG_12 先在 `form=standard` 下夹带 `Ki`/`Kd`，改成 parallel 后又写了 `Ti: 0`，得到的是 schema 的原话“0 is less than or equal to the minimum of 0”，前 4 步才得到一个控制器；XG_02 也因多余的 `Ti=0` 浪费了一回合。规则：
   - (a) “某组字段只属于某个模式”（PID 的 parallel 与 standard、`series`/`feedback` 的具名角色与位置参数）MUST 由算子的 validate 检查，MUST NOT 只靠 `oneOf`/`not` 这类 schema 关键字：函数调用子集会丢掉它们（8.4 表），校验失败时模型也看不出是哪两个字段冲突。冲突 MUST 报 `E.VALIDATION.OPTION_CONFLICT`，`details` 给出 `conflicting_fields`、生效的模式（例如 `form`）以及该模式是否是调用方写的（`form_given`）。
   - (b) remediation MUST 是可以直接套用的 JSON Patch：`remove` 只针对请求里**确实出现**的字段（不得对不存在的路径 remove，否则套用补丁本身就报错）；需要改模式时用 `add`/`replace` 写模式字段。只有当另一个模式下所有字段都合法时才给“改模式”补丁（例如 `Ti ≤ 0` 时不给“改成 standard”）。两种做法都要猜调用方意图时，`confidence` 为 `medium`，并 MUST 另给 `ask_user`。
   - (c) 有物理含义的禁止值 MUST 用一句说明原因的话报错，而不是 schema 的比较句：`Ti = 0` 的含义是“没有积分项”，参考实现报 `OPTION_CONFLICT`，消息写明“没有积分项就省略 Ti，不要写 0”，补丁 `omit_integral` 去掉 `Ti`；负的 `Ti`/`Td`/`Tf` 报 `E.VALIDATION.RANGE`。因此 `pid` 0.4.0 的 input schema 去掉了 `Ti` 的 `exclusiveMinimum`，改由算子检查（G-2 MINOR：接受的输入集合不变，只是错误更具体）。
   - (d) 工具描述（F-1）MUST 在每个只属于某一模式的字段上写“只用于 form = …”，并写明“不需要的项直接省略，不要用 0 占位”。
 
-### 3.12 系统的组合、跨调用与近似（v0.3.5）
+### 3.12 系统的组合、跨调用与近似
 
 第二批算子能分析一个已经写好的 LTI 系统，但不能把它和另一个系统接起来。设计任务因此要手乘多项式。把“接起来”做成算子时，v0.3.4 有五处写不干净，下面是规范性要求（I = interconnection）。
 
@@ -341,7 +310,7 @@ C ABI (cdylib, 计划) ────────┘     所有入口共享同一 
 **还没写成算子的整定**
 - A-4 不在 v0.3.5 提供 `pidtune`。一个能写进规范的整定算子必须事先声明：对象类（例如已经化成的一阶加时滞）、被最小化或被满足的指标、解的唯一性、以及失败时的错误码。缺任何一条，算法就只是“某个实现的默认行为”，不能当算子。v0.4.6 的 `control.design.pidtune` 按 10.16 PT-1 – PT-6 满足这四项。
 
-### 3.13 回路的角色、一次性分析与句柄（v0.3.6）
+### 3.13 回路的角色、一次性分析与句柄
 
 EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调用了正确的算子却得到错误的系统：XG_13 用 `feedback(sys1 = 对象, sys2 = 控制器)` 把控制器放进了反馈通路（得到 G/(1+CG)），又在闭环后多串了 1/s；Ziheng_03 把闭环 T 当成开环 L 送进 `margin`，并把因式乘积 (0.5s+1)(s+1)(2s+1) 心算展开错了；XG_11 手拼越来越高阶的分母，丢掉了对象里的 169；XG_02 要求约 85 Hz 的带宽，却没有办法读 plant×controller 的带宽，交了一个带宽为 0 的增益。工具本身都是对的，接口让这些错误很容易犯。下面是规范性要求（K = loop）。
 
@@ -352,7 +321,7 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 - K-5 **频率字段写单位。** 返回频率的字段名 MUST 带单位后缀，并且两种单位都给：`gain_crossover_rad_s` / `gain_crossover_hz`（|L(jω)| = 1，开环穿越频率），`bandwidth_rad_s` / `bandwidth_hz`（闭环 T 的带宽）。`_hz` MUST 恰好等于 `_rad_s / 2π`。带宽的定义 MUST 回显在 `bandwidth_definition`：`{drop_db, reference: "dc_gain", of: "closed_loop", method}`，即第一个使 |T(jω)| < |T(0)|·10^{drop_db/20} 的频率；连续系统用 |T(jω)|² 在 ω² 上的偶多项式求根再二分精化，离散系统在 (0, π/ts) 的网格上找第一个跨越再二分。T 不稳定、T 不 proper、DC 增益为 0 或无穷时为 null 并给 `W.DOMAIN.ANALYSIS_SKIPPED`；T 稳定但在整个频率范围内都没有跌到阈值以下（例如双正则且高频增益不低于阈值）时为 `"Inf"`，与 python-control 的 `bandwidth` 一致。带宽算在 plant·controller 的闭环上，不是只算对象。
 - K-6 **系统靠原样传递，不靠手抄。** 返回的 `result.system`（以及 `open_loop` / `closed_loop` / `sensitivity`）就是 I-1 的句柄。绑定层回传给模型时 MUST NOT 抽样、截断或改写任何 `LtiSystem`（F-6 的 `_downsampled` 只适用于时间/频率数组）；系统提示词与工具描述 MUST 写明“把上一个工具返回的系统 JSON 原样作为下一个工具的参数，不要重新抄写或化简系数”，`input` 描述里的 `LtiSystem` 参数 MUST 带这句话。题目给出的因式乘积 SHOULD 用 `series` 相乘，而不是由模型展开。
 
-### 3.14 方法的登记与选择（v0.4）
+### 3.14 方法的登记与选择
 
 到 v0.3.6 为止，一个算子版本只有一个方法：manifest 的 `receipt.method_id` 写死，收据的 `method.id` 回显它。于是“换一个实现”或“换一种算法”只能靠发布新的算子版本，用户也没有办法要求“只用经过审计的库”。v0.4 允许同一个算子登记多个方法，并让请求在这些方法之间选择。
 
@@ -383,7 +352,7 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 - MS-10 策略有两个来源：宿主或部署层（用户或组织的规定，例如“只用经过审计的库”），以及模型生成的请求。生效策略 = 宿主策略与请求策略的交集：`require` 取交集，`constraints` 取更严的（`min_exactness` 取较高者，`backend_library_in` 取交集）。合并后候选集为空时按 MS-6 报错。请求 MUST NOT 能放宽宿主策略。宿主策略由绑定层在调用算子前合并进 `exec.method_policy`；这是请求的一部分，不是对结果的改写，所以不违反 B-1。算子只处理它实际收到的 `exec.method_policy`。
 - MS-11 LLM 绑定默认隐藏 `exec`（F-6），模型因此不能改策略；宿主策略仍按 MS-10 注入，当前被允许的方法集合 SHOULD 写进工具描述（F-1），让模型知道有哪些方法可用。绑定层若允许模型自己提出 `method_policy`，它只能收紧宿主策略。
 
-### 3.15 表达式语言（v0.4.8）
+### 3.15 表达式语言
 
 到 v0.4.7 为止，算子的输入都是数据：数、数组、系统。ODE 的右端 f(t, y) 是一个函数。JSON 只能传数据。把代码（Python、MATLAB 的匿名函数）交给算子执行，既不安全，也无法复现，因为结果取决于哪个解释器、哪个版本。所以 v0.4.8 用一种小的表达式语言，让函数也作为数据传递。语法固定，函数表固定，算子只解析、只求值，不执行任何代码。以后凡是要由用户给出函数的算子（非线性方程、优化目标、被积函数）都复用本节。参考实现在 `aeoi-numeric::expr`。golden 生成脚本里另有一个独立的 Python 实现（`gen_golden_ode.py`），它只依据本节写成。
 
@@ -419,7 +388,7 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 - EX-5 **规模上限**：每个表达式最多 10 000 个字符、10 000 个语法树节点，嵌套深度不超过 200。超出时分别报 `too_long`、`too_many_nodes`、`too_deep`。深度有上限，所以递归下降解析器不会因栈溢出而崩溃（X-3）。
 - EX-6 **错误**。静态错误一律报 `E.VALIDATION.EXPRESSION`（新码）。`details` 包含：`path`（指向出错表达式的 JSON Pointer，如 `/rhs/1`）、`expression`（原文）、`position`（从 0 起算的字符偏移）、`kind`（取值为 `syntax`、`unknown_name`、`arity`、`non_ascii`、`too_long`、`too_many_nodes`、`too_deep`、`not_finite`、`bad_name`、`duplicate_name`）。`message` 的最后一行是原文加一个指向错误位置的 `^`。所有表达式都先通过检查，然后才开始求值，不会出现算到一半才发现第三个表达式写错的情况。remediation 是 `modify_input`（改写该表达式）和 `ask_user`。
 - EX-7 实现 MUST NOT 借用宿主语言的 `eval` 或任何能执行代码的机制，也 MUST NOT 接受本节以外的语法或函数（不提供“方便的扩展”）。两个实现只要都遵守本节，对同一个表达式就有相同的语义；golden 里的右端由 Python 实现求值，参考实现与它的差别只来自 libm。
-- EX-8 **自动微分**（v0.4.13，作者决定）：需要导数的算子（`fsolve`，以后的 `fmincon`、`ode15s`）MUST 对表达式做前向自动微分，得到精确到舍入误差的导数，MUST NOT 用有限差分。
+- EX-8 **自动微分**（作者决定）：需要导数的算子（`fsolve`，以后的 `fmincon`、`ode15s`）MUST 对表达式做前向自动微分，得到精确到舍入误差的导数，MUST NOT 用有限差分。
   - 值部分与 EX-4 的求值逐位相同。
   - 不可导点的约定：abs′(0) = 0，sign′ = 0；min、max 取被选中那个参数的导数，相等时取第一个；指数为常数的幂 x^c 用 c·x^(c−1)。
   - 参考实现在 `aeoi-numeric::expr::eval_grad`，所有需要导数的算子共用它（11.5 RI-1）。
@@ -449,12 +418,12 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 - E-6 `trust_level: "summary"`（默认）只返回上表字段；`"full"` MAY 附加逐点诊断数组。
 - E-7 `warnings[]` 元素：`code`（`W.<CATEGORY>.<NAME>`）、`message`、`path`（JSON Pointer）、可选 `details` 与 `remediation`。算子 MUST 在 manifest `warnings[]` 中声明所有可能返回的 warning code。
 - E-8 MCP 返回时，信封放入 `structuredContent`；`content` 中 MUST 给出一段简短文本摘要（status、精度等级、warning 列表），并 SHOULD 再给出信封的 JSON 文本，以兼容不读 `structuredContent` 的客户端。
-- E-9 **dry run（v0.2 新增）**：`exec.dry_run = true` 时，算子完成全部校验（schema、语义、规模上限）后停止，返回 `dry_run: true`、`result: null`、`estimate`（如网格点数、flops 估计）；不得执行主计算。信封字段 `dry_run` 为必填。
+- E-9 **dry run**：`exec.dry_run = true` 时，算子完成全部校验（schema、语义、规模上限）后停止，返回 `dry_run: true`、`result: null`、`estimate`（如网格点数、flops 估计）；不得执行主计算。信封字段 `dry_run` 为必填。
 - E-10 **输出编码**：见 L-5。
-- E-11 **没有证据，不声称成功（v0.3.3 新增）**：成功信封的 `receipt.evidence.claim` 只能是 `verified`（manifest `receipt.postconditions` 列出的 `trust.checks` 全部为 true）、`spot_checked`（全部为 true，但至少一个只是抽样检查，E-12，v0.3.6 新增）、`unchecked`（算子没有声明后置条件）或 `unverified`。任何声明的后置条件为 false 或缺失时，框架 MUST 追加 `W.EVIDENCE.POSTCONDITION_FAILED`（于是 `status` 为 `ok_with_warnings`），claim 为 `unverified`。`ok` 本身只表示"算子完成了计算"；只有 `verified` 才能被下游（含 LLM）表述为"已验证"。只描述问题性质的检查（如 `asymptotically_stable`、对称化之前的不对称度）MUST NOT 列为后置条件，否则合法结果会被误判。
-- E-7a **框架级码（v0.3.3 新增）**：由框架而不是算子产生的码（目前只有 `W.EVIDENCE.POSTCONDITION_FAILED`）在 5.1 统一登记，不要求在每个 manifest 的 `warnings[]` 中重复声明；E-7 的"MUST 声明"只约束算子自己产生的码。
-- E-12 **抽样的检查只是抽查（v0.3.6）。** manifest 的 `receipt.coverage` 为每个后置条件声明它覆盖了多少结果：`full`（在整个结果上求值；缺省）、`test_points`（一个结果必须处处满足的恒等式，在算子事先固定、与结果无关的若干点上核对；结果本身由有限次精确形式的运算得到，例如组合算子的 I-9）、`sampled`（只在结果的子集、网格或压缩副本上求值，例如 `margin` 在频率网格上复查有没有漏掉穿越点）。所有后置条件为 true 但其中有 `sampled` 时，claim MUST 是 `spot_checked`，不是 `verified`。收据 `evidence.coverage` 抄录完整的映射（未声明者写 `full`）；没有声明 coverage 的算子 MUST NOT 出现这个字段（已发布收据字节不变）。绑定层抽样后的视图（F-6 的 `_downsampled`）、模型自己写的摘要都不是证据：MUST NOT 在它们上面计算任何后置条件。v0.3.6 声明 `sampled` 的有：`margin.grid_audit_clean`、`loopsens.sub_operator_checks`（因为裕度来自 `margin`）；声明 `test_points` 的有 `series`/`parallel`/`feedback`/`convert` 的 `response_consistent`、`pid.formula_matches`、`loopsens.closed_loop_identity`。
-- E-13 **失败的检查要指出哪些字段不能用（v0.3.6）。** EngDesign 的 XG_02 是 7 阶系统：Krylov 可控性矩阵的数值秩是 4，PBH 检验认为满秩，`pbh_agrees_ctrb` 为 false，claim 正确地为 `unverified`；但信封没有说哪些字段因此不能用，模型看到的又是被抽样的矩阵，`rank`、`full_rank`、`minimal` 看起来和正常结果一样。manifest 的 `receipt.guards` 把后置条件映射到它保护的结果字段（JSON Pointer）；某个检查失败时，收据 `evidence.unreliable` MUST 列出这些字段（排序去重），`W.EVIDENCE.POSTCONDITION_FAILED` 的消息与 `details.unreliable` 写出同一列表，绑定层 MUST 把它作为 `unreliable_fields` 告诉模型，系统提示词 MUST 要求“不得引用、不得作为下一步的依据”。v0.3.6：`ctrb_obsv` 的 `pbh_agrees_ctrb` → `/ctrb/rank`、`/ctrb/full_rank`、`/minimal`（obsv 同理）；组合算子的 `response_consistent` → `/system`；`loopsens` 见其 manifest。
+- E-11 **没有证据，不声称成功**：成功信封的 `receipt.evidence.claim` 只能是 `verified`（manifest `receipt.postconditions` 列出的 `trust.checks` 全部为 true）、`spot_checked`（全部为 true，但至少一个只是抽样检查，E-12，v0.3.6 新增）、`unchecked`（算子没有声明后置条件）或 `unverified`。任何声明的后置条件为 false 或缺失时，框架 MUST 追加 `W.EVIDENCE.POSTCONDITION_FAILED`（于是 `status` 为 `ok_with_warnings`），claim 为 `unverified`。`ok` 本身只表示"算子完成了计算"；只有 `verified` 才能被下游（含 LLM）表述为"已验证"。只描述问题性质的检查（如 `asymptotically_stable`、对称化之前的不对称度）MUST NOT 列为后置条件，否则合法结果会被误判。
+- E-7a **框架级码**：由框架而不是算子产生的码（目前只有 `W.EVIDENCE.POSTCONDITION_FAILED`）在 5.1 统一登记，不要求在每个 manifest 的 `warnings[]` 中重复声明；E-7 的"MUST 声明"只约束算子自己产生的码。
+- E-12 **抽样的检查只是抽查。** manifest 的 `receipt.coverage` 为每个后置条件声明它覆盖了多少结果：`full`（在整个结果上求值；缺省）、`test_points`（一个结果必须处处满足的恒等式，在算子事先固定、与结果无关的若干点上核对；结果本身由有限次精确形式的运算得到，例如组合算子的 I-9）、`sampled`（只在结果的子集、网格或压缩副本上求值，例如 `margin` 在频率网格上复查有没有漏掉穿越点）。所有后置条件为 true 但其中有 `sampled` 时，claim MUST 是 `spot_checked`，不是 `verified`。收据 `evidence.coverage` 抄录完整的映射（未声明者写 `full`）；没有声明 coverage 的算子 MUST NOT 出现这个字段（已发布收据字节不变）。绑定层抽样后的视图（F-6 的 `_downsampled`）、模型自己写的摘要都不是证据：MUST NOT 在它们上面计算任何后置条件。v0.3.6 声明 `sampled` 的有：`margin.grid_audit_clean`、`loopsens.sub_operator_checks`（因为裕度来自 `margin`）；声明 `test_points` 的有 `series`/`parallel`/`feedback`/`convert` 的 `response_consistent`、`pid.formula_matches`、`loopsens.closed_loop_identity`。
+- E-13 **失败的检查要指出哪些字段不能用。** EngDesign 的 XG_02 是 7 阶系统：Krylov 可控性矩阵的数值秩是 4，PBH 检验认为满秩，`pbh_agrees_ctrb` 为 false，claim 正确地为 `unverified`；但信封没有说哪些字段因此不能用，模型看到的又是被抽样的矩阵，`rank`、`full_rank`、`minimal` 看起来和正常结果一样。manifest 的 `receipt.guards` 把后置条件映射到它保护的结果字段（JSON Pointer）；某个检查失败时，收据 `evidence.unreliable` MUST 列出这些字段（排序去重），`W.EVIDENCE.POSTCONDITION_FAILED` 的消息与 `details.unreliable` 写出同一列表，绑定层 MUST 把它作为 `unreliable_fields` 告诉模型，系统提示词 MUST 要求“不得引用、不得作为下一步的依据”。v0.3.6：`ctrb_obsv` 的 `pbh_agrees_ctrb` → `/ctrb/rank`、`/ctrb/full_rank`、`/minimal`（obsv 同理）；组合算子的 `response_consistent` → `/system`；`loopsens` 见其 manifest。
 
 ### 4.2 信封骨架（字段取自参考实现的实际输出）
 
@@ -477,7 +446,7 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 }
 ```
 
-### 4.3 结果收据（Result Receipt，v0.3.3 新增）
+### 4.3 结果收据（Result Receipt）
 
 每个非 dry-run 的成功信封带一个 `receipt`（`schemas/envelope.schema.json#/$defs/Receipt`）；错误与 dry-run 信封中为 `null`。收据回答四个问题：**用什么方法算的、在什么前提下成立、有多精确、凭什么说它对**，并给出可以离线复核的指纹。思路借鉴 bicmath（nikoma，MIT）的"可验证结果"与 matlab-mcp-extensions（zws20070309）的"没有证据不声称成功"；只借鉴想法，没有复制代码。
 
@@ -497,7 +466,7 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 - R-6 **入口**：参考实现在 `aeoi_core::receipt::verify`，暴露为 MCP 工具 `aeoi_verify`（参数 `operator`、`arguments`、`envelope`；只读、幂等）、命令行 `aeoi-call verify <operator> <request.json> <envelope.json>`（通过时退出码 0）、wasm 导出 `verify` / `verify_tool_call`，以及网页轨迹面板中每次工具调用的"重放验证"按钮（本地版走 `POST /api/verify`，浏览器版在 wasm 里重放）。
 - R-7 **对 LLM 的呈现**：绑定层回传给模型的是收据的短形式（`claim`、`failed_postconditions`、`exactness`、`unchecked_assumptions` = `enforced_by: "caller"` 的前提、`method`、`fingerprint`）；系统提示词要求模型：只有 `verified` 才能说"已验证"，`spot_checked` 只能说“抽查通过”，`unchecked` 要说明没有独立后验检查，`unverified` 不能当作成功结论，并在回答前确认 `unchecked_assumptions` 成立。v0.3.6 起短形式另带 `coverage`（有非 `full` 项时）、`unreliable_fields` 与一句不得引用这些字段的说明（E-13）；回传结果里有数组被抽样时，短形式带 `result_view: "downsampled"`，提醒模型这不是完整结果。
 - R-8 收据不是签名：它证明"这组输入在这个算子版本上会得到这个结果"，任何人可以重放复核；它不证明是谁算的。需要来源证明时，对收据（或整个信封）再做 V-8 的 CI 签名。
-- R-9 **方法选择（v0.4）**：请求带 `exec.method_policy` 时收据多一个 `method_selection`（3.14 MS-7）；重放以 `require: [used]` 进行，环境没有该方法时 verdict 为 `method_unavailable`（MS-9）。`exec` 不进入 `input_hash`（P-2），所以策略不影响 `fingerprint.request`。
+- R-9 **方法选择**：请求带 `exec.method_policy` 时收据多一个 `method_selection`（3.14 MS-7）；重放以 `require: [used]` 进行，环境没有该方法时 verdict 为 `method_unavailable`（MS-9）。`exec` 不进入 `input_hash`（P-2），所以策略不影响 `fingerprint.request`。
 
 收据实例（`control.design.lqr` 示例响应，节选）：
 
@@ -514,8 +483,6 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 }
 ```
 
-实测（v0.3.3）：615 个 golden 成功用例全部给出收据，同机重放全部 `bitwise_match`，30 个错误用例全部 `error_reproduced`（`tests/receipt.rs`，`reports/receipts.json`）；claim 分布：10 个算子全部 `verified`，`poles_zeros` 与 `lyap` 为 `unchecked`（没有独立的后验检查，见 11.4）；没有 `unverified`（v0.3.6 复测见 11.3：`margin` 与 `loopsens` 因 E-12 为 `spot_checked`）。36 个已发布示例（原生生成）在 wasm 中重放：19 个 `bitwise_match`、5 个 `tolerance_match`（最大相对差 4.2e-15）、12 个 `error_reproduced`（`rust/aeoi-wasm/parity/verify_examples.mjs`，CI 冒烟测试的一部分）。
-
 ## 5. 结构化错误
 
 ### 5.1 错误码分类
@@ -524,13 +491,13 @@ EngDesign 真模型运行（`reports/design-live.md`，7 题）里，模型调�
 
 | 类别 | 何时使用 | `retryable` 默认 | 已登记的码（v0.3 新增的加粗） |
 |---|---|---|---|
-| `VALIDATION` | 输入不符合 schema 或语义约束 | true（改输入） | `SCHEMA`、`SHAPE`、`DTYPE`、`RANGE`、`NON_FINITE`、`NOT_SYMMETRIC`、`NOT_CONJUGATE`、`ZERO_DENOMINATOR`、`GRID`、`SPARSE_STRUCTURE`、`DIGEST_MISMATCH`、`REF_UNSUPPORTED`、`REF_FORBIDDEN`、**`OPTION_CONFLICT`**、**`RANK_DEFICIENT`**、**`UNGROUNDED_INPUT`**（v0.3.1，绑定层）、**`METHOD_UNAVAILABLE`**（v0.4）、`EXPRESSION`（v0.4.8，3.15） |
-| `DOMAIN` | 输入合法，但数学问题本身无解/不适用 | 视情况 | `IMPROPER_SYSTEM`、`NOT_STABILIZABLE`、`R_NOT_POSITIVE_DEFINITE`、`WEIGHT_NOT_PSD`、`HAMILTONIAN_IMAG_AXIS_EIG`、`ABOVE_NYQUIST`、**`MIMO_NOT_SUPPORTED`**、**`DEGENERATE_SYSTEM`**、**`NOT_CONTINUOUS`**、**`NOT_CONTROLLABLE`**、**`POLE_MULTIPLICITY`**、**`LYAP_SINGULAR`**、**`SYMPLECTIC_UNIT_CIRCLE_EIG`**、`UNDERDETERMINED`（v0.4.10）、`EXTRAPOLATION_REQUIRED`（v0.4.10）、`NO_SIGN_CHANGE`（v0.4.13）、`INFEASIBLE`（v0.4.14）、`UNBOUNDED`（v0.4.14） |
-| `NUMERICAL` | 问题理论上可解，但数值上失败或不可信 | true（正则化/放宽/换算法） | `SINGULAR`、`NO_CONVERGENCE`、`POLE_ON_GRID`、`NON_FINITE_EVALUATION`（v0.4.8）、`STEP_SIZE_TOO_SMALL`（v0.4.8）、`LOCAL_MINIMUM`（v0.4.13） |
+| `VALIDATION` | 输入不符合 schema 或语义约束 | true（改输入） | `SCHEMA`、`SHAPE`、`DTYPE`、`RANGE`、`NON_FINITE`、`NOT_SYMMETRIC`、`NOT_CONJUGATE`、`ZERO_DENOMINATOR`、`GRID`、`SPARSE_STRUCTURE`、`DIGEST_MISMATCH`、`REF_UNSUPPORTED`、`REF_FORBIDDEN`、**`OPTION_CONFLICT`**、**`RANK_DEFICIENT`**、**`UNGROUNDED_INPUT`**（v0.3.1，绑定层）、**`METHOD_UNAVAILABLE`**、`EXPRESSION`（v0.4.8，3.15） |
+| `DOMAIN` | 输入合法，但数学问题本身无解/不适用 | 视情况 | `IMPROPER_SYSTEM`、`NOT_STABILIZABLE`、`R_NOT_POSITIVE_DEFINITE`、`WEIGHT_NOT_PSD`、`HAMILTONIAN_IMAG_AXIS_EIG`、`ABOVE_NYQUIST`、**`MIMO_NOT_SUPPORTED`**、**`DEGENERATE_SYSTEM`**、**`NOT_CONTINUOUS`**、**`NOT_CONTROLLABLE`**、**`POLE_MULTIPLICITY`**、**`LYAP_SINGULAR`**、**`SYMPLECTIC_UNIT_CIRCLE_EIG`**、`UNDERDETERMINED`、`EXTRAPOLATION_REQUIRED`、`NO_SIGN_CHANGE`、`INFEASIBLE`、`UNBOUNDED` |
+| `NUMERICAL` | 问题理论上可解，但数值上失败或不可信 | true（正则化/放宽/换算法） | `SINGULAR`、`NO_CONVERGENCE`、`POLE_ON_GRID`、`NON_FINITE_EVALUATION`、`STEP_SIZE_TOO_SMALL`、`LOCAL_MINIMUM` |
 | `RESOURCE` | 超时、超规模、被取消 | true | `TIMEOUT`、`INPUT_TOO_LARGE`、`COMPUTE_LIMIT`、`OUTPUT_TOO_LARGE` |
 | `INTERNAL` | 实现缺陷或后端异常 | false（可原样重试一次） | `PANIC`（`BACKEND`、`INVARIANT_VIOLATED` 为保留码，v0.2 算子未使用） |
 
-已登记的 warning（v0.3.3 新增框架级 `W.EVIDENCE.POSTCONDITION_FAILED`，见 E-7a、E-11）：`W.NUMERICAL.{NEAR_POLE, ZERO_ON_GRID, ILL_CONDITIONED, LARGE_RESIDUAL, NEAR_UNCONTROLLABLE, **RANK_AMBIGUOUS, CROSSING_RECOVERED, PLACEMENT_INACCURATE, CONVERSION_DISCREPANCY**, STIFF_PROBLEM（v0.4.8）}`、`W.DOMAIN.{BRACKET_SEARCHED（v0.4.13）, UNSTABLE_SYSTEM, NOT_SETTLED, INFINITE_DC_GAIN, ZERO_DC_GAIN, **UNDEFINED_DC_GAIN, NONMINIMAL_REALIZATION, REALIZATION_DEPENDENT, GRAMIAN_UNDEFINED, CLOSED_LOOP_UNSTABLE, DIRECT_FEEDTHROUGH_IGNORED**}`、`W.ACCURACY.{GRID_TOO_COARSE, AUTO_GRID, **ALIASING**, EXTRAPOLATED（v0.4.10）}`、`W.VALIDATION.{LEADING_ZEROS_STRIPPED, SYMMETRIZED}`、`W.PERFORMANCE.SPARSE_DENSIFIED`（加粗为 v0.3 新增）。
+已登记的 warning（v0.3.3 新增框架级 `W.EVIDENCE.POSTCONDITION_FAILED`，见 E-7a、E-11）：`W.NUMERICAL.{NEAR_POLE, ZERO_ON_GRID, ILL_CONDITIONED, LARGE_RESIDUAL, NEAR_UNCONTROLLABLE, **RANK_AMBIGUOUS, CROSSING_RECOVERED, PLACEMENT_INACCURATE, CONVERSION_DISCREPANCY**, STIFF_PROBLEM}`、`W.DOMAIN.{BRACKET_SEARCHED, UNSTABLE_SYSTEM, NOT_SETTLED, INFINITE_DC_GAIN, ZERO_DC_GAIN, **UNDEFINED_DC_GAIN, NONMINIMAL_REALIZATION, REALIZATION_DEPENDENT, GRAMIAN_UNDEFINED, CLOSED_LOOP_UNSTABLE, DIRECT_FEEDTHROUGH_IGNORED**}`、`W.ACCURACY.{GRID_TOO_COARSE, AUTO_GRID, **ALIASING**, EXTRAPOLATED}`、`W.VALIDATION.{LEADING_ZEROS_STRIPPED, SYMMETRIZED}`、`W.PERFORMANCE.SPARSE_DENSIFIED`（加粗为 v0.3 新增）。
 
 v0.3.1 新增码：`UNGROUNDED_INPUT` 由 LLM 绑定层（不是算子）返回，表示 `x-aeoi-provenance: "user"` 的输入没有用户原话作为来源（F-5(c)），`retryable: true` 但只能在问过用户之后重试。v0.3 新增码的含义：`OPTION_CONFLICT` 选项组合矛盾（O-2）；`RANK_DEFICIENT` 输入矩阵列不满秩（`place` 的 B）；`MIMO_NOT_SUPPORTED` 该算子/表示只支持 SISO（R-8、`margin`）；`DEGENERATE_SYSTEM` 系统矩阵非满法秩，零点无定义（R-9）；`NOT_CONTINUOUS` 需要连续系统却给了离散系统（`c2d`）；`NOT_CONTROLLABLE` 有不可控模态，无法任意配置极点（`place`；与 `NOT_STABILIZABLE` 区分：后者只关心不稳定模态）；`POLE_MULTIPLICITY` 期望极点重数超过输入数 m；`LYAP_SINGULAR` Lyapunov 方程奇异（连续 λᵢ + λ̄ⱼ ≈ 0，离散 λᵢλ̄ⱼ ≈ 1）；`SYMPLECTIC_UNIT_CIRCLE_EIG` DARE 的辛矩阵束在单位圆上有特征值（单位圆上的模态不被 Q 观测）。这些都是 `DOMAIN`/`VALIDATION`：调数值参数无效（X-1）。
 
@@ -547,8 +514,8 @@ v0.4 新增码：`METHOD_UNAVAILABLE` 由算子返回（3.14 MS-6）：`exec.met
 - X-2 FFI 后端的每个返回码 MUST 映射到具体错误码；MUST NOT 把后端错误笼统报为 `INTERNAL.BACKEND`，除非确实无法归类。
 - X-3 Rust `panic` MUST 被 `catch_unwind` 捕获并转为 `E.INTERNAL.PANIC`，FFI 边界 MUST NOT 让 panic 或 Fortran 异常跨越。
 - X-4 数值"勉强成功"SHOULD 返回成功 + `W.NUMERICAL.ILL_CONDITIONED`，而不是错误；阈值 MUST 写在 manifest。
-- X-4a **数值判据 MUST 与问题尺度无关（v0.2 新增）**：判断"特征值在虚轴上"、"矩阵奇异"等的阈值 MUST 以机器精度 u 与相关范数表达（如 `|Re λ| ≤ 10³·u·‖H‖₁`），MUST NOT 用与尺度无关的固定小数。（v0.2 实现初版用 `1e-8·‖H‖₁`，在 cond(R)=10⁹ 的合法问题上误报 `HAMILTONIAN_IMAG_AXIS_EIG`，被 parity 测试发现。）**（v0.3.2 补充）** 以机器精度表达仍不够：范数本身 MUST 不被某个可任意缩放的块主导。`lqr` 0.2.0 的 `10³·u·‖H‖₁` 中 ‖H‖₁ 由 ‖BR⁻¹Bᵀ‖ 主导，R = diag(1, 1e-12) 的良态解耦问题被误报（tpt-control 交叉验证发现）；0.3.0 改为在辛对角平衡（状态尺度变换）后的 H̃ 上判断，且只把"接近虚轴"当作怀疑，用直接判据（PBH 不可观检验）确认或求解后检验闭环。
-- X-4b **规模类错误要区分（v0.2 新增）**：`COMPUTE_LIMIT`（计算量超限，remediation 改粗网格）与 `OUTPUT_TOO_LARGE`（计算可做但返回体过大，remediation 抽样或只返回指标）MUST 分开，因为两者的有效修复不同。
+- X-4a **数值判据 MUST 与问题尺度无关**：判断"特征值在虚轴上"、"矩阵奇异"等的阈值 MUST 以机器精度 u 与相关范数表达（如 `|Re λ| ≤ 10³·u·‖H‖₁`），MUST NOT 用与尺度无关的固定小数。（v0.2 实现初版用 `1e-8·‖H‖₁`，在 cond(R)=10⁹ 的合法问题上误报 `HAMILTONIAN_IMAG_AXIS_EIG`，被 parity 测试发现。）**（v0.3.2 补充）** 以机器精度表达仍不够：范数本身 MUST 不被某个可任意缩放的块主导。`lqr` 0.2.0 的 `10³·u·‖H‖₁` 中 ‖H‖₁ 由 ‖BR⁻¹Bᵀ‖ 主导，R = diag(1, 1e-12) 的良态解耦问题被误报（tpt-control 交叉验证发现）；0.3.0 改为在辛对角平衡（状态尺度变换）后的 H̃ 上判断，且只把"接近虚轴"当作怀疑，用直接判据（PBH 不可观检验）确认或求解后检验闭环。
+- X-4b **规模类错误要区分**：`COMPUTE_LIMIT`（计算量超限，remediation 改粗网格）与 `OUTPUT_TOO_LARGE`（计算可做但返回体过大，remediation 抽样或只返回指标）MUST 分开，因为两者的有效修复不同。
 
 ### 5.2 错误对象（`control.design.lqr` 的实际错误输出，节选）
 
@@ -572,7 +539,7 @@ v0.4 新增码：`METHOD_UNAVAILABLE` 由算子返回（3.14 MS-6）：`exec.met
 - X-6 凡改变物理模型含义的修复（改 A/B、改系统阶次、加滤波器、改 Q）MUST 设 `requires_user_confirmation: true`。只影响数值处理或输出规模的修复（换网格、抽样、排序频点）MAY 为 false。
 - X-7 `remediation` 按推荐度排序；MUST 至少一条（实在无建议时给 `ask_user`）。
 - X-8 `details.path` SHOULD 用 JSON Pointer 指向出错的输入字段。
-- X-9 **（v0.2 新增）** `call_operator` MUST 引用同一注册表中已存在的算子（v0.1 示例引用了不存在的 `control.lti.ctrb_decomp`，已删除）。`modify_input` 的 patch 应用后 SHOULD 能通过校验；参考实现对 `step` 的 `COMPUTE_LIMIT` 示例测试了"应用 patch 后调用成功"。
+- X-9 **** `call_operator` MUST 引用同一注册表中已存在的算子（v0.1 示例引用了不存在的 `control.lti.ctrb_decomp`，已删除）。`modify_input` 的 patch 应用后 SHOULD 能通过校验；参考实现对 `step` 的 `COMPUTE_LIMIT` 示例测试了"应用 patch 后调用成功"。
 
 ## 6. 可复现性
 
@@ -591,18 +558,18 @@ v0.4 新增码：`METHOD_UNAVAILABLE` 由算子返回（3.14 MS-6）：`exec.met
 
 - V-1 参考数据来源优先级：① MATLAB（ground truth，正版授权）② 解析解/高精度计算（如 mpmath）③ python-control/scipy、GNU Octave 等开源实现（开发阶段对照，不能单独授予 A 级）。
 - V-2 MATLAB 侧只运行公开 API 的生成脚本（`matlab/gen_golden_<op>.m`），固定 `rng(seed)`，记录 `version`、工具箱版本、`version('-blas')`、`version('-lapack')`、`computer('arch')`、`maxNumCompThreads`。脚本 MUST 遵守第 0 章内存序规则。
-- V-3 **（v0.2 修改）** golden 目录包含参考引擎名：`golden/<engine>/<op>/<op_version>/<sha256>.json`（如 `golden/python-control/…`、`golden/MATLAB/…`），以免不同参考的数据混在一起被误当作 MATLAB 结果。文件名 = 内容 SHA-256。每个文件 MUST 带 `reference_env`（引擎与版本）。golden 文件 MUST 纳入版本库或制品仓库，MUST NOT 在 CI 中重新生成。
-- V-3a **（v0.3.2 新增）golden 的版本归属**：`<op_version>` 是生成该 golden 时的算子版本。算子升级而 input schema 与输出语义不变时，新版本 MAY 继续使用旧版本目录下的 golden（参考值与算子版本无关，MUST NOT 为改目录名而重新生成或改写文件），parity.yaml MUST 列出实际使用的 `golden_store`；为新版本新增的用例写入新版本目录。v0.3.6 补充：只**增加**可选输入或输出字段的 MINOR 升级（G-2），只要旧请求的结果在旧字段上逐位不变（参考实现：位置参数调用的 `series`/`feedback` 0.4.0），同样 MAY 沿用旧目录；新增输入形式（如具名角色）的用例 SHOULD 写入新版本目录或由单元测试覆盖。高精度参考（V-1 ②）用引擎名 `mpmath`：`golden/mpmath/<op>/<ver>/`，`reference_env` 写明 mpmath 版本、精度位数与求解方法。
+- V-3 **** golden 目录包含参考引擎名：`golden/<engine>/<op>/<op_version>/<sha256>.json`（如 `golden/python-control/…`、`golden/MATLAB/…`），以免不同参考的数据混在一起被误当作 MATLAB 结果。文件名 = 内容 SHA-256。每个文件 MUST 带 `reference_env`（引擎与版本）。golden 文件 MUST 纳入版本库或制品仓库，MUST NOT 在 CI 中重新生成。
+- V-3a **golden 的版本归属**：`<op_version>` 是生成该 golden 时的算子版本。算子升级而 input schema 与输出语义不变时，新版本 MAY 继续使用旧版本目录下的 golden（参考值与算子版本无关，MUST NOT 为改目录名而重新生成或改写文件），parity.yaml MUST 列出实际使用的 `golden_store`；为新版本新增的用例写入新版本目录。v0.3.6 补充：只**增加**可选输入或输出字段的 MINOR 升级（G-2），只要旧请求的结果在旧字段上逐位不变（参考实现：位置参数调用的 `series`/`feedback` 0.4.0），同样 MAY 沿用旧目录；新增输入形式（如具名角色）的用例 SHOULD 写入新版本目录或由单元测试覆盖。高精度参考（V-1 ②）用引擎名 `mpmath`：`golden/mpmath/<op>/<ver>/`，`reference_env` 写明 mpmath 版本、精度位数与求解方法。
 - V-4 parity 测试 MUST 使用显式输入（显式频点、显式时间网格），MUST NOT 依赖参考实现的自动网格/自动选择逻辑。
 - V-5 非唯一输出（特征向量、状态空间实现、Schur 基）MUST 比较不变量（特征值集合、传递函数、投影子），不得逐元素比较。
 - V-6 比较公式：|x − x_ref| ≤ atol + rtol·|x_ref|；矩阵 SHOULD 用范数形式。**（v0.2 细化）** 病态问题的容差 MAY 按以下两种方式放宽，且 MUST 写入 parity spec、MUST 在测试报告中单独统计被放宽的用例数：
   - 条件数缩放：`rtol × max(1, κ/10²)`（`lqr` 用 κ = cond(S)）；
   - 误差估计缩放：`max(class_tol, 10 × trust.error_estimate)`——只有当算子自报的误差估计本身已经较大时才放宽（如 `bode` 的近极点频点）。这同时检验了误差估计不是"夸大的好消息"：实际偏差必须落在算子自报估计的 10 倍以内。
-  - **（v0.3 新增）根与系数的条件数缩放**：多项式根/特征值逐个按最近匹配比较，容差 = class_tol × max(1, κᵣ)，κᵣ = Σ|aₖ||r|^{n−k} / (max(1,|r|)·|p′(r)|)（参考多项式的 Wilkinson 相对条件数）；由特征值展开得到的多项式系数，容差 = class_tol × max(1, Π(1+|λᵢ|)/‖p‖₁)（系数对特征值扰动的一阶界）。DC 增益用 κ = Π(1+|p|)/Π|p|；Tustin 离散化用 κ = cond(I − αA)；zoh/foh 用 κ = e^{‖A‖₁·T}。
-- V-5a **（v0.3 新增）非唯一的设计结果**：多输入极点配置的 K 不唯一，MUST NOT 与参考的 K 比较；parity 测试 MUST 用**参考请求中的 A、B**（而不是算子自报的 `achieved_poles`）重算 eig(A − B·K) 并与期望极点比较——否则把 A 按 column-major 传错的请求也会"成功配置极点"，内存序错误无法检出。闭环特征向量矩阵的条件数与参考（scipy YT）之比作为信息报告。
+  - **根与系数的条件数缩放**：多项式根/特征值逐个按最近匹配比较，容差 = class_tol × max(1, κᵣ)，κᵣ = Σ|aₖ||r|^{n−k} / (max(1,|r|)·|p′(r)|)（参考多项式的 Wilkinson 相对条件数）；由特征值展开得到的多项式系数，容差 = class_tol × max(1, Π(1+|λᵢ|)/‖p‖₁)（系数对特征值扰动的一阶界）。DC 增益用 κ = Π(1+|p|)/Π|p|；Tustin 离散化用 κ = cond(I − αA)；zoh/foh 用 κ = e^{‖A‖₁·T}。
+- V-5a **非唯一的设计结果**：多输入极点配置的 K 不唯一，MUST NOT 与参考的 K 比较；parity 测试 MUST 用**参考请求中的 A、B**（而不是算子自报的 `achieved_poles`）重算 eig(A − B·K) 并与期望极点比较——否则把 A 按 column-major 传错的请求也会"成功配置极点"，内存序错误无法检出。闭环特征向量矩阵的条件数与参考（scipy YT）之比作为信息报告。
 - V-7 预期报错用例 MUST 比对错误码；预期 warning 用例 MUST 断言 warning 出现。
-- V-9 **（v0.3 新增）参考值的后处理** MUST 写入 parity spec 并说明原因。例：python-control（无 slycot）用 scipy QZ 计算零点时，会把无穷远广义特征值返回成 ~10¹⁶–10¹⁸ 的有限数；参考生成器丢弃 |z| > 10¹⁰·(1+‖[A B; C D]‖_F) 的"零点"。
-- V-10 **（v0.3 新增）参考本身是局部优化结果时**（python-control 离散 `stability_margins` 用 scipy L-BFGS-B 求 min|1+G|），比较规则为：在类容差内一致，或被测值更小（更好的极小值）且参考值与在参考频率处重新求值的 |1+G| 一致（≤ 1e-9）、差距 ≤ 1e-6；频率按优化器精度比较（rel 1e-3）。这类规则 MUST 在报告中单独标注。
+- V-9 **参考值的后处理** MUST 写入 parity spec 并说明原因。例：python-control（无 slycot）用 scipy QZ 计算零点时，会把无穷远广义特征值返回成 ~10¹⁶–10¹⁸ 的有限数；参考生成器丢弃 |z| > 10¹⁰·(1+‖[A B; C D]‖_F) 的"零点"。
+- V-10 **参考本身是局部优化结果时**（python-control 离散 `stability_margins` 用 scipy L-BFGS-B 求 min|1+G|），比较规则为：在类容差内一致，或被测值更小（更好的极小值）且参考值与在参考频率处重新求值的 |1+G| 一致（≤ 1e-9）、差距 ≤ 1e-6；频率按优化器精度比较（rel 1e-3）。这类规则 MUST 在报告中单独标注。
 
 ### 7.2 容差类
 
@@ -654,58 +621,28 @@ v0.3.5 参考实现的 18 个算子当前均为 **B 级**（python-control / mpm
 - C-2 server SHOULD 暴露资源：`aeoi://operators`（目录）、`aeoi://operators/{id}/{version}/manifest`、`…/credentials`、`aeoi://schemas/{name}/{ver}`。（参考实现已提供目录、manifest 与 schema；credentials 资源尚未提供。）
 - C-3 大型输出 SHOULD 用 `exec.output_encoding = "b64"`（L-5）；超过 `limits` 时返回 `E.RESOURCE.OUTPUT_TOO_LARGE` 并给出抽样/只返回指标的 remediation。基于 resource link 的输出留待 v0.3。
 - C-4 工具数量多时，server SHOULD 支持按命名空间过滤（参考实现：`aeoi-mcp --namespace control.lti`）。
-- C-6 **（v0.3.3 新增）** server SHOULD 提供只读工具 `aeoi_verify`（4.3 R-5/R-6），参数 `{operator, arguments, envelope}`，返回 verdict 对象（`structuredContent`；不通过时 `isError: true`）。它不是算子，没有 manifest；`tools/list` 中以 `_meta["aeoi/kind"] = "verifier"` 标出。
+- C-6 **** server SHOULD 提供只读工具 `aeoi_verify`（4.3 R-5/R-6），参数 `{operator, arguments, envelope}`，返回 verdict 对象（`structuredContent`；不通过时 `isError: true`）。它不是算子，没有 manifest；`tools/list` 中以 `_meta["aeoi/kind"] = "verifier"` 标出。
 - C-5 `initialize` 的 `protocolVersion` 协商：参考实现支持 `2025-06-18`、`2025-03-26`、`2024-11-05`，客户端请求其他版本时回落到 `2025-06-18`。
 
-### 8.2 Rust 核心 trait（参考实现 `rust/aeoi-core/src/operator.rs`）
+### 8.2 Rust 核心 trait
 
-```rust
-pub trait Operator: Send + Sync + 'static {
-    type Input;
-    fn meta(&self) -> &OperatorMeta;
-    /// schema 之外的语义校验；返回解析后的 Input（解析与校验交织，如解码 b64、稠密化稀疏矩阵）。不做主计算
-    fn validate(&self, args: &Value, host: &HostCtx) -> Result<(Self::Input, Vec<Warning>), OpError>;
-    /// 主计算；确定性按 manifest.determinism；长循环中必须调用 ctx.check()（超时/取消）
-    fn execute(&self, input: Self::Input, ctx: &ExecCtx) -> Result<Output, OpError>;
-    /// dry_run 时的代价估计
-    fn estimate(&self, _input: &Self::Input) -> Option<Value> { None }
-}
-```
-
-调用管线（`DynOperator` blanket impl，算子只实现上面 4 个方法）：
-
-1. JSON Schema 校验（`jsonschema` crate，Draft 2020-12）→ 失败返回 `E.VALIDATION.SCHEMA`，`details.violations` 带最多 20 条 JSON Pointer；`oneOf` 失败按 F-3 递归诊断到叶子，可无损修正的嵌套数组矩阵附 F-4 补丁（v0.3.1）
-2. `validate()`（在 `catch_unwind` 内）→ 解析 + 语义校验 + 规模上限，得到 `Input` 与 warnings
-3. 计算 `input_hash`（3.7）
-4. `dry_run` 时返回 `estimate()` 后停止
-5. `execute()`（在 `catch_unwind` 内，受 `deadline` 约束）
-6. 计算 `output_hash`；按需转为 b64 输出
-7. 框架填充 `reproducibility`、`timing`，组装信封
+见 `docs/reference-impl.md` 8.2。
 
 ### 8.3 绑定层
-
-| 绑定 | crate | 状态 |
-|---|---|---|
-| MCP server | `aeoi-mcp` | **已实现**（stdio，换行分隔 JSON-RPC 2.0；手写最小实现，不依赖 `rmcp`，以保持依赖少、兼容 Rust 1.85）。Streamable HTTP 未实现 |
-| LLM 函数调用 | `aeoi-web` | **已实现（v0.3.1）**：Gemini（必选）与 OpenAI 兼容 provider；进程内调用；网页测试台 + 评测 CLI（8.4） |
-| 浏览器（WebAssembly） | `aeoi-wasm` + `pages/` | **已实现（v0.3.1）**：算子与工具桥编译为 wasm（wasm-bindgen），Agent 循环在页面里，模型由浏览器用访问者自己的 key 直接调用；发布在 GitHub Pages（8.5） |
-| CLI | `aeoi-call`（在 `aeoi-control` 中） | **已实现**：`aeoi-call <op-id|tool_name> <request.json|-> [--data-root DIR]`；v0.3.3：`aeoi-call verify <op-id> <request.json> <envelope.json>` |
-| Python | `aeoi-py`（PyO3 + maturin） | 计划：`aeoi.call(id, args) -> dict`；NumPy 便捷层 MUST 遵守内存序规则；MUST 释放 GIL |
-| C ABI | `aeoi-capi`（cdylib） | 计划：`aeoi_call(const char* id, const char* json_args, char** json_envelope)` + `aeoi_free` |
 
 - B-1 所有绑定 MUST 返回同一信封结构；绑定层 MUST NOT 自行改写数值或错误码。
 - B-2 Python 绑定 MUST 释放 GIL 执行长计算。
 
-### 8.4 LLM 函数调用绑定（`aeoi-web`，v0.3.1 新增）
+各绑定的实现状态见 `docs/reference-impl.md` 8.3。
 
-`aeoi-web` 是端到端测试台：云端 LLM 通过函数调用使用 19 个算子，网页显示对话与逐步轨迹，CLI 跑评测。
+### 8.4 LLM 函数调用绑定
 
-**调用方式**：进程内调用 `aeoi_control::registry()` 的 `DynOperator::call`。这与 `aeoi-mcp` 是同一条管线（schema 校验 → validate → execute → 信封），信封逐字节相同；不经过 stdio 子进程与 JSON-RPC 帧，Windows 上部署更简单，延迟就是算子本身的耗时（亚毫秒到毫秒）。MCP 路径已由 `aeoi-mcp` 的端到端测试覆盖。
+把算子交给 LLM 的函数调用接口时，绑定层按下列规则生成函数声明、核对来源并管理回合。参考实现 `aeoi-web`（测试台、评测与结果）见 `docs/reference-impl.md` 8.4。
 
 **函数声明**：`name` = `manifest.mcp.tool_name`；`description` = `[id] description` + 前提条件 + 不适用范围（+ "仅 SISO"）；`parameters` 由 input schema 两步生成：
 
 1. 收窄与精简（所有 provider，F-6）：`Matrix` 只保留 `DenseMatrix` 分支并固定 `dtype: "f64"`、`shape` 为二维；去掉 `exec`、`time_unit`、`state_names`/`input_names`/`output_names`、`structure`；`x-aeoi-shape-constraints` 并入 description（F-2）。OpenAI 兼容 provider 直接使用这一步的 JSON Schema。
-2. Gemini OpenAPI 子集转换（`schema_conv::to_gemini`）：
+2. 转换到 provider 支持的 schema 子集。以 Gemini 的 OpenAPI 子集为例，映射如下；有损的映射 MUST 只让模型看到的约束变少，算子仍按完整 input schema 校验：
 
 | JSON Schema | Gemini `parameters` | 是否有损 |
 |---|---|---|
@@ -722,56 +659,16 @@ pub trait Operator: Send + Sync + 'static {
 | 数/复数/布尔/非有限值的标量联合 | 收窄为 `number` | 是 |
 | 其他关键字（`$schema`、`title`、扩展关键字） | 丢弃 | 是 |
 
-12 个工具的有损映射次数可用 `aeoi-web tools --losses` 打印（当前：`additionalProperties:false` 46 处、`oneOf→anyOf` 27 处、`default` 19 处、`prefixItems` 17 处、`exclusiveMinimum` 15 处）。所有声明合计约 38 KB JSON；Gemini 2.5 Flash 上每次请求约 1.7 万输入 token，其中大部分是工具声明。
-
-**Agent 循环**：系统提示词（`rust/aeoi-web/src/system_prompt.zh.md`）用中文说明 row-major、tf 降幂、`ts` 含义、`rad/s` 与 `Hz`、`"Inf"`/`null`、remediation 的使用规则与工具选择提示。循环为"模型 → 工具调用（可并行多个）→ 信封 → 模型"，最多 `max_steps` 个模型回合（默认 8）。错误信封（含 `agent_hint` 与 `remediation`）原样回传；Gemini 的 `thoughtSignature` 按原样回传；超过 120 个数的数组按 F-6 抽样。"自我纠错"= 某工具报错后同一工具随后调用成功。v0.3.6 起 `LtiSystem` 对象从不抽样（K-6）。
-
-**回合预算（v0.3.6，AL = agent loop）**：真模型运行里 7 题有 4 题在已经拿到 `stepinfo`/`margin` 结果之后仍不调用 `submit_design`，10 个回合用完，没有分数。
+**回合预算（AL = agent loop）**：模型常在已经拿到结果后仍不提交，直到回合用完（v0.3.6 的真模型运行里 7 题有 4 题如此）。
 - AL-1 有回合上限、且只能通过某个工具提交答案的循环（设计评测的 `submit_design`）MUST 在系统提示词里写明上限（“最多 N 个模型回合，最后一个回合只能提交”）。
 - AL-2 剩余 2 个回合（含本回合）时，绑定层 MUST 注入一条以“（系统提示）”开头的提示，要求在本回合或下一回合提交；最后一个回合 MUST 只提供提交工具，并再注入一条“这是最后一个回合，只能提交，在说明里写明哪些指标没有用工具确认”。这些注入不算用户原话（F-5(c) 的来源核对排除它们）。`max_steps < 3` 时不发第一条提示。
 - AL-3 绑定层 MUST NOT 替模型提交（例如把最后一次调用的参数当答案）：提交的内容必须是模型自己写的。报告 MUST 记录注入次数（`budget_notices`）。没有提交仍记为未提交、0 分。
 
 **来源核对（F-5(c)）**：对 `x-aeoi-provenance: "user"` 的参数（v0.3.1 只有 `c2d.ts`），函数声明多一个必填参数 `_user_quote`，工具描述末尾写明"必须由用户给出、不得假设的参数：ts（用户没给时先询问，不要调用本工具）"。绑定层在调用算子前核对引用：把用户本人的消息（不含"（系统提示）"开头的注入提示）与引用都去掉空白、`$`、`{}` 等 LaTeX 符号后做子串匹配，并要求引用中有与参数相同的数值（`ms`/`μs` 按单位换算）。不通过则返回 `E.VALIDATION.UNGROUNDED_INPUT`（`details.field/value/quote`，remediation 只有 `ask_user`），不调用算子。直接在网页上调用算子（`/api/call`）与 `rescore` 重算旧报告时不做核对，只移除 `_user_quote`。
 
-**评测**：`eval/questions.zh.json` 29 道中文题，覆盖 12 个算子，其中 7 道是陷阱题（MATLAB 列优先数据 ×2、缺采样周期、Hz 与 rad/s、离散系统误当连续、不可镇定系统）。期望值不手抄：评测时用题目里的 `reference.args` 直接调用算子得到（算子已与 python-control/scipy 对照，见第 11 章；**不是 MATLAB**）。四个指标：工具选择（期望工具出现在调用中；澄清题要求不带猜测地调用）、参数正确性（对每个检查量，取含该量的最新一次成功调用，其输出与参考调用一致；例如先算 ω = 10 再画整条 Bode 曲线时取前一次）、最终回答（回答文本中能找到期望数值：识别 LaTeX `\frac{a}{b}`、`3.2 \times 10^{-3}`、`0{,}9048`、`±`、unicode 负号与上标指数；容差取相对 2% 与"印出精度的半个末位"（至少 2 位有效数字）中的较大者，期望值为 0 时绝对 1e-3；`z − 0.9048` 这类因式写法对系数检查允许符号相反；澄清题要求最终消息是一个问题且没有带猜测值的成功调用；报错题要求解释原因）、自我纠错次数。单元测试另外验证每道陷阱题的"典型错误"确实会得到不同的数值。
+### 8.5 浏览器绑定
 
-**设计评测（v0.3.4，v0.3.5 更新工具）**：`aeoi-web design` 把同一条 Agent 循环用在设计题上。模型拿到题目和 `submit_design` 伪工具，用算子检查设计，提交一次后由 `design.rs` 按该题的评分细则打分。v0.3.5 起模型可以调用串联、并联、反馈、PID、stepinfo 和 Padé，把上一个 `result.system` 传给下一个；v0.3.6 起评测提示词把 `loopsens` 作为检查回路的首选（K-4），并写明穿越频率与闭环带宽的区别、Hz 与 rad/s（K-5），以及回合预算（AL-1）；评测提示词告诉模型不要再手乘多项式，并声明“题目没写 Padé 阶次时用 N = 10 并在说明里写明”（这是提示词里的回退，不是 `pade.order` 的默认值，见 F-7）。EngDesign 的 10 道控制/DSP 题以 MIT 许可原文放在 `eval/design/engdesign.json`；ControlEval 没有许可证，题目在运行时下载到 gitignore 的 `eval/design/upstream/`，不进入仓库。没有 key 时用 `mock:design` 或 `mock:script` 离线跑通循环。单次请求和单题都有时限；每日配额立即停止；报告在每题开始和每个模型回合后落盘。哪些题因此不再被手算多项式挡住，见 `reports/design-pilot.md`。
-
-**结果（2026-11-22，temperature 0，报告在 `reports/`，对比表见 `reports/eval-comparison.md`）**：
-
-| 模型 | 题数 | 工具选择 | 参数正确 | 最终回答 | 说明 |
-|---|---|---|---|---|---|
-| gemini-3.1-flash-lite（v0.3.1 第一轮，旧评分器） | 29 | 93.1% | 92.9%（n=28） | 89.7% | 4 道失败 |
-| 同一次运行，用新评分器 `rescore` | 29 | 93.1% | 96.4% | 93.1% | `c2d-01`、`bode-01` 是评分器误判；`ctrb-01`（`MALFORMED_FUNCTION_CALL`，无回答）与 `c2d-03-missing-ts`（自行假设 Ts = 0.1 s）是真实失败 |
-| gemini-3.1-flash-lite（第二轮修改后） | 29 | 100% | 100% | 100% | 唯一的工具错误是题目预期的 `E.DOMAIN.NOT_STABILIZABLE`；`ctrb-01`、`c2d-03` 另各重跑 5 次全部通过 |
-| gemini-2.5-flash（第一轮） | 10 | 10/10 | 10/10 | 10/10 | 第 11 题起免费额度（20 次/天）用尽，未写报告 |
-| OpenRouter `nvidia/nemotron-3-ultra-550b-a55b:free` | 8 | 8/8 | 7/7 | 8/8 | 8 题子集（5 道陷阱题 + 3 道普通题）；免费账号每天 50 次请求 |
-| OpenRouter `nvidia/nemotron-3.5-super-vl:free` | 8 | 8/8 | 7/7 | 8/8 | 同上 |
-| OpenRouter `particle-ai/particle-1:free` | 8 | 8/8 | 7/7 | 7/8 | 唯一失败是上游 HTTP 429（重试 6 次后放弃），不是答错 |
-
-解读：第二轮修改后，缺采样周期的陷阱在 5 次重跑里都是模型直接提问、没有调用 `c2d`，所以 `_user_quote` 核对（F-5(c)）在真实运行中没有被触发过，只有单元测试覆盖。8 题子集区分不出模型，需要完整 29 题。
-
-
-### 8.5 浏览器绑定（`aeoi-wasm`，GitHub Pages，v0.3.1 新增）
-
-纯静态页面 https://yuanqingfei.github.io/aeoi/ （账号的自定义域名生效时为 https://yuanqingfei.me/aeoi/ ；页面只用相对路径，CORS 预检对两个源都已核对）：不需要服务器，访问者用自己的 Gemini 或 OpenRouter key（BYOK），也可以不填 key 用 `mock:demo` 演示。
-
-- **分层**：`aeoi-bridge` 是从 `aeoi-web` 拆出的、不含 tokio/reqwest 的同步部分——函数声明转换（schema_conv）、工具桥与 F-5 `_user_quote` 核对、错误信封与回传模型的抽样、provider 线格式（Gemini `generateContent` / OpenAI 兼容 `chat/completions` 的请求构造与响应解析）、空回合提示、Mock 脚本、回答评分。`aeoi-web`（原生）与 `aeoi-wasm`（浏览器）都用它，所以两边的函数声明、核对规则与系统提示词是同一份代码。
-- **wasm API**（JSON 字符串进出）：`info`、`tools`、`system_prompt`、`build_request(provider, model, history)`、`parse_response(provider, body)`、`call_tool(name, args, history?, max_array?)`、`run_operator(id, request)`、`verify(id, request, envelope)` 与 `verify_tool_call(name, args, envelope)`（v0.3.3，4.3）、`nudge_text`、`demo_script`。页面的 JS 只做 HTTP 与 Agent 循环（与 `agent.rs` 同语义：最多步数、空回合最多提示 2 次、工具消息回传抽样后的信封）。Rust 的 Provider trait 要求 `Send` future，浏览器 fetch 的 future 不是 `Send`，因此循环放在 JS 一侧。
-- **key**：只存放在该浏览器的 `localStorage`，只发给 provider 自己的 API（Gemini 用 `x-goog-api-key` 头，OpenRouter 用 `Authorization`）；页面有"忘记 key"。两家 API 都允许跨域调用（已核对 CORS 预检：Gemini 回显 `https://yuanqingfei.github.io` 并允许 `x-goog-api-key`；OpenRouter 为 `*`）。key 会被同源脚本读到——页面只加载仓库内的文件（Plotly 也已内置，不走 CDN）。
-- **wasm 与原生的一致性**（`rust/aeoi-wasm/parity/parity.mjs`，报告 `reports/parity-wasm-vs-native.json`；v0.3.5：755 个请求，node 22 vs x86_64-linux）：状态、错误码、warning 码、`input_hash` 全部一致（`status_or_code_mismatch = 0`）。566 例结果逐位相同。串联、并联、反馈、pid、stepinfo 全部逐位相同；pade 的系数逐位相同，certificate 用到 `exp`，最大相对差约 5e-17。其余差异仍是末位舍入，多输入 `place` 的 K 不唯一：
-
-| 算子 | 用例 | 逐位相同 | 最大范数相对差 |
-|---|---|---|---|
-| series、parallel、feedback、pid、stepinfo、convert、lyap、lqr | 14、13、14、12、9、79、47、91 | 全部 | 0 |
-| pade | 12 | 3 | 5e-17（certificate 的 `exp`；系数逐位相同） |
-| bode、step、impulse、pz、ctrb_obsv、margin、c2d | 106、91、31、50、29、48、50 | 5、81、28、43、20、35、38 | ≤ 5e-15 |
-| dlqr | 28 | 20 | 1.5e-14 |
-| place | 31 | 14 | 2.4e-2（见下） |
-
-  v0.3.1（`lqr` 0.2.0）时 lqr 只有 35/74 例逐位相同、最大相对差 4.7e-6，且一个病态用例原生返回 `ok_with_warnings`（`W.NUMERICAL.ILL_CONDITIONED`）而 wasm 返回 `ok`（条件估计恰在阈值附近）；`lqr` 0.3.0 的补偿 Newton–Kleinman 把结果收敛到真值的 f64 舍入，消掉了两边舍入路径的差异，lqr 全部逐位相同，CI 的 `AEOI_PARITY_ALLOW_MISMATCH` 由 1 改为 0。`place` 的差异出在多输入 KNV 用例：多输入时满足极点配置的 K 不唯一，两边都达到了指定极点，只是迭代路径因舍入不同而停在不同的 K。由此得到两条规范性说明：**跨平台时，基于阈值的 warning 可能翻转**（消费者不能把 warning 集合当作跨平台确定）；**对解不唯一的算子，跨平台比较 MUST 用不变量（达到的闭环极点）而不是解本身**。
-- **体积**：wasm 2.97 MB（gzip 1.07 MB；`wasm-release` profile：opt-level s、LTO、codegen-units 1、panic=abort，再经 `wasm-opt -Oz`），Plotly basic 1.07 MB（gzip 354 KB）。这些编译选项不改变 IEEE 运算结果（parity 用的就是这个 profile）。
-- **构建与发布**：`.github/workflows/pages.yml`——Rust 1.85.1 + wasm32 目标，固定版本并校验 sha256 的 wasm-bindgen CLI 0.2.130（与 crate 的 `=0.2.130` 一致）与 binaryen version_133，`pages/build.sh` 组装 `_site/`，node 冒烟测试后用 `actions/deploy-pages` 发布；另一个不阻塞发布的 job 跑全量 parity 并上传报告。
+见 `docs/reference-impl.md` 8.5。
 
 ## 9. 治理
 
@@ -806,9 +703,11 @@ pub trait Operator: Send + Sync + 'static {
 8. 用开源参考生成 `golden/<engine>/…` 开发数据；写 MATLAB 生成脚本，由有授权的机器运行生成 `golden/MATLAB/…`
 9. CI：schema 校验（Rust 与独立的 Python 校验器）、单元测试、重放测试、parity 测试、MCP 端到端测试、跨平台测试
 10. 评审：数值评审 + 接口评审（错误信息与 remediation 是否可执行）
-11. 生成凭证、确定等级与合规等级、发布
+11. 写算子契约 `profiles/10.NN-<op>.md`（语义、规范性条款、示例与 parity 规格的链接），在第 10 章的索引表里加一行；它逼出的通用规则写进本文相应章节
+12. 在 `CHANGELOG.md` 记一节（起因、规范改动、已做的改动、发现的问题、结果）
+13. 生成凭证、确定等级与合规等级、发布
 
-### 9.4 跨实现一致性（v0.4）
+### 9.4 跨实现一致性
 
 9.1 的合规等级评价一个算子实现自身的质量（schema、信封、可复现、凭证）。本节回答另一个问题：**换一个实现，行为是否等价于参考实现。** 两者独立：一个实现可以是 L2 却通不过本节的套件，反过来也一样。本节规定判定规则和套件的组成；套件 v0.2（`conformance/`：运行器、独立的哈希重算、只含 `lyap` 的 Python 第二实现）有 6 个算子的数值规则（`lyap`、`poles_zeros`、`bode`、`step`、`lqr`、`c2d`），参考实现全部通过（`conformance/README.md`）。
 
@@ -818,7 +717,7 @@ pub trait Operator: Send + Sync + 'static {
 
   一致性按（算子 id、版本、方法 id）逐项声明（CF-11）；没有声明的算子，实现不得宣称遵守 AEOI。
 - CF-2 **套件沿用 golden 与 `parity.yaml`，不另立用例格式。** 一个用例就是 `golden/<engine>/<op>/<ver>/<sha256>.json`（`request`、`expected`、`reference_env`、`case_family`）；用例族的容差类、`compare` 规则、预期错误与预期警告写在该算子的 `parity.yaml`（V-4 – V-10）。套件 = 这两者 + CF-10 的方法用例。含矩阵输入的算子 MUST 带 `memory_order_nonsymmetric` 族（第 0 章）：运行器断言按列主序展平的请求，其结果偏离参考超过容差：取该算子全部数值检查里最大的“偏差 / 容差”，须 > 1e3（或请求被拒绝）。只看一个字段可能看不出错误：eig(Aᵀ) = eig(A)，极点不动，零点与 DC 增益会动。这是对第二实现最便宜也最有效的检验。
-  - **默认值用例（v0.4.4）。** 运行器从成功的 golden 用例派生，不另存：对套件 input schema（`examples/<op>/input.schema.json`，不是被测实现的 manifest）里每个带 `default` 的顶层字段，显式写了默认值的用例派生“省略它”的变体，省略了的用例派生“写出默认值”的变体（每个算子、字段、方向至多 3 个）。两者问的是同一个问题（F-7），结果 MUST 与原请求逐位相同（`output_hash` 相等，`convention` 字段的回显也包括在内）。写出的字段在该请求的模式下不适用、实现按 F-8 报 `E.VALIDATION.OPTION_CONFLICT` 且 `conflicting_fields` 含该字段时，记为跳过。嵌套字段的默认值（如 `time` 内部）暂不派生。
+  - **默认值用例。** 运行器从成功的 golden 用例派生，不另存：对套件 input schema（`examples/<op>/input.schema.json`，不是被测实现的 manifest）里每个带 `default` 的顶层字段，显式写了默认值的用例派生“省略它”的变体，省略了的用例派生“写出默认值”的变体（每个算子、字段、方向至多 3 个）。两者问的是同一个问题（F-7），结果 MUST 与原请求逐位相同（`output_hash` 相等，`convention` 字段的回显也包括在内）。写出的字段在该请求的模式下不适用、实现按 F-8 报 `E.VALIDATION.OPTION_CONFLICT` 且 `conflicting_fields` 含该字段时，记为跳过。嵌套字段的默认值（如 `time` 内部）暂不派生。
 - CF-3 **通信与运行。** 运行器通过 MCP stdio 驱动被测实现，只做这一种（`initialize`、`tools/list`、`tools/call`、`resources/read`）；manifest 由资源 `aeoi://operators/{id}/{version}/manifest`（M-1）读取。非 MCP 的传统程序要通过线级套件，需要自带一层薄的 MCP stdio 适配。运行器命令（v0.1 已实现，只覆盖 `lyap`，见 `conformance/README.md`）：`python3 conformance/aeoi_conformance.py run --impl "<启动命令>" --operators all|<id,…> --report report.json`。对声明 `bitwise`、`platform_bitwise` 或 `seeded` 的算子（M-7），运行器对每个请求运行两次，`output_hash` MUST 相同（P-7）。
 - CF-4 **必须相同的字段。** 信封的 `status` 是否为 `error`；`error.code`（V-7）；用例 `expect_warning` 列出的 warning 码 MUST 出现（V-7）；算子 id 与版本；`fingerprint.request`。最后一项成立的原因：它是 `H({operator, version, input_hash})`，而 `input_hash` 与编码无关（H-1），所以任何实现对同一请求 MUST 算出相同的值。
 - CF-5 **不要求相同的字段。**
@@ -828,10 +727,10 @@ pub trait Operator: Send + Sync + 'static {
   - `timing`、`build`、`platform`、`cpu_features`。
 - CF-6 **数值比较。**
   - 沿用 `parity.yaml` 的 `compare`：对每个顶层输出字段按相对范数（`rel_fro`，标量退化为相对误差，向量为 2-范数）；字符串、布尔、键与数组长度必须完全相同。**多项式系数同样按范数比较，不逐元素。**
-  - 某个字段在 `parity.yaml` 里有自己的写法时（如 `bode` 的 dB 与度按绝对差、相位模 360；`step` 的 y 按相对 max|y_ref| 的最大差），以 `parity.yaml` 为准，上一条的 `rel_fro` 只是没写时的默认。运行器实际执行的公式 MUST 写在该算子 `parity.yaml` 的 `conformance_compare` 里（v0.4.2），使套件不必读运行器代码也能复现。
+  - 某个字段在 `parity.yaml` 里有自己的写法时（如 `bode` 的 dB 与度按绝对差、相位模 360；`step` 的 y 按相对 max|y_ref| 的最大差），以 `parity.yaml` 为准，上一条的 `rel_fro` 只是没写时的默认。运行器实际执行的公式 MUST 写在该算子 `parity.yaml` 的 `conformance_compare` 里，使套件不必读运行器代码也能复现。
   - 无序量（极点、零点、特征值）按 V-5 与 3.10 R-2 做集合匹配；状态空间实现、特征向量、Schur 基比较不变量（V-5）；多输入 `place` 的 K 用 V-5a；`stepinfo` 的时间量按 I-10。
   - 容差类与 κ 缩放由套件固定在 `parity.yaml`（7.2、V-6）；被测实现 manifest 里的 `tolerance_class` 只是它的自我声明，MUST NOT 用来决定验收容差（否则声明一个更宽的类就能通过）。**κ 由运行器用参考请求或参考值计算，不采信被测实现自报的任何量**（`trust.error_estimate`、`trust.condition`、`trust.derived` 都不用）。 V-6 中“`max(class_tol, 10 × trust.error_estimate)`”这种放宽只对参考实现开放；第二个实现自报的 `error_estimate` MUST NOT 用来放宽验收，否则它把估计报大就能通过任何用例。
-  - 高精度参考（如 mpmath）与其他参考引擎用同一个 κ 缩放容差（v0.4.3）：它们提供更准的参考值，不提高要求。`parity.yaml` 中为参考实现自己写的更严目标（如“1e-12 不放宽”）不是一致性门槛；`conformance_compare` 写明一致性实际用的容差。
+  - 高精度参考（如 mpmath）与其他参考引擎用同一个 κ 缩放容差：它们提供更准的参考值，不提高要求。`parity.yaml` 中为参考实现自己写的更严目标（如“1e-12 不放宽”）不是一致性门槛；`conformance_compare` 写明一致性实际用的容差。
   - 状态空间实现的不变量（v0.4.2，以 `c2d` 为例）：运行器在自己选的点（离散系统取单位圆上若干点，避开参考极点）上比较传递函数值，再比较极点集合与 D；A、B、C 本身不比较，因为相似变换得到的实现同样正确。返回传递函数时，分子分母先同除以分母首项系数（二者只确定到一个公共因子）再比较系数。
   - 4.3 R-5 的 `verify` 用 ‖·‖∞ 做重放比较，`parity.yaml` 用 `rel_fro`；两种范数并存，一致性套件用后者（12.1 第 14 项）。
 - CF-7 **验收容差与自报误差界。** 验收容差由套件决定（CF-6），是“合规下限”。被测实现的收据里 `exactness.bound_kind` 为 `rigorous` 或 `a_priori` 且 `bound` 是数值时，`bound` MUST 不大于该用例的验收容差，否则声明本身不合规；`a_posteriori_heuristic` 与 `none` 只作信息记录，通过与否只看实际偏差。个别用例上确有理由的更宽偏差 MUST 登记在声明的 `known_deviations`（用例、实际偏差、原因），记为“带偏差通过”，不计入“完全通过”。典型情形：病态问题上，没有精化的后向稳定算法的前向误差超出 κ 缩放容差，而运行器独立复核的后向误差（如 `lqr` 的 CARE 残差）合格（12.1 第 23 项）。运行器用 `--known-deviations` 读入；只有数值偏差可以登记，结构性失败（形状、错误码、指纹）不行。
@@ -856,1745 +755,58 @@ pub trait Operator: Send + Sync + 'static {
   ```
 - CF-12 **绑定层一致性。** 另立套件，不属于算子实现。检验：函数声明由 manifest 与 input schema 生成且有损映射可见（8.4）；F-5(c) 的来源核对与 `UNGROUNDED_INPUT`；F-7 的 `convention` 回显；F-8 与 K-6（系统不抽样）；AL-1 – AL-3；MS-10、MS-11 的策略合并。本节不展开。
 
-## 10. 完整示例
+## 10. 算子契约
 
-`bode` 与 `step` 使用同一被控对象，`lqr` 使用经典双积分器；v0.3 新增算子（10.4–10.12）的示例尽量复用同一被控对象，并都给出可手算核对的值。10.4–10.12 中用 `jsonc` 占位符 内联的 JSON 为了可读性把超过 16 个元素的数值数组缩写为 `"…(+N)…"`，完整内容见对应文件。**所有响应都是 Rust 参考实现的实际输出**（`regen_examples.py` 调用 `aeoi-call` 生成），并经 `cargo test` 与 python-control 结果比对；不是 MATLAB 输出。每个示例的完整文件在 `examples/<id>/`。
+每个算子的语义、约定、规范性条款（如 FT-1、OD-1）、示例与 parity 规格各占一个文件，放在 `profiles/`。它们与本文同样是规范性的；条款编号在全规范内唯一，正文里写“10.17 FT-3”指 `profiles/10.17-fft.md` 的 FT-3。新算子接入时新增一个文件（9.3）。
+
+`bode` 与 `step` 使用同一被控对象，`lqr` 使用经典双积分器；v0.3 新增算子（10.4–10.12）的示例尽量复用同一被控对象，并都给出可手算核对的值。
 
 被控对象：G(s) = 4 / (s² + 1.2s + 4)（ωn = 2 rad/s，ζ = 0.3），极点 −0.6 ± 1.9079j。
 
-### 10.1 `control.lti.bode`
-
-语义要点：
-- 频点：`explicit` 时 MUST 严格递增（相位 unwrap 依赖顺序；否则 `E.VALIDATION.GRID`，remediation 给出排序后的 patch）；`logspace` 时 `min < max`。输入可为 `Hz`，输出 `w` 一律 `rad/s`。离散系统频点 MUST ≤ π/ts（`E.DOMAIN.ABOVE_NYQUIST`）。
-- 相位约定：`branch_center_deg = c`（默认 0）。`unwrap = true` 时首个频点相位取 (c−180, c+180] 内的主值，之后每点取与前一点之差的主值累加（与 `numpy.unwrap` 一致；实测 100 个成功 golden 用例的 unwrapped 相位与 python-control 逐点一致，不只是 mod 360 一致）；`unwrap = false` 时每点都落在该区间。MIMO 按通道独立 unwrap。
-- 频点恰为极点：`E.NUMERICAL.POLE_ON_GRID`；恰为零点：幅值 `-Inf` dB + `W.NUMERICAL.ZERO_ON_GRID`；误差估计 > 1e-6 时 `W.NUMERICAL.NEAR_POLE`。
-- 求值：tf 用 Horner（带 Higham 运行误差界），zpk 用乘积形式，ss 用逐频点复 LU 解 (jωI−A)x = B，n ≤ 64 时以 SVD 条件数给出启发式误差估计。
-
-**Manifest** — `examples/control.lti.bode/manifest.json`
-
-```json
-{{file:examples/control.lti.bode/manifest.json}}
-```
-
-**Input schema** — `examples/control.lti.bode/input.schema.json`
-
-```json
-{{file:examples/control.lti.bode/input.schema.json}}
-```
-
-**请求**
-
-```json
-{{file:examples/control.lti.bode/request.json}}
-```
-
-**成功响应**（ω = 2 rad/s 处相位正好 −90°、幅值 +4.437 dB = 20·log10(1/(2ζ))，可作手算核对）
-
-```json
-{{file:examples/control.lti.bode/response.success.json}}
-```
-
-**错误请求与响应**（非 proper 系统；remediation 给出加滤波极点的 patch，需用户确认）
-
-```json
-{{file:examples/control.lti.bode/request.error.json}}
-```
-
-```json
-{{file:examples/control.lti.bode/response.error.json}}
-```
-
-**非对称状态空间示例（内存序回归用例）** — `request.ss_nonsymmetric.json`，A 为伴随形 [[0,1,0],[0,0,1],[−6,−11,−6]]（row-major 展平为 `[0,1,0, 0,0,1, -6,-11,-6]`），响应见 `response.ss_nonsymmetric.json`。
-
-```json
-{{file:examples/control.lti.bode/request.ss_nonsymmetric.json}}
-```
-
-**Parity 测试规格** — `examples/control.lti.bode/parity.yaml`
-
-```yaml
-{{file:examples/control.lti.bode/parity.yaml}}
-```
-
-### 10.2 `control.lti.step`
-
-语义要点：
-- 对 LTI 系统，用 ZOH 精确离散化：增广矩阵 [[A, B],[0, 0]]·dt 的矩阵指数（Van Loan 1978；expm 用 Higham 2005 的缩放平方 + Padé 13）。阶跃输入在 ZOH 下没有离散化误差，因此归入 T2。
-- 网格：`uniform` 时点数 N = floor(t_final/dt + 1e-9) + 1，t_k = k·dt。离散系统 MUST 满足 dt = ts（否则 `E.VALIDATION.GRID`）。N × nu > 10⁷ 返回 `E.RESOURCE.COMPUTE_LIMIT`（remediation：把 dt 放大到满足上限）；返回值个数 N × ny × nu > 10⁶ 返回 `E.RESOURCE.OUTPUT_TOO_LARGE`（remediation：抽样返回或只返回指标）。`return_samples: "decimated"` 时取下标 round(k(N−1)/(M−1))。
-- **阶跃指标在网格上定义，不插值（v0.2 明确）**：上升时间 = 首个 y ≥ hi·y∞ 的网格时刻 − 首个 y ≥ lo·y∞ 的网格时刻；调节时间 = 最后一个 |y − y∞| ≥ thr·|y∞| 的网格点之后一个网格点的时刻；峰值取网格最大 |y|。定义与 python-control 0.10 `step_info` 一致，相对连续时间真值的误差 ≤ dt。y∞ 取 DC 增益。不稳定系统与零 DC 增益通道的 info 为 `null`（分别附 `W.DOMAIN.UNSTABLE_SYSTEM`、`W.DOMAIN.ZERO_DC_GAIN`）。MIMO 时 info 为 `[ny][nu]` 数组。
-- trust：终点一致性（逐步递推的 x(t_end) 与一次性 expm 直接计算的 x(t_end) 的相对偏差）作为后验残差。
-
-**Manifest**
-
-```json
-{{file:examples/control.lti.step/manifest.json}}
-```
-
-**Input schema**
-
-```json
-{{file:examples/control.lti.step/input.schema.json}}
-```
-
-**请求**
-
-```json
-{{file:examples/control.lti.step/request.json}}
-```
-
-**成功响应**（1001 点网格计算后抽样为 11 点返回；指标按 dt = 0.01 s 网格定义：上升时间 0.66 s、调节时间 5.62 s、超调 37.2318%、峰值时刻 1.65 s。v0.1 示例中的 0.5815 s / 5.698 s 来自 python-control 的自动网格，与请求的网格不符，是 v0.1 的错误）
-
-```json
-{{file:examples/control.lti.step/response.success.json}}
-```
-
-**错误请求与响应**（dt = 1e-7 s，计算量超限）
-
-```json
-{{file:examples/control.lti.step/request.error.json}}
-```
-
-```json
-{{file:examples/control.lti.step/response.error.json}}
-```
-
-**Parity 测试规格**
-
-```yaml
-{{file:examples/control.lti.step/parity.yaml}}
-```
-
-### 10.3 `control.design.lqr`
-
-算法与来源：nalgebra 没有有序实 Schur 分解，因此 v0.2 不采用 v0.1 计划的 Schur 方法（Laub 1979 / SLICOT `SB02OD`），改用：
-1. 有交叉项 N 时先消去：Ā = A − BR⁻¹Nᵀ，Q̄ = Q − NR⁻¹Nᵀ；
-2. 前置检查：R 的 Cholesky（`E.DOMAIN.R_NOT_POSITIVE_DEFINITE`）、[[Q,N],[Nᵀ,R]] 半正定（`E.DOMAIN.WEIGHT_NOT_PSD`）、PBH 可镇定性检验 σ_min([A−λI, B]) / ‖[A,B]‖_F ≤ 1e-10 即 `E.DOMAIN.NOT_STABILIZABLE`（< 1e-6 时 `W.NUMERICAL.NEAR_UNCONTROLLABLE`）、Hamiltonian 虚轴特征值检验 min|Re λ(H)| ≤ 10³·u·‖H‖₁ 即 `E.DOMAIN.HAMILTONIAN_IMAG_AXIS_EIG`；
-3. 矩阵符号函数 Newton 迭代 Z ← (Z + Z⁻¹)/2，前期用行列式缩放（Byers 1987；Kenney–Laub 1995），收敛判据 ‖Z_{k+1}−Z_k‖₁/‖Z_{k+1}‖₁ ≤ 1e-13 或停滞；
-4. 由 [sign(H) + I] 的列空间方程用 SVD 最小二乘解出 S（Roberts 1980），对称化；
-5. n ≤ 32 时至多 3 步 Newton–Kleinman 修正（Kleinman 1968；Lyapunov 方程用 Kronecker 形式直接解），残差不降即停；
-6. trust 报告 CARE 残差（绝对、相对、按各项范数缩放的相对残差）、cond(R)、cond(S)、PBH 裕度、基于 sep 的一阶后验误差估计（n ≤ 20）。
-
-**0.3.0 的改动**（v0.3.2；起因是 tpt-control 交叉验证 `reports/parity-tpt-control.md`：cond(R) = 1e12 时 0.2.0 前向误差 3e-5，且 7/10 个合法用例误报虚轴特征值）：
-- 第 2 步的虚轴检验改为在辛对角平衡后的 H̃ = diag(D⁻¹, D)·H·diag(D, D⁻¹) 上做（D = diag(2^k)，坐标下降最小化 H̃ 的逐元 ℓ₁ 范数；等价于状态尺度变换 x = Dx̃，在二进制下精确）。min|Re λ(H̃)| ≤ 10³·u·‖H̃‖₁ 只是怀疑：对 Ā 在虚轴附近（|Re λ| ≤ 1e-6·‖Ā‖_F）的特征值做 PBH 可观性检验 σ_min([Ā−λI; Q̄]) / ‖[Ā; Q̄]‖_F ≤ 1e-10 → `E.DOMAIN.HAMILTONIAN_IMAG_AXIS_EIG`（基本原因写入 `details.basis`）；未确认时照常求解（`W.NUMERICAL.ILL_CONDITIONED`），符号函数失败或求得的闭环没有稳定裕度（max Re λ(A−BK) ≥ −10³·u·‖A−BK‖₁）时才报该错误码。符号函数本身仍在未平衡的 H 上迭代（在 100 维、3 输入的极病态用例上，平衡后的迭代丢失了镇定性）。
-- 第 5 步改为 K 形式 Newton–Kleinman 缺陷校正，n ≤ 200（`limits.max_states_for_refinement`），至多 20 步（`limits.max_newton_iterations`）：K = R⁻¹(BᵀX + Nᵀ)（Cholesky，再用补偿残差 P − RK 做至多 4 步迭代精化）；残差 E = (A−BK)ᵀX + X(A−BK) + Q − NK − KᵀNᵀ + KᵀRK 用补偿点积（Ogita–Rump–Oishi Dot2，Dekker 无 FMA 乘法，各平台逐位相同）计算——E 对 K 驻定，K 的误差只以二次项进入；ΔX 解 (A−BK)ᵀΔX + ΔX(A−BK) + E = 0（复 Schur Bartels–Stewart，替代 O(n⁶) 的 Kronecker 形式），X ← X + ΔX。‖ΔX‖_F ≤ 2ε‖X‖_F，或 ‖ΔX‖ 在 1e-8‖X‖_F 以下不再减小（该步不施加）即停；修正后 A−BK 必须 Hurwitz，否则退回符号函数解。
-- 输出的 K 由 S 加上"再一步未施加的 Newton 修正量"（S 在 f64 舍入之外的低位部分）求得：cond(R) = 1e12 时仅由 S 的 f64 舍入引起的 K 误差就可达 cond(R)·u。
-- trust 新增 `convergence.care_residual_compensated_fro`、`newton_kleinman_final_change_rel`、`symplectic_balancing_log2_range`、`condition.hamiltonian_balanced`；`error_estimate` 用补偿残差 / sep 加 u‖S‖_F。
-- 结果（50 位 mpmath 真值，`golden/mpmath/control.design.lqr/0.3.0`，16 例，cond(R) 1e6–1e12）：S、K 全部与真值的 f64 舍入一致（相对误差 0 到 4.5e-16）；0.2.0 在同一批用例上 S 最大误差 2.3e-4，且 4 例报错。复现例 A = diag(−0.1, −1)、B = diag(0.1, 1)、Q = I、R = diag(1, 1e-12) 现在返回 S = diag(4.14213562373095, 9.999990000004999e-7)、K = diag(0.414213562373095, 999999.0000005)，与 50 位真值的 f64 舍入一致（见 `examples/control.design.lqr/request.ill_conditioned_R.json`）。
-
-**Manifest**
-
-```json
-{{file:examples/control.design.lqr/manifest.json}}
-```
-
-**Input schema**
-
-```json
-{{file:examples/control.design.lqr/input.schema.json}}
-```
-
-**请求**
-
-```json
-{{file:examples/control.design.lqr/request.json}}
-```
-
-**成功响应**（解析解 K = [1, √3]，S = [[√3,1],[1,√3]]，闭环极点 −√3/2 ± 0.5j；实现结果与解析解的相对误差为 0）
-
-```json
-{{file:examples/control.design.lqr/response.success.json}}
-```
-
-**错误请求与响应**（不可镇定：A = diag(1, −1)，B = [0;1]，不稳定模态 λ=1 不可控）
-
-```json
-{{file:examples/control.design.lqr/request.error.json}}
-```
-
-```json
-{{file:examples/control.design.lqr/response.error.json}}
-```
-
-**Parity 测试规格**
-
-```yaml
-{{file:examples/control.design.lqr/parity.yaml}}
-```
-
-### 10.4 `control.lti.convert`（v0.3 新增）
-
-tf ↔ ss ↔ zpk 互转。
-
-语义要点：
-- `to ∈ {tf, ss, zpk}`；`realization` 字段说明所用实现（R-6）。tf→ss 用可控标准型（scipy `tf2ss` 约定）；MIMO tf→ss 为逐元素块对角（非最小，`W.DOMAIN.NONMINIMAL_REALIZATION`）。
-- ss→tf 按 R-7（scipy `ss2tf` 约定，所有元素共享 det(sI − A)）；zpk→tf 为乘积展开；tf→zpk 为多项式求根（平衡伴随矩阵特征值 + Newton 精修，共轭对精确共轭）；ss→zpk 为不变零点 + eig(A) + Markov 增益（R-8）。
-- 非 proper 的 tf → `E.DOMAIN.IMPROPER_SYSTEM`；MIMO→zpk → `E.DOMAIN.MIMO_NOT_SUPPORTED`；传递函数恒为零的 ss→zpk 返回 k = 0、无零点（与 python-control 一致），结构退化 → `E.DOMAIN.DEGENERATE_SYSTEM`。
-- trust：在 9 个测试点（连续 jω；离散单位圆）比较转换前后的频率响应，最大相对差写入 `residual.response_max_rel_discrepancy`；> 1e-6 时 `W.NUMERICAL.CONVERSION_DISCREPANCY`（高阶/重根时多项式表示本身病态）。
-
-**Manifest** — `examples/control.lti.convert/manifest.json`
-
-```json
-{{jsonc:examples/control.lti.convert/manifest.json}}
-```
-
-**请求**（G(s) = 4/(s² + 1.2s + 4) 转为 ss；手算：A = [[−1.2, −4], [1, 0]]，B = [1, 0]ᵀ，C = [0, 4]，D = 0）
-
-```json
-{{file:examples/control.lti.convert/request.json}}
-```
-
-**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 python-control/scipy 值一致，见 11.3）
-
-```json
-{{jsonc:examples/control.lti.convert/response.success.json}}
-```
-
-**错误请求与响应**（2×2 ss 请求转 zpk：v0.3 的 zpk 只表示 SISO）
-
-```json
-{{jsonc:examples/control.lti.convert/request.error.json}}
-```
-
-```json
-{{jsonc:examples/control.lti.convert/response.error.json}}
-```
-
-**非对称矩阵示例（内存序回归用例）** — `request.nonsymmetric.json`（3 阶非对称 A 的 ss→tf），响应见 `response.nonsymmetric.json`。Input/output schema 见 `examples/control.lti.convert/input.schema.json`、`output.schema.json`。
-
-**Parity 测试规格** — `examples/control.lti.convert/parity.yaml`
-
-```yaml
-{{file:examples/control.lti.convert/parity.yaml}}
-```
-
-### 10.5 `control.lti.poles_zeros`（v0.3 新增）
-
-极点、（传输/不变）零点、DC 增益、自然频率与阻尼比。
-
-语义要点：
-- 极点 = eig(A)（tf 为分母根）；零点 = 不变零点：先做原始与对偶两遍 Emami-Naeini/Van Dooren 式 SVD 秩揭示约化直到 D 方阵可逆，再求 eig(A − B·D⁻¹·C)。支持非方系统（如 2×1 系统的公共零点）。
-- 法秩不足（例如 C = 0）→ `E.DOMAIN.DEGENERATE_SYSTEM`（R-9），不返回空集。
-- DC 增益按 D-2：连续 s = 0，离散 z = 1；A 数值奇异时改用逐元素 zpk 极限（带零极点对消判定），方法写在 `trust.condition.dcgain_method`。
-- 自然频率/阻尼比：连续 ωn = |λ|、ζ = −Re λ/|λ|；离散先映射 s = ln(z)/ts（与 python-control `damp` 一致）。
-- 约化后 D 的条件数写入 trust；偏大时 `W.NUMERICAL.ILL_CONDITIONED`。
-
-**Manifest** — `examples/control.lti.poles_zeros/manifest.json`
-
-```json
-{{jsonc:examples/control.lti.poles_zeros/manifest.json}}
-```
-
-**请求**（G(s) = (s + 3)/(s² + 1.2s + 4)；手算：零点 −3，极点 −0.6 ± 1.907878j，DC 增益 3/4，ωn = 2，ζ = 0.3）
-
-```json
-{{file:examples/control.lti.poles_zeros/request.json}}
-```
-
-**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 python-control/scipy 值一致，见 11.3）
-
-```json
-{{jsonc:examples/control.lti.poles_zeros/response.success.json}}
-```
-
-**错误请求与响应**（C = 0 的 ss：传递函数恒为零，零点无定义）
-
-```json
-{{jsonc:examples/control.lti.poles_zeros/request.error.json}}
-```
-
-```json
-{{jsonc:examples/control.lti.poles_zeros/response.error.json}}
-```
-
-**非对称矩阵示例（内存序回归用例）** — `request.nonsymmetric.json`（3 阶非对称 A），响应见 `response.nonsymmetric.json`。Input/output schema 见 `examples/control.lti.poles_zeros/input.schema.json`、`output.schema.json`。
-
-**Parity 测试规格** — `examples/control.lti.poles_zeros/parity.yaml`
-
-```yaml
-{{file:examples/control.lti.poles_zeros/parity.yaml}}
-```
-
-### 10.6 `control.analysis.ctrb_obsv`（v0.3 新增）
-
-可控性/可观性矩阵、数值秩、可选 Gramian。
-
-语义要点：
-- Krylov 矩阵 [B, AB, …, A^{n−1}B] 与 [C; CA; …]（T1）；数值秩 = 奇异值 > rtol·σ_max 的个数，默认 rtol = max(行, 列)·ε（与 numpy `matrix_rank` 一致），可用 `rank_rtol` 覆盖。
-- PBH 交叉检查：min over λ ∈ eig(A) 的 σ_min([A − λI, B])/‖[A, B]‖_F；与 Krylov 秩结论不一致、或秩阈值处无明显奇异值间隙时 `W.NUMERICAL.RANK_AMBIGUOUS`（Krylov 矩阵在 n 较大时本身病态）。
-- `gramians: true`：连续 A Wc + Wc Aᵀ + B Bᵀ = 0，离散 A Wc Aᵀ − Wc + B Bᵀ = 0（Wo 对偶），用 `control.math.lyap` 同一 Bartels–Stewart 实现；系统不渐近稳定时 Gramian 为 `null` + `W.DOMAIN.GRAMIAN_UNDEFINED`（R-3）。
-- tf/zpk 输入先按可控标准型实现，结果依赖实现：`W.DOMAIN.REALIZATION_DEPENDENT`。
-
-**Manifest** — `examples/control.analysis.ctrb_obsv/manifest.json`
-
-```json
-{{jsonc:examples/control.analysis.ctrb_obsv/manifest.json}}
-```
-
-**请求**（G(s) = 4/(s² + 1.2s + 4) 的 ss 形式 + Gramian；手算：ctrb = [[0, 4], [4, −4.8]]，obsv = I）
-
-```json
-{{file:examples/control.analysis.ctrb_obsv/request.json}}
-```
-
-**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 python-control/scipy 值一致，见 11.3）
-
-```json
-{{jsonc:examples/control.analysis.ctrb_obsv/response.success.json}}
-```
-
-**错误请求与响应**（B 的行数与 A 不符）
-
-```json
-{{jsonc:examples/control.analysis.ctrb_obsv/request.error.json}}
-```
-
-```json
-{{jsonc:examples/control.analysis.ctrb_obsv/response.error.json}}
-```
-
-**非对称矩阵示例（内存序回归用例）** — `request.nonsymmetric.json`（非对称 A，含 Gramian），响应见 `response.nonsymmetric.json`。Input/output schema 见 `examples/control.analysis.ctrb_obsv/input.schema.json`、`output.schema.json`。
-
-**Parity 测试规格** — `examples/control.analysis.ctrb_obsv/parity.yaml`
-
-```yaml
-{{file:examples/control.analysis.ctrb_obsv/parity.yaml}}
-```
-
-### 10.7 `control.analysis.margin`（v0.3 新增）
-
-增益裕度、相位裕度、稳定裕度及全部交越点（SISO）。
-
-语义要点：
-- 交越点由多项式精确求根得到，不依赖网格：相位交越 Im[N(jω)·D(−jω)] = 0，增益交越 |N(jω)|² − |D(jω)|² = 0，稳定裕度的驻点为 d|1+G|²/dω 的分子根；偶/奇多项式先做 x = ω² 降阶。离散系统按 D-6 经双线性映射处理。
-- 求根后在 G 上做割线修正；再用 4000 点对数网格做符号变化审计，漏检的交越点用二分补回并给 `W.NUMERICAL.CROSSING_RECOVERED`（近重根/相切时求根可能漏根）。
-- 选择规则与 python-control 0.10.2 一致：GM 取 Re G ≤ 0 的相位交越中 |ln GM| 最小者；PM = mod(∠G, 360) − 180 中 |PM| 最小者；SM 取最小值。全部候选在 `crossings` 中返回（R-4）。
-- 负单位反馈闭环稳定性由 N + D 的根判定；不稳定时 `W.DOMAIN.CLOSED_LOOP_UNSTABLE`（裕度数值不再代表鲁棒性）。MIMO → `E.DOMAIN.MIMO_NOT_SUPPORTED`。
-
-**Manifest** — `examples/control.analysis.margin/manifest.json`
-
-```json
-{{jsonc:examples/control.analysis.margin/manifest.json}}
-```
-
-**请求**（L(s) = 4/(s(s+1)(s+2))；手算：ω = √2 处相位 −180°，|L| = 2/3 ⇒ GM = 1.5（3.52 dB））
-
-```json
-{{file:examples/control.analysis.margin/request.json}}
-```
-
-**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 python-control/scipy 值一致，见 11.3）
-
-```json
-{{jsonc:examples/control.analysis.margin/response.success.json}}
-```
-
-**错误请求与响应**（2×2 系统）
-
-```json
-{{jsonc:examples/control.analysis.margin/request.error.json}}
-```
-
-```json
-{{jsonc:examples/control.analysis.margin/response.error.json}}
-```
-
-**非对称矩阵示例（内存序回归用例）** — `request.nonsymmetric.json`（非对称 A 的 SISO ss），响应见 `response.nonsymmetric.json`。Input/output schema 见 `examples/control.analysis.margin/input.schema.json`、`output.schema.json`。
-
-**Parity 测试规格** — `examples/control.analysis.margin/parity.yaml`
-
-```yaml
-{{file:examples/control.analysis.margin/parity.yaml}}
-```
-
-### 10.8 `control.lti.c2d`（v0.3 新增）
-
-连续 → 离散：zoh / foh / tustin（可选预畸变）。
-
-语义要点：
-- 公式按 D-5，与 scipy `cont2discrete` 相同的状态坐标（因此可逐元素比较）；`output_kind = same` 时 tf 输入返回 tf（MIMO tf 逐元素离散化）。
-- `prewarp_frequency` 只与 `tustin` 组合，否则 `E.VALIDATION.OPTION_CONFLICT`（O-2）；预畸变频率 ≥ π/ts → `E.DOMAIN.ABOVE_NYQUIST`；输入已是离散系统 → `E.DOMAIN.NOT_CONTINUOUS`；I − αA 奇异 → `E.NUMERICAL.SINGULAR`。
-- 极点虚部超过 π/ts 时 `W.ACCURACY.ALIASING`。trust 记录极点映射不变量：eig(Ad) 与 exp(λ·ts)（tustin 为 (1+λT_w/2)/(1−λT_w/2)）的最大偏差，以及 cond(I − αA)、‖A‖₁·ts、expm 平方次数。
-- 实现中发现的缺陷：tustin 的 Dd 初版写成 D + (T/2)·C·Bd（多乘了一个 T），D ≠ 0 的 18 个 golden 用例因此失败；正确为 D + ½·C·Bd（scipy gbt, α = ½）。
-
-**Manifest** — `examples/control.lti.c2d/manifest.json`
-
-```json
-{{jsonc:examples/control.lti.c2d/manifest.json}}
-```
-
-**请求**（被控对象 ss 形式，ts = 0.1 s，zoh）
-
-```json
-{{file:examples/control.lti.c2d/request.json}}
-```
-
-**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 python-control/scipy 值一致，见 11.3）
-
-```json
-{{jsonc:examples/control.lti.c2d/response.success.json}}
-```
-
-**错误请求与响应**（zoh + 预畸变频率：选项冲突）
-
-```json
-{{jsonc:examples/control.lti.c2d/request.error.json}}
-```
-
-```json
-{{jsonc:examples/control.lti.c2d/response.error.json}}
-```
-
-**非对称矩阵示例（内存序回归用例）** — `request.nonsymmetric.json`（非对称 A，zoh），响应见 `response.nonsymmetric.json`。Input/output schema 见 `examples/control.lti.c2d/input.schema.json`、`output.schema.json`。
-
-**Parity 测试规格** — `examples/control.lti.c2d/parity.yaml`
-
-```yaml
-{{file:examples/control.lti.c2d/parity.yaml}}
-```
-
-### 10.9 `control.lti.impulse`（v0.3 新增）
-
-冲激（脉冲）响应，与 `step` 共用网格、规模限制与 ZOH 递推。
-
-语义要点：
-- 连续：y(t) = C·e^{At}·B，在均匀网格上用精确递推；D·δ(t) 按 D-4 去掉并返回 `direct_feedthrough` + `W.DOMAIN.DIRECT_FEEDTHROUGH_IGNORED`。
-- 离散：`dt` MUST 等于 `ts`（否则 `E.VALIDATION.GRID`）；幅值按 D-3（默认 unit_area，u₀ = 1/ts）。
-- trust：终点一致性检查用 Φ(t_end)·B 一次性计算与逐步递推比较；不稳定系统给 `W.DOMAIN.UNSTABLE_SYSTEM`。
-- 输出 `{t, y, n_grid_points, direct_feedthrough}`，y 布局 `[ny, nu, nt]` row-major（与 `step` 相同）。
-
-**Manifest** — `examples/control.lti.impulse/manifest.json`
-
-```json
-{{jsonc:examples/control.lti.impulse/manifest.json}}
-```
-
-**请求**（G(s) = 4/(s² + 1.2s + 4)，0–10 s，dt = 0.05；手算 y(t) = (4/ωd)·e^{−0.6t}·sin(ωd·t)，ωd = 1.907878）
-
-```json
-{{file:examples/control.lti.impulse/request.json}}
-```
-
-**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 python-control/scipy 值一致，见 11.3）
-
-```json
-{{jsonc:examples/control.lti.impulse/response.success.json}}
-```
-
-**错误请求与响应**（离散系统 ts = 0.1 但 dt = 0.05）
-
-```json
-{{jsonc:examples/control.lti.impulse/request.error.json}}
-```
-
-```json
-{{jsonc:examples/control.lti.impulse/response.error.json}}
-```
-
-**非对称矩阵示例（内存序回归用例）** — `request.nonsymmetric.json`（非对称 A 的 MIMO ss），响应见 `response.nonsymmetric.json`。Input/output schema 见 `examples/control.lti.impulse/input.schema.json`、`output.schema.json`。
-
-**Parity 测试规格** — `examples/control.lti.impulse/parity.yaml`
-
-```yaml
-{{file:examples/control.lti.impulse/parity.yaml}}
-```
-
-### 10.10 `control.math.lyap`（v0.3 新增）
-
-连续/离散 Lyapunov 方程（O-3 约定）。
-
-语义要点：
-- Bartels–Stewart：A 的实 Schur 分解（带迭代上限与确定性回退的 `schur_robust`）→ 复 Schur → 逐列回代。
-- **Q 的对称性（v0.4.4，规范性）。** Q 可以不对称：方程对任意 Q 有唯一解（非奇异时），实现 MUST 按原样求解，MUST NOT 把 Q 对称化，那会换成另一个方程（golden 有 4 个非对称 Q 的用例，一致性套件的第二实现第一版就因对称化 Q 在这 4 个用例上失败）。Q 对称（‖Q − Qᵀ‖_F ≤ 1e-14·‖Q‖_F）时解在数学上对称，实现 MAY 把 X 对称化为 (X + Xᵀ)/2，对称化前的不对称度写入 `trust.residual.X_asymmetry_before_symmetrization_rel`；这只消除舍入，不发 warning。`W.VALIDATION.SYMMETRIZED` 的含义是“输入在容差内被对称化”（`lqr`、`dlqr` 的 Q、R），`lyap` 从不对称化输入，所以不发也不声明它。
-- 奇异判据与尺度无关（X-4a）：连续 min|λᵢ + λ̄ⱼ| ≤ 10³·u·‖A‖，离散 min|λᵢλ̄ⱼ − 1| ≤ 10³·u·max(1, ‖A‖)² → `E.DOMAIN.LYAP_SINGULAR`（不是数值问题，调参无效）。Schur 迭代不收敛 → `E.NUMERICAL.NO_CONVERGENCE`。
-- trust.residual：相对残差（连续 ‖AX + XAᵀ + Q‖_F/(2‖A‖_F‖X‖_F + ‖Q‖_F)，离散类似）与 Schur 后向误差；error_estimate = ‖残差‖/sep_min（非严格上界：A 非正规时偏乐观）。
-- A 不稳定但方程非奇异时照常求解（Lyapunov 方程本身有唯一解），trust.checks.A_stable = false。
-- **（0.4.0，v0.3.2）迭代精化**：启发式前向误差估计 ‖R‖_F/(sep_min·‖X‖_F)（R 为 f64 残差）> 1e-12 时（方程接近奇异，如离散 ρ(A) → 1、连续特征值接近虚轴）触发：用补偿算术（Dot2；离散的 A X Aᵀ 先把 A X 保留为未求值的 hi + lo 和）计算残差 R(X)，复用同一 Schur 分解解 δ，X ← X + δ，至多 4 步（`limits.max_refinement_steps`），‖δ‖_F ≤ 2u‖X‖_F 或修正量未减半、补偿残差不降即停。trust.convergence 在触发时为 `applicable: true` 并给出步数与最后修正量，`residual.abs_fro_compensated` 给出补偿残差，error_estimate 改用补偿残差。未触发时输出与 0.3.0 逐位相同。50 位真值上（`golden/mpmath/control.math.lyap/0.4.0`，12 例：离散 ρ = 1 − 1e-4 … 1 − 1e-8，连续 max Re λ = −1e-4 … −1e-8·‖A‖）最大误差由 0.3.0 的 8.2e-8 降到 6.7e-15（scipy 6.2e-9）；示例 `request.discrete_near_unit.json`（A = [[p, −q], [q, p]]，p = 1 − 2⁻²⁰，q = 2⁻¹⁰，X = I/(2⁻²⁰ − 2⁻⁴⁰) 精确）逐位等于解析解。
-
-**Manifest** — `examples/control.math.lyap/manifest.json`
-
-```json
-{{jsonc:examples/control.math.lyap/manifest.json}}
-```
-
-**请求**（A = [[−1, 2], [0, −3]]（非对称），Q = I，连续）
-
-```json
-{{file:examples/control.math.lyap/request.json}}
-```
-
-**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 python-control/scipy 值一致，见 11.3）
-
-```json
-{{jsonc:examples/control.math.lyap/response.success.json}}
-```
-
-**错误请求与响应**（A 的特征值为 ±j：λ₁ + λ̄₂ = 0）
-
-```json
-{{jsonc:examples/control.math.lyap/request.error.json}}
-```
-
-```json
-{{jsonc:examples/control.math.lyap/response.error.json}}
-```
-
-**非对称矩阵示例（内存序回归用例）** — `request.nonsymmetric.json`（非对称 A），响应见 `response.nonsymmetric.json`。Input/output schema 见 `examples/control.math.lyap/input.schema.json`、`output.schema.json`。
-
-**Parity 测试规格** — `examples/control.math.lyap/parity.yaml`
-
-```yaml
-{{file:examples/control.math.lyap/parity.yaml}}
-```
-
-### 10.11 `control.design.place`（v0.3 新增）
-
-状态反馈极点配置 u = −Kx。
-
-语义要点：
-- SISO：K 唯一（与 scipy/python-control 一致到舍入）。MIMO：KNV 方法 0 的复数版本——B = [U₀ U₁][Z; 0]，Sᵢ = null(U₁ᵀ(A − λᵢI))；实极点取实向量，共轭对成对更新，逐列扫描直到 Δln|det X̂| < 1e-6（`max_sweeps` 默认 50）；然后 M = XΛX⁻¹，K = Z⁻¹U₀ᵀ(A − M)。m = n（B 方阵可逆）时直接取酉矩阵 X（cond = 1）。
-- 不可控 → `E.DOMAIN.NOT_CONTROLLABLE`（PBH）；期望极点重数 > m → `E.DOMAIN.POLE_MULTIPLICITY`；B 列不满秩 → `E.VALIDATION.RANK_DEFICIENT`；极点不共轭封闭 → `E.VALIDATION.NOT_CONJUGATE`。
-- trust：达成极点与期望极点的最大相对偏差、闭环特征向量矩阵 cond(X)（鲁棒性指标）、‖K‖_F；偏差大时 `W.NUMERICAL.PLACEMENT_INACCURATE`，cond(X) 大时 `W.NUMERICAL.ILL_CONDITIONED`。
-- parity 按 V-5a 比较；golden 中本实现的 cond(X) 最多为 scipy YT 方法的 1.08 倍。
-
-**Manifest** — `examples/control.design.place/manifest.json`
-
-```json
-{{jsonc:examples/control.design.place/manifest.json}}
-```
-
-**请求**（双积分器，期望极点 −1 ± j；手算 K = [2, 2]）
-
-```json
-{{file:examples/control.design.place/request.json}}
-```
-
-**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 python-control/scipy 值一致，见 11.3）
-
-```json
-{{jsonc:examples/control.design.place/response.success.json}}
-```
-
-**错误请求与响应**（A = diag(1, −1)，B = [0, 1]ᵀ：λ = 1 不可控）
-
-```json
-{{jsonc:examples/control.design.place/request.error.json}}
-```
-
-```json
-{{jsonc:examples/control.design.place/response.error.json}}
-```
-
-**非对称矩阵示例（内存序回归用例）** — `request.nonsymmetric.json`（非对称 A，2 输入），响应见 `response.nonsymmetric.json`。Input/output schema 见 `examples/control.design.place/input.schema.json`、`output.schema.json`。
-
-**Parity 测试规格** — `examples/control.design.place/parity.yaml`
-
-```yaml
-{{file:examples/control.design.place/parity.yaml}}
-```
-
-### 10.12 `control.design.dlqr`（v0.3 新增）
-
-离散 LQR：DARE 的稳定化解、增益与闭环极点（O-3 约定，支持交叉项 N）。
-
-语义要点：
-- 算法：结构保持倍增算法（SDA）求 DARE，再做至多 3 步 Newton–Hewer 修正（每步解一个离散 Lyapunov 方程，复用 `lyap` 的 Bartels–Stewart）。K = (R + BᵀSB)⁻¹(BᵀSA + Nᵀ)。
-- 前置检查：对 |λ| ≥ 1 的模态做 PBH 可镇定性检查 → `E.DOMAIN.NOT_STABILIZABLE`；单位圆上不被 Q 观测的模态 → `E.DOMAIN.SYMPLECTIC_UNIT_CIRCLE_EIG`；R 非正定 → `E.DOMAIN.R_NOT_POSITIVE_DEFINITE`。输入校验与 `lqr` 共用（对称化规则、`symmetry_tolerance`）。
-- trust：DARE 相对残差与缩放残差、cond(S)、cond(R)、闭环谱半径、error_estimate = ‖残差‖/min|λᵢλ̄ⱼ − 1|（非严格上界）。
-- parity 容差规则与 `lqr` 相同（V-6）。
-
-**Manifest** — `examples/control.design.dlqr/manifest.json`
-
-```json
-{{jsonc:examples/control.design.dlqr/manifest.json}}
-```
-
-**请求**（ZOH 离散双积分器（ts = 0.1），Q = I，R = 1）
-
-```json
-{{file:examples/control.design.dlqr/request.json}}
-```
-
-**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 python-control/scipy 值一致，见 11.3）
-
-```json
-{{jsonc:examples/control.design.dlqr/response.success.json}}
-```
-
-**错误请求与响应**（A = diag(1.2, 0.5)，B = [0, 1]ᵀ：不稳定模态 1.2 不可控）
-
-```json
-{{jsonc:examples/control.design.dlqr/request.error.json}}
-```
-
-```json
-{{jsonc:examples/control.design.dlqr/response.error.json}}
-```
-
-**非对称矩阵示例（内存序回归用例）** — `request.nonsymmetric.json`（非对称 A），响应见 `response.nonsymmetric.json`。Input/output schema 见 `examples/control.design.dlqr/input.schema.json`、`output.schema.json`。
-
-**Parity 测试规格** — `examples/control.design.dlqr/parity.yaml`
-
-```yaml
-{{file:examples/control.design.dlqr/parity.yaml}}
-```
-
-## 10.13 组合、PID、阶跃指标与 Padé（v0.3.5）
-
-规范性定义在 3.12。下面每个数都可以手算，完整信封在 `examples/<id>/`，由 `aeoi-call` 实际生成。参考值来自 python-control 0.10.2 或 mpmath 50 位，不是 MATLAB。
-
-**串联** `control.lti.series`，容差 T1，等级 B。G₁ = 1/(s+1)，G₂ = 2/(s²+3s+2)：
-
-- num = [2]，den = [1, 4, 5, 2]（即 2/((s+1)(s²+3s+2))）。`realization = polynomial_product`。
-
-**并联** `control.lti.parallel`，T1，B。同一对系统：num = [1, 5, 4]，den = [1, 4, 5, 2]。
-
-**反馈** `control.lti.feedback`，T2（含代数环求解；纯多项式例子远好于 1e-10），B。`sign` 默认 −1。1/(s+1) 的单位负反馈是 1/(s+2)。两个静态增益 1 在 `sign = +1` 下是 `E.DOMAIN.ALGEBRAIC_LOOP`。
-
-**PID** `control.design.pid`，T1，B。parallel，Kp=1，Ki=2，Kd=3，Tf 省略（即 0）：num = [3, 1, 2]，den = [1, 0]，`proper = false`，警告 `W.DOMAIN.IMPROPER_RESULT`。这是理想微分，不是算错。standard 形式与 Ti、Td 混用 parallel 的 Ki 会得到 `E.VALIDATION.OPTION_CONFLICT`。不提供 pidtune（A-4）。
-
-**阶跃指标** `control.lti.stepinfo`，轨迹 T2，时间量按网格定义（I-10），B。G = 1/(s+1)，t = 0, 0.5, …, 5：上升时间 2.0 s（0.5 → 2.5），2% 调节时间 4.0 s，超调 0，稳态 1。dt = 0.5 大于 0.1/|极点|，另有 `W.ACCURACY.GRID_TOO_COARSE`：采样值仍然是 ZOH 精确的，时间量的量化是 0.5 s。1/(s−1) 不稳定：上升/调节为 null，`window_limited = true`，峰值取窗口。1/(s+1) 只仿真到 1 s：`settling_time` 为 null 且 `W.DOMAIN.NOT_SETTLED`，不是 Inf。
-
-**Padé** `control.lti.pade`，系数 T1，B。θ = 2、N = 2：num = [1, −3, 3]，den = [1, 3, 3]（首项已归一）。`approximation.bound` 为 null。`delay` 与 `order` 都没有默认值。
-
-块状态空间公式（串联、并联、负反馈）与 python-control 0.10.2 的 `series` / `parallel` / `feedback` 在黄金用例上的矩阵差在 1e-15 量级；列优先展开的非对称 A 偏离超过容差的 1e9 倍。SISO 多项式与 mpmath 50 位闭式在 PID 上逐位相同，Padé 系数的相对差 ≤ 4e-16。
-
-## 10.14 具名角色与 `control.analysis.loopsens`（v0.3.6）
-
-规范性定义在 3.13。参考值来自 python-control 0.10.2，不是 MATLAB。
-
-**具名反馈** `control.lti.feedback` 0.4.0：plant = 1/(s²+2s)，controller = (30s+60)/(s+15)，sensor = 1/(0.05s+1)：num = [1.5, 33, 60]，den = [0.05, 1.85, 18.5, 60, 60]，`composition.loop_role = "closed_loop"`。与 `feedback(sys1 = series(sys1 = 对象, sys2 = 控制器), sys2 = sensor)` 逐位相同。同时给 `plant` 和 `sys1` → `E.VALIDATION.OPTION_CONFLICT`。
-
-**PID 冲突** `control.design.pid` 0.4.0：`{Kp: 1, Ki: 1, Ti: 2}`（form 省略 = parallel）→ `OPTION_CONFLICT`，`details.conflicting_fields = ["Ti"]`；补丁 `drop` 只有 `{"op": "remove", "path": "/Ti"}`（v0.3.5 还会删除并不存在的 `/Td`，套用补丁本身就会失败），另有 `ask_user`。因为 `Ki` 不属于 standard，这里不给“改模式”补丁；`{Kp: 2, Ti: 4}`（form 省略）给出的字段全属于 standard，才另给 `switch_form`（`add /form = "standard"`，confidence high）。`{form: standard, Kp: 2, Ti: 0}` → `OPTION_CONFLICT`，消息说明“没有积分项就省略 Ti”，补丁 `omit_integral`。
-
-**一次性回路分析** `control.analysis.loopsens` 0.4.0，T3，等级 B。plant = 2/(s²+3s+2)，controller = (5s+10)/s，time = 0…10 s、dt = 0.01：
-
-- `open_loop` = (10s+20)/(s³+3s²+2s)，`closed_loop` = (10s+20)/(s³+3s²+12s+20)，`closed_loop_stable = true`；
-- 相位裕度 17.964°，增益裕度 Inf；`gain_crossover_rad_s` = 3.08423，`gain_crossover_hz` = 0.490871；
-- `bandwidth_rad_s` = 4.82451，`bandwidth_hz` = 0.767845（−3 dB，`method = even_polynomial_roots`）；
-- `step_metrics` 与对 T 单独调用 `stepinfo` 相同；
-- claim `spot_checked`：恒等式是 `test_points`，裕度来自 `margin` 的网格复查（`sampled`，E-12）。
-
-缺少 `plant` → `E.VALIDATION.SCHEMA`。12 个 golden 用例（含非单位反馈、只有对象、闭环不稳定、6 个随机 PID）上与 python-control 的最大相对差：系数 0、穿越频率/裕度/带宽 9.7e-13、阶跃指标 1.1e-12（`tests/parity_loopsens.rs`，`reports/parity-loopsens.json`）。
-
-## 10.15 `control.lti.lsim`：任意输入的响应（v0.4.5）
-
-`step`、`impulse` 只回答两种标准输入。`lsim` 回答任意采样输入：斜坡、正弦、扰动、实测数据，可带初始状态。参考值来自 scipy（`signal.lsim`、`signal.dlsim`），每个连续 foh 用例另与 python-control 0.10.2 `forced_response` 交叉核对，不是 MATLAB。
-
-**规范性条款**
-
-- LS-1 **输入布局**。`u` 是 `Matrix`，形状 `[nu, nt]`：第 i 行是第 i 个输入通道，第 k 列是 t_k 时刻的值。nu = 1 时也可给一维 `[nt]`。行数不等于 nu MUST 报 `E.VALIDATION.SHAPE`，`details.expected_rows = nu`（最常见的错误是按表格习惯给成 `[nt, nu]`）。`u` 可以用 b64 或 `ref` 编码（3.6），长数据不必内联成 JSON。
-- LS-2 **时间网格**。均匀网格 t_k = t0 + k·dt，k = 0…nt−1；`time = {dt, t0（缺省 0）, unit: "s"}`，nt 由 `u` 决定。非均匀时间戳不在本算子范围内，先重采样。离散系统 `dt` MUST 等于 `ts`（相对 1e-9），否则 `E.VALIDATION.GRID`。
-- LS-3 **采样之间的输入**。连续系统按 `interpolation` 解释：`foh`，u 在 (t_k, u_k) 与 (t_{k+1}, u_{k+1}) 之间线性；`zoh`，u(t) = u_k，t ∈ [t_k, t_{k+1})。缺省 `foh`，与 `scipy.signal.lsim`（interp=True）和 python-control 相同；实现 MUST NOT 根据输入数据自动选择（MATLAB 不给 method 时会按输入是否光滑自动选），因为同一个请求必须是同一个问题。离散系统没有“采样之间”，写出 `interpolation` MUST 报 `E.VALIDATION.OPTION_CONFLICT`（F-8，`conflicting_fields = ["interpolation"]`）。`result.interpolation` 回显实际使用的值，离散系统为 `none`。
-- LS-4 **初始状态的坐标**。`x0` 是状态向量，它的坐标由状态空间实现决定，所以 MUST 只用于 `kind = ss` 的系统。tf、zpk 没有状态坐标，给 `x0` MUST 报 `E.VALIDATION.OPTION_CONFLICT`（`conflicting_fields = ["x0"]`），提示先用 `control.lti.convert` 转成 ss：那个实现有规范定义（可控标准型，10.4），这样 `x0` 才有确定的含义。`return_states = true` 时返回 `x [n, nt]`，坐标所属的实现写在 `result.realization`（`given ss` 或 tf/zpk 的可控标准型）。
-- LS-5 **精确性与后置条件**。对 LS-3 解释下的输入，采样点上的响应没有离散化误差：连续系统用增广矩阵指数 expm([[A·dt, B·dt, 0], [0, 0, I], [0, 0, 0]]) 递推（Van Loan 1978），离散系统直接递推。后置条件 `half_step_consistent`：在 dt/2 上重新离散化，对同一个插值输入跑前 64 步，偶数步状态与原递推之差 ≤ 1e-9（相对 max‖x‖）；它检验的是每一步都用到的离散化矩阵，所以 E-12 的覆盖记为 `test_points`。结果相对真实输入的误差取决于输入采样，不在算子能检查的范围内（receipt 假设 `input_sampling`，`enforced_by: caller`）。
-- LS-6 **规模**。`limits.max_grid_points = 10⁷`（超出报 `E.RESOURCE.COMPUTE_LIMIT`，提示分段计算、用上一段的末状态作 `x0`）；返回值个数 nt × (ny + 返回状态时的 n) 受 `limits.max_output_values = 10⁶` 限制，超出报 `E.RESOURCE.OUTPUT_TOO_LARGE` 并给抽样返回的补丁（`output.return_samples = decimated`，与 `step` 相同）。
-
-**Manifest** — `examples/control.lti.lsim/manifest.json`
-
-```json
-{{jsonc:examples/control.lti.lsim/manifest.json}}
-```
-
-**请求**（G(s) = 2/(s² + 3s + 2)，u = sin 2t，0–10 s，dt = 0.05，foh）
-
-```json
-{{file:examples/control.lti.lsim/request.json}}
-```
-
-**成功响应**（Rust 参考实现实际输出；与 `reference.python-control.json` 中的 scipy 值之差 ≤ 1e-10，claim `verified`，半步检查残差 3.4e-15）
-
-```json
-{{jsonc:examples/control.lti.lsim/response.success.json}}
-```
-
-**错误请求与响应**（tf 系统给了 `x0`：LS-4）
-
-```json
-{{jsonc:examples/control.lti.lsim/request.error.json}}
-```
-
-```json
-{{jsonc:examples/control.lti.lsim/response.error.json}}
-```
-
-**初始状态与状态轨迹（内存序回归用例）** — `request.ss_x0.json`：非对称 A = [[0, 1], [−4, −0.4]]，x0 = [1, 0]，u = 0.5，zoh，`return_states = true`；响应见 `response.ss_x0.json`，`realization = "given ss"`。
-
-**Parity 测试规格** — `examples/control.lti.lsim/parity.yaml`
-
-```yaml
-{{file:examples/control.lti.lsim/parity.yaml}}
-```
-
-33 个 golden 用例（23 个成功、10 个错误；含 MIMO、x0 与状态、刚性、不稳定、直通、离散、20000 点 b64 输入）上与 scipy 的最大差：y 9.2e-14（相对 max|y|）、x 9.5e-15、t 0（`tests/parity_lsim.rs`，`reports/parity-lsim.json`）。
-
-## 10.16 `control.design.pidtune`：按穿越频率与相位裕度整定 PI/PID（v0.4.6）
-
-A-4 规定，整定算子必须先声明对象类、指标、解的唯一性与失败码，否则算法只是“某个实现的默认行为”。`pidtune` 按下面的条款满足这四项。参考值是对本节公式的独立 numpy 实现，每个结果再用 python-control 0.10.2 的 `stability_margins` 与闭环极点核验；不是 MATLAB（MATLAB `pidtune` 自己选 ωc，指标未公开，不能作参考）。
-
-**规范性条款**
-
-- PT-1 **对象类**。`plant` 为 SISO、连续、proper 的 LTI 系统。离散对象 → `E.DOMAIN.NOT_CONTINUOUS`（先用连续模型整定，再用 `c2d` 离散化控制器）；MIMO → `E.DOMAIN.MIMO_NOT_SUPPORTED`。带时滞的对象先用 `pade` 近似后串联。
-- PT-2 **指标**。给定 ωc（`wc_rad_s`，必填，来源 `user`：算子不猜，缺了由调用方问用户）与相位裕度 PM（`phase_margin_deg`，缺省 60°），要求开环 L = G·C 满足 |L(jωc)| = 1、∠L(jωc) = −180° + PM。等价于控制器在 ωc 处取值 C* = e^{j(PM − 180°)}/G(jωc)。G(jωc) 为 0 或无穷 → `E.DOMAIN.TARGET_NOT_ACHIEVABLE`。`type`（PI / PID）必填：控制器类型是设计决定。
-- PT-3 **PI：唯一的封闭解**。C(jω) = Kp − j·Ki/ω，所以 Kp = Re C*，Ki = −ωc·Im C*。可达当且仅当 Kp > 0 且 Ki ≥ 0，即 ∠C* ∈ (−90°, 0°]；否则 `TARGET_NOT_ACHIEVABLE`，`details` 给出所需控制器相位、可达范围与对象相位。∠C* = 0° 是纯 P：−4u·ωc·|C*| ≤ Ki < 0 MUST 按 Ki = 0 处理，否则可达性会因舍入翻转（1/(s+1)³ 在 ωc = 1、PM = 45° 时 ∠C* 恰为 0°，是 golden 用例）。
-- PT-4 **PID：固定多出的自由度，并规定取哪个解**。标准形 C = Kp·(1 + 1/(Ti·s) + Td·s/(1 + Tf·s))，Ti = α·Td（`ti_td_ratio`，缺省 4，Åström–Hägglund），Tf = Td/N（`derivative_filter_n`，缺省 10）。令 x = ωc·Td，H(x) = 1 − j/(αx) + jx/(1 + jx/N)；Re H > 0，所以 arg H ∈ (−90°, 90°)，不需要相位展开。Td 由 arg H(x) = ∠C* 决定，这个方程可能有多个根，规范规定取法：在 x_k = 10^{−6 + 12k/4000}（k = 0…4000）上找第一个 arg H(x) − ∠C* 变号（或为 0）的区间，在 log x 上二分到 (hi − lo) ≤ 4u·hi，取几何中点；Kp = |C*|/|H(x)|。没有变号区间 → `TARGET_NOT_ACHIEVABLE`（`details.achievable_range_deg` 为扫描上的相位范围）；二分 200 次未收敛 → `E.NUMERICAL.NO_CONVERGENCE`。这一取法是规范的一部分，不是实现细节：两个独立实现由此得到相同的根（参考实现与 numpy 实现的增益相差 ≤ 7.3e-16）。`trust.convergence` 报告二分次数与区间宽度。两个 PID 专属字段用于 PI → `E.VALIDATION.OPTION_CONFLICT`（F-8）。
-- PT-5 **闭环稳定是结果的一部分**。频率点条件只约束一个频率，不保证闭环稳定。控制器由 `control.design.pid`（parallel：Ki = Kp/Ti、Kd = Kp·Td、Tf）构造，回路由 `control.analysis.loopsens(plant, controller)` 分析，都在同一个 JSON 上（K-4）；闭环不稳定 MUST 报 `TARGET_NOT_ACHIEVABLE`（附闭环极点与增益），不返回一个不能用的控制器。L 还有别的增益穿越、使实际相位裕度（所有穿越里最小的）小于目标时，给 `W.DOMAIN.EXTRA_CROSSOVER`（新），`achieved` 报告实际值。
-- PT-6 **后置条件**。`target_met`：用构造出的控制器（而不是增益公式）重新计算 L(jωc)，||L| − 1| ≤ 1e-9、相位差 ≤ 1e-7°（覆盖 `test_points`）；`closed_loop_stable`；`sub_operator_checks`（`pid`、`loopsens` 的后置条件，`margin` 的网格复查为 `sampled`，所以 claim 最多 `spot_checked`，E-12）；`all_finite`。
-
-新错误码 `E.DOMAIN.TARGET_NOT_ACHIEVABLE`：设计目标在给定对象与控制器结构下不可达（相位不可达、对象在 jωc 处为零或极点、结果闭环不稳定），`remediation` 为向用户确认是否降低 ωc、降低 PM 或换控制器类型。新警告码 `W.DOMAIN.EXTRA_CROSSOVER`：设计频率处条件满足，但开环另有穿越点、实际相位裕度小于目标。
-
-**Manifest** — `examples/control.design.pidtune/manifest.json`
-
-```json
-{{jsonc:examples/control.design.pidtune/manifest.json}}
-```
-
-**请求**（PID，G = 1/(s+1)³，ωc = 1 rad/s，PM 缺省 60°；对象在 ωc 处相位 −135°，需要控制器提供 +15°）
-
-```json
-{{file:examples/control.design.pidtune/request.json}}
-```
-
-**成功响应**（Kp = 2.6182，Ti = 2.6432，Td = 0.6608，Tf = 0.06608；达到的相位裕度 60.000°、穿越 1.000 rad/s、增益裕度 14.05，闭环稳定；Td 二分 44 次；claim `spot_checked`）
-
-```json
-{{jsonc:examples/control.design.pidtune/response.success.json}}
-```
-
-**PI 示例** — `request.pi.json`：G = 2/(s² + 3s + 2)，ωc = 1，PM = 45° → Kp = 1/√2，Ki = √2，与手算一致；响应见 `response.pi.json`。
-
-**错误请求与响应**（同一目标用 PI：需要 +15° 超前，PI 只能 (−90°, 0°]）
-
-```json
-{{jsonc:examples/control.design.pidtune/request.error.json}}
-```
-
-```json
-{{jsonc:examples/control.design.pidtune/response.error.json}}
-```
-
-**Parity 测试规格** — `examples/control.design.pidtune/parity.yaml`
-
-```yaml
-{{file:examples/control.design.pidtune/parity.yaml}}
-```
-
-33 个 golden 用例（24 个成功、9 个错误；含纯 P 边界、不稳定对象、非最小相位、额外穿越、闭环不稳定）上：增益与 numpy 实现之差 ≤ 7.3e-16，达到的裕度与穿越频率与 python-control 之差 ≤ 3.5e-13（`tests/parity_pidtune.rs`，`reports/parity-pidtune.json`）。
-
-## 10.17 `signal.spectral.fft`：离散傅里叶变换（v0.4.7，第一个控制以外的算子）
-
-这是控制以外的第一个算子（领域 `signal`，实现在 crate `aeoi-numeric`）。FFT 的数值本身没有疑问，难点全在约定上：同一段数据，归一化、频率轴顺序、单双边任何一项理解不同，结果就差一个常数因子或整体错位，而且看起来都“像对的”。所以本节的条款都在把约定写死。参考值来自 numpy.fft（pocketfft，一个独立的 FFT 实现）和 mpmath 的 50 位直接 DFT（精确值）；不是 MATLAB。
-
-**规范性条款**
-
-- FT-1 **定义与归一化**。正变换 X_k = s·Σ_{j=0}^{n−1} x_j·e^{−2πi·jk/n}，逆变换 x_j = s′·Σ_k X_k·e^{+2πi·jk/n}。`normalization`：`backward`（缺省；s = 1、s′ = 1/n，与 MATLAB `fft`/`ifft` 和 numpy 相同）、`ortho`（s = s′ = 1/√n）、`forward`（s = 1/n、s′ = 1）。`direction` 为 `forward`（缺省）或 `inverse`。两者都在结果中回显（O-1）。
-- FT-2 **布局与长度**。`x` 为 f64、c128（i64 按实数处理），形状 `[n]` 或 `[m, n]`：沿最后一维变换，每行一个通道（与 `lsim` 的 `[nu, nt]` 相同）；更高维 → `E.VALIDATION.SHAPE`，bool → `E.VALIDATION.DTYPE`。`n` 缺省为最后一维长度；更小则截断、更大则在末尾补零（= MATLAB `fft(x, n)`）；`result.input_length` 回显原长度，二者不同即表示截断或补零。
-- FT-3 **单边谱**。`sides = one` 只用于实数输入的正变换：返回 k = 0…⌊n/2⌋ 共 ⌊n/2⌋ + 1 个频点，且 MUST 与双边结果的前 ⌊n/2⌋ + 1 个频点逐位相同（参考实现由同一次变换截取）。复数输入（dtype c128，与虚部是否为 0 无关）或逆变换写 `sides = one` → `E.VALIDATION.OPTION_CONFLICT`（F-8）：负频率不是正频率的共轭时不能省略。
-- FT-4 **频率轴总是返回**。`result.frequency` 给出每个输出频点的频率：给了 `sample_rate_hz` 时单位 Hz，否则 `cycles/sample`。双边按 numpy `fftfreq` 顺序：f_k = k·fs/n（k < ⌈n/2⌉），其余 f_k = (k − n)·fs/n；n 为偶数时 Nyquist 频点 k = n/2 标为 −fs/2。单边按 `rfftfreq`：f_k = k·fs/n。实现 MUST NOT 做 `fftshift`。把频点下标误当频率，是 FFT 最常见的用法错误，所以算子不把这一步留给调用方。
-- FT-5 **确定性**。`determinism = platform_bitwise`。快速算法的运算路径只能由 x 和 n 决定，MUST NOT 依赖运行时检测到的 CPU 特性（SIMD 分派会让同一平台描述下的结果因 CPU 不同而变）。参考实现用 `aeoi-core::kernels::fft`（v0.4.16 起；之前是 rustfft 6.4 的标量规划器）：2 的幂用基 2，合数按最小素因子做混合基按时间抽取，素数 ≤ 31 直接 DFT，更大的素数用 Bluestein。
-- FT-6 **后置条件**。`parseval`：Σ|out|²（单边时镜像频点计两次）与 sc²·n·Σ|in|² 的相对差 ≤ 64·(⌈log₂n⌉ + 1)·u，覆盖全部输出（`full`）；它查不出频点错位（换位不改变能量）。`dft_spot_check`：在 {0, 1, n−1, ⌊n/2⌋, ⌊n/3⌋, ⌊n/4⌋, ⌊2n/3⌋, ⌊3n/4⌋} 上用 O(n) 补偿求和直接计算 DFT（j·k mod n 先做整数约化），与 FFT 之差 ≤ 64·(⌈log₂n⌉ + 1)·u·sc·Σ|x_j|，覆盖 `sampled`，所以 claim 为 `spot_checked`（E-12）。`exactness.bound_kind = a_priori`：‖ΔX‖₂/‖X‖₂ ≲ c·log₂n·u（Higham 2002 定理 24.2，基 2 严格；其它分解常数更大，c 取 10 作估计）。
-
-**Manifest** — `examples/signal.spectral.fft/manifest.json`
-
-```json
-{{jsonc:examples/signal.spectral.fft/manifest.json}}
-```
-
-**请求**（0.1 s 的 sin 2π·50t + 0.5·sin 2π·120t，fs = 1 kHz，单边）
-
-```json
-{{file:examples/signal.spectral.fft/request.json}}
-```
-
-**成功响应**（51 个频点，分辨率 10 Hz；幅值峰在 50 Hz（|X| = 50 = 1·N/2）与 120 Hz（25 = 0.5·N/2）；`operator.build` 为 `aeoi-numeric`）
-
-```json
-{{jsonc:examples/signal.spectral.fft/response.success.json}}
-```
-
-**复数示例** — `request.complex.json`：e^{2πi·2j/8}、`ortho`，只有第 2 个频点非零（√8）；响应见 `response.complex.json`。
-
-**错误请求与响应**（复数输入要单边谱：FT-3）
-
-```json
-{{jsonc:examples/signal.spectral.fft/request.error.json}}
-```
-
-```json
-{{jsonc:examples/signal.spectral.fft/response.error.json}}
-```
-
-**Parity 测试规格** — `examples/signal.spectral.fft/parity.yaml`
-
-```yaml
-{{file:examples/signal.spectral.fft/parity.yaml}}
-```
-
-44 个 golden 用例（36 个成功、8 个错误；含 2、合数、素数长度，三种归一化 × 两个方向，单边奇偶，补零与截断，多通道，8192 点 b64 输入）：与 numpy 的最大范数相对差 8.4e-16，与 mpmath 精确值 2.9e-16，频率轴 2.2e-16（`aeoi-numeric/tests/parity_fft.rs`，`reports/parity-fft.json`）。
-
-## 10.18 `ode.ivp.solve`：常微分方程初值问题（v0.4.8）
-
-这是第二个控制以外的算子（领域 `ode`，实现在 crate `aeoi-numeric`），对应 MATLAB 里最常用的 `ode45`。右端用 3.15 的表达式语言给出。参考值来自 scipy `solve_ivp(method = "RK45")` 与精确解（有解析解时用解析解，否则用 DOP853 在 rtol 1e-13 下的解），都不是 MATLAB 的结果。ODE 求解器最常见的问题不在算法：求解器只控制每一步的局部误差，用户却把结果当作“精确到 rtol”。缺省容差下的 Van der Pol 振子，全局误差可达 0.23，求解器照样报告成功。所以本节的重点是把实际达到的精度报告出来。
-
-**规范性条款**
-
-- OD-1 **问题与命名**。求解 y′ = f(t, y)，y(t0) = y0，t 从 t0 积到 tf。`states` 是状态名数组，它的顺序决定输出 `y` 的行序。`rhs[i]` 是 d(states[i])/dt 的表达式，`rhs` 的长度必须与 `states` 相同，否则报 `E.VALIDATION.SHAPE`。`params` 是“名字 → 数”的映射。`initial` 是“状态名 → 初值”的映射，键的集合必须正好等于 `states`，缺键或多键都报 `SHAPE`。`t_span = [t0, tf]` 要求 t0 ≠ tf（否则报 `RANGE`）；tf < t0 表示反向积分。表达式里能用的变量是 `t`、状态名和参数名；参数名与状态名重复时报 `E.VALIDATION.EXPRESSION`，`kind` 为 `duplicate_name`。状态用名字而不用下标，是因为 Agent 写 `"-k*x - c*v"` 比写 `"-p[0]*y[0] - p[1]*y[1]"` 更不容易把顺序弄错，就算弄错了，读者也能一眼看出来。
-- OD-2 **方法**：Dormand–Prince 5(4)，用 5 阶解推进（局部外推），FSAL，系数为精确有理数。步长控制与 scipy RK45 完全相同：
-  - 误差范数取 RMS：‖e‖ = √(mean_i (e_i / (atol + rtol·max(|y_i|, |y_new_i|)))²)，‖e‖ < 1 时接受；
-  - 接受时步长乘 min(10, 0.9·‖e‖^(−1/5))（‖e‖ = 0 时乘 10），同一步里被拒过的不再放大；拒绝时乘 max(0.2, 0.9·‖e‖^(−1/5))；
-  - 最小步长为 10·|nextafter(t, 积分方向) − t|，步长不超过 `max_step`；
-  - 初始步长：给了 `first_step` 就用它，否则按 Hairer–Nørsett–Wanner 的估计算法（与 scipy `select_initial_step` 相同）。
-
-  MATLAB `ode45` 用的是同一对公式，但误差范数取最大值而不是 RMS，初始步长的取法不同，还要在每步内插出 Refine = 4 个点，所以它的结果与本算子只在容差范围内一致，不会逐位相同。照抄 scipy 的步长决策，是为了有一个开放、可查的参考：两边的每一个差异都能追到具体的一步。
-- OD-3 **输出时刻**。输出时刻要么由 `t_eval` 给出（必须落在 `t_span` 内并沿积分方向严格单调，否则分别报 `RANGE` 和 `GRID`），要么由 `n_out` 给出（缺省 101，按 numpy `linspace` 的公式等距取点，含两端）。两者同时给出报 `OPTION_CONFLICT`（F-8）。落在 (t_old, t_new] 里的输出点，用这一步的 Shampine 四阶稠密输出求值；t0 处直接取 y0。结果包含：`t`、`y`（形状 [n_states, n_out]，第 i 行对应 `states[i]`）、回显的 `states`、实际生效的 `tolerance {rtol, atol}`（O-1）、`stats {n_steps, n_rejected, n_rhs_evals}` 和 `global_error`（OD-5）。
-- OD-4 **容差**。`rtol` 缺省 1e-3，`atol` 缺省 1e-6，与 `ode45` 和 scipy 相同；`atol` 只能是一个标量。rtol < 100·ε 时报 `E.VALIDATION.RANGE`，并附上把 rtol 改成 100·ε 的补丁。scipy 遇到这种情况会悄悄把 rtol 抬高，本算子不这样做：调用方要求的精度在 f64 里达不到，这件事必须让调用方知道。rtol 和 atol 只约束每一步的局部误差，不约束全局误差。
-- OD-5 **全局误差的后验估计**。算子用同一方法、以 rtol/10 和 atol/10 再解一次，在输出点上比较两次的结果，给出 `global_error.max_abs`（每个状态一项）和 `max_scaled` = max |y − y_fine| / (atol + rtol·|y|)。后置条件 `tolerance_consistent` 成立当且仅当 `max_scaled` ≤ 100（manifest 中的 `limits.tolerance_consistency_factor`），它覆盖全部 `y`（`full`），守护 `/y`。不成立时按 E-7a 发出 `W.EVIDENCE.POSTCONDITION_FAILED`，`/y` 列为不可依赖。`bound_kind` 为 `a_posteriori_heuristic`：误差 ∝ tol^(4/5) 时，更严的那次解的误差约小 6 倍，所以这个差值近似等于本次解的全局误差，但不是严格上界。代价是 rhs 求值次数约为单解的 2.6 倍。在 golden 上，估计值与实际误差之比的中位数是 0.92，最大是 1.03。示例 `request.vdp.json`（μ = 1，缺省容差）的估计值是 0.17（实际误差 0.23），`max_scaled` = 2422，结果被标记为不可依赖。
-- OD-6 **失败**。初始点的右端不是有限值时，报 `E.NUMERICAL.NON_FINITE_EVALUATION`（新码）。积分过程中，某次试探步的任一阶段出现非有限值，就把这一步当作被拒绝，缩小步长重试。步长缩到最小步长以下时：如果最后一次试探是非有限值（解爆破或碰到奇点，例如 y′ = y²、y(0) = 1 在 t = 1 处），报 `NON_FINITE_EVALUATION`；否则报 `E.NUMERICAL.STEP_SIZE_TOO_SMALL`（新码）。两种情况的 `details` 都给出出事的 t 和 h。接受步与拒绝步合计超过 `limits.max_steps`（10⁶）时，报 `E.RESOURCE.COMPUTE_LIMIT`，remediation 指出问题可能是刚性的。失败时不返回部分结果。
-- OD-7 **刚性**。按 Hairer DOPRI5 的检测方法：每 1000 个接受步检查一次，处于可疑状态时每步都检查；用 h·ρ̂ 估计 h·|λ|，其中 ρ̂ = ‖k7 − k6‖ / ‖y_new − y_stage6‖。h·ρ̂ > 3.25 累计 15 次（中间连续 6 次不可疑就清零）时，发出一次 `W.NUMERICAL.STIFF_PROBLEM`（新码），`details` 给出开始出现刚性的 t。这时结果仍然返回，因为它是准确的，只是代价高。本算子还没有隐式方法（对应 `ode15s`），所以 remediation 是告诉调用方这一点并 `ask_user`。
-- OD-8 **确定性**：`platform_bitwise`。右端通过数学库求值（EX-4），所以只在同一平台、同一数学库上逐位相同；参考实现自 v0.4.9 起各平台用同一个数学库（2.1 M-7a）。
-
-新码：`E.VALIDATION.EXPRESSION`（3.15 EX-6）、`E.NUMERICAL.NON_FINITE_EVALUATION`、`E.NUMERICAL.STEP_SIZE_TOO_SMALL`、`W.NUMERICAL.STIFF_PROBLEM`。前两个 NUMERICAL 码的意思是：问题本身可能有解，换容差、换输出区间或换方法也许能成功（X-1）。解在有限时间内爆破属于问题本身的性质，可数值上无法把它和步长失败区分开，所以仍归 NUMERICAL，由 message 给出“可能爆破”的判断。
-
-**Manifest** — `examples/ode.ivp.solve/manifest.json`
-
-```json
-{{jsonc:examples/ode.ivp.solve/manifest.json}}
-```
-
-**请求**（阻尼振子 x″ + 0.4·x′ + 4·x = 0，x(0) = 1；参数 k、c 按名字给出，rtol 1e-8）
-
-```json
-{{file:examples/ode.ivp.solve/request.json}}
-```
-
-**成功响应**（31 个输出点；全局误差估计 8.8e-9，`max_scaled` = 14.4 ≤ 100，`tolerance_consistent` 成立）
-
-```json
-{{jsonc:examples/ode.ivp.solve/response.success.json}}
-```
-
-**缺省容差的例子** — `request.vdp.json`：Van der Pol 振子，μ = 1，[0, 20]，rtol 和 atol 取缺省值（与 `ode45` 相同）。响应 `response.vdp.json` 的状态是 `ok_with_warnings`：`max_scaled` = 2422，`tolerance_consistent` = false，`/y` 被列为不可依赖。它与 scipy RK45 在同样设置下的结果一致，两者相对精确解的误差都是 0.23。
-
-**错误请求与响应**（表达式末尾缺操作数：EX-6，`position` = 12）
-
-```json
-{{jsonc:examples/ode.ivp.solve/request.error.json}}
-```
-
-```json
-{{jsonc:examples/ode.ivp.solve/response.error.json}}
-```
-
-**Parity 测试规格** — `examples/ode.ivp.solve/parity.yaml`
-
-```yaml
-{{file:examples/ode.ivp.solve/parity.yaml}}
-```
-
-共 34 个 golden 用例，17 个成功、17 个错误。对精确解的检验是逐点的 |y − truth| ≤ max(10·(atol + rtol·|truth|), 2·E_ref + 1e-13·max|y|)，最坏的一点用掉了界的 0.50（`functions`）。与 scipy RK45 的差别只记录、不断言：在 `functions` 用例里，min、max 带来的折点让两边的接受/拒绝决策分了岔，差到容差的 20.9 倍，可两边相对精确解的误差几乎相同（1.60e-7 和 1.58e-7）；其余用例的差别都在容差的 1.2e-3 倍以内。μ = 100 的 Van der Pol 用例触发了 `W.NUMERICAL.STIFF_PROBLEM`。结果见 `aeoi-numeric/tests/parity_ode.rs` 和 `reports/parity-ode.json`。
-
-## 10.19 `linalg.system.solve`：线性方程组（v0.4.10）
-
-对应 MATLAB 的 `A\b`，按 MATLAB 使用频率排在 `fft`、`ode45` 之后。参考值来自 numpy.linalg（LAPACK `dgesv`、`dgelsd`），真值是 mpmath 以 60 位精度对**存储下来的 f64 数据**求出的解；都不是 MATLAB 的结果。这个算子逼出的规范问题是：一个“解”到底能信多少。MATLAB 只在 rcond < ε 时打印一行警告，调用方拿不到条件数，也拿不到后向误差；而对 Hilbert 13 这样的矩阵，解可能一位有效数字都没有。
-
-**规范性条款**
-
-- LS-1 **范围**（作者决定，2026-11-25）。A 为实数稠密 [m, n] 矩阵，b 为 [m] 或 [m, k]，每列一个右端项。
-  - m = n：解方阵方程组。
-  - m > n：最小二乘解。
-  - m < n：报 `E.DOMAIN.UNDERDETERMINED`（新码），remediation 为 `ask_user`。MATLAB 此时给的是“基本解”，它不是最小范数解，也不唯一，所以不能悄悄返回一个解。最小范数解以后按 3.14 作为另一个方法登记。
-  - 复数 A 报 `E.VALIDATION.DTYPE`，0.4.0 不支持。
-- LS-2 **方阵的解法**：LU 分解，部分选主元，每列取 |a_ik| 最大的第一行，与 LAPACK `dgetf2` 相同；某步主元恰为 0 报 `E.NUMERICAL.SINGULAR`。
-  - `refinement = auto`（缺省）时，再做至多 3 步固定精度迭代精化：残差 r = b − A·x 用补偿算术（Dot2，无 FMA，跨平台逐位相同）计算，解 A·δ = r，令 x ← x + δ。‖δ‖∞ ≤ 2u‖x‖∞ 或修正量没有减半时停止。
-  - 精化在每个平台上的结果相同；κ·u ≪ 1 时，它把前向误差压到 u 的量级。`refinement = none` 只做一次 LU 求解，与 MATLAB 相同。
-  - golden 上的实测：Hilbert 10（κ₁ = 3.5e13）上，numpy 的相对误差是 7.2e-6，本算子是 0；Wilkinson 增长矩阵（n = 60，部分选主元增长 2⁵⁹）上，numpy 的误差是 0.90，本算子精化 2 步后为 1.3e-16。
-- LS-3 **超定的解法**：Householder QR（LAPACK `dgeqr2`/`dlarfg` 的约定），x = R⁻¹·(Qᵀb) 的前 n 行。
-  - 秩判定：|r_jj| ≤ max(m, n)·u·max|r_ii| 时报 `E.NUMERICAL.SINGULAR`，`details` 给出估计秩。QR 不选列主元，所以列秩不足时最小二乘解不唯一，不能返回。
-  - 超定情形不做精化。
-- LS-4 **后向误差与后置条件 `backward_stable`**。残差一律用补偿算术计算。
-  - 方阵：η = ‖b − A·x‖∞ / (‖A‖∞‖x‖∞ + ‖b‖∞)（Rigal–Gaches 范数后向误差），要求 η ≤ 10·n·u。
-  - 超定：η = ‖Aᵀr‖₂ / (‖A‖_F·(‖r‖₂ + ‖A‖_F‖x‖₂))，即最小二乘解的最优性，要求 η ≤ 10·m·u。
-  - 多个右端项取最大值。不成立时 `/x` 列为不可依赖（E-13）。golden 里不做精化的 Wilkinson 用例 η = 0.021，如实报告不成立。
-- LS-5 **条件数与前向误差估计**。κ₁ ≈ ‖A‖₁·est(‖A⁻¹‖₁)，超定时对 R 估计；est 用 Hager–Higham 1-范数估计器：固定起始向量，至多 5 次迭代，加上交错向量。它是下界；κ·u ≪ 1 时，golden 上它与真值之比是 1.00。
-  - 前向误差估计：方阵 κ₁·η；超定 η·(2κ + κ²·‖r‖/(‖A‖‖x‖))（Golub–Van Loan 5.3.8）。
-  - rcond = 1/κ₁ < ε 时发 `W.NUMERICAL.ILL_CONDITIONED`（阈值同 MATLAB），`details` 给出 rcond 和 κ₁。这时的解可能没有有效数字，调用方从信封里就能看到。
-- LS-6 **输出**：`x`（b 为 [m] 时是 [n]，为 [m, k] 时是 [n, k]）、`residual_norm`（每个右端项的 ‖r‖₂）、`method`（`lu_partial_pivoting` 或 `householder_qr`）、`shape {m, n, rhs, kind}`、`refinement_steps`。
-- LS-7 **确定性**：`platform_bitwise`，全部运算是 f64 加减乘除与 `sqrt`/`hypot`（M-7a）。
-
-新码：`E.DOMAIN.UNDERDETERMINED`。
-
-**Manifest** — `examples/linalg.system.solve/manifest.json`
-
-```json
-{{jsonc:examples/linalg.system.solve/manifest.json}}
-```
-
-**请求与响应**（3×3，精确解 x = [1, −2, 3]；精化 1 步后逐位等于精确解）
-
-```json
-{{file:examples/linalg.system.solve/request.json}}
-```
-
-```json
-{{jsonc:examples/linalg.system.solve/response.success.json}}
-```
-
-**病态的例子** — `request.ill.json`：Hilbert 13，κ₁ ≈ 5.5e18。响应 `response.ill.json` 的状态是 `ok_with_warnings`，带 `W.NUMERICAL.ILL_CONDITIONED`。估计的 κ₁ 只有真值的 1/12，因为 κ·u > 1 时估计器本身也不可靠；但 rcond < ε 已经足以说明解不可信。
-
-**错误请求与响应**（2×3 欠定：LS-1）
-
-```json
-{{jsonc:examples/linalg.system.solve/request.error.json}}
-```
-
-```json
-{{jsonc:examples/linalg.system.solve/response.error.json}}
-```
-
-**Parity 测试规格** — `examples/linalg.system.solve/parity.yaml`
-
-```yaml
-{{file:examples/linalg.system.solve/parity.yaml}}
-```
-
-共 30 个 golden 用例，20 个成功、10 个错误。对精确解的误差，最坏的用例用掉了容差的 4.9e-3；20 个成功用例中，有 12 个比 numpy 更准。结果见 `aeoi-numeric/tests/parity_linsolve.rs` 和 `reports/parity-linsolve.json`。
-
-## 10.20 `interp.grid.interp1`：一维插值（v0.4.10）
-
-对应 MATLAB 的 `interp1`。参考值来自 numpy.interp 与 scipy.interpolate：`interp1d` 的 nearest-up、previous、next，以及 `PchipInterpolator`、`CubicSpline(not-a-knot)`。不是 MATLAB 的结果。这个算子逼出的规范问题是“数据范围之外”。MATLAB 在这里自相矛盾：linear、nearest 缺省返回 NaN，pchip、spline 缺省外推。同一个查询点，换一个方法就从“缺失”变成一个看似可信的数，调用方不会注意到。
-
-**规范性条款**
-
-- IP-1 **输入**：x 为 [n]，严格递增，n ≥ 2。不满足报 `E.VALIDATION.GRID`，并指出是哪个点；整体递减时提示把 x 和 y 一起倒序。y 为 [n] 或 [k, n]，每行一个通道，与 `fft`、`lsim` 相同；MATLAB 按列存，[n, k] 报 `SHAPE` 并提示转置。xq 为 [q]，顺序任意。
-- IP-2 **方法**（与 MATLAB 同名方法定义相同）：
-  - linear：slope·(xq − x_i) + y_i，运算顺序同 numpy.interp。
-  - nearest：xq ≥ x_i/2 + x_{i+1}/2 时取 y_{i+1}，中点归右，同 MATLAB 与 scipy nearest-up。
-  - previous、next。
-  - pchip：Fritsch–Butland 加权调和平均斜率，端点用保形三点公式。
-  - spline：not-a-knot 三次样条，斜率方程是三对角的，用 LAPACK `dgtsv` 的部分选主元消元求解；n = 3 时是过三点的抛物线，n = 2 时是直线。
-
-  区间定位规则：x_i ≤ xq < x_{i+1}，xq = x_{n−1} 时取最后一段。三次段按 scipy PPoly 的方式求值：((c0·d + c1)·d + c2)·d + c3。**查询点恰好落在节点上时，直接返回该节点的 y**，对所有方法都成立。
-- IP-3 **范围外**（作者决定，2026-11-25）：`extrapolation` 缺省为 `error`。有查询点落在 [x_0, x_{n−1}] 之外时，报 `E.DOMAIN.EXTRAPOLATION_REQUIRED`（新码），`details` 给出范围外的点数、第一个这样的点、x 与 xq 的范围，并附三个 `modify_input` 补丁，分别加上 `extrapolation = nan`、`clamp`、`extrapolate`。三个补丁都要求用户确认（R-2），因为选哪一个改变的是结果的含义。各取值的含义：
-  - `nan`：标成缺失。
-  - `clamp`：取最近端点的值。
-  - `extrapolate`：linear 与三次方法把端点那一段延长；nearest、previous、next 取端点值。只要真的发生了外推，就发 `W.ACCURACY.EXTRAPOLATED`（新码）。
-- IP-4 **输出**：`yq`（[q] 或 [k, q]）、回显的 `method` 与 `extrapolation`，以及 `out_of_range_count`。
-- IP-5 **后置条件**：
-  - `pieces_interpolate`：每个三次段在右端点处与数据之差 ≤ 64u（相对局部尺度）。
-  - `spline_c2`：样条在内部节点两侧的二阶导一致（≤ 6.4e4·u，相对全局尺度）。
-  - `local_bounds`：除 spline 外，所有方法的值都落在所在区间两端值之间（pchip 的保形性就体现在这里）。
-  - `all_finite`：`extrapolation = nan` 有意给出的 NaN 不算违反。
-- IP-6 **后置条件一律报告**。框架把 manifest 里列出、但 `trust.checks` 里缺失的后置条件算作不成立（E-11），所以每个方法都报告全部四项。对某个方法没有意义的项按空真处理：线性方法没有三次段，`pieces_interpolate` 为真；非样条方法的 `spline_c2` 为真；spline 不保证 `local_bounds`，该项也记为真，并在 `derived.local_bounds_applies` 里写明不适用。以后为“只对部分方法有意义的后置条件”专设一种写法，作为开放问题 26。
-- IP-7 **确定性**：`platform_bitwise`，只用 f64 四则运算（M-7a）。
-
-新码：`E.DOMAIN.EXTRAPOLATION_REQUIRED`、`W.ACCURACY.EXTRAPOLATED`。
-
-**Manifest** — `examples/interp.grid.interp1/manifest.json`
-
-```json
-{{jsonc:examples/interp.grid.interp1/manifest.json}}
-```
-
-**请求与响应**（台阶状数据，pchip：结果单调，不越过数据范围）
-
-```json
-{{file:examples/interp.grid.interp1/request.json}}
-```
-
-```json
-{{jsonc:examples/interp.grid.interp1/response.success.json}}
-```
-
-**对照** — `request.spline.json` 用同一组数据和 spline：结果在 x = 0.5 处是 −0.39，在 x = 4.5 处是 4.94，都越出了数据范围 [0, 4]。这是三次样条的正常行为，不是错误，所以样条不做 `local_bounds` 检查。
-
-**错误请求与响应**（查询点 6.0 超出 [0, 5]，缺省 `extrapolation = error`：IP-3）
-
-```json
-{{jsonc:examples/interp.grid.interp1/request.error.json}}
-```
-
-```json
-{{jsonc:examples/interp.grid.interp1/response.error.json}}
-```
-
-**Parity 测试规格** — `examples/interp.grid.interp1/parity.yaml`
-
-```yaml
-{{file:examples/interp.grid.interp1/parity.yaml}}
-```
-
-共 56 个 golden 用例，44 个成功、12 个错误。成功用例中，29 个与参考逐位相同；最大偏差是 3.0e-16·max(1, max|y|)，与精确值的最大偏差是 2.3e-16。结果见 `aeoi-numeric/tests/parity_interp1.rs` 和 `reports/parity-interp1.json`。
-
-## 10.21 `fit.poly.polyfit`：多项式拟合（v0.4.11）
-
-对应 MATLAB 的 `polyfit`。参考值来自 numpy.polyfit（LAPACK `dgelsd`，先对 Vandermonde 矩阵做列缩放）；真值是 mpmath 以 60 位精度对存储下来的 f64 数据解正规方程得到的。都不是 MATLAB 的结果。这个算子逼出的规范问题有两个：
-
-- **病态时算子该不该替用户改模型。** 年份这类 x 离 0 远、跨度小，单项式基会严重病态。MATLAB 只打印一句“建议中心化缩放”。中心化缩放会改变系数的含义：系数变成关于 (x − mean)/std 的多项式，所以不能悄悄替用户做。
-- **一个“警告”怎么附上修复建议。** 5.1 的 warning 没有 `remediation` 字段。
-
-**规范性条款**
-
-- PF-1 **输入**（作者决定，2026-11-25）：
-  - x、y 为等长的 [n] 实数向量。
-  - `degree` 必填，来源 `user`：次数是模型选择，算子和 LLM 都不得代填。
-  - `scaling` 取 `none`（缺省）或 `center_scale`。
-  - x 不同值的个数少于 degree + 1 时，报 `E.DOMAIN.UNDERDETERMINED`（复用 LS-1 的码），附两个 remediation：一个把次数降到“不同值个数 − 1”的补丁（改变模型，须用户确认），一个 `ask_user`（补充数据）。
-- PF-2 **解法**：
-  - V[i][j] = t_i^(d−j)，按列连乘（同 MATLAB），用 Householder QR 求解（与 10.19 共用）。
-  - 解出 p 之后，再用修正半正规方程做至多 3 步精化：δ = R⁻¹R⁻ᵀ·(Vᵀr)，Vᵀr 用补偿算术算。修正量没有减半，或已到 u 的量级时停止。
-  - 精化的效果：golden 上 14 个成功用例全都比 numpy 准。最病态的一个（年份、4 次，κ = 7e10）上，numpy 的误差是 3.0e-7，本算子是 3.4e-12。
-- PF-3 **列缩放**：秩判定、条件数、后向误差都在 V·D⁻¹ 上计算，D 为 V 的列 2-范数。这样这些量与 x 的单位无关，只反映 x 的位置与跨度。
-  - 原因：未缩放的 R 在年份数据上，3 次就判为数值秩不足（列范数从 5.6 到 8e9），而按缩放后的条件数，问题其实只有 1.3e8。
-  - `center_scale` 时 t = (x − mu[0])/mu[1]，mean 与样本标准差用补偿求和，mu 随结果返回。x 只有一个不同值时，标准差为 0，报 `E.VALIDATION.OPTION_CONFLICT`。
-- PF-4 **病态**（作者决定）：缩放后列满秩、但 κ₁(R·D⁻¹) > 1e10 时，照原样拟合，并发 `W.NUMERICAL.ILL_CONDITIONED`。
-  - 警告的 `details.suggested_remediation` 是一个与错误 remediation 同形的对象（`modify_input`，补丁加上 `scaling = center_scale`，`requires_user_confirmation: true`）。这是“警告附修复建议”的写法，见开放问题 27。
-  - 警告文字要说清：对给定数据算得的系数仍然准确；但数据的相对扰动会被放大约 κ 倍传到系数上，而且系数之间高度相关。
-  - 缩放后仍数值秩不足时，报 `E.NUMERICAL.SINGULAR`，补丁同上。
-- PF-5 **输出**：
-  - `p`：最高次在前。
-  - `degree`、`scaling`、`mu`（`center_scale` 时为 [mean, std]，否则 null）。
-  - `residual_norm`、`dof` = n − d − 1。
-  - `std_errors`：sqrt(diag((RᵀR)⁻¹))·‖r‖₂/sqrt(dof)，假设误差独立、等方差；dof = 0 时为 null。MATLAB 的第二个输出 S 只给 R、自由度和残差范数，标准误差要调用方自己算（作者决定直接给出）。
-- PF-6 **后置条件 `backward_stable`**：‖D⁻¹Vᵀr‖₂ / (‖V·D⁻¹‖_F·(‖r‖₂ + ‖V·D⁻¹‖_F‖D·p‖₂)) ≤ 10·n·u，r 用补偿算术。
-- PF-7 **确定性**：`platform_bitwise`。
-
-**Manifest** — `examples/fit.poly.polyfit/manifest.json`
-
-```json
-{{jsonc:examples/fit.poly.polyfit/manifest.json}}
-```
-
-**请求与响应**（7 个点的二次拟合，带标准误差）
-
-```json
-{{file:examples/fit.poly.polyfit/request.json}}
-```
-
-```json
-{{jsonc:examples/fit.poly.polyfit/response.success.json}}
-```
-
-**病态的例子** — `request.ill.json`：x = 1990…2020，4 次。响应 `response.ill.json` 的状态是 `ok_with_warnings`：κ₁(R·D⁻¹) ≈ 6.1e10，警告里附有 `center_scale` 补丁。系数的标准误差与系数本身同量级，说明这些系数单独看没有意义。
-
-**错误请求与响应**（x 只有 2 个不同值，却要 2 次：PF-1）
-
-```json
-{{jsonc:examples/fit.poly.polyfit/response.error.json}}
-```
-
-**Parity 测试规格** — `examples/fit.poly.polyfit/parity.yaml`
-
-```yaml
-{{file:examples/fit.poly.polyfit/parity.yaml}}
-```
-
-共 24 个 golden 用例，14 个成功、10 个错误。缩放后的前向误差，最坏的用例用掉了容差的 6.2e-4。结果见 `aeoi-numeric/tests/parity_polyfit.rs` 和 `reports/parity-polyfit.json`。
-
-## 10.22 `linalg.decomp.eig`：特征值与特征向量（v0.4.11）
-
-对应 MATLAB 的 `eig(A)` 与 `[V, D] = eig(A)`。真值是 mpmath 以 50 位精度给出的特征值、特征向量和特征值条件数，numpy（LAPACK `dsyevd`/`dgeev`）的值只作记录。都不是 MATLAB 的结果。这个算子逼出的规范问题是**结果不唯一**：
-
-- 一般矩阵的特征值，MATLAB 和 numpy 都不排序。
-- 特征向量可以差一个非零复数因子。
-- 重特征值的特征向量只确定到子空间。
-
-两个正确的实现可以给出看起来完全不同的 V。
-
-**规范性条款**
-
-- EG-1 **算法选择**：`structure = auto`（缺省）时，A 与 Aᵀ 逐位相等才用对称算法（同 MATLAB 的判定），否则用一般算法；`structure = general` 总用一般算法。实际所用的算法在 `structure` 里回显。
-- EG-2 **算法**：
-  - 对称：循环双边 Jacobi，|a_pq| > ε·sqrt(|a_pp·a_qq|) 时旋转。
-  - 一般：实 Schur 分解 → 复 Schur 形（每个 2×2 块用一个 Givens 旋转消去，同 MATLAB `rsf2csf`）→ 在上三角因子上回代求特征向量，前代求左特征向量。小除数按 LAPACK `ztrevc` 抬到 max(ε·|λ|, smlnum)。
-  - 2×2 块的特征值由实数块直接算出，所以共轭对是精确共轭的；对中第二个向量取第一个的共轭。
-  - 先试过 nalgebra 的 SymmetricEigen：它在分级矩阵 diag(1e6, 1, 1e-6)·S·diag(1e6, 1, 1e-6) 上的后向误差是 3e-13（≈ 1000u），后置条件如实报了不成立，所以换成 Jacobi。
-- EG-3 **排序**（作者决定）：
-  - 对称：升序。
-  - 一般：按 (实部, |虚部|) 升序，共轭对相邻，虚部为正的在前。
-  - 排序规则在 `ordering` 里回显。
-- EG-4 **规一化**（作者决定）：‖v‖₂ = 1，模最大的分量（并列取下标最小）为正实数。
-  - 实特征值的特征向量取实部。
-  - 重特征值的特征向量只确定到子空间，规范不规定选哪一组；比较时只比较残差与正交性（9.4）。
-- EG-5 **后置条件**：
-  - `residual_small`：max_k ‖A·v_k − λ_k·v_k‖₂/‖A‖_F ≤ 100·n·u。
-  - `orthonormal`：只对对称算法有意义，‖VᵀV − I‖_max ≤ 100·n·u；一般算法按 IP-6 报空真，`derived.orthonormal_applies = false`。这是开放问题 26 的第二个实例。
-  - `all_finite`。
-  - `vectors = false` 时，特征向量仍在内部计算并检查，只是不返回。
-- EG-6 **条件数与误差估计**：
-  - 一般矩阵：报告每个特征值的条件数 cond_k = 1/|yᴴx|（x、y 为单位右、左特征向量），误差估计 |Δλ_k| ≲ cond_k·‖r_k‖₂。
-  - 对称矩阵：cond = 1，|Δλ_k| ≤ ‖r_k‖₂（残差界），特征向量夹角 ≲ ‖r_k‖₂/gap_k（Davis–Kahan）。
-  - 任一 cond_k > 1e8（≈ u^(−1/2)）时，发 `W.NUMERICAL.ILL_CONDITIONED`：A 可能亏损，特征值可能只有约一半有效数字，特征向量接近平行。这些特征值的误差估计记为 null，因为一阶估计已经失效。
-  - 例：Jordan 块 `request.defective.json` 的三个特征向量相同，V 奇异，这就是正确答案。
-- EG-7 **确定性**：`platform_bitwise`。
-
-**Manifest** — `examples/linalg.decomp.eig/manifest.json`
-
-```json
-{{jsonc:examples/linalg.decomp.eig/manifest.json}}
-```
-
-**请求与响应**（对称三对角，特征值 2 − √2、2、2 + √2）
-
-```json
-{{file:examples/linalg.decomp.eig/request.json}}
-```
-
-```json
-{{jsonc:examples/linalg.decomp.eig/response.success.json}}
-```
-
-**一般矩阵** — `request.general.json`：多项式 s³ + 2s² + 3s + 2 的友矩阵。特征值是 −1 和 −0.5 ± 1.3229i；响应里共轭对相邻，虚部为正的在前，两个特征向量互为共轭。
-
-**错误请求与响应**（2×3：EG-1 要求方阵）
-
-```json
-{{jsonc:examples/linalg.decomp.eig/response.error.json}}
-```
-
-**Parity 测试规格** — `examples/linalg.decomp.eig/parity.yaml`
-
-```yaml
-{{file:examples/linalg.decomp.eig/parity.yaml}}
-```
-
-共 28 个 golden 用例，22 个成功、6 个错误。特征值误差最坏的用例用掉了容差的 1.6e-3，特征向量的是 4.0e-6；在不亏损的用例上，条件数与真值之比都在 [0.5, 2] 内。结果见 `aeoi-numeric/tests/parity_eig.rs` 和 `reports/parity-eig.json`。
-
-## 10.23 `linalg.decomp.svd`：奇异值分解（v0.4.11）
-
-对应 MATLAB 的 `svd`。真值是 mpmath 以 50 位精度给出的奇异值与奇异向量，numpy（LAPACK `dgesdd`）的值只作记录。都不是 MATLAB 的结果。
-
-**规范性条款**
-
-- SV-1 **模式**：
-  - `values`：只要奇异值。
-  - `thin`：缺省，同 MATLAB `svd(A, "econ")`，U 为 [m, p]、V 为 [n, p]，p = min(m, n)。
-  - `full`：U、V 为方阵；补全部分是 thin 因子的 Householder QR 给出的正交补，前 p 列保持不变。
-
-  返回 V 而不是 Vᵀ（同 MATLAB；numpy 返回 Vᵀ）。
-- SV-2 **算法**：单边 Jacobi（Hestenes），m < n 时作用在 Aᵀ 上；|g_pᵀg_q| > sqrt(m)·ε·‖g_p‖‖g_q‖ 时旋转，至多 60 轮扫描；σ_k = ‖g_k‖₂，零奇异值对应的 u_k 由正交补全给出。
-  - 先试过 nalgebra 的双对角 QR：在行分级矩阵（行尺度 1e8 : 1 : 1e-8）上重构残差为 8.7e-10，中间一行的信息丢了。后置条件 `reconstructs` 如实报了不成立，所以换成 Jacobi，重构残差降到 2.5e-16。
-  - 在 400×400 上耗时约 2 秒，因此 `limits.max_dimension` 为 500。
-- SV-3 **符号**（作者决定）：u_k 中模最大的分量（并列取下标最小）为正，v_k 随之变号。
-- SV-4 **数值秩**：s_k > max(m, n)·eps(s_max) 的个数，eps(x) 为 x 处的浮点间距（同 MATLAB `rank`）。输出 `rank`、`rank_tol`、`cond2` = s_max/s_min（s_min = 0 时为 "Inf"）。
-- SV-5 **后置条件**：`reconstructs`（‖A − U·diag(s)·Vᵀ‖_F/‖A‖_F）、`orthonormal_u`、`orthonormal_v`（‖UᵀU − I‖_max 等）都 ≤ 100·max(m, n)·u；外加 `all_finite`。`values` 模式也在内部检查。
-- SV-6 **误差估计**：|Δs_k| ≲ ‖A‖_F·残差 + s_max·正交性误差（Weyl）。小奇异值只有绝对精度，没有相对精度。奇异向量夹角 ≲ 该界/gap_k（Wedin）。
-- SV-7 **确定性**：`platform_bitwise`。
-
-**Manifest** — `examples/linalg.decomp.svd/manifest.json`
-
-```json
-{{jsonc:examples/linalg.decomp.svd/manifest.json}}
-```
-
-**请求与响应**（2×3，thin）
-
-```json
-{{file:examples/linalg.decomp.svd/request.json}}
-```
-
-```json
-{{jsonc:examples/linalg.decomp.svd/response.success.json}}
-```
-
-**秩亏的例子** — `request.full.json`：A = [1 2 3; 4 5 6; 7 8 9]，full 模式。最小奇异值是 1.5e-16，小于 `rank_tol` = 1.1e-14，所以 `rank` = 2；`cond2` ≈ 1.1e17。
-
-**错误请求与响应**（一维 A：SV-1 要求 [m, n]）
-
-```json
-{{jsonc:examples/linalg.decomp.svd/response.error.json}}
-```
-
-**Parity 测试规格** — `examples/linalg.decomp.svd/parity.yaml`
-
-```yaml
-{{file:examples/linalg.decomp.svd/parity.yaml}}
-```
-
-共 20 个 golden 用例，15 个成功、5 个错误。奇异值误差最坏的用例用掉了容差的 2.3e-3，奇异向量的是 5.1e-6。结果见 `aeoi-numeric/tests/parity_svd.rs` 和 `reports/parity-svd.json`。
-
-## 10.24 `signal.design.butter`：巴特沃斯滤波器设计（v0.4.12）
-
-对应 MATLAB 的 `butter`。真值来自 mpmath 以 50 位精度对同一构造的独立实现，scipy.signal.butter 的值只作记录；都不是 MATLAB 的结果。这个算子逼出的规范问题有两个：
-
-- **频率单位。** MATLAB 的 Wn 是“相对 Nyquist 的归一化频率”。它很容易和 Hz、rad/sample、“相对采样率”混淆，而且写错了往往不报错，只会得到另一个滤波器。
-- **同一个结果的三种表示，精度不同。** 高阶或截止频率很低时，多项式 b/a 已经完全失真；golden 里的两个例子，b/a 的频率响应与正确答案相差 100%。scipy 的 b/a 一样坏，MATLAB 文档也建议改用 zpk 或 sos。
-
-**规范性条款**
-
-- BW-1 **截止频率**（作者决定，2026-11-25）：MUST 显式给出，没有缺省。
-  - 数字滤波器：`cutoff_hz` 加 `sample_rate_hz`，或 `cutoff_normalized`（= MATLAB 的 Wn，0 < Wn < 1，1 = Nyquist）。
-  - 模拟滤波器：`cutoff_rad_s` 或 `cutoff_hz`。
-  - 一种都没给、给了两种、只给 Hz 没给采样率、或给了不适用于该 domain 的写法，都报 `E.VALIDATION.OPTION_CONFLICT`。附 `ask_user`，问清截止频率与单位。
-  - 截止频率 ≥ Nyquist 报 `E.DOMAIN.ABOVE_NYQUIST`。
-  - 结果在 `cutoff` 里同时回显归一化值和 Hz 值。
-- BW-2 **类型与阶数**：`order` 来源 `user`。`type` 省略时，一个截止频率按低通、两个按带通（同 MATLAB）；实际类型在结果里回显。
-- BW-3 **构造**：
-  - 模拟原型 p_k = −exp(iπm/(2n))，m = −n+1, −n+3, …, n−1。
-  - 频率变换：lp2lp、lp2hp、lp2bp、lp2bs（零极点形式）。
-  - 数字滤波器：先预畸变 w = 4·tan(π·Wn/2)，再做双线性变换（fs = 2）。这与 scipy、MATLAB 相同。
-  - 内核在 `aeoi-core::kernels::filter`（11.5 RI-1）。b/a 由零极点展开，用的是 `control.lti.convert` 的同一段代码。
-- BW-4 **输出与 b/a 警告**（作者决定）：
-  - 同时给出 z/p/k、sos（数字滤波器）、b/a，以及 `system`：模拟滤波器是 ts = 0 的 LTI 系统；数字滤波器给了采样率时 ts = 1/fs；只给归一化频率时为 null，因为这时时间基未知。
-  - b/a 的频率响应与零极点形式在 64 个频点上的最大相对偏差 > 1e-8 时，发 `W.NUMERICAL.ILL_CONDITIONED`，`details.unreliable_fields` = ["/b", "/a"]。这是警告，不是后置条件：zpk 与 sos 仍然可用，不应因此把整个结果判为 `unverified`。
-  - sos 的配对规则：极点组按离单位圆由远到近排列，各取最近的零点，增益放在第一节。这是 AEOI 自己的约定，与 scipy 的 `nearest` 配对不保证逐系数相同，所以只比较频率响应。
-- BW-5 **后置条件**：
-  - `stable`：数字滤波器 |p| < 1；模拟滤波器 Re p < 0。
-  - `edge_gain`：每个截止点 |H|² = 1/2，偏差 ≤ 1e-10。
-  - `sos_consistent`：sos 与零极点的响应偏差 ≤ 1e-10。模拟滤波器没有 sos，按空真报告（开放问题 26 的第三个实例）。
-  - `all_finite`。
-- BW-6 **确定性**：`platform_bitwise`。
-
-**Manifest** — `examples/signal.design.butter/manifest.json`
-
-```json
-{{jsonc:examples/signal.design.butter/manifest.json}}
-```
-
-**请求与响应**（4 阶低通，50 Hz，采样率 1000 Hz）
-
-```json
-{{file:examples/signal.design.butter/request.json}}
-```
-
-```json
-{{jsonc:examples/signal.design.butter/response.success.json}}
-```
-
-**其他例子**：
-- `request.analog.json`：3 阶模拟低通，10 rad/s。结果的 `system` 可以直接交给 `control.lti.bode`。
-- `request.ill.json`：20 阶，Wn = 0.01。响应带 `W.NUMERICAL.ILL_CONDITIONED`，b/a 的响应偏差为 1.0；sos 与真值的偏差仍 ≤ 1e-11。
-
-**错误请求与响应**（给了 cutoff_hz 但没给采样率：BW-1）
-
-```json
-{{jsonc:examples/signal.design.butter/response.error.json}}
-```
-
-**Parity 测试规格** — `examples/signal.design.butter/parity.yaml`
-
-```yaml
-{{file:examples/signal.design.butter/parity.yaml}}
-```
-
-共 33 个 golden 用例，20 个成功、13 个错误。最坏用例：零极点误差 7.9e-14，sos 响应偏差 2.6e-13，未标记的 b/a 系数误差 4.6e-16。结果见 `aeoi-numeric/tests/parity_butter.rs` 和 `reports/parity-butter.json`。
-
-## 10.25 `signal.filter.filter`：数字滤波（v0.4.12）
-
-对应 MATLAB 的 `filter`（sos 形式对应 scipy 的 `sosfilt`）。真值来自 mpmath 以 50 位精度、在存储下来的数据上逐样本计算的差分方程，scipy 的 lfilter、sosfilt 只作记录；都不是 MATLAB 的结果。
-
-**规范性条款**
-
-- FL-1 **滤波器形式**：b/a 与 `sos` 恰好给出一种，否则报 `E.VALIDATION.OPTION_CONFLICT`。
-  - b、a 是 z⁻¹ 的升幂（MATLAB 约定），a[0] 必须非零，否则报 `E.VALIDATION.ZERO_DENOMINATOR`。
-  - sos 为 [L, 6]，每行 [b0 b1 b2 a0 a1 a2]。
-  - 高阶滤波器 SHOULD 用 sos（见 BW-4）。
-- FL-2 **通道与状态**：x 为 [n] 或 [k, n]，每行一个通道，与 `fft`、`interp1` 相同。MATLAB 按列存，[n, k] 要先转置。
-  - 初始状态 `zi`：b/a 为 max(len(a), len(b)) − 1 个数，sos 为 [L, 2]；多通道可以每个通道一份。
-  - 返回末状态 `zf`，可以直接作为下一段数据的 `zi`。
-- FL-3 **算法**：转置直接 II 型递推，同 MATLAB `filter` 与 scipy `lfilter`。b、a 补齐到同长并除以 a0。sos 为各节依次计算。内核在 `aeoi-core::kernels::filter`，与 `butter` 共用。
-- FL-4 **后置条件 `difference_equation`**：每个样本的差分方程残差 |Σa_i·y[n−i] − Σb_i·x[n−i]| ≤ 10·m·u·(Σ|a_i·y[n−i]| + Σ|b_i·x[n−i]|)，用补偿算术计算，sos 逐节检查；给了 `zi` 时，前 m − 1 个样本不查。另有 `all_finite`。
-- FL-5 **稳定性**：分母多项式的根（与 `control.lti.poles_zeros` 同一求根代码）在单位圆上或圆外时，发 `W.DOMAIN.UNSTABLE_SYSTEM`。这是警告：不稳定递推的输出仍然是差分方程的正确解。
-- FL-6 **确定性**：`platform_bitwise`。
-
-**Manifest** — `examples/signal.filter.filter/manifest.json`
-
-```json
-{{jsonc:examples/signal.filter.filter/manifest.json}}
-```
-
-**请求与响应**（10 Hz 与 120 Hz 正弦加噪声，经过 50 Hz、4 阶巴特沃斯 sos）
-
-```json
-{{jsonc:examples/signal.filter.filter/response.success.json}}
-```
-
-**其他例子**：
-- `request.ba.json`：一阶 IIR 的冲激响应，结果为 0.1·0.9ⁿ。
-- `request.unstable.json`：a = [1, −1.2]，响应带 `W.DOMAIN.UNSTABLE_SYSTEM`。
-
-**错误请求与响应**（a0 = 0：FL-1）
-
-```json
-{{jsonc:examples/signal.filter.filter/response.error.json}}
-```
-
-**Parity 测试规格** — `examples/signal.filter.filter/parity.yaml`
-
-```yaml
-{{file:examples/signal.filter.filter/parity.yaml}}
-```
-
-共 24 个 golden 用例，15 个成功、9 个错误。最坏用例只用掉了容差的 3.1%；15 个成功用例中，13 个的误差不超过 scipy。结果见 `aeoi-numeric/tests/parity_filter.rs` 和 `reports/parity-filter.json`。
-
-## 10.26 `nonlinear.root.fzero`：单变量求根（v0.4.13）
-
-对应 MATLAB 的 `fzero`。真值是 mpmath `findroot` 以 50 位精度、从参考根出发求得的，scipy `brentq` 只作记录；都不是 MATLAB 的结果。f 用 3.15 的表达式语言写。这个算子逼出的规范问题是：“根”指的是哪一个。MATLAB 只给 x0 时会自己向外找变号区间，找到的根可能离 x0 很远，也可能不是用户想要的那个。另外，在变号的“根”处，f 也可能根本不是 0，而是一个极点。
-
-**规范性条款**
-
-- FZ-1 **搜索范围**（作者决定，2026-11-25）：`bracket` = [a, b] 与 `x0` 恰好给出一种，否则报 `E.VALIDATION.OPTION_CONFLICT`。
-  - 优先用 bracket。f(a)·f(b) > 0 时报 `E.DOMAIN.NO_SIGN_CHANGE`（新码），附 `ask_user`。
-  - 只给 x0 时按 MATLAB 的方式向外搜索：dx = |x0|/50（x0 = 0 时取 1/50），交替试 x0 − dx 和 x0 + dx，每轮 dx 乘 √2，直到变号；搜不到时报 `E.DOMAIN.NO_SIGN_CHANGE`。
-  - 搜到区间后，在 `bracket.initial` 里回显它，`bracket.source` = `searched_from_x0`，并发 `W.DOMAIN.BRACKET_SEARCHED`（新码），说明找到的根不一定是想要的那个。
-- FZ-2 **算法**：Brent 方法（zeroin，也是 MATLAB fzero 的算法）。区间半宽 ≤ 2ε|x| + xtol/2 时停止。
-- FZ-3 **输出**：`x`、`fx`、`bracket`（`initial`、`source`、`final`；`final` 夹住根，就是误差界）、`iterations`、`evaluations`。
-- FZ-4 **后置条件**：
-  - `sign_change`：最终区间两端变号。
-  - `not_a_pole`：|f(x)| ≤ max(|f(a₀)|, |f(b₀)|)，a₀、b₀ 为初始区间两端。tan(x) 在 [1, 2] 上的变号点 π/2 是极点，这一条就会不成立，结果被标为不可依赖。
-  - `all_finite`。
-  - 求值遇到非有限值报 `E.NUMERICAL.NON_FINITE_EVALUATION`。
-- FZ-5 **确定性**：`platform_bitwise`（经数学库，见 EX-4）。
-
-**Manifest** — `examples/nonlinear.root.fzero/manifest.json`
-
-```json
-{{jsonc:examples/nonlinear.root.fzero/manifest.json}}
-```
-
-**请求与响应**（开普勒方程 E − e·sin E = M，e = 0.9，M = 0.3）
-
-```json
-{{file:examples/nonlinear.root.fzero/request.json}}
-```
-
-```json
-{{jsonc:examples/nonlinear.root.fzero/response.success.json}}
-```
-
-**其他例子**：
-- `request.x0.json`：cos(x) = x，只给 x0 = 1。响应带 `W.DOMAIN.BRACKET_SEARCHED`。
-- `request.pole.json`：tan(x) 在 [1, 2] 上。`not_a_pole` 不成立，状态为 `ok_with_warnings`，x 被标为不可依赖。
-
-**错误请求与响应**（x² + 1 在 [−1, 1] 上不变号：FZ-1）
-
-```json
-{{jsonc:examples/nonlinear.root.fzero/response.error.json}}
-```
-
-**Parity 测试规格** — `examples/nonlinear.root.fzero/parity.yaml`
-
-```yaml
-{{file:examples/nonlinear.root.fzero/parity.yaml}}
-```
-
-共 24 个 golden 用例，15 个成功、9 个错误。未标记的用例中，最坏的一个只用掉了 4ε|x*| 这个容差的 18%。结果见 `aeoi-numeric/tests/parity_roots.rs` 和 `reports/parity-fzero.json`。
-
-## 10.27 `nonlinear.system.fsolve`：非线性方程组（v0.4.13）
-
-对应 MATLAB 的 `fsolve`。真值是 mpmath `findroot` 求得的，scipy `fsolve`（MINPACK hybrd）只作记录；都不是 MATLAB 的结果。这个算子逼出的规范问题有两个：
-
-- **导数从哪里来。** MATLAB 缺省用有限差分，精度取决于步长。
-- **不收敛怎么报。** MATLAB 返回最后一个点和一个 exitflag，常被调用方忽略。
-
-**规范性条款**
-
-- FS-1 **输入**：`unknowns`（名字）、`equations`（F_i 的表达式，个数等于未知量个数；否则报 `E.VALIDATION.SHAPE`）、`params`、`x0`（来源 `user`）。超定或欠定的问题留给以后的 lsqnonlin。
-- FS-2 **雅可比**（作者决定）：由表达式自动微分得到（EX-8），是精确的，不用有限差分。结果里回显 `jacobian` = `automatic_differentiation`。
-- FS-3 **算法**：Powell dogleg 信赖域（MATLAB fsolve 的缺省算法）。
-  - 牛顿步用共享 LU 内核求解（11.5 RI-1）。
-  - 收敛判据：完整牛顿步 ‖p‖∞ ≤ 4u‖x‖∞，或 F = 0。
-- FS-4 **不收敛**（作者决定）：报错，并在 `details.best` 里给出目前最好的点、‖F‖∞ 和迭代次数。
-  - 信赖域缩到无法再下降，或连续 10 个接受步 ½‖F‖² 的下降不到 0.1%：报 `E.NUMERICAL.LOCAL_MINIMUM`（新码）。这是残差的局部极小，不是根，应换初值。
-  - 到迭代上限：报 `E.NUMERICAL.NO_CONVERGENCE`。
-  - 两种情况都附 `ask_user`，请用户给出更好的初值。
-- FS-5 **收敛后的检查**：
-  - 在解处再算一步牛顿修正，作为误差估计；后置条件 `newton_step_small` 要求这一步 ≤ 1e3·u·‖x‖∞。
-  - 用 Hager–Higham 估计 κ₁(J)。κ₁(J) > 1e8，或最后几步牛顿迭代只线性收敛（相邻步长之比 ≥ 1/4，连续三次）时，发 `W.NUMERICAL.ILL_CONDITIONED`：可能是重根。一维时 κ(J) 恒为 1，只能靠收敛速度判断。
-- FS-6 **输出**：`x`（按 unknowns 的顺序）、`solution`（名字 → 值）、`residual` = F(x)、`iterations`、`evaluations`。
-- FS-7 **确定性**：`platform_bitwise`。
-
-**Manifest** — `examples/nonlinear.system.fsolve/manifest.json`
-
-```json
-{{jsonc:examples/nonlinear.system.fsolve/manifest.json}}
-```
-
-**请求与响应**（捕食者–猎物模型的平衡点，精确解 (3, 2)）
-
-```json
-{{file:examples/nonlinear.system.fsolve/request.json}}
-```
-
-```json
-{{jsonc:examples/nonlinear.system.fsolve/response.success.json}}
-```
-
-**其他例子**：`request.double_root.json` 解 (x − 1)² = 0。牛顿法只线性收敛，响应带 `W.NUMERICAL.ILL_CONDITIONED`。
-
-**错误请求与响应**（x² + 1 = 0 没有实根：FS-4）
-
-```json
-{{jsonc:examples/nonlinear.system.fsolve/response.error.json}}
-```
-
-**Parity 测试规格** — `examples/nonlinear.system.fsolve/parity.yaml`
-
-```yaml
-{{file:examples/nonlinear.system.fsolve/parity.yaml}}
-```
-
-共 18 个 golden 用例，9 个成功、9 个错误。最坏的用例用掉了容差（相对 1e-14）的 3%。从经典起点 (−1.2, 1) 解 Rosenbrock 函数的梯度方程时，scipy 的 hybr 和 lm 也都失败；本算子如实报 `E.NUMERICAL.NO_CONVERGENCE`，并给出目前最好的点。结果见 `aeoi-numeric/tests/parity_roots.rs` 和 `reports/parity-fsolve.json`。
-
-## 10.28 `optim.linear.linprog`：线性规划（v0.4.14）
-
-对应 MATLAB 的 `linprog`。参考值来自 scipy（HiGHS），真值是手算的最优顶点，每个都在生成脚本里与 HiGHS 交叉核对过；都不是 MATLAB 的结果。这个算子逼出的规范问题是**缺省值的分歧**：MATLAB 的变量缺省没有界，scipy 的缺省是 x ≥ 0。同一个请求在两边可能一个有解、一个“无界”。
-
-**规范性条款**
-
-- LP-1 **问题**：min cᵀx，s.t. A·x ≤ b、Aeq·x = beq、lb ≤ x ≤ ub。边界里的无穷写作 "Inf" / "−Inf"（R-2）。
-  - **缺省没有界，同 MATLAB。** 结果的 `bounds_used` 回显实际用到的 lb、ub。
-  - 目标无下界时报 `E.DOMAIN.UNBOUNDED`（新码），提示可能漏了 x ≥ 0 之类的边界，并附 `ask_user`。
-- LP-2 **算法**（作者决定）：两阶段稠密单纯形，用 Bland 规则（不会循环，结果确定）。
-  - 第一阶段的剩余量 > 1e-9·max(1, ‖rhs‖∞) 时报 `E.DOMAIN.INFEASIBLE`（新码）；lb > ub 时直接报同一个码。
-  - 最优基确定后，用 LU 内核重算基解与对偶变量（11.5 RI-1）。
-  - 内核在 `aeoi-core::kernels::lp`，二次规划内核用它求可行起点。
-- LP-3 **乘子**（MATLAB 约定）：c + Aᵀλ_ineq + Aeqᵀλ_eq − λ_lower + λ_upper = 0，除 λ_eq 外都 ≥ 0。scipy 的 `marginals` 符号与此相反，所以调用方 MUST 按字段名取值，不能照搬 scipy 的符号。
-- LP-4 **后置条件 `kkt`**：原始可行性、对偶可行性、互补松弛、驻定条件，相对数据尺度都 ≤ 1e-9。另有 `all_finite`。最优解不唯一时，给出其中一个顶点。
-
-**Manifest** — `examples/optim.linear.linprog/manifest.json`
-
-```json
-{{jsonc:examples/optim.linear.linprog/manifest.json}}
-```
-
-**请求与响应**（max x + y，s.t. x + 2y ≤ 4、3x + y ≤ 6、x, y ≥ 0；最优顶点 (1.6, 1.2)，λ_ineq = (0.4, 0.2)）
-
-```json
-{{file:examples/optim.linear.linprog/request.json}}
-```
-
-```json
-{{jsonc:examples/optim.linear.linprog/response.success.json}}
-```
-
-**错误请求与响应**（min x，s.t. x ≤ 4，没给边界。按 MATLAB 约定 x 没有下界，目标无界；scipy 会给出 x = 0：LP-1）
-
-```json
-{{jsonc:examples/optim.linear.linprog/response.error.json}}
-```
-
-**Parity 测试规格** — `examples/optim.linear.linprog/parity.yaml`
-
-```yaml
-{{file:examples/optim.linear.linprog/parity.yaml}}
-```
-
-## 10.29 `optim.local.fmincon`：带约束的非线性最小化（v0.4.14）
-
-对应 MATLAB 的 `fmincon`。参考值来自 scipy SLSQP（ftol 1e-14）和解析最优解；都不是 MATLAB 的结果。这个算子逼出的规范问题是“最优”的含义：SQP 只能找到局部最优，而 MATLAB 的输出没有任何地方提醒这一点。
-
-**规范性条款**
-
-- FC-1 **问题**（作者决定）：目标、非线性不等式 g(x) ≤ 0 与等式 h(x) = 0 都用 3.15 的表达式写；另可给线性约束 A、b、Aeq、beq 与边界 lb、ub。`x0` 来源 `user`。
-- FC-2 **算法**：SQP。
-  - 梯度由自动微分精确给出（EX-8）。
-  - 子问题用 `aeoi-core::kernels::qp`（有效集法，可行起点由 LP 内核给出）。
-  - 线性化约束不相容时，把违反的非线性约束放宽 θ = 1/2, 1/4, …。
-  - ℓ1 价值函数加 Armijo 回溯；阻尼 BFGS（Powell）。
-  - 起点先投影到边界内。
-- FC-3 **局部最优**（作者决定）：receipt 的前提里 MUST 写明“结果只是局部最优（满足一阶条件，二阶条件未检查）”，`enforced_by: caller`；`derived.optimum` = `local`。
-- FC-4 **不收敛**：报 `E.NUMERICAL.NO_CONVERGENCE`，在 `details.best` 里给出最好的点、一阶最优性和约束违反量，与 FS-4 相同。约束本身矛盾（例如 x² + y² + 1 ≤ 0）也走这条路，提示“问题可能不可行”。非线性约束是否可行无法事先判定，所以不用 `E.DOMAIN.INFEASIBLE`；边界不相容时才用它。
-- FC-5 **后置条件 `kkt`**：相对驻定残差 ‖∇f + Σλ∇g + Σν∇h‖∞ / max(1, ‖∇f‖∞) ≤ optimality_tolerance（缺省 1e-8）；互补残差同样不超过这个容差；约束违反 ≤ constraint_tolerance（缺省 1e-8）。MATLAB 的缺省容差都是 1e-6，这里有精确梯度，所以取得更严。乘子按 MATLAB 的分组给出：`ineqnonlin`、`eqnonlin`、`ineqlin`、`eqlin`、`lower`、`upper`。
-
-**Manifest** — `examples/optim.local.fmincon/manifest.json`
-
-```json
-{{jsonc:examples/optim.local.fmincon/manifest.json}}
-```
-
-**请求与响应**（Hock–Schittkowski 71。f* = 17.0140172891563，文献值 17.014017）
-
-```json
-{{file:examples/optim.local.fmincon/request.json}}
-```
-
-```json
-{{jsonc:examples/optim.local.fmincon/response.success.json}}
-```
-
-**错误请求与响应**（x² + y² + 1 ≤ 0 不可行：FC-4）
-
-```json
-{{jsonc:examples/optim.local.fmincon/response.error.json}}
-```
-
-**Parity 测试规格** — `examples/optim.local.fmincon/parity.yaml`
-
-```yaml
-{{file:examples/optim.local.fmincon/parity.yaml}}
-```
-
-## 10.30 `optim.local.fminsearch`：无导数最小化（v0.4.14）
-
-对应 MATLAB 的 `fminsearch`。参考值来自 scipy Nelder–Mead 与解析最优解；都不是 MATLAB 的结果。
-
-**规范性条款**
-
-- NM-1 **算法**：Nelder–Mead，参数同 Lagarias 等人与 MATLAB（反射 1、扩展 2、收缩 1/2、压缩 1/2）。初始单纯形在 x0 的每个坐标上加 5%，为 0 的坐标取 0.00025。顶点按 f 排序，相等时按原下标，所以结果确定。
-- NM-2 **容差**：缺省同 MATLAB，tol_x = tol_fun = 1e-4，迭代上限 200·n，三者都在结果里回显。结果只在这个分辨率下是局部极小。精度要求高、目标又光滑的问题 SHOULD 改用 `fmincon`。
-- NM-3 **不收敛**：报 `E.NUMERICAL.NO_CONVERGENCE`，附最好的点。
-- NM-4 **后置条件 `probe_local_minimum`**：在每个坐标方向上探测，f(x) ≤ f(x ± h·e_j) + tol_fun，h = tol_x·max(1, |x_j|)。这个检查不用导数，所以对不光滑的目标也成立。精度等级为 C。
-
-**Manifest** — `examples/optim.local.fminsearch/manifest.json`
-
-```json
-{{jsonc:examples/optim.local.fminsearch/manifest.json}}
-```
-
-**请求与响应**（不光滑的 |x − 1| + 2|y + 2|，解析最优解为 (1, −2)）
-
-```json
-{{jsonc:examples/optim.local.fminsearch/response.success.json}}
-```
-
-**Parity 测试规格** — `examples/optim.local.fminsearch/parity.yaml`
-
-```yaml
-{{file:examples/optim.local.fminsearch/parity.yaml}}
-```
-
-三个算子共 39 个 golden 用例：`linprog` 16 个（9 个成功 / 7 个错误），`fmincon` 13 个（7 / 6），`fminsearch` 10 个（5 / 5）。最坏的用例分别用掉了容差的 7.8e-7、7.5e-3 和 4.2e-2。结果见 `aeoi-numeric/tests/parity_optim.rs` 和 `reports/parity-optim.json`。
-
-## 10.31 `calculus.quadrature.integral`：数值积分（v0.4.15）
-
-对应 MATLAB 的 `integral`。真值来自 mpmath `quad`（50 位精度；有闭式的用例另外与闭式交叉核对过），scipy `quad` 只作记录；都不是 MATLAB 的结果。这个算子逼出的规范问题是：**缺省精度是一个约定**。MATLAB 的缺省 RelTol = 1e-6，很多人以为得到的是机器精度。
-
-**规范性条款**
-
-- IN-1 **输入**：f 用 3.15 的表达式写（变量名缺省为 x）；`limits` = [a, b]，可以是 "Inf" / "−Inf"；a > b 时结果取负。
-- IN-2 **容差**（作者决定，2026-11-25）：缺省 rel_tol = 1e-10、abs_tol = 1e-12，比 MATLAB 的 1e-6 / 1e-10 严。两个容差都在结果里回显。停止条件是 Σ误差 ≤ max(abs_tol, rel_tol·|I|)。所以积分值很小时，精度由 abs_tol 决定，golden 用例 `tiny_value_abs_tol` 演示了这一点。
-- IN-3 **算法**：全局自适应 Gauss–Kronrod (7, 15)，误差公式同 QUADPACK。
-  - 变量替换同 MATLAB integral：有限区间用 x = (a+b)/2 + (b−a)/4·t(3 − t²)，可以减弱端点奇异；无穷区间用 t/(1 − t²) 或 a ± t/(1 − t)。
-  - 初始 10 段，子区间上限 650（同 MATLAB）；子区间的和用补偿求和。
-  - 区间端点因舍入映到 ±∞ 时，该点的贡献记为 0：积分要存在，尾部必须趋于 0。
-- IN-4 **误差估计**：报告 max(Σ Kronrod 误差估计, 全部子区间再二分一次后积分值的变化)。端点奇异时，前者会偏小：golden 用例 `endpoint_singularity` 上偏小了 10 倍，所以加上后者。后置条件 `refinement_consistent` 要求再二分一次的变化 ≤ 容差。
-- IN-5 **达不到容差**（作者决定）：报 `E.NUMERICAL.NO_CONVERGENCE`，`details` 给出当前估计值、误差估计和最难的子区间。附两个 remediation：一个把 rel_tol 放宽到 1e-6 的补丁（须用户确认），一个 `ask_user`（在奇点处分段）。被积函数出现非有限值时报 `E.NUMERICAL.NON_FINITE_EVALUATION`，并给出出问题的 x。
-- IN-6 **确定性**：`platform_bitwise`（经数学库，EX-4）。
-
-**Manifest** — `examples/calculus.quadrature.integral/manifest.json`
-
-```json
-{{jsonc:examples/calculus.quadrature.integral/manifest.json}}
-```
-
-**请求与响应**（∫ exp(−x²) dx 在 (−∞, ∞) 上 = √π）
-
-```json
-{{file:examples/calculus.quadrature.integral/request.json}}
-```
-
-```json
-{{jsonc:examples/calculus.quadrature.integral/response.success.json}}
-```
-
-**其他例子**：`request.singular.json` 是 1/√x 在 [0, 1] 上的积分。变量替换之后，10 个子区间就达到了容差。
-
-**错误请求与响应**（1/x² 在 [−1, 1] 上，0 处不可积：IN-5）
-
-```json
-{{jsonc:examples/calculus.quadrature.integral/response.error.json}}
-```
-
-**Parity 测试规格** — `examples/calculus.quadrature.integral/parity.yaml`
-
-```yaml
-{{file:examples/calculus.quadrature.integral/parity.yaml}}
-```
-
-共 19 个 golden 用例，13 个成功、6 个错误。最坏的用例用掉了容差的 1.2e-3。结果见 `aeoi-numeric/tests/parity_quad.rs` 和 `reports/parity-quad.json`。
-
-## 10.32 `calculus.quadrature.trapz`：数据的梯形积分（v0.4.15）
-
-对应 MATLAB 的 `trapz`；`cumulative = true` 时对应 `cumtrapz`。真值是存储数据的精确有理数求和。
-
-**规范性条款**
-
-- TZ-1 **输入**：y 为 [n] 或 [k, n]，每行一个通道。采样位置 MUST 显式给出：要么 x（每个点的位置），要么 dx（等间距步长），恰好一种，否则报 `E.VALIDATION.OPTION_CONFLICT` 并附 `ask_user`。MATLAB 的 `trapz(y)` 缺省步长为 1，这是常见的单位错误来源（与 BW-1 同理）。
-- TZ-2 **输出**：`value`；`cumulative`（部分和，形状同 y）；`spacing` 回显所用的采样位置。
-- TZ-3 **精度**：每一项拆成两个乘积，用补偿算术累加，对给定数据至多一次舍入。golden 上 7 个成功用例全部与精确值相同；其中一个是 10 万个约 ±1e8 的数相互抵消，普通求和在这里会丢很多位。至于结果与数据背后真实函数的积分差多少，取决于采样，算子无法估计；receipt 的前提里写明了这一点。
-
-**Manifest** — `examples/calculus.quadrature.trapz/manifest.json`
-
-```json
-{{jsonc:examples/calculus.quadrature.trapz/manifest.json}}
-```
-
-**请求与响应**（sin 在 [0, π] 上取 11 个点，带部分和）
-
-```json
-{{jsonc:examples/calculus.quadrature.trapz/response.success.json}}
-```
-
-**Parity 测试规格** — `examples/calculus.quadrature.trapz/parity.yaml`
-
-```yaml
-{{file:examples/calculus.quadrature.trapz/parity.yaml}}
-```
-
-## 11. Rust 参考实现（v0.3）
-
-### 11.1 结构
-
-```
-rust/                         cargo workspace（resolver 3，Rust 1.85，纯 Rust，无 C/Fortran 依赖）
-├── aeoi-core/                规范层：错误/warning、JCS 哈希、schema 内联与校验、数组解析（json/b64/ref/sparse）、
-│                             LTI 解析与 tf→ss、线性代数（expm、Lyapunov、条件数）、Operator trait 与调用管线；
-│                             v0.3 新增 poly.rs（平衡伴随矩阵求根 + Newton 精修）、sysalg.rs（ss2tf、不变零点、
-│                             Bartels–Stewart、频响求值、PBH），以及带迭代上限的 schur_robust
-├── aeoi-control/             18 个算子 + aeoi-call CLI
-│   ├── src/bode.rs step.rs(含 impulse) lqr.rs                       v0.2
-│   ├── src/convert.rs poles_zeros.rs ctrb_obsv.rs margin.rs c2d.rs
-│   │       lyap.rs place.rs dlqr.rs                                 v0.3
-│   ├── tests/parity.rs parity_b2.rs parity_hp.rs examples.rs analytic_b2.rs receipt.rs
-│   └── examples/golden_eval.rs   （v0.3.2）对任意 golden 文件跑算子并输出 JSON 行（tools/hp_compare.py 用于新旧版本对比）
-├── aeoi-mcp/                 MCP stdio server + tests/e2e.rs
-├── aeoi-bridge/              （v0.3.1）无运行时的同步部分，原生与 wasm 共用（8.5）
-│   ├── src/schema_conv.rs    input schema → LLM 函数参数（收窄 + Gemini OpenAPI 子集），记录有损映射
-│   ├── src/tools.rs          工具桥（进程内调用、F-5 来源核对、回传抽样）
-│   ├── src/llm.rs            provider 线格式（Gemini / OpenAI 兼容请求构造与解析）、中性消息、空回合提示、Mock 脚本
-│   ├── src/answer.rs         回答数值识别与评分；system_prompt.zh.md
-├── aeoi-web/                 （v0.3.1）LLM 端到端测试台：axum 网页 + 评测 CLI（8.4）
-│   ├── src/provider.rs       Provider trait（reqwest）；Gemini、OpenAI 兼容（OpenRouter/Groq/Ollama/OpenAI）、Mock
-│   ├── src/agent.rs          Agent 循环
-│   ├── src/eval.rs           评测（eval/questions.zh.json，期望值来自直接调用算子）
-│   ├── src/design.rs         （v0.3.4）设计题循环与评分（eval/design/，不新增算子）
-│   └── static/               index.html、app.js、style.css、vendor/plotly-basic（编译期嵌入，不走 CDN）
-└── aeoi-wasm/                （v0.3.1）wasm-bindgen 导出（8.5）；examples/golden_dump.rs 与 parity/parity.mjs
-pages/                        GitHub Pages 页面：index.html、browser.js（浏览器内 Agent 循环与 BYOK）、build.sh
-```
-
-依赖：nalgebra 0.33、serde_json（`preserve_order`、`float_roundtrip`）、jsonschema 0.18（`draft202012`）、sha2、base64。`aeoi-web` 另用 axum 0.8、tokio、reqwest 0.12（rustls + ring，无 OpenSSL/aws-lc，Windows MSVC 可直接构建）。schema 文件在编译期通过 `include_str!` 嵌入，与 `schemas/` 目录同源。
-
-### 11.2 运行
-
-```bash
-cd ai-operator-spec/rust
-cargo test --release                      # 全部测试（含 264 + 353 个 python-control golden 用例）
-cargo test --release -p aeoi-control --test parity -- --nocapture      # v0.2 算子，写 reports/parity-python-control.json
-cargo test --release -p aeoi-control --test parity_b2 -- --nocapture   # v0.3 算子，写 reports/parity-python-control-b2.json
-cargo test --release -p aeoi-control --test parity_hp                  # lqr / lyap 对 50 位 mpmath 真值，写 reports/parity-mpmath.json
-cargo build --release
-./target/release/aeoi-call control.lti.bode ../examples/control.lti.bode/request.json
-./target/release/aeoi-mcp [--data-root DIR] [--namespace control.lti]   # MCP stdio server
-cd .. && python3 mcp_session_demo.py      # 脚本化 MCP 会话，记录到 reports/mcp-session.jsonl
-python3 regen_examples.py                 # 用 Rust 输出重新生成 examples/*/response*.json
-python3 gen_golden_pycontrol.py           # 重新生成 v0.2 算子的 python-control golden（需 python-control/scipy）
-python3 gen_golden_pycontrol_b2.py        # v0.3 算子的 golden（seed 20261122）
-python3 gen_golden_mpmath.py              # lqr 0.3.0 / lyap 0.4.0 的高精度 golden（mpmath 50 位，seed 20261123）
-python3 make_examples_b2.py               # v0.3 算子的示例请求、python-control 参考值与 parity.yaml
-python3 build_spec.py                     # spec-src.md → spec-v0.4.md（内联示例文件）
-python3 validate_examples.py              # 独立的 Python jsonschema 校验
-cd rust && cargo run --release -p aeoi-web                              # 网页测试台 http://127.0.0.1:8787/（需 GEMINI_API_KEY）
-cargo run --release -p aeoi-web -- eval --model gemini:gemini-2.5-flash  # LLM 评测，写 reports/eval-<model>.json
-cargo run --release -p aeoi-web -- design --model mock:design --engdesign ZC_02  # 设计评测，离线；见 8.4
-cargo run --release -p aeoi-web -- tools --losses                       # 函数声明有损映射汇总
-```
-
-MCP 客户端配置示例：`{"command": "/path/to/aeoi-mcp", "args": ["--data-root", "/path/to/shared"]}`。
-
-### 11.3 测试结果（2026-11-23，v0.3.2，x86_64-linux，cpu_features avx/avx2/fma/avx512f）
-
-全部通过（`cargo test --release`）：aeoi-core 单元测试 23 个，aeoi-control 单元测试 12 个，解析解测试 12 个（`analytic_b2.rs`：非方系统零点、Tustin 标量闭式解、离散 SM 的 Nyquist 端点、标量 DLQR = 黄金比例等；v0.3.2 新增 3 个，均在旧实现上失败：cond(R) = 1e12 解耦 CARE 的闭式解、尺度 ×1e3 / ×1e-3 的不可观虚轴模态仍报错、ρ = 1 − 2⁻²⁰ 的离散 Lyapunov 精确解），示例测试 5 个（12 个算子的示例请求 vs python-control/scipy 参考值与已发布响应的 `output_hash`），parity 测试 3 个（v0.2：264 例；v0.3：353 例；v0.3.2 高精度：28 例，`parity_hp.rs`，S/K/X 容差 1e-12，实测 lqr S、K ≤ 3.1e-19、lyap X ≤ 6.7e-15），MCP 端到端测试 1 个（12 个算子工具 + `aeoi_verify`，每个算子的成功与错误请求，以及对已发布示例信封的重放验证、篡改结果 → `result_tampered`、改输入 → `request_mismatch`），收据测试 3 个（v0.3.3，`receipt.rs`：全部 645 个 golden 请求的指纹、claim 与同机重放；跨平台容差比较、b64 编码无关性、比较规则），aeoi-bridge 测试 11 个（v0.3.3 +1：收据短形式与 bridge 重放验证）与 aeoi-web 测试 30 个（v0.3.1：schema 转换、工具桥与 F-5 来源核对、回答数值识别、Mock provider 驱动的 Agent 循环与评测打分、陷阱题判别性、HTTP 端点；v0.3.4 另有设计评测：10 道 EngDesign 参考答案、XG_02 部分分、`mock:design`、`max_steps`、单次请求/单题超时、429 日配额立即停止与重试预算）。独立 Python 校验器（`validate_examples.py`，v0.3.3 起独立重算收据指纹并核对 E-11 claim）180 项 + 392 个 golden 请求（含 28 个 mpmath）全部通过。
-
-v0.2 算子的 parity（参考 = python-control 0.10.2 / scipy 1.18.1，**不是 MATLAB**）：
-
-| 算子 | 用例 | 通过 | 量 | 实测最大误差 | 容差 |
-|---|---|---|---|---|---|
-| bode | 103 | 103 | 幅值（dB，绝对） | 2.8e-13 | 1e-9 |
-| | | | 相位（deg，mod 360） | 3.0e-12 | 1e-8 |
-| | | | 近极点 3 例（容差按自报估计放宽） | 幅值 7.1e-15 | 5.8e-4 |
-| step | 89 | 89 | y（相对 max\|y\|） | 1.2e-11 | 1e-10 |
-| | | | 指标时间（单位 dt） | 0（全部同一网格点） | 1 dt |
-| | | | 峰值/调节值等（相对） | 1.2e-11 | 1e-9 |
-| | | | 超调/欠调（百分点） | 3.2e-10 | 1e-6 |
-| lqr | 72 | 72 | S（Frobenius 相对） | 6.9e-10（`lqr` 0.3.0；0.2.0 为 2.4e-6，cond(R)=10⁹ 用例）；不再需要 κ 缩放（0.2.0：4 例）。剩余差值是参考值本身的误差：50 位真值下本实现为 0，scipy 为 7.0e-10 | 1e-10·max(1,cond(S)/100)，或 10×自报估计 |
-| | | | K（Frobenius 相对） | 1.1e-8（0.2.0：1.7e-6） | S 容差 × 10 |
-| | | | 闭环极点（集合匹配，相对） | 5.1e-8（0.2.0：2.3e-5） | 1e-8·max(1,cond(S)/100) |
-| | | | 不变量：缩放 CARE 残差 | 8.9e-17 | 1e-12 |
-
-内存序回归（v0.2 三个算子）：column-major 错误请求与参考值偏差分别为容差的 5.6e10（bode）、1.3e10（step）、9.3e9（lqr）倍，均被检出。
-
-v0.3 新增算子的 parity（`reports/parity-python-control-b2.json`；参考 = python-control 0.10.2 / scipy 1.18.1 / numpy 2.5.5，**不是 MATLAB**）。"基准容差"为未缩放的类容差；"κ 缩放"列为按 V-6 放宽过容差的比较次数（实际误差除 `place` 外都低于未缩放的基准容差）：
-
-| 算子 | 用例 | 通过 | 量 | 实测最大误差 | 基准容差 | 最大 误差/容差 | κ 缩放 | 内存序检出倍数 |
-|---|---|---|---|---|---|---|---|---|
-| convert | 76 | 76 | tf→ss 矩阵（rel_fro） | 0（逐位相同） | 1e-12 | 7.4e-4 | 133 | 2.5e10 |
-| | | | tf 系数 | 1.9e-14 | 1e-10 | | | |
-| | | | zpk 根 / 增益 | 7.0e-14 / 7.4e-14 | 1e-10 | | | |
-| poles_zeros | 47 | 47 | 极点 / 零点 | 2.9e-12 / 2.1e-12 | 1e-10 | 4.5e-5 | 165 | 1.8e10 |
-| | | | DC 增益 | 8.3e-16 | 1e-10 | | | |
-| | | | ωn / ζ | 2.9e-12 / 3.7e-14 | 1e-10 | | | |
-| ctrb_obsv | 26 | 26 | 秩 | 0（全部一致） | 精确 | 1.1e-3 | 0 | 1.0e13 |
-| | | | Krylov 矩阵 / 奇异值 | 5.0e-16 / 1.1e-15 | 1e-12 | | | |
-| | | | Gramian | 9.1e-15 | 1e-10 | | | |
-| margin | 45 | 45 | GM / 交越频率 | 1.9e-14 / 6.3e-15 | 1e-9 | 0.12 | 0 | 检出（交越集合不同） |
-| | | | PM（deg） | 2.0e-13 | 1e-8 | | | |
-| | | | SM / SM 频率（连续） | 4.4e-15 / 2.3e-15 | 1e-9 / 1e-6 | | | |
-| | | | SM 频率（离散，V-10） | 1.2e-4 | 1e-3 | | | |
-| c2d | 47 | 47 | 离散 ss 矩阵 / tf 系数 | 5.7e-16 / 2.7e-15 | 1e-10 | 1.4e-5 | 44 | 8.5e8 |
-| impulse | 28 | 28 | y（相对 max\|y\|） | 3.0e-14 | 1e-10 | 3.0e-4 | 0 | 4.6e10 |
-| lyap | 31 | 31 | X（rel_fro） | 1.6e-14 | 1e-10 | 1.6e-4 | 0 | 1.6e10 |
-| place | 28 | 28 | 达成极点（V-5a） | 4.3e-10 | 1e-10（× cond(X)·(1+‖K‖)） | 1.2e-6 | 25 | 4.3e8 |
-| | | | SISO K | 3.0e-13 | 同上 | | | |
-| | | | cond(X) / scipy YT（信息） | 最大 1.08 | — | | | |
-| dlqr | 25 | 25 | S / K | 6.7e-14 / 4.8e-14 | 1e-10 | 5.4e-4 | 15 | 2.8e10 |
-| | | | 闭环极点 | 2.2e-14 | 1e-10 | | | |
-
-v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多乘了 T（18 例失败）；`margin` 离散系统漏掉 Nyquist 端点处的稳定裕度极小值（6 例）；`poles_zeros` 对 C = 0 的退化系统返回了空零点集而不是报错；`place` 在 B 方阵时初始特征向量矩阵奇异；python-control 零点参考中的伪"无穷远零点"（V-9）。
-
-
-**v0.3.6 复测（2026-11-23，同一台机器）**：`cargo test --release --workspace` 23 个测试目标、132 个测试全部通过（新增：`margin` 不挂住 2 个、K-1 角色 3 个、F-8 冲突 3 个、`loopsens` 单元 5 个、E-12/E-13 收据 3 个、绑定层 K-6/E-13/K-3 3 个、AL 预算 1 个、`loopsens` 示例与 parity 各 1 个）。`loopsens` 对 python-control 的 12 个 golden 用例见 10.14。收据（`reports/receipts.json`）：675 个 golden 成功用例、40 个错误用例；按 E-12，`margin` 44 例与 `loopsens` 11 例为 `spot_checked`，其余声明了后置条件的算子为 `verified`，没有 `unverified`。`validate_examples.py` 独立核对 claim、coverage 与 unreliable，全部通过。wasm 重放（`verify_examples.mjs`）由 CI 的 Pages 工作流执行（本机没有 wasm32 目标）。
-
-### 11.4 已知限制
-
-- **收据（v0.3.3）**：`poles_zeros` 与 `lyap` 没有声明后置条件，claim 为 `unchecked`（`lyap` 有残差，但没有与问题尺度无关的通过/不通过判据；`poles_zeros` 没有独立检查）；`exactness.class` 全部为 `approximate`，没有算子给出严格误差界；`verify` 对解不唯一的输出（多输入 `place` 的 K）不会改比不变量；收据没有签名（R-8）；`assumptions[].statement` 只有中文。
-
-- ~~`lqr` 在 cond(R) ≥ 10⁸ 时比 scipy 不准~~（v0.3.2 / `lqr` 0.3.0 已修复：K 形式 Newton–Kleinman + 补偿残差，见 10.3；50 位真值下 cond(R) 到 1e12 的 S、K 误差 ≤ 4.5e-16，scipy 为 3.7e-9）。仍有的限制：Newton–Kleinman 从符号函数解出发，符号函数在极病态的大问题上可能不收敛（例：n = 200、m = 3 的随机问题，cond(X) ~1e15，0.2.0 与 0.3.0 都返回 `E.NUMERICAL.NO_CONVERGENCE`）；没有平衡的有序 Schur / 广义特征值路径作后备。`lqr` 0.3.0 在 n = 200 时约 4.1 s（0.2.0 为 3.7 s）。
-- `lqr` 的 sep 误差估计在部分随机用例上很悲观（例：实际 3.6e-8，估计 2e-3）。
-- ~~Newton–Kleinman 修正只在 n ≤ 32 时进行~~（0.3.0：Bartels–Stewart，n ≤ 200）。补偿算术（Dot2）的残差是 O(n³) 的标量循环，没有向量化；golden 中最大 n = 40，n = 100 / 200 只做了手工性能与收敛测试。
-- 只实现了 stdio 传输；未实现 Streamable HTTP、PyO3、C ABI 绑定；credentials 资源未提供。
-- 稀疏输入一律稠密化（`densify`），没有原生稀疏算法。
-- golden 规模小于 v0.1 parity.yaml 的计划数量（实际 264 + 353 例），且未跑 MATLAB；`matlab/gen_golden_bode.m` 未在 MATLAB 上运行过，v0.3 算子还没有 MATLAB 生成脚本。
-- **v0.3 算子的限制**：
-  - 未实现 d2c（离散 → 连续，需要矩阵对数）；`c2d` 只接受连续系统。
-  - 不做最小实现（minreal）/零极点对消；MIMO 转换得到非最小实现（有 warning）。zpk 只表示 SISO（R-8）。
-  - `place` 用 KNV 方法 0 的复数变体，不是 scipy 的 YT 方法；golden 中 cond(X) 最多为 YT 的 1.08 倍，没有对极难问题做系统比较。
-  - `margin` 只支持 SISO；恰在 Nyquist 频率的相位交越不报告（与 python-control 0.10.2 一致，D-6）；没有返回时滞裕度。
-  - `dlqr` 的误差估计（‖残差‖/sep）是启发式的；没有像 `lqr` 那样做病态 R 的专门测试。
-  - 不变零点在接近退化的系统上精度依赖约化时的秩判定；只有 2 个确定性点的法秩检查。
-  - `lyap` 的 error_estimate 在 A 非正规时可能偏乐观；规模上限由 manifest `limits` 控制，未做大规模（n > 100）测试。0.4.0 的迭代精化只修正舍入误差，不改善问题本身的条件数：高度非正规的 A（tpt 交叉验证的 `lyap_c_nonnormal_rot_*`，条件数 1e12 以上）上本实现、tpt、scipy 的前向误差都很大；精化在 ρ = 1 − 1e-6 时把误差降到 4.3e-11，但仍未到 f64 舍入（触发阈值与步数上限是启发式的）。
-  - `ctrb_obsv` 的 Krylov 矩阵在 n 较大时本身病态，秩判定以 PBH 交叉检查兜底（`W.NUMERICAL.RANK_AMBIGUOUS`）。
-  - nalgebra 0.33 的实 Schur QR 没有特殊移位，个别矩阵会不收敛（实现中遇到：`margin` 的偶多项式伴随矩阵导致死循环）；参考实现用带迭代上限与确定性回退的 `schur_robust` 规避，回退路径只在少数矩阵上被触发过。
-- **aeoi-web（v0.3.1）的限制**：
-  - 评测只覆盖 29 道题；回答正确性用"文本中出现期望数值（相对 2%）"判定，可能把恰好出现的数字算作正确，也可能漏判用分数或根式表达的正确回答。
-  - Gemini 免费额度很小（`gemini-2.5-flash` 每天 20 次请求），每题至少 2 次请求，一个模型一天跑不完全部题；评测遇到每日配额用尽时停止并在报告 `aborted` 中列出未运行的题。
-  - 工具声明约 1.7 万 token/请求；未做按问题筛选工具。
-  - OpenAI 兼容 provider 用真实 OpenRouter 跑过 3 个免费模型的 8 题子集；Groq、Ollama 只做了 Mock 层面的请求/响应格式测试。OpenRouter 免费账号每天 50 次请求（所有免费模型合计），许多免费模型经常因上游共享额度返回 429。
-  - `_user_quote` 核对只能确认数值出现在用户原话里，不能确认模型摘取的是对的那个数（例如用户同时给了采样周期和仿真步长）；它只覆盖 `x-aeoi-provenance: "user"` 标出的参数（目前只有 `c2d.ts`）。
-  - 模型文本不流式输出（轨迹按步骤用 SSE 推送）；会话只保存在内存；Plotly basic 2.35.2 已内置（`static/vendor/`，MIT），加载失败时退回内置的简易 SVG 图（无缩放、悬停）。
-  - **设计评测（v0.3.4）**不新增算子：模型要自己做传递函数串联/反馈，没有 `pid`/`pidtune`、Padé、闭环 stepinfo 便利函数、MIMO 裕度。ControlEval 题库无许可证，不能随仓库分发。一次真实模型的试点见 `reports/design-pilot.md`。
-- **浏览器版（8.5）的限制**：
-  - wasm 2.97 MB + Plotly 1.07 MB（gzip 后约 1.4 MB），首次打开需要下载；没有 Service Worker 离线缓存。
-  - 结果与原生不逐位相同（26% 用例末几位不同，多输入 `place` 的 K 不同；v0.3.2 起 lqr、lyap 全部逐位相同，不再有 warning 不一致），见 8.5。
-  - key 存在 `localStorage`，同源的任何脚本都能读到——页面的源是该账号 Pages 的域名（`yuanqingfei.github.io`；该账号设了自定义域名，实际会 301 到 `https://yuanqingfei.me/aeoi/`），同一账号下其他仓库的 Pages 页面也属于这个源；不要在公用电脑上保存。没有服务端代理，provider 的速率限制按访问者自己的 key 计算；Gemini 免费额度很小。
-  - 浏览器版没有评测 CLI；只测试了 Chrome（headless）与 node 24，没有测 Firefox/Safari。
-  - Windows：已在 Linux 上交叉编译 `x86_64-pc-windows-gnu`（Rust 1.85.1 + mingw-w64）通过，得到 `aeoi-web.exe`；但没有在 Windows 机器上实际运行，MSVC 工具链未验证。
-- 只在一台 x86_64-linux 机器上测试，跨平台（aarch64、无 AVX-512）的 `platform_bitwise` 行为未验证。
-- b64/ref 编码只测试了 f64；c128/i64/bool 的二进制解码路径已实现但没有测试。`reject` 稀疏策略已定义但算子都未使用。
-
-### 11.5 算子之间的复用（v0.4.11，作者决定 2026-11-25）
-
-- RI-1 **一个算子用到另一个算子的计算时，参考实现 MUST 调用那个算子所基于的内核，也就是同一段代码。** MUST NOT 另写一份，也 MUST NOT 改调外部库里的同类功能。
-  - 内核放在 `aeoi-core::kernels`（v0.4.17 起共 25 个，清单与依赖见 12.3）：`dense`（LU、Householder QR、Cholesky、1-范数条件数估计、补偿残差）、`svd`（单边 Jacobi）、`eig`（对称 Jacobi；Schur → 复 Schur → 三角回代）、`sum`、`schur`、`fft`、`filter`、`iir`、`lp`、`qp`、`bracket`、`newton`、`quad`、`rk`、`spline`、`riccati`、`freqresp`、`timeresp` 等。
-  - 内核不依赖表达式语言：被积函数、右端、方程组都以闭包传入；取消与超时以检查闭包传入。这样控制层和数值层的算子都能调用同一个内核。
-  - 规则同样适用于同一算子内部能被别的算子复用的部分：在第二个使用者出现之前就把它放进内核（v0.4.17 从现有算子里抽出 10 个）。
-  - 对应的算子（`linalg.system.solve`、`linalg.decomp.svd`、`linalg.decomp.eig`）只是内核外面的一层：校验、输出格式、后置条件。
-  - 理由：同一个计算出现两份实现，精度与行为就可能不一致，而 parity 和一致性套件只验证了其中一份。v0.4.11 正好有实例：nalgebra 的 SVD 和对称特征分解在分级矩阵上不准，被 `svd`、`eig` 的后置条件抓到；而控制算子当时还在用它们。
-- RI-2 **一个算子自身的核心算法可以来自外部库**，例如 v0.4.15 之前 `fft` 用 rustfft、`eig` 的实 Schur 用 nalgebra，但 MUST 写在 manifest 的 `backend` 里，并受 2.1 M-7a（跨平台逐位相同）约束。外部库给出的功能一旦有了 AEOI 自己的算子，其他算子 MUST 改用该算子的内核（RI-1）。
-- RI-3 **迁移**（已知违反项）：v0.4.11 审计时，控制算子与 `aeoi-core` 的 `linalg`、`sysalg` 里还有约 45 处直接调用 nalgebra 的 LU、SVD、Cholesky、对称特征分解或 QR（`bode`、`c2d`、`connect`、`ctrb_obsv`、`dlqr`、`lqr`、`lyap`、`place`、`poles_zeros`、`step`）。它们要逐一改用内核。结果的末几位会变：在容差类内按 G-3 处理，超出容差的按 G-2 升版本。**v0.4.16 已完成**：上述调用、`fft` 的 rustfft、`eig` 与 `lti` 的 nalgebra Schur 全部改为 `aeoi-core::kernels`（新增 `cdense`、`schur`、`fft`、`nalg` 适配层，`dense` 加了 Cholesky）。仍在用的外部数值代码只有：nalgebra 作矩阵容器与矩阵乘法（经打补丁的 `matrixmultiply`，固定通用内核）、`libm`（经 `aeoi-libm`）。检查办法：在 `rust/` 下搜 `.svd(`、`.lu()`、`try_inverse`、`.qr()`、`.cholesky()`、`symmetric_eigen`、`Schur::`，结果应为空。
+| 节 | 算子 | 文件 |
+|---|---|---|
+| 10.1 | `control.lti.bode` | [`profiles/10.01-bode.md`](profiles/10.01-bode.md) |
+| 10.2 | `control.lti.step` | [`profiles/10.02-step.md`](profiles/10.02-step.md) |
+| 10.3 | `control.design.lqr` | [`profiles/10.03-lqr.md`](profiles/10.03-lqr.md) |
+| 10.4 | `control.lti.convert` | [`profiles/10.04-convert.md`](profiles/10.04-convert.md) |
+| 10.5 | `control.lti.poles_zeros` | [`profiles/10.05-poles_zeros.md`](profiles/10.05-poles_zeros.md) |
+| 10.6 | `control.analysis.ctrb_obsv` | [`profiles/10.06-ctrb_obsv.md`](profiles/10.06-ctrb_obsv.md) |
+| 10.7 | `control.analysis.margin` | [`profiles/10.07-margin.md`](profiles/10.07-margin.md) |
+| 10.8 | `control.lti.c2d` | [`profiles/10.08-c2d.md`](profiles/10.08-c2d.md) |
+| 10.9 | `control.lti.impulse` | [`profiles/10.09-impulse.md`](profiles/10.09-impulse.md) |
+| 10.10 | `control.math.lyap` | [`profiles/10.10-lyap.md`](profiles/10.10-lyap.md) |
+| 10.11 | `control.design.place` | [`profiles/10.11-place.md`](profiles/10.11-place.md) |
+| 10.12 | `control.design.dlqr` | [`profiles/10.12-dlqr.md`](profiles/10.12-dlqr.md) |
+| 10.13 | 组合、PID、阶跃指标与 Padé | [`profiles/10.13-composition-pid-stepinfo-pade.md`](profiles/10.13-composition-pid-stepinfo-pade.md) |
+| 10.14 | 具名角色与 `control.analysis.loopsens` | [`profiles/10.14-loopsens.md`](profiles/10.14-loopsens.md) |
+| 10.15 | `control.lti.lsim`：任意输入的响应 | [`profiles/10.15-lsim.md`](profiles/10.15-lsim.md) |
+| 10.16 | `control.design.pidtune`：按穿越频率与相位裕度整定 PI/PID | [`profiles/10.16-pidtune.md`](profiles/10.16-pidtune.md) |
+| 10.17 | `signal.spectral.fft`：离散傅里叶变换 | [`profiles/10.17-fft.md`](profiles/10.17-fft.md) |
+| 10.18 | `ode.ivp.solve`：常微分方程初值问题 | [`profiles/10.18-ode.md`](profiles/10.18-ode.md) |
+| 10.19 | `linalg.system.solve`：线性方程组 | [`profiles/10.19-linsolve.md`](profiles/10.19-linsolve.md) |
+| 10.20 | `interp.grid.interp1`：一维插值 | [`profiles/10.20-interp1.md`](profiles/10.20-interp1.md) |
+| 10.21 | `fit.poly.polyfit`：多项式拟合 | [`profiles/10.21-polyfit.md`](profiles/10.21-polyfit.md) |
+| 10.22 | `linalg.decomp.eig`：特征值与特征向量 | [`profiles/10.22-eig.md`](profiles/10.22-eig.md) |
+| 10.23 | `linalg.decomp.svd`：奇异值分解 | [`profiles/10.23-svd.md`](profiles/10.23-svd.md) |
+| 10.24 | `signal.design.butter`：巴特沃斯滤波器设计 | [`profiles/10.24-butter.md`](profiles/10.24-butter.md) |
+| 10.25 | `signal.filter.filter`：数字滤波 | [`profiles/10.25-filter.md`](profiles/10.25-filter.md) |
+| 10.26 | `nonlinear.root.fzero`：单变量求根 | [`profiles/10.26-fzero.md`](profiles/10.26-fzero.md) |
+| 10.27 | `nonlinear.system.fsolve`：非线性方程组 | [`profiles/10.27-fsolve.md`](profiles/10.27-fsolve.md) |
+| 10.28 | `optim.linear.linprog`：线性规划 | [`profiles/10.28-linprog.md`](profiles/10.28-linprog.md) |
+| 10.29 | `optim.local.fmincon`：带约束的非线性最小化 | [`profiles/10.29-fmincon.md`](profiles/10.29-fmincon.md) |
+| 10.30 | `optim.local.fminsearch`：无导数最小化 | [`profiles/10.30-fminsearch.md`](profiles/10.30-fminsearch.md) |
+| 10.31 | `calculus.quadrature.integral`：数值积分 | [`profiles/10.31-integral.md`](profiles/10.31-integral.md) |
+| 10.32 | `calculus.quadrature.trapz`：数据的梯形积分 | [`profiles/10.32-trapz.md`](profiles/10.32-trapz.md) |
+
+## 11. 参考实现
+
+Rust 参考实现的结构、运行方式、已知限制与内核复用规则（11.1 – 11.5，含 RI-1 – RI-3）见 [`docs/reference-impl.md`](docs/reference-impl.md)。那些规则约束的是参考实现本身，不是其他实现必须满足的协议。
 
 ## 12. 开放问题与下一步
 
 ### 12.1 开放问题
+
+编号沿用历史编号；已解决的问题移到 CHANGELOG 的附录。
 
 1. ~~大数组传输~~（v0.2 已定义 b64 与 file:// 引用）；剩余：网络引用（HTTP/对象存储）的 SSRF 防护与凭据模型，以及基于 resource link 的大输出。
 2. **单位的深度**：v0.2 只做声明与校验，不做量纲推导。是否需要状态/输入/输出逐通道单位？
@@ -2610,790 +822,51 @@ v0.3 parity 测试在开发中发现并修正的问题：`c2d` tustin 的 Dd 多
 10. **Agent 可用性评估**：建立一组 Agent 回归任务（故意给错输入，测自我修复成功率）。
 11. **稀疏 vs 稠密的哈希等价**（新）：是否应让同一矩阵的稀疏/稠密表示 `input_hash` 相同？代价是哈希大型稀疏矩阵时需要逻辑稠密化。
 14. **（v0.4 新）两种范数并存**：`parity.yaml` 的 `compare` 用相对 Frobenius 范数，4.3 R-5 的 `verify` 用 ‖·‖∞（近零字段另有下限）。一致性套件沿用前者（9.4 CF-6）。是否统一？统一会改变已发布 `verify` 的判定，需要重跑已有测试。
-15. ~~**（v0.4 新）线协议标识**~~ **已决定：升为 `aeoi/0.4`，核心 schema 的 `$id` 升为 `/0.4`。** 作者先决定保持 `aeoi/0.3`（理由是新增字段全部可选，与 v0.3.1、v0.3.5、v0.3.6 的做法一致），随后改为随版本升级。做法与 v0.3 相同（第 13 章 v0.3-draft 第 1 行）：`spec` 与 `$id` 一起升；`golden/` 不改（文件名是内容哈希，V-3；其中的 `spec` 记录生成时的版本，没有测试或脚本比较它）；`reports/` 是历史运行记录，不改。没有兼容层：v0.4 的实现只发 `aeoi/0.4`，是否同时接受 `aeoi/0.3` 的 manifest/信封留给消费者。`input_hash`、`fingerprint` 不含 `spec`，不受影响。
 16. **（v0.4 新）`method_policy` 的细节**：~~`prefer` 是否保留~~ 已决定去掉（3.14 MS-5），以后若有“偏好但不强制”的需求再加，届时要同时定义回退顺序与收据里的回显。仍待定：字段名；`constraints` 还需要哪些键（例如对 `bound_kind` 的要求）；`METHOD_UNAVAILABLE` 归 `VALIDATION` 还是 `DOMAIN`；`receipt.alternatives` 是否要求 `backend` 与 `algorithm` 必填。
 17. **（v0.4 新）内核级接入的接口**：数值内核如何挂到宿主（输入输出是否限于数值数组加元数据、错误如何跨 ABI 表达、内存归属、收据由哪一层生成）。需要先对照 `aeoi-core` 现有的 `validate`/`execute` 分层（8.2）再设计；它不是 8.3 的 `aeoi-capi`。
 18. **（v0.4 新）宿主策略的表达与注入**：3.14 MS-10 规定了合并语义，但宿主策略从哪里来（配置文件、MCP 客户端、会话参数）、如何审计，属于绑定层设计，尚未写。参考实现的 `Bridge::with_method_policy` 只提供合并这一步，策略的来源（目前只能由嵌入方在代码里设置）、持久化与审计都没有设计。
-19. ~~**（v0.4 新，一致性套件发现）`$ref` 约定**~~ **已决定（v0.4.1）：改写所有 schema 为标准引用，见 3.9 J-1 – J-3。** 没有选“在 3.9 写明简写约定”：那会要求每个实现和每个通用校验器都先写专用解析器。原问题：manifest 的输入、输出 schema 用 `aeoi://schemas/common/0.4/Matrix` 引用通用类型，标准 JSON Schema 解析不了（应为 `aeoi://schemas/common/0.4#/$defs/Matrix`），3.9 也没有说明这种写法。要么改写所有 schema，要么在 3.9 写明约定。
-20. ~~**（v0.4 新，一致性套件发现）`lyap` 的 Q 对称性**~~ **已决定（v0.4.4）：Q 可以不对称，按原样求解，不得对称化 Q；Q 对称时 MAY 对称化 X，不发 warning；`lyap` 不声明 `W.VALIDATION.SYMMETRIZED`（10.10）。** 参考实现的行为本来就是这样，改的是 input schema 的描述（原写“对称”）与 manifest 的声明（声明了从不发出的码）；接受的输入、输出和发出的码都不变，所以算子版本不升。原问题：：input schema 把 Q 描述为“对称”，10.10 的算法说明写“Q 非对称也可解”，二者要统一；`W.VALIDATION.SYMMETRIZED` 已在 manifest 声明，但规范没有规定触发条件（Q 非对称？结果被对称化？）。第二实现第一版因把非对称 Q 对称化，在 golden 的 4 个用例上失败。
-21. ~~**（v0.4 新，一致性套件发现）默认值没有用例**~~ **已决定（v0.4.4）：运行器派生默认值用例（9.4 CF-2）。** 参考实现 77 个变体中 73 个通过、4 个按 F-8 跳过（PID 的模式专属字段）；`lyap` 有了 3 个省略 `type` 的用例；变异“缺省 `type` 当作 discrete”在这 3 个用例上全部失败。原问题：：`lyap` 的 `type` 默认 `continuous`，golden 里没有省略它的用例，F-7 的“默认值回显”也无人检验。套件需要“省略可选字段”的用例族。
-22. ~~**（v0.4.2 新，一致性规则发现）`bode` 的相位分支不被检验**~~ **已决定（v0.4.3）：检验。** 10.x 的分支约定是规范性的，套件按它比较（不取模）；参考值距分支边界 1e-6° 以内时才取模，因为那里舍入就可能让正确的实现落到另一边（unwrap 时整条通道，否则单点）。参考实现不取模的最大误差为容差的 3e-12 倍，现有 golden 首点距边界最近 0.027°。原问题：：`parity.yaml` 按“模 360”比较相位，`branch_center_deg` 与 unwrap 规则规定的分支（v0.2，12.1 第 4 项）因此不进入一致性判定，相位整体差 360° 的实现能通过。要么在套件里加分支检查（同一 `branch_center_deg` 下逐点差 < 180°），要么写明分支只是参考实现约定。
-23. ~~**（v0.4.2 新，一致性规则发现）`lyap` 的 mpmath 容差不一致**~~ **已决定（v0.4.3）：一致性对所有参考引擎用同一个 κ 缩放容差。** 高精度参考（mpmath）只是更准的参考值，不是更严的要求。`parity.yaml` 里的“1e-12 不放宽”是参考实现自己的精度目标，由它的 `cargo test` 检验：参考实现带精化，实测 `lyap` ≤ 7e-15；而没有精化的后向稳定算法达不到，SciPy 在 `lyap`（κ ≈ 1.6e8）上为 7.5e-9，在 `lqr`（cond(R) = 1e11）上为 3.7e-9。把它当门槛会让标准实现无法通过。`lqr` 的 mpmath 分支同样改为 `cond_S` 缩放（v0.4.2 时误设为 1e-12）。试过用 CARE 的一阶条件数（闭环 Lyapunov 算子）缩放，最病态的用例容差 ≥ 1，等于不检查，所以没有采用；剩下的个别超差（上面 SciPy 的 `lqr` 用例超出 6.5 倍）按 CF-7 登记 `known_deviations`。原问题：：`parity.yaml` 对 mpmath 用例写“rel_fro ≤ 1e-12，不放宽”，运行器的 `lyap` 规则对所有引擎都用 T2 × max(1, κ/100)。`lqr` 的新规则对 mpmath 用 1e-12。改 `lyap` 规则会影响 Python 第二实现在病态用例上的结果，需要先重跑。
 24. **（v0.4.4 新，写默认值用例时发现）默认值与请求指纹**：H-1 按请求原样计算 `input_hash`，不补默认值，所以“省略 `type`”与“写出 `type: continuous`”的请求指纹不同，而 4.3 R-3 说请求指纹表示“同一个问题”。要么在哈希前补齐 schema 默认值（会改变所有省略了默认值的已发布 `input_hash` 与 golden 文件名之外的指纹，需要一次迁移），要么在 R-3 写明指纹只认字面相同的请求。一致性套件目前只要求结果相同，不比较这两个指纹。
 25. **（v0.4.9 新，发布流水线证实全平台逐位相同后）`platform_bitwise` 升为 `bitwise`**：参考实现已在 5 个平台上对全部 golden 逐位相同（2.1、M-7a），但 manifest 仍声明较弱的 `platform_bitwise`。改声明是新的承诺（G-2 MINOR），23 个算子要一起升版本、重新生成 manifest 与示例；还要决定 `aeoi_verify` 在 `bitwise` 下遇到跨平台差异时的判定（现在跨平台只给 `tolerance_match`）。建议随下一批算子升版本时一并处理。
 26. **（v0.4.10 新）只对部分方法有意义的后置条件**：`interp1` 的 `spline_c2` 只适用于 spline，`local_bounds` 不适用于 spline。E-11 把缺失的后置条件算作不成立，所以现在只能按空真报告（IP-6）。可选做法：manifest 的 `receipt.postconditions` 允许按 `method` 条件列出，或在 `trust.checks` 里允许 `null` 表示“不适用”。两种都改核心 schema（MINOR），留到第二个有此需要的算子出现时再定。v0.4.11 出现了第二个实例：`eig` 的 `orthonormal` 只对对称算法有意义（EG-5）；v0.4.12 出现了第三个：`butter` 的 `sos_consistent` 不适用于模拟滤波器（BW-5）。暂时都按空真处理，等作者决定。
 27. **（v0.4.11 新）警告附修复建议**：5.1 的 warning 没有 `remediation` 字段。`polyfit` 的病态警告把一个与错误 remediation 同形的对象放在 `details.suggested_remediation`（PF-4）。可选做法：给 warning 增加可选的 `remediation` 数组（核心 schema MINOR），或维持放在 `details` 的约定。
 
-### 12.2 下一步（建议顺序）
+### 12.2 下一步
 
-1. 在有授权的机器上运行 `matlab/gen_golden_bode.m`（并补 step/lqr 脚本），先核对 `memory_order_nonsymmetric` 用例与 python-control 一致，再跑通第一份 A 级凭证
-2. ~~修复 `lqr` 病态 R 的精度差距~~（v0.3.2 用补偿 Newton–Kleinman 完成）；剩余：平衡 + 有序 Schur（或广义特征值）作为符号函数不收敛时的后备路径，以及 `dlqr` 的同类精化
-3. ~~再接 5–7 个差异较大的控制算子~~（v0.3 已完成 9 个：convert、poles_zeros、ctrb_obsv、margin、c2d、impulse、lyap、place、dlqr）；v0.4.5 加了 `lsim`（10.15），v0.4.6 加了 `pidtune`（10.16，满足 A-4）；v0.4.7 起转向控制以外的领域：`fft`（10.17）、`ode.ivp.solve`（10.18，v0.4.8，表达式语言 3.15）；v0.4.10 加了 `linalg.system.solve`（10.19）与 `interp.grid.interp1`（10.20）；v0.4.11 加了 `fit.poly.polyfit`（10.21）、`linalg.decomp.eig`（10.22）、`linalg.decomp.svd`（10.23）；v0.4.12 加了 `signal.design.butter`（10.24）、`signal.filter.filter`（10.25）；v0.4.13 加了 `nonlinear.root.fzero`（10.26）、`nonlinear.system.fsolve`（10.27）；v0.4.14 加了 `optim.linear.linprog`、`optim.local.fmincon`、`optim.local.fminsearch`（10.28–10.30）；v0.4.15 加了 `calculus.quadrature.integral`、`calculus.quadrature.trapz`（10.31–10.32）；之后做 优化、`integral`，以及隐式/刚性方法（`ode15s`）与事件检测；剩余：`kalman`/`dlqe`、d2c、`minreal`、MIMO zpk、时滞裕度，以及为 v0.3 算子写 MATLAB 生成脚本
-4. PyO3 绑定 + CI（跨平台 parity、重放、签名凭证）
-5. Agent 回归评测：v0.3.1 已有 `aeoi-web eval`（29 题、4 个指标）；v0.3.4 另有 `aeoi-web design`。v0.3.5 实现了试点里排在前面的算子（串联、并联、反馈、PID 构造、stepinfo、Padé），v0.3.6 加了具名角色、`loopsens`（含带宽读数）和回合预算。下一步是按 A-4 写 `pidtune`（必须先声明对象类、指标和唯一性），以及控制器离散化和 MIMO 裕度；扩充问答题、加入"Agent + 裸 scipy"对照组。非线性吸引域仍不做。
-6. 分发：为 `aeoi-mcp` 发布各平台预编译二进制（GitHub Releases）、Claude Desktop 一键安装扩展、登记到 MCP 公开目录（v0.4.9：数学库、矩阵乘法内核与 FFT 旋转因子已统一，5 个平台的 golden 哈希完全相同；`v0.4.9` 是第一个正式发布）；之后做纯浏览器的结果查看器（`aeoi-wasm`：结果、信任信息、收据与本地重放）。不做独立的图形界面客户端或自带 LLM 的聊天客户端：AEOI 的客户端是 MCP 宿主
-7. 一致性套件（9.4）：v0.4.15 有 24 个算子的数值规则（24 / 37 = 65%；作者定的下限是 30%，以后提高），参考实现 1111 / 0 / 291 通过；`lyap` 的 Python 第二实现通过；8 种注入缺陷与 45 种代理改写都按预期判定。接下来：给其余 13 个算子补比较规则（V-5、V-5a 的不变量）；为新规则找一个独立的第二实现；再做 C 的内核级实现验证实现可替换；在 `receipt.alternatives` 里登记第二个方法以跑 CF-10
-8. 根据以上反馈修订，冻结 v1.0
-
-### 12.3 目标算子清单与依赖（v0.4.11 定目标，v0.4.16 细化）
-
-本项目的目标，是覆盖工程计算中最常用的约 100 个 MATLAB 函数。逐元素运算（`sin`、`sum` 之类）、绘图、文件读写、字符串和数据结构不在其中，它们不需要 AEOI 的信任信息。清单是作者与 Claude 的判断，不是统计结果；以后可以用公开 MATLAB 代码的调用频率修正。
-
-v0.4.16 把清单细化到每个 MATLAB 函数，并给出每个函数依赖的共享内核（11.5）。实现顺序按依赖层自底向上：先把“待抽出”的内核从现有算子里移到 `aeoi-core::kernels`，再写下一层的内核和算子。
-
-{{file:roadmap/layers.md}}
-
-内核依赖图（Mermaid 源）：`roadmap/deps.mmd`。
-
-顺序：
-1. ~~剩下的四批~~（v0.4.12 – v0.4.15 完成）。
-2. ~~控制算子迁移到共享内核（11.5 RI-3）~~（v0.4.16 完成）。
-3. 按 12.3 的依赖层自底向上实现：~~先抽出 10 个“待抽出”内核~~（v0.4.17 完成），再逐层做内核和算子；同一层内按 MATLAB 使用频率排。
+1. 按 12.3 的依赖层自底向上实现目标函数；同一层内按 MATLAB 使用频率排。
+2. 用只读规范的第二实现（`conformance/impls/python_scipy/`）检验规范是否足以定义行为，从 `fft`、`interp1`、`linalg.system.solve`、`integral` 开始。
+3. 一致性套件（9.4）：有数值规则的算子不低于全部算子的 30%（v0.4.17：24 / 37）。
 4. 发布：102 个目标函数全部完成后发布 v0.5（作者决定 2026-11-25）；在此之前不打 tag。
-5. polyval/roots、inv/det/norm、ode15s、filtfilt/freqz/pwelch、nyquist/rlocus、interp2/spline、lsqcurvefit。
-6. 其余。
+5. 在有授权的机器上运行 `matlab/` 下的 golden 脚本；PyO3 与 C ABI 绑定（8.3）。
+6. 根据以上反馈修订，冻结 v1.0。
+
+### 12.3 目标算子清单与依赖
+
+本项目的目标是覆盖工程计算中最常用的约 100 个 MATLAB 函数（作者决定，v0.4.11）。逐元素运算、绘图、文件读写、字符串和数据结构不在其中，它们不需要 AEOI 的信任信息。清单是作者与 Claude 的判断，不是统计结果。
+
+完整清单在 [`roadmap/layers.md`](roadmap/layers.md)（由唯一来源 `roadmap/targets.py` 生成）：每个 MATLAB 函数对应的 AEOI 算子、状态、依赖的共享内核（11.5）与依赖层，以及内核依赖图 `roadmap/deps.mmd`。实现按依赖层自底向上。
+
+{{file:roadmap/summary.md}}
 
 ## 13. Changelog
 
-### v0.4.17-draft（2026-11-25）
-
-起因：作者确认 12.3 的清单与“先抽出 10 个内核”的顺序，并决定 102 个函数全部完成后才发布 v0.5。12.3 里有 10 个内核还藏在单个算子里，下一层的算子（nyquist、kalman、cheby、integral2、ode23……）都要用到它们，所以先抽出来。
-
-**规范改动**
-
-| # | 位置 | 改动 | 理由 |
-|---|---|---|---|
-| 1 | 11.5 RI-1 | 列出 25 个内核；内核以闭包接收被积函数、右端与取消检查，不依赖表达式语言；能被复用的部分在第二个使用者出现前就放进内核 | 控制层（没有表达式）与数值层要共用同一个内核 |
-| 2 | 12.2、12.3 | 10 个内核标为已有；发布计划改为“102 个完成后发布 v0.5” | 作者决定 |
-
-**已做的改动**
-
-| 内核 | 来自 | 内容 |
-|---|---|---|
-| `sum` | sysalg、fft | TwoSum、TwoProduct、Dot2、Neumaier |
-| `bracket` | fzero | Brent zeroin |
-| `newton` | fsolve | Powell dogleg 信赖域、后验 Newton 修正与 κ₁(J) |
-| `quad` | integral | GK(7, 15)、全局自适应、变量替换、再二分检验 |
-| `rk` | ode.ivp.solve | Dormand–Prince 5(4)、稠密输出、刚性检测 |
-| `spline` | interp1 | pchip / not-a-knot 斜率、dgtsv、PPoly 系数 |
-| `riccati` | lqr、dlqr | CARE 符号函数 + Newton–Kleinman + 精化增益；DARE 的 SDA + Newton–Hewer |
-| `freqresp` | bode、margin | 求值点、Horner 误差界、zpk 乘积、预解式、相位卷绕/展开 |
-| `timeresp` | step、lsim、c2d | 零阶/一阶保持离散化（增广 expm）、递推 |
-| `iir` | butter（及 filter 内核） | 原型、频率变换、双线性变换、zpk→tf/sos、设计流程 |
-
-**结果**
-
-- 每抽一个内核都重新生成全部示例：`output_hash` 一个都没有变；全部 Rust 测试通过；一致性 1111 / 0 / 291；45 种代理改写都被抓住。
-
-### v0.4.16-draft（2026-11-25）
-
-起因：作者定下规则——算子之间有依赖时 MUST 用 AEOI 自己的实现，不得重写，也不得改调外部库；已有算子一次性检查并改正（11.5 RI-1 – RI-3）。本版没有新算子。
-
-**规范改动**
-
-| # | 位置 | 改动 | 理由 |
-|---|---|---|---|
-| 1 | 11.5 RI-3 | 迁移完成；写明仍在用的外部数值代码（nalgebra 只作容器与矩阵乘法，`libm`）和检查办法 | 让以后的审计可以机械地做 |
-| 2 | 10.x FT-5、2.1 | 参考实现的 FFT 改为 `kernels::fft`；rustfft 补丁副本删除 | — |
-| 3 | 12.2、12.3 | 12.3 改为逐函数清单（102 个 MATLAB 函数、33 个共享内核、依赖层），由 `roadmap/targets.py` 生成；下一步自底向上实现 | 作者建议：按依赖图从底层开始 |
-
-**已做的改动**
-
-| 位置 | 改动 |
-|---|---|
-| `kernels::dense` | 加 Cholesky 与 `chol_solve`、`Lu::entry` |
-| `kernels::cdense`（新） | 复数 LU（按 cabs1 选主元）、复数 Jacobi 奇异值、复数 Householder QR 的完整 Q（zgeqr2/zlarfg 约定） |
-| `kernels::svd` | 加 `svd_thin`；迭代内核改收一个检查闭包（不再依赖 ExecCtx），这样控制层也能调用 |
-| `kernels::eig` | `complex_schur` 从 `general` 拆出，供 `sysalg` 的 Lyapunov 求解器复用 |
-| `kernels::schur`（新） | 实 Schur：Householder 化为 Hessenberg 形，Francis 双位移 QR（第 10、20 次迭代用特例位移，预算 max(30n, 100)），之后按 LAPACK dlanv2 把实特征值的 2×2 块标准化为上三角 |
-| `kernels::fft`（新） | 基 2、混合基按时间抽取、小素数直接 DFT、大素数 Bluestein；旋转因子用 `libm::cos/sin` 并按 (n, 方向) 缓存 |
-| `kernels::nalg`（新） | nalgebra `DMatrix` 与内核之间的适配层（solve、inverse、Cholesky、奇异值、对称特征、QR、复数版本） |
-| `aeoi-core` linalg、sysalg、lti | cond2、Padé、Lyapunov、补基、行压缩、PBH、Schur 全部改调内核 |
-| `aeoi-control` | bode、c2d、connect、ctrb_obsv、dlqr、lqr、lyap、place、poles_zeros、step 全部改调内核 |
-| `aeoi-numeric` | `fft` 改用 `kernels::fft`；`eig`、`svd` 改用新接口；去掉 rustfft 依赖 |
-
-**开发中发现的问题**
-
-| # | 问题 | 处理 |
-|---|---|---|
-| 1 | 自写 Schur 后 `eig` 的 parity `general_companion` 失败：实特征值的 2×2 块没有标准化，后续 rsf2csf 得到的向量与参考的取法不同 | 按 dlanv2 的实数情形旋转成上三角块 |
-| 2 | Bluestein 的 Parseval 误差 3%：旋转因子缓存只按 n 作键，正变换与逆变换的旋转因子互相覆盖 | 缓存键改为 (n, 方向) |
-
-**结果**
-
-- 38 个示例的 `output_hash` 变了，数值差都在各自的容差类内（G-3）；parity 最坏值：`fft` 对 mpmath 5.3e-16，`eig` 值误差 / 容差 0.0013，`lqr` 的病态 R 极点相对差 6.4e-8（容差 2.0e-7）。
-- 全部 Rust 测试通过；一致性 1111 / 0 / 291；45 种代理改写都被抓住。
-
-### v0.4.15-draft（2026-11-25）
-
-起因：四批中的最后一批，积分。作者定了两件事：
-- integral 缺省 rel_tol = 1e-10，并回显容差、给出误差估计；
-- 达不到容差时报错，附上当前估计值。
-
-**规范改动**
-
-| # | 位置 | 改动 | 理由 |
-|---|---|---|---|
-| 1 | 10.31 IN-1 – IN-6 | 新算子 `calculus.quadrature.integral` 0.4.0：自适应 GK(7, 15)，变量替换同 MATLAB；误差估计取 Kronrod 估计与“再二分一次的变化”中较大的那个 | 端点奇异时，单靠 Kronrod 估计会偏小 10 倍 |
-| 2 | 10.32 TZ-1 – TZ-3 | 新算子 `calculus.quadrature.trapz` 0.4.0：补偿求和；x 或 dx 必须显式给出 | MATLAB 缺省步长 1，常被误用 |
-| 3 | 3.15 EX-2（实现） | `t` 只在 ODE 里是保留名（规范原文就是这样写的，实现一直把它全局保留）；fzero、fsolve、integral、优化算子都可以用 t 作变量 | 积分、求根里用 t 作变量很常见；v0.4.13 记下的问题，这里修正 |
-
-**开发中发现的问题**
-
-| # | 问题 | 处理 |
-|---|---|---|
-| 1 | 无穷区间上，GK 节点在舍入后可能恰好落在 t = 1，映射到 x = ∞，得到 0·∞ = NaN | 该点的贡献记为 0（IN-3） |
-| 2 | 1/x 在 [0, 1] 上会求值到 x = 0，得到 Inf，所以走的是 `NON_FINITE_EVALUATION`，不是不收敛 | 两种都是如实的报告；golden 的不收敛用例改用 1/x 在 [1, ∞) 上：处处有限，但积分发散 |
-
-**结果**
-
-- golden：`integral` 19 个（13 个成功 / 6 个错误），真值来自 mpmath，且与闭式交叉核对；`trapz` 12 个（7 / 5），全部与精确的有理数求和相同。
-- 一致性：24 / 37 = 65% 的算子有数值规则，参考实现 1111 / 0 / 291；新增 3 种代理改写，都被抓住，其中包括“把误差估计少报 10⁶ 倍”。
-
-### v0.4.14-draft（2026-11-25）
-
-起因：四批中的第三批，优化。作者定了三件事：
-- fmincon 一次支持边界、线性与非线性约束；
-- 每个结果都声明只是局部最优，并以 KKT 残差作为后置条件；
-- linprog 用单纯形法，给出顶点与乘子。
-
-**规范改动**
-
-| # | 位置 | 改动 | 理由 |
-|---|---|---|---|
-| 1 | 10.28 LP-1 – LP-4 | 新算子 `optim.linear.linprog` 0.4.0 与 LP 内核 | 变量缺省无界（同 MATLAB）并回显；scipy 缺省 x ≥ 0，同一请求可能得到相反的结论 |
-| 2 | 10.29 FC-1 – FC-5 | 新算子 `optim.local.fmincon` 0.4.0：SQP + QP 内核 + 自动微分梯度；乘子按 MATLAB 的分组 | 只保证局部最优，写进 receipt 的前提 |
-| 3 | 10.30 NM-1 – NM-4 | 新算子 `optim.local.fminsearch` 0.4.0：Nelder–Mead；用不依赖导数的探测检查做后置条件 | — |
-| 4 | 11.5 | 新内核 `kernels::lp`、`kernels::qp`（QP 用 LP 求可行起点，用 LU、QR 内核） | RI-1；quadprog 以后只需加一层外壳 |
-| 5 | 5.1 | 新码 `E.DOMAIN.INFEASIBLE`、`E.DOMAIN.UNBOUNDED` | — |
-
-**开发中发现的问题**
-
-| # | 问题 | 处理 |
-|---|---|---|
-| 1 | `fminsearch` 用例 `quadratic_3d` 的解析最优解手算错了（写成 (16/7, −11/7)，应为 (12/7, −10/7)），parity 测试抓到了 | 生成脚本里给每个手算的最优解加了独立的紧容差求解来交叉核对（AGENTS.md 第 6 条） |
-
-**结果**
-
-- golden：`linprog` 16 个（9 个成功 / 7 个错误），`fmincon` 13 个（7 / 6），`fminsearch` 10 个（5 / 5）。HS071 的 f* = 17.0140172891563。
-- 一致性：22 / 35 = 63% 的算子有数值规则，参考实现 1066 / 0 / 291；新增 4 种代理改写，都被抓住，其中包括“乘子符号按 scipy 约定写反”。运行器从请求出发，自己重算 KKT 条件。
-
-### v0.4.13-draft（2026-11-25）
-
-起因：四批中的第二批，`fzero` + `fsolve`。作者为这一批定了三件事：
-- fzero 优先用区间；也接受 x0，但回显搜到的区间并警告；
-- fsolve 的雅可比用表达式自动微分；
-- 不收敛时报错，并附上目前最好的点。
-
-**规范改动**
-
-| # | 位置 | 改动 | 理由 |
-|---|---|---|---|
-| 1 | 3.15 EX-8 | 表达式语言的前向自动微分；不可导点的约定 | 精确导数；以后 fmincon、ode15s 共用 |
-| 2 | 10.26 FZ-1 – FZ-5 | 新算子 `nonlinear.root.fzero` 0.4.0：Brent 方法；用后置条件 `not_a_pole` 区分根与极点 | 变号点不一定是根 |
-| 3 | 10.27 FS-1 – FS-7 | 新算子 `nonlinear.system.fsolve` 0.4.0：dogleg 信赖域 + 自动微分雅可比 + 共享 LU；用线性收敛判断重根 | 一维时 κ(J) 恒为 1，只能靠收敛速度 |
-| 4 | 5.1 | 新码 `E.DOMAIN.NO_SIGN_CHANGE`、`E.NUMERICAL.LOCAL_MINIMUM`、`W.DOMAIN.BRACKET_SEARCHED` | — |
-
-**开发中发现的问题**
-
-| # | 问题 | 处理 |
-|---|---|---|
-| 1 | 3.15 把 `t` 保留给 ODE 的时间，所以 fzero 不能用 t 作变量名 | 维持保留（语言要简单），golden 改用 w；以后如果用户反映不便，再考虑按算子放开 |
-| 3 | v0.4.12 的发布预演中，Windows 版在 8 个 `butter` golden 用例上的 `output_hash` 与其他平台不同：都是数字设计，都要用 tan 预畸变，而模拟设计都相同 | 滤波内核与表达式求值改为按名字直接调用编入的 `libm`（`aeoi_libm::libm::tan` 等）；复数平方根和整数次幂改为显式写出，不再依赖 `f64::tan`、num_complex 的极坐标开方和 `powi` 在各平台上解析到哪个符号（2.1 M-7a）。Linux、macOS 上的结果不变（原本就走同一个 libm）；Windows 上由发布流水线确认 |
-| 2 | 从 (−1.2, 1) 出发解 Rosenbrock 梯度方程会失败，scipy 的 hybr 和 lm 也一样 | 作为错误用例收入 golden（`E.NUMERICAL.NO_CONVERGENCE`，附最好的点）；另从 (0.5, 0.2) 出发的用例能收敛 |
-
-**结果**
-
-- golden：`fzero` 24 个（15 个成功 / 9 个错误），`fsolve` 18 个（9 / 9），真值来自 mpmath。
-- 一致性：19 / 32 = 59% 的算子有数值规则，参考实现 1012 / 0 / 291；新增 4 种代理改写，都被抓住。运行器用自己的求值器（Python）重算区间两端的 f 和 F(x)。
-
-### v0.4.12-draft（2026-11-25）
-
-起因：作者定下项目目标是约 100 个常用工程计算函数（12.3），并要求算子之间的复用必须调用同一内核（11.5 RI-1）。之后继续剩下的四批，这是第一批：`butter` + `filter`。作者为 `butter` 选了三件事：
-- zpk 与 sos 为主，b/a 也给，但失真时警告；
-- 截止频率必须显式二选一（Hz 加采样率，或 MATLAB 的 Wn），没有缺省；
-- 支持模拟滤波器，并输出为 LTI 系统。
-
-**规范改动**
-
-| # | 位置 | 改动 | 理由 |
-|---|---|---|---|
-| 1 | 11.5 RI-1 – RI-3 | 共享内核 `aeoi-core::kernels`（dense、svd、eig、filter）；已知约 45 处违反列入迁移 | 同一计算两份实现会不一致 |
-| 2 | 12.3 | 目标算子清单约 100 个，及完成顺序 | 作者决定 |
-| 3 | 10.24 BW-1 – BW-6 | 新算子 `signal.design.butter` 0.4.0 | 频率单位必须显式；b/a 失真时警告，不判整个结果失败 |
-| 4 | 10.25 FL-1 – FL-6 | 新算子 `signal.filter.filter` 0.4.0：b/a 或 sos，多通道，zi/zf，差分方程残差作为后置条件 | — |
-| 5 | 开放问题 26 | 第三个实例（`butter` 的模拟滤波器没有 sos） | — |
-
-**结果**
-
-- golden：`butter` 33 个（20 个成功 / 13 个错误），真值来自 50 位精度的独立构造；`filter` 24 个（15 / 9），真值来自 50 位精度的差分方程。
-- 高阶失真的两个例子里，我们和 scipy 的 b/a 响应偏差都是 1.0，我们的 sos 偏差 ≤ 1e-11。
-- 一致性：17 / 30 = 57% 的算子有数值规则，参考实现 962 / 0 / 291；新增 4 种代理改写，都被抓住，其中包括“删掉 b/a 警告”：运行器自己重算偏差来判断该不该有警告。
-
-### v0.4.11-draft（2026-11-25）
-
-起因：按 MATLAB 使用频率继续加算子。作者选了 `polyfit` + `eig`/`svd`，并定了三件事：
-- `polyfit` 病态时照原样拟合，警告并附中心化缩放的补丁，补丁须用户确认，不悄悄缩放；
-- 直接给出每个系数的标准误差；
-- `eig` 先做实对称与一般实矩阵，排序与规一化写死在规范里；`svd` 支持 thin 与 full。
-
-线协议标识、核心 schema 和已有算子的版本都不变。
-
-**规范改动**
-
-| # | 位置 | 改动 | 理由 |
-|---|---|---|---|
-| 1 | 10.21 PF-1 – PF-7 | 新算子 `fit.poly.polyfit` 0.4.0：Householder QR 加修正半正规方程精化；输出标准误差、自由度、mu | 与 MATLAB `[p, S, mu]` 对应，但直接给出调用方真正要的标准误差 |
-| 2 | 10.21 PF-3 | 秩判定、条件数、后向误差都在列缩放的 V·D⁻¹ 上计算 | 未缩放时，年份数据 3 次拟合就被误判为数值秩不足；缩放后只反映 x 的位置与跨度，与单位无关 |
-| 3 | 10.21 PF-4、开放问题 27 | 病态警告的 `details.suggested_remediation` 带一个须用户确认的补丁 | 中心化缩放改变系数的含义，只能建议，不能代做；warning 目前没有 remediation 字段 |
-| 4 | 10.22 EG-1 – EG-7 | 新算子 `linalg.decomp.eig` 0.4.0：对称 Jacobi / 一般 Schur + 三角回代；排序（对称升序；一般按 (Re, \|Im\|)，共轭对正虚部在前）与规一化（单位 2-范数，最大模分量为正实数）写死；报告每个特征值的条件数，> 1e8 时警告可能亏损 | 特征向量不唯一，不写死约定就无法比较、无法复现 |
-| 5 | 10.22 EG-5、开放问题 26 | `orthonormal` 只适用于对称算法，一般算法按空真报告 | 开放问题 26 的第二个实例 |
-| 6 | 10.23 SV-1 – SV-7 | 新算子 `linalg.decomp.svd` 0.4.0：单边 Jacobi；values / thin / full；u_k 的符号约定；数值秩用 MATLAB 的容差 | — |
-| 8 | 11.5 RI-1 – RI-3、12.3 | 作者决定：目标是约 100 个常用工程计算函数（12.3）；算子之间复用 MUST 调用同一内核（`aeoi-core::kernels`），不得重写，也不得改调外部库；已知的约 45 处违反列入迁移计划 | 同一计算两份实现会不一致；nalgebra 的 SVD、对称特征分解刚被证明在分级矩阵上不准 |
-| 7 | 9.4（`rules_numeric.py`） | 三个算子的一致性规则只比较不变量：特征值（最近匹配）、残差、正交性、规一化规则；运行器从请求重算残差 | 两个正确实现给出的 V 可以完全不同 |
-
-**开发中发现的问题**
-
-| # | 问题 | 处理 |
-|---|---|---|
-| 1 | nalgebra 的 SVD（双对角 QR）在行分级矩阵（行尺度 1e8 : 1 : 1e-8）上，重构残差为 8.7e-10，中间一行的信息丢了 | 后置条件 `reconstructs` 如实报了不成立；改用单边 Jacobi，残差降到 2.5e-16 |
-| 2 | nalgebra 的 SymmetricEigen 在分级对称矩阵上的后向误差是 3e-13（≈ 1000u） | 后置条件 `residual_small` 如实报了不成立；改用循环 Jacobi |
-| 3 | `polyfit` 的秩判定起初用未缩放的 R，年份数据 3 次就报 `E.NUMERICAL.SINGULAR` | 改为列缩放（PF-3） |
-| 4 | `polyfit` 只做 QR 时，病态用例的误差比 numpy 大 10–20 倍 | 加了修正半正规方程精化，之后全部比 numpy 准 |
-
-**结果**
-
-- golden 用例数（成功 / 错误）：`polyfit` 24 个（14 / 10）；`eig` 28 个（22 / 6）；`svd` 20 个（15 / 5）。真值全部来自 mpmath。
-- 最坏用例占容差的比例：`polyfit` 缩放后的前向误差 6.2e-4；`eig` 特征值 1.6e-3、特征向量 4.0e-6；`svd` 奇异值 2.3e-3、奇异向量 5.1e-6。
-- 一致性套件：15 / 28 = 54% 的算子有数值规则；参考实现 900 / 0 / 291。新增 7 种代理改写，都被预期的检查抓住，其中包括两种约定类改写：共轭对顺序反了；u、v 同时变号，这个 SVD 本身等价，但违反了符号约定。
-
-### v0.4.10-draft（2026-11-25）
-
-起因：按 MATLAB 使用频率继续加算子，作者选了 `A\b` 与 `interp1`，并定了两件事：插值范围外缺省报错、外推要显式选择；线性方程组支持方阵与超定最小二乘，欠定报错。线协议标识（`aeoi/0.4`）、核心 schema 和已有算子的版本都不变。
-
-**规范改动**
-
-| # | 位置 | 改动 | 理由 |
-|---|---|---|---|
-| 1 | 10.19 LS-1 – LS-7 | 新算子 `linalg.system.solve` 0.4.0：方阵用 LU（部分选主元）加至多 3 步迭代精化，超定用 Householder QR；报告后向误差、κ₁ 估计和前向误差估计 | MATLAB 只在 rcond < ε 时打印警告；调用方需要从信封里看出解能信几位 |
-| 2 | 10.19 LS-1 | 欠定报 `E.DOMAIN.UNDERDETERMINED`（新码），不返回 MATLAB 的“基本解” | 基本解不唯一，也不是最小范数解，悄悄返回会被当成“唯一答案” |
-| 3 | 10.20 IP-1 – IP-7 | 新算子 `interp.grid.interp1` 0.4.0：linear、nearest、previous、next、pchip、spline，y 每行一个通道 | 与 `fft`、`lsim` 的通道约定一致 |
-| 4 | 10.20 IP-3 | 范围外缺省 `E.DOMAIN.EXTRAPOLATION_REQUIRED`（新码），附 nan / clamp / extrapolate 三个须用户确认的补丁；实际外推时发 `W.ACCURACY.EXTRAPOLATED`（新码） | MATLAB 对不同方法的缺省行为不同（NaN 或外推），换方法会不声不响地改变结果的含义 |
-| 5 | 10.20 IP-6、开放问题 26 | 只对部分方法有意义的后置条件按空真报告，`derived` 里注明是否适用 | E-11 把缺失的后置条件算作不成立；正式写法留作开放问题 |
-| 6 | 5.1 | 登记上面三个新码 | — |
-
-**实现与验证**
-
-- golden：`linalg.system.solve` 30 个用例（10 个错误），真值来自 mpmath 60 位；`interp.grid.interp1` 56 个用例（12 个错误），参考值来自 numpy/scipy。
-- 精化的效果：Hilbert 10 上 numpy 的相对误差为 7.2e-6，本算子为 0；Wilkinson 增长矩阵上 numpy 为 0.90，本算子为 1.3e-16。不做精化的 Wilkinson 用例如实报告 `backward_stable = false`（golden 标记 `expect_postcondition_failed`）。
-- `interp1`：44 个成功用例中 29 个与 scipy 逐位相同，最大偏差 3.0e-16（相对）。
-- 一致性套件：两个算子都有数值规则（12 / 25 = 48%），参考实现 813 / 0 / 291；新增 4 种代理改写，都被预期的检查抓住。
-
-### v0.4.9-draft（2026-11-24）
-
-起因：作者决定先做分发（12.2 第 6 项），并选定“全平台用同一个纯 Rust 数学库”。审计时发现，跨平台差异除了系统数学库，还有 `matrixmultiply` 按 CPU 选内核这第二个来源（2.1 早就记着，作者问起时我漏说了）。线协议标识、核心 schema、算子版本都不变。
-
-**规范改动**
-
-| # | 条款 | 改动 | 原因 |
-|---|---|---|---|
-| 1 | 2.1 | 记录参考实现消除了跨平台差异的两个来源：编入二进制的 Rust `libm`，以及固定使用通用内核的 `matrixmultiply`；`reproducibility.libm` 记为 `rust-libm 0.2.16` | 让同一请求在各平台上逐位相同；系统数学库还会随系统升级改变 |
-| 2 | 2.1 M-7a（新） | 声明 `bitwise` 的前提：超越函数来自编入 build 的数学库，不在编译期用编译机的 C 库求值，任何运算路径都不按运行时 CPU 特性分派；证据是各平台 golden 哈希完全相同 | 把上面的做法变成对所有实现的要求；“编译期求值”是 CI 找出来的第三个来源 |
-| 3 | 3.15 EX-4、10.18 OD-8 | “平台的 libm”改为“实现所用的数学库” | 与 M-7a 一致 |
-| 4 | 12.2 第 6 项 | 分发：多平台发布、Claude Desktop 一键安装包、MCP 公开目录；不做独立 GUI 和聊天客户端 | 作者决定 |
-| 5 | 12.1 第 25 项（新） | `platform_bitwise` 何时升为 `bitwise` | 全平台逐位相同已证实，但改声明要给所有算子升版本 |
-
-**已做的改动**
-
-| 位置 | 改动 |
-|---|---|
-| `rust/aeoi-libm`（新 crate） | 在二进制内定义 `sin`、`cos`、`tan`、反三角、双曲、`exp`/`exp2`/`expm1`、`log` 系列、`cbrt`、`atan2`、`pow`、`hypot`、`sincos`、`__sincos_stret`（Apple）、`_hypot`（MSVC），转给 `libm` 0.2.16。`tests/override.rs` 在每个平台上检查 `f64` 方法与 `libm` 逐位相同（6 万个自变量）。在本机，同一组函数下 glibc 2.39 与 `libm` 的不同率是 3%–26%，所以这个测试确实能区分两者 |
-| `rust/vendor/matrixmultiply` | 0.3.11 的补丁副本，经 `[patch.crates-io]` 使用：`detect()` 固定选通用内核（`AEOI-PATCH.md`） |
-| `rust/vendor/rustfft` | 6.4.1 的补丁副本：旋转因子用 `libm::cos/sin`，不受编译机 C 库影响（`AEOI-PATCH.md`）。Linux 上只有 1 个 golden 用例（n = 31）的哈希因此改变 |
-| `aeoi-libm` | 另覆盖 `__exp10`、`exp10`（苹果平台上 `10f64.powf(x)` 被改写成它们；`pade` 在 macOS 上的 8 个差异由此而来） |
-| `conformance/` | Windows 上统一用 UTF-8 读写文件与子进程管道；`suite_hash` 的路径统一用 `/`；`.gitattributes` 规定检出用 LF |
-| `aeoi-call mathprobe` | 14 类数学函数调用的结果摘要；发布流水线每个平台都打印它和二进制从系统导入的数学符号（各平台摘要相同；Windows、macOS x86_64 只导入 `fma`，它是正确舍入的） |
-| `aeoi-core::operator` | `libm()` 报告 `rust-libm 0.2.16`；`build` 字符串加上 `matrixmultiply-0.3.11-portable libm-0.2.16`；`blas` 写明是通用内核 |
-| Linux 二进制 | 不再从 glibc 导入任何数学函数（`nm -D` 已核对） |
-| `examples/*/response*.json` | 重新生成：9 / 43 个成功示例的 `output_hash` 变了（数值差在容差类内，最大为 `bode` 非对称 ss 示例的相对差 8.9e-12；fft 示例 3.7e-17·max|X|），其余逐位不变 |
-| `aeoi-call hashes <golden-dir>`（新） | 输出每个 golden 请求的 `output_hash`（错误用例输出错误码），供发布流水线做跨平台比较 |
-| `.github/workflows/release.yml`（新） | 5 个平台（Linux x86_64/aarch64 musl 静态、macOS arm64/x86_64、Windows x86_64）上分别跑测试、一致性套件和 `hashes`；`compare` 任务要求各平台的结果完全相同；生成 `aeoi.mcpb`（macOS 通用二进制 + Windows exe）；打 tag 时发布 Release（SHA256SUMS、构建来源证明），并用 GitHub OIDC 登记到 MCP 公开目录 |
-| `tools/write_mcpb_manifest.py`、`tools/write_server_json.py`、`release/NOTES.md`（新） | MCPB manifest（工具清单从二进制的 `tools/list` 读取，已用 `mcpb validate` 和 `mcpb pack` 试过）；registry 的 server.json；发布说明 |
-| `.github/workflows/pages.yml` | 修复冒烟测试：它把工具数写死为 19，所以从 v0.4.5（`b19feab`）起的 5 次推送 Pages 构建都失败了，一直没人发现。现在改为从 `examples/` 的目录数推出 |
-| `README.md`、`THIRD_PARTY_NOTICES.md` | 安装说明；登记 `libm` 与 `matrixmultiply` 补丁副本 |
-
-**结果**：`cargo test` 181 / 0；一致性 715 / 0 / 291（5 个平台都是）；变异 28 / 28；`validate_examples.py` 退出码 0。浏览器版与 Linux 原生版 925 / 925 逐位相同。第 3 次试运行时 Linux x86_64 与 aarch64 的 859 个 golden 哈希完全相同，macOS、Windows 只剩 FFT 不同，原因是上面的 (b)。第 4 次试运行（`8c0a13c`）：5 个平台的 859 个 golden 哈希完全相同，`compare` 通过，MCPB 打包通过。
-
-### v0.4.8-draft（2026-11-24）
-
-起因：按 MATLAB 使用频率排的第二个非控制算子 `ode45`。作者选定右端用“安全表达式语言”给出：规范定语法、优先级、函数表与求值顺序，不执行代码，以后的领域复用。线协议标识与核心 schema 不变；已有算子的结果不变。
-
-**规范改动**
-
-| # | 条款 | 改动 | 原因 |
-|---|---|---|---|
-| 1 | 3.15 EX-1 – EX-7（新节） | 表达式语言：EBNF、优先级（`^` 右结合且高于一元负号）、名字规则、函数表、逐节点 binary64 求值、规模上限、`E.VALIDATION.EXPRESSION`（`position`、`kind`） | 函数不能作为 JSON 数据传；执行代码既不安全也不可复现 |
-| 2 | 10.18 OD-1 – OD-8 | 新算子 `ode.ivp.solve` 0.4.0（领域 `ode`）：Dormand–Prince 5(4)，步长决策与 scipy RK45 相同；状态与参数按名字给出 | 见上 |
-| 3 | OD-4 | rtol < 100ε 报错，不像 scipy 那样悄悄抬高 | 达不到的精度要让调用方知道 |
-| 4 | OD-5 | 用 tol/10 重解估计全局误差；`max_scaled` > 100 时 `tolerance_consistent` 不成立，`/y` 不可依赖 | rtol/atol 只控制局部误差；缺省容差下的 Van der Pol 误差 0.23 而求解器报告成功 |
-| 5 | OD-6、OD-7、5.1 | 新码 `E.NUMERICAL.NON_FINITE_EVALUATION`、`E.NUMERICAL.STEP_SIZE_TOO_SMALL`、`W.NUMERICAL.STIFF_PROBLEM` | 爆破、步长失败与刚性需要不同的修复 |
-| 6 | 9.4 CF-6 的应用 | ODE 的一致性对照精确解，界为 max(10·tol, 2·E_ref)；与参考求解器之差只记录 | 两个正确的 RK45 在折点处会因一次接受/拒绝决策不同而分岔：`functions` 用例两者差容差的 20.9 倍，相对精确解的误差却相同（1.60e-7、1.58e-7） |
-| 7 | golden 约定 | 用例可写 `expect_postcondition_failed`：后置条件不成立就是正确答案（由生成脚本用 scipy 独立预测） | 原来的收据测试假定 golden 成功用例的后置条件全部成立；`pendulum`、`van_der_pol_mu1`、缺省容差的 Van der Pol 如实报告不成立 |
-
-**已做的改动**
-
-| 位置 | 改动 |
-|---|---|
-| `rust/aeoi-numeric/src/expr.rs`（新） | 3.15 的解析器与求值器（3 个单元测试） |
-| `rust/aeoi-numeric/src/ode.rs`（新） | DOPRI5(4)、稠密输出、刚性检测、全局误差估计（5 个单元测试）；`tests/parity_ode.rs`（新）、`tests/examples_numeric.rs` 加 `ode_example` |
-| `write_manifests.py` | `ode.ivp.solve` 的 manifest、schema、L-1 描述、receipt（`a_posteriori_heuristic`，后置条件 `all_finite`、`tolerance_consistent`） |
-| `gen_golden_ode.py`（新）、`golden/python-control/ode.ivp.solve/0.4.0` | 34 个用例（17 成功、17 错误）；右端由独立的 Python 表达式实现求值；解析解另用 DOP853 交叉核对 |
-| `conformance/rules_numeric.py`、`tests/proxy_mutant.py` | `rule_ode`；变异 `ode_y_wrong`、`ode_states_reordered`、`ode_overclaims` |
-| `rust/aeoi-ops/tests/receipt.rs` | 认 `expect_postcondition_failed` |
-
-开发中发现两处错误。第一处：`constant_rhs_precedence` 的精确解写错了（把 `- -2^2*3` 当成 −12，实际是 +12）。parity 测试没有报错，因为两个实现都按 3.15 正确求值，与 scipy 的误差相同，而界里含 2·E_ref。之后生成脚本对每个解析解都用 DOP853 交叉核对。第二处：第一版 parity 断言与 scipy 逐点相差 ≤ 10·tol，`functions` 用例因此失败（见规范改动第 6 条）。
-
-**结果**：`cargo test` 180 / 0；parity 34 / 34（对精确解最坏用掉界的 0.50，估计误差 / 实际误差的中位数 0.92、最大 1.03）；参考实现一致性 715 通过 / 0 失败 / 291 跳过（`ode` 34 + 默认值 11 + 方法选择 1）；变异测试 28 / 28；`validate_examples.py` 退出码 0；有数值规则的算子 10 / 23 = 43%。
-
-### v0.4.7-draft（2026-11-24）
-
-起因：控制领域告一段落，作者决定按 MATLAB 的使用频率转向其他领域，先做 `fft` 与 `ode45`。这一版是 `fft`，以及为多领域做的结构调整。线协议标识与核心 schema 不变。
-
-**规范改动**
-
-| # | 条款 | 改动 | 原因 |
-|---|---|---|---|
-| 1 | 10.17 FT-1 – FT-6 | 新算子 `signal.spectral.fft` 0.4.0（领域 `signal`） | 见上 |
-| 2 | FT-4 | 频率轴总是返回，顺序为 numpy `fftfreq`，不做 `fftshift` | 频点下标与频率的对应是最常见的用法错误 |
-| 3 | FT-5 | 快速算法的运算路径不得依赖运行时 CPU 特性 | rustfft 缺省规划器按 AVX/SSE 分派，`platform_bitwise` 会因 CPU 不同而失效 |
-| 4 | P-1 补充 | `operator.build` 与 `receipt.replay.build` 报告实现所在的 crate（`aeoi-control …`、`aeoi-numeric …`） | 原来写死为 `aeoi-control`，对其他领域的算子是错的；控制算子的输出不变 |
-
-**已做的改动**
-
-| 位置 | 改动 |
-|---|---|
-| `rust/aeoi-numeric`（新 crate） | `fft.rs`（4 个单元测试）、`tests/parity_fft.rs`、`tests/examples_numeric.rs`；依赖 rustfft 6.4（标量规划器） |
-| `rust/aeoi-ops`（新 crate） | 跨领域注册表 `registry()` / `find()`；`aeoi-call` 与遍历全部 golden 的收据测试 `tests/receipt.rs` 从 `aeoi-control` 移来（它们需要看到所有领域） |
-| `rust/aeoi-{mcp,bridge,web,wasm}` | 改用 `aeoi_ops::registry()`；控制 crate 的测试仍用 `aeoi_control::registry()` |
-| `rust/aeoi-core/src/operator.rs` | `OperatorMeta.crate_name`、`build_string_for(crate)`；`operator_meta!` 宏传入 `env!("CARGO_PKG_NAME")` |
-| `write_manifests.py` | `man(…, backend=)`；`fft` 的 manifest、schema、L-1 描述、receipt |
-| `gen_golden_fft.py`（新）、`golden/{python-control,mpmath}/signal.spectral.fft/0.4.0` | 38 个 numpy 用例、6 个 mpmath 精确用例；同时生成示例请求与参考值 |
-| `conformance/rules_numeric.py`（新）、`aeoi_conformance.py` | `fft` 的一致性规则（含运行器用请求的 x 与返回的 X 独立重算 Parseval，b64 输入也解码）；变异 `fft_bin_wrong`、`fft_shifted_frequencies`、`fft_scale_wrong` |
-| `examples/control.design.pidtune/manifest.json` | 修正 v0.4.6 的一处 manifest 错误：`limits.td_scan_log10_range` 是数组，manifest schema 要求 `limits` 的值是数字，改为 `td_scan_log10_min`、`td_scan_log10_max`。`validate_examples.py` 在 `8a997b4` 上就报了这个错，当时检查时只看了它输出的最后一行（汇总），漏掉了前面的 FAIL 行；之后以退出码为准 |
-
-写 `fft` 的 manifest 时两次用了 schema 枚举之外的值（`bound_kind = a_priori_normwise`、覆盖 `all`），一致性套件的信封校验（CF-8）和 `validate_examples.py` 都抓到了。
-
-**结果**：`cargo test` 170 / 0；parity 44 / 44（与 numpy 8.4e-16，与 mpmath 精确值 2.9e-16）；参考实现一致性 669 通过 / 0 失败 / 290 跳过（`fft` 44 + 方法选择 1 + 默认值 14）；变异测试 24 / 24；`validate_examples.py` 退出码 0；有数值规则的算子 9 / 22 = 41%。
-
-### v0.4.6-draft（2026-11-24）
-
-起因：按用途广度补的第二个算子。工业回路绝大多数是 PID，“帮我把 PID 调好”是最常见的设计请求；此前 Agent 只能自己猜参数再交给 `pid`、`loopsens` 验证。A-4 要求的四项由作者选定：指标为穿越频率 + 相位裕度，ωc 必须由调用方给出，PID 用 Ti = 4·Td 固定多出的自由度并取最小 Td 根。线协议标识与核心 schema 不变。
-
-**规范改动**
-
-| # | 条款 | 改动 | 原因 |
-|---|---|---|---|
-| 1 | 10.16 PT-1 – PT-6、A-4 | 新算子 `control.design.pidtune` 0.4.0 | 见上 |
-| 2 | PT-3 | ∠C* = 0°（纯 P）在舍入内 MUST 按 Ki = 0 处理 | 第一版在这个边界上报“不可达”，而错误消息又说所需相位 0° 在可达范围内 |
-| 3 | PT-4 | Td 的求根法（扫描网格、二分终止条件、取最小根）是规范的一部分 | 方程可有多个根；规定取法后两个独立实现的增益相差 ≤ 7.3e-16 |
-| 4 | PT-5 | 闭环不稳定报 `E.DOMAIN.TARGET_NOT_ACHIEVABLE`，额外穿越给 `W.DOMAIN.EXTRA_CROSSOVER`（两个新码） | 频率点条件只约束一个频率；golden 里两种情况都是从系统族中搜出来的真实例子 |
-
-**已做的改动**
-
-| 位置 | 改动 |
-|---|---|
-| `write_manifests.py` | `pidtune` 的 manifest、schema、L-1 描述、receipt（假设、后置条件、覆盖、guards） |
-| `rust/aeoi-control/src/pidtune.rs`（新）、`lib.rs`、`loopsens.rs`（`sub` 改为 crate 内可见） | 实现与注册；4 个单元测试（PI 封闭解、需要超前时 PI 报错而 PID 成功、纯 P 边界、冲突与域错误） |
-| `gen_golden_pidtune.py`（新）、`golden/python-control/control.design.pidtune/0.4.0` | 33 个用例，独立 numpy 实现 + python-control 核验；同时生成示例请求与参考值 |
-| `rust/aeoi-control/tests/parity_pidtune.rs`（新）、`examples.rs` 的 `pidtune_example` | parity 与示例测试；示例测试同时核对 controller 与 `control.design.pid(gains)` 逐位相同（K-4） |
-| `examples/control.design.pidtune/` | manifest、schema、三个示例请求与响应、`parity.yaml`（含 `conformance_compare`） |
-| `conformance/rules_control.py`、`tests/proxy_mutant.py`、`test_runner_catches_mutants.py` | `pidtune` 的一致性规则（含运行器用返回的控制器重算 L(jωc)）；变异 `pidtune_kp_wrong`、`pidtune_controller_wrong` |
-
-一致性套件在第一次运行时就查出一处 manifest 错误：`pidtune` 会发出 `E.DOMAIN.MIMO_NOT_SUPPORTED`，但没有声明（CF-8），已改正。
-
-**结果**：`cargo test` 164 / 0；parity 33 / 33（增益 7.3e-16）；参考实现一致性 610 通过 / 0 失败 / 290 跳过（`pidtune` 33 + 方法选择 1 + 默认值 8 通过、6 跳过）；变异测试 21 / 21；有数值规则的算子 8 / 21 = 38%。
-
-### v0.4.5-draft（2026-11-24）
-
-起因：作者决定按用途广度补算子，第一个是 `lsim`（任意输入的响应）：`step`、`impulse` 只回答两种标准输入，实际工作里更常见的是斜坡、正弦、扰动和实测数据。线协议标识与核心 schema 不变。
-
-**规范改动**
-
-| # | 条款 | 改动 | 原因 |
-|---|---|---|---|
-| 1 | 10.15 LS-1 – LS-6 | 新算子 `control.lti.lsim` 0.4.0 | 见上 |
-| 2 | LS-3 | 采样之间的输入解释有固定缺省（foh），实现不得按数据自动选择；离散系统写出即 F-8 冲突 | MATLAB 不给 method 时自动选择，同一个请求会因数据不同而换问题 |
-| 3 | LS-4 | `x0` 只用于 ss；tf/zpk 报 `OPTION_CONFLICT` 并指向 `convert` | tf/zpk 没有状态坐标，`x0` 的含义取决于实现选哪个状态空间实现 |
-| 4 | LS-5 | 后置条件 `half_step_consistent`（dt/2 重新离散化），覆盖记 `test_points` | 原先 `step` 只有 `all_finite`；这是对离散化矩阵的独立检查 |
-
-**已做的改动**
-
-| 位置 | 改动 |
-|---|---|
-| `write_manifests.py` | `lsim` 的 manifest、输入输出 schema、L-1 字段描述、receipt（假设、后置条件、覆盖、guards） |
-| `rust/aeoi-control/src/lsim.rs`（新）、`lib.rs` | 实现与注册；6 个单元测试（斜坡 foh 精确到 1e-13、常值 zoh 等于阶跃、x0 规则、离散规则、转置的 u） |
-| `rust/aeoi-{bridge,mcp,web}` | 三处写死的“19 个工具”改为跟注册表数量一致 |
-| `gen_golden_lsim.py`（新）、`golden/python-control/control.lti.lsim/0.4.0` | 33 个用例；foh 用例与 python-control 交叉核对 ≤ 1e-11；同时生成示例请求与参考值 |
-| `rust/aeoi-control/tests/parity_lsim.rs`（新）、`examples.rs` 的 `lsim_example` | parity 与示例测试 |
-| `examples/control.lti.lsim/` | manifest、schema、三个示例请求与响应、`parity.yaml`（含 `conformance_compare`） |
-| `conformance/rules_control.py`、`tests/proxy_mutant.py`、`test_runner_catches_mutants.py` | `lsim` 的一致性规则；变异 `lsim_y_wrong`、`lsim_interp_mislabeled` |
-
-**结果**：`cargo test` 158 / 0；parity 33 / 33（y 9.2e-14）；参考实现一致性 568 通过 / 0 失败 / 284 跳过（`lsim` 33 + 方法选择 1 + 默认值 5 通过、2 跳过）；变异测试 19 / 19；有数值规则的算子 7 / 20 = 35%。
-
-### v0.4.4-draft（2026-11-24）
-
-起因：清理开放问题 20、21（一致性套件 v0.1 发现）。线协议标识与核心 schema 不变。
-
-| # | 条款 | 改动 | 原因 |
-|---|---|---|---|
-| 1 | 10.10、12.1 第 20 项 | `lyap` 的 Q 可以不对称，MUST 按原样求解、MUST NOT 对称化 Q；Q 对称时 MAY 对称化 X，不发 warning；不声明 `W.VALIDATION.SYMMETRIZED` | input schema 说“对称”、算法说明说“非对称也可解”，manifest 声明了一个从不发出的码；第二实现照字面理解后在 4 个用例上失败 |
-| 2 | 9.4 CF-2、12.1 第 21 项 | 默认值用例由运行器从 golden 派生，省略与写出默认值的结果必须逐位相同；F-8 不适用的字段跳过 | 19 个算子里有 15 个带默认值的字段，golden 几乎从不写出默认值，`lyap` 一个省略 `type` 的用例都没有 |
-| 3 | 12.1 第 24 项 | 新开放问题：省略与写出默认值的请求指纹不同 | 写默认值用例时发现 |
-
-**已做的改动**：`write_manifests.py`（`lyap` 的 Q 描述、前置条件，manifest 去掉 `W.VALIDATION.SYMMETRIZED`；重新生成 `examples/control.math.lyap/{manifest,input.schema}.json`）；`conformance/aeoi_conformance.py`（默认值变体，`--examples` 参数，报告里按 `defaults` 分组；运行器 0.3.0）；`conformance/tests/mutant_server.py` 与 `test_runner_catches_mutants.py`（变异 `wrong_default`）；`conformance/README.md`。`lyap` 算子版本不升：接受的输入、输出和发出的码都不变。
-
-**结果**：参考实现 529 通过 / 0 失败 / 282 跳过（新增 73 个默认值用例通过、4 个跳过）；Python 第二实现 47 / 47；变异测试 17 / 17；`cargo test` 150 / 0。
-
-### v0.4.3-draft（2026-11-24）
-
-起因：清理 v0.4.2 写规则时发现的开放问题 22、23。线协议标识与 schema 不变。
-
-| # | 条款 | 改动 | 原因 |
-|---|---|---|---|
-| 1 | 12.1 第 22 项、9.4 CF-6 | `bode` 相位按 10.x 的分支比较，不取模；只在参考值距分支边界 1e-6° 以内时取模 | 分支约定是规范性的；模 360 比较会放过相位整体差 360° 的实现 |
-| 2 | 12.1 第 23 项、9.4 CF-6、CF-7 | 高精度参考与其他引擎用同一 κ 缩放容差；“1e-12 不放宽”是参考实现自己的目标；超差走 `known_deviations`，CF-7 加例子并写明只有数值偏差能登记 | 实测标准 SciPy 在病态用例上达不到 1e-12，这是后向稳定算法的正常表现 |
-
-**已做的改动**：`conformance/rules_control.py`（`bode` 相位不取模；`lqr` 的 mpmath 分支改为 `cond_S` 缩放）；`conformance/tests/proxy_mutant.py` 与 `test_runner_catches_mutants.py` 新增变异 `bode_phase_360`（相位整体 +360°，必须失败）；`examples/{bode,lqr,lyap}/parity.yaml` 的 `conformance_compare`；`conformance/README.md`。
-
-**结果**：参考实现仍为 456 通过 / 0 失败 / 278 跳过；Python 第二实现 44 / 44；变异测试 16 / 16。
-
-### v0.4.2-draft（2026-11-24）
-
-起因：作者定下目标，一致性数值规则覆盖的算子数不少于全部算子的 30%，以后再提高。v0.4.1 时只有 `lyap`（19 个中的 1 个）。这一版补 5 个，挑选标准是比较方式各不相同：复数集合（`poles_zeros`）、频率响应（`bode`）、时间响应与网格指标（`step`）、唯一解加独立残差复核（`lqr`）、实现不唯一的系统（`c2d`）。线协议标识与 schema 不变。
-
-**规范改动**
-
-| # | 条款 | 改动 | 原因 |
-|---|---|---|---|
-| 1 | 9.4 CF-2 | 列主序检查取全部数值检查里最大的“偏差 / 容差” | `poles_zeros`：eig(Aᵀ) = eig(A)，只看极点查不出错误 |
-| 2 | 9.4 CF-6 | `parity.yaml` 的字段写法优先于默认的 `rel_fro`；运行器的公式写进 `conformance_compare`；容差类取自套件而不是被测实现的 manifest；κ 可由参考请求或参考值算，列出不得采信的自报量；状态空间实现比较哪些不变量，tf 系数先归一 | 写规则时这几处都要自己做决定，规范原来没写 |
-| 3 | 9.4 CF-8 | 记录 `lqr` 的独立复核与残差归一方式 | 第一版按 R⁻¹ 计算残差，cond(R) = 1e12 时运行器自己误判 |
-| 4 | 12.1 第 22、23 项；12.2 第 7 项 | 新开放问题：`bode` 相位分支不被检验；`lyap` 的 mpmath 容差与 `parity.yaml` 不一致 | 写规则时发现 |
-
-**已做的改动**
-
-| 位置 | 改动 |
-|---|---|
-| `conformance/rules_control.py`（新） | 5 个算子的规则。`bode` 近极点用例的 κ(ω) = 1 + |s| / min |s − p|（p 为参考请求的极点），取代参考实现 parity 测试里用的自报误差估计；`lqr` 的 S 容差按参考解的 cond_S 缩放，mpmath 用例 1e-12 不放宽；`step` 的 dt 取参考网格；`c2d` 的 κ 由请求算（tustin：cond(I − αA)；zoh/foh：e^{‖A‖₁ts}），ss 结果比较单位圆上 7 个点的传递函数值、极点与 D |
-| `conformance/aeoi_conformance.py` | 接入新规则；列主序检查改为最大比值；`lyap` 规则的容差类改为取自套件（值仍是 T2，结果不变）；运行器版本 0.2.0 |
-| `conformance/tests/proxy_mutant.py`（新）、`test_runner_catches_mutants.py` | 包住参考实现的代理做 8 种改写：5 种错误答案必须失败、3 种等价答案（极点换序、相似变换、tf 分子分母同乘 3）必须通过 |
-| `examples/{poles_zeros,bode,step,lqr,c2d}/parity.yaml` | 新增 `conformance_compare` |
-| `conformance/README.md` | 状态、结果、限制与新发现的规范问题 |
-
-**结果**：参考实现 456 通过 / 0 失败 / 278 跳过（v0.4.1 时 100 / 0 / 634）；有规则的 6 个算子全部通过，各检查的最大“偏差 / 容差”≤ 0.15。变异测试 15 / 15。
-
-**仍未做**：新规则还没有被独立实现检验过；其余 13 个算子没有规则。
-
-### v0.4.1-draft（2026-11-24）
-
-起因：一致性套件 v0.1 发现输入、输出 schema 用 `aeoi://schemas/common/0.4/Matrix` 这种简写引用核心 schema（开放问题 19）。标准 JSON Schema 解析不了它，参考实现、`validate_examples.py` 和一致性运行器各自写了一段兼容代码才能用。作者决定先定这个问题，再扩充一致性规则。线协议标识保持 `aeoi/0.4`，核心 schema 的 `$id` 不变。
-
-**规范改动**
-
-| # | 条款 | 改动 | 原因 |
-|---|---|---|---|
-| 1 | 3.9 J-1 – J-3 | `$ref` MUST 是标准 2020-12 引用（`<$id>#/$defs/<Name>`），简写不合法；引用的 `$id` 版本与 manifest `spec` 一致；MCP 返回的 manifest 与工具 schema 内联 | 第三方实现和通用校验器不应需要专用解析器 |
-| 2 | 12.1 第 19 项 | 标为已决定 | |
-
-**已做的改动**
-
-| 位置 | 改动 |
-|---|---|
-| `write_manifests.py` | 引用前缀改为 `aeoi://schemas/common/0.4#/$defs/`；`E.VALIDATION.METHOD_UNAVAILABLE` 改在写出前统一补到每个 manifest（v0.4 时 `bode`、`step`、`lqr` 三个 v0.2 算子是手改 manifest 文件加的，脚本重新生成会丢掉） |
-| `examples/*/input.schema.json`、`output.schema.json` | 由 `write_manifests.py` 重新生成，只有引用写法改变（19 个算子，37 个文件） |
-| `schemas/common.schema.json`、`envelope.schema.json` | `MethodPolicy` 的两处引用（文件内改为 `#/$defs/MethodPolicy`） |
-| `aeoi-core/src/schema.rs` | 去掉 `resolve` 的简写分支；新单元测试 `shorthand_ref_rejected` |
-| `validate_examples.py` | 去掉为简写注册的别名资源；新增检查：所有 schema 文件里的非本地 `$ref` 按原样解析 |
-| `conformance/aeoi_conformance.py` | 去掉 `fix_refs`（自动改写）；manifest 内的 schema 有无法解析的 `$ref` 时，该算子的用例判失败并注明 J-1；运行器版本 0.1.1 |
-
-指纹、`input_hash`、`output_hash` 都不含 schema 文本，示例响应不变。另：v0.4 一节所说“示例都没有 `libm`、逐位比较暂时跳过”已由 `3dada65` 解决（在 glibc 2.39 上重新生成，只改了元数据）。
-
-### v0.4-draft（2026-11-23）
-
-起因：准备写第二个实现（先 Python，再 C 的数值内核）时发现两处规范是空的：一个算子版本只能有一个方法 id，没有办法登记另一种算法，用户也没有办法要求“只用经过审计的库”；换一个实现是否等价于参考实现，没有判定规则，`parity.yaml` 只说明参考实现怎么测自己。这一版先改规范文本，随后补上 schema 与参考实现（见下“已做的改动”）；另加了一致性套件 v0.1（`conformance/`，只做了 `lyap` 的数值比较规则；在参考实现上的运行结果：734 个用例中 100 通过、0 失败，其余 634 个因没有比较规则而跳过）。线协议标识升为 `aeoi/0.4`（已决定，12.1 第 15 项）：`spec` 与核心 schema 的 `$id` 一起升，改动见下表第 7 行。
-
-**规范改动**
-
-| # | 条款 | 改动 | 原因 |
-|---|---|---|---|
-| 1 | 2.1 M-11、3.14 MS-1 – MS-4 | 方法登记：manifest `receipt` 描述 `default` 方法，其他方法登记在可选的 `receipt.alternatives[]`；非参考实现的方法 id 不得用 `aeoi:` 前缀；每个方法各自通过 parity；增删方法与改 `default` 的版本影响 | 换算法或换内核不应该只能靠发布新算子版本 |
-| 2 | 3.14 MS-5 – MS-9、4.3 R-9 | `exec.method_policy`（`require`、`constraints`，都是硬约束；没有软偏好），放在 `exec` 里所以不进入 `input_hash`；硬约束无解报错而不是静默换方法；收据 `method_selection` 只在请求带策略时出现；重放以 `require: [used]` 进行，verify 新增 verdict `method_unavailable` | 用户要能约束计算方式，同时保持 R-3 “同一个问题 / 同一个答案”两层指纹的分工 |
-| 3 | 3.14 MS-10、MS-11 | 生效策略 = 宿主策略 ∩ 请求策略，请求只能收紧；LLM 绑定默认隐藏 `exec`，允许的方法集合写进工具描述 | 约束要对模型有约束力 |
-| 4 | 5.1 | 新错误码 `E.VALIDATION.METHOD_UNAVAILABLE`（类别仍是 5 个） | MS-6 |
-| 5 | 9.4 CF-1 – CF-12 | 跨实现一致性：线级与内核级两种形态（避开 9.1 的 L1 – L3 命名）；套件沿用 golden 与 `parity.yaml`；精确字段与不要求相同的字段（`ok` 与 `ok_with_warnings`、结果指纹、方法 id 不要求相同）；范数比较；第二实现自报的 `error_estimate` 不得放宽验收；`rel_fro` 与 R-5 的 ‖·‖∞ 并存的说明；收据与 manifest 的机械核查；逐方法检验；声明区分“同源通过”与“独立通过” | 让“换实现”可以被检验，而不是只被声称 |
-| 6 | 12、附录 A | 新开放问题 14 – 21（19 – 21 由一致性套件的第一次运行发现）；下一步 7；附录 A 加 `spec-v0.4.md` 与 `conformance/` | |
-| 7 | 0、2.2、4.2、12.1 第 15 项 | 线协议标识升为 `aeoi/0.4`，核心 schema `$id` 升为 `/0.4`（与 v0.3 的做法相同） | 作者决定：新增字段后版本号与线标识保持同步 |
-
-**已改（只涉及标识）**：`schemas/*`（`$id`、`$ref`、`spec` 的 const）、`examples/**`（manifest 的 `spec`、示例响应、输入输出 schema 里对核心 schema 的引用）、`write_manifests.py`、`validate_examples.py`、`rust/`（`aeoi_core::SPEC`、`schema.rs` 两处单元测试字面量、`aeoi-mcp` 的 e2e 断言与说明文字）、`conformance/`。没有改：`golden/`、`reports/`、`gen_golden_*.py`（它们只记录生成当时的版本）。`validate_examples.py`（459 个 golden 请求与全部示例校验通过）、一致性套件（44 个用例、7 个变异测试）通过；Rust 在 WSL（x86_64-linux）上，标识改动前后 `cargo test` 的结果相同，只有上面两个与平台有关的示例测试失败（见下）。
-
-**已做的改动（参考实现与数据）**
-
-| 位置 | 改动 |
-|---|---|
-| `schemas/common.schema.json` | `ExecOptions.method_policy`；新定义 `MethodPolicy`（`require`、`constraints.min_exactness`、`constraints.backend_library_in`，封闭对象，没有 `prefer`） |
-| `schemas/manifest.schema.json` | `receipt.alternatives[]`（与 `receipt` 同形，另必填 `backend`、`algorithm`，可选 `determinism`、`tolerance_class`） |
-| `schemas/envelope.schema.json` | `Receipt.method_selection`（`policy`、`used`） |
-| `examples/*/manifest.json`、`write_manifests.py` | 19 个 manifest 的 `errors` 声明 `E.VALIDATION.METHOD_UNAVAILABLE`（CF-8：发出的码必须声明） |
-| `aeoi-core` | 新模块 `method`：登记（`registered`）、解析（`resolve`，MS-6）、策略合并（`merge_policies`，MS-10）、重放策略（`replay_policy`，MS-9）；`operator.rs` 在语义校验前解析方法，收据按所用方法生成并在请求带策略时加 `method_selection`；`verify` 以 `require: [used]` 重放，缺方法时 verdict 为 `method_unavailable`；`ExecCtx.method` 把所选方法 id 交给算子 |
-| `aeoi-mcp` | `aeoi_verify` 的 verdict 枚举加 `method_unavailable` |
-| `aeoi-bridge` | `Bridge::with_method_policy`（宿主策略与请求策略合并后写入 `exec.method_policy`，请求只能收紧）；算子登记多于一个方法时，工具描述列出允许的方法（MS-11）；只登记一个方法的算子描述不变 |
-| 测试 | `aeoi-core/src/method.rs` 单元测试（合成多方法 manifest：登记顺序与继承、`require` / `constraints`、无解报错与理由、策略合并）；`aeoi-control/tests/method_policy.rs`（对 `pade`：无策略时收据与 v0.3 相同、策略不改请求指纹与结果、无解策略报 `METHOD_UNAVAILABLE`、畸形策略报 `SCHEMA`、重放与 `method_unavailable`）；`aeoi-control` 与 `aeoi-mcp` 的示例测试只在示例所在平台（`reproducibility.platform` 与 `cpu_features` 相同）比较 `output_hash`，其余平台只跑数值检查（见下） |
-
-**`platform_bitwise` 的示例测试与"平台"的定义**：在作者的 WSL（x86_64-linux，CPU 特性与生成示例的环境相同，glibc 2.31）上，`pade` 示例、`ctrb_obsv` 非对称示例与 MCP e2e 的 `output_hash` 与发布值不同；标识改动前后失败相同，所以与标识改动无关。逐字段比较：`pade` 只有 `approximation.certificate.value` 差 1 ulp（复数 `exp` 与模长，走 libm），`ctrb_obsv` 只有可观性矩阵的两个奇异值差 1–2 ulp（nalgebra 的 SVD 用到 libm）。先前按"CPU 特性不同"修过一次测试，判断错了：两边 CPU 特性相同。现在的改动：2.1 的"平台"加上 `libm`，`reproducibility` 与收据 `replay` 记录 `libm`（linux-gnu 上运行时读取 glibc 版本），`verify` 的同平台判定包含 `libm`；`build` 改为记录实际编译器版本（`aeoi-core/build.rs`），不再在缺环境变量时写死 `rustc-1.85`；示例测试只在 `platform`、`cpu_features`、`libm` 都相同时比较 `output_hash`，示例没有记录 `libm` 时只做数值检查。**目前所有示例都没有 `libm`，所以示例的逐位比较暂时全部跳过，需要在能编译的环境里重新生成示例后恢复**；同机重放（`deterministic_repeat_calls_bitwise_equal`）不受影响。哪个 libm 函数造成了这几位差异没有逐一确认。
-
-**仍未做**：算子端没有任何一个真正登记第二个方法（`alternatives` 的路径只有合成 manifest 的单元测试）；`conformance/` 里只有 `lyap` 有数值比较规则。
-
-### v0.3.6-draft（2026-11-23）
-
-起因：EngDesign 7 题的真模型运行（`reports/design-live.md`，gemini-flash-lite-latest）。模型用对了算子，却在接口容易出错的地方出错：把控制器放进反馈通路、把闭环送进 `margin`；PID 的 `Ti: 0` 和混用字段连续报错；手抄、心算系统系数；读不到 plant×controller 的带宽；4 题回合用完没有提交；7 阶系统上一个失败的秩检查没有说明哪些字段不能用。线协议标识保持 `aeoi/0.3`；信封只增加可选字段（`receipt.evidence.coverage`、`unreliable`，claim 多一个取值 `spot_checked`）。
-
-**规范改动**
-
-| # | 条款 | 改动 | 原因 |
-|---|---|---|---|
-| 1 | 3.13 K-1–K-3 | 组合算子接受具名角色 `plant` / `controller` / `sensor`，拓扑固定为单回路负反馈，`controller` 永远在前向通路；结果标 `composition.loop_role`（`open_loop` / `closed_loop`）与 `topology`；与位置参数混用报 `OPTION_CONFLICT`；工具描述必须写明哪个是 L、哪个是 T | XG_13：`feedback(sys1=对象, sys2=控制器)` 把控制器放进了反馈通路；Ziheng_03 把 T 送进 `margin` |
-| 2 | 3.13 K-4 | 新算子 `control.analysis.loopsens`：一次得到 L、T、S、闭环极点与稳定性、L 的裕度、带宽、T 的阶跃指标；必须等于串起原语的结果，子算子失败时该字段为 null 加 `W.DOMAIN.ANALYSIS_SKIPPED` | 一次调用就不会接错；也省回合 |
-| 3 | 3.13 K-5 | 频率字段名带单位并两种都给：`gain_crossover_rad_s/_hz`、`bandwidth_rad_s/_hz`；带宽定义（drop_db、相对 DC 增益、闭环）必须回显；带宽算在 plant·controller 的闭环上 | XG_02：要求约 85 Hz 带宽，没有 plant×controller 的带宽读数，交了带宽 0 Hz 的增益还声称满足 |
-| 4 | 3.13 K-6、F-6 | `LtiSystem` 永不抽样；系统提示词、工具描述必须要求原样传递上一步的系统 | XG_11 手拼分母丢了 169、Ziheng_03 心算展开错了对象，后面每一步都在算另一个系统 |
-| 5 | 3.11 F-8 | 互斥选项由算子检查，统一 `E.VALIDATION.OPTION_CONFLICT`，`details.conflicting_fields`；补丁只删除请求里出现的字段；`Ti = 0` 给一句说明原因的话和 `omit_integral` 补丁；只属于某模式的字段在描述里标明 | XG_12 前 4 步耗在 PID 字段冲突与 “less than or equal to the minimum of 0”；XG_02 也因 `Ti=0` 报错一次；旧补丁还会删除不存在的 `/Td` |
-| 6 | 4.1 E-11/E-12、R-4、R-7 | manifest `receipt.coverage`：`full` / `test_points` / `sampled`；有 `sampled` 的全通过结果 claim 为 `spot_checked`；绑定层的抽样视图不是证据；短收据带 `coverage` 与 `result_view` | 网格复查与抽样视图只能说明“没看到问题”，不能说“已验证” |
-| 7 | 4.1 E-13 | manifest `receipt.guards`；检查失败时收据 `evidence.unreliable` 列出不可用的结果字段，警告与短收据同步，系统提示词禁止引用 | XG_02（7 阶）：`pbh_agrees_ctrb` 为 false，但没有说明 rank / minimal 不能用，模型看到的还是抽样后的矩阵 |
-| 8 | 8.4 AL-1–AL-3 | 有上限的提交式循环必须告诉模型上限；剩 2 回合时提示，最后一回合只提供提交工具；绑定层不替模型提交，报告记录 `budget_notices` | 7 题里 4 题 10 回合内没有提交 |
-| 9 | 7.1 V-3a | 只增加可选字段、旧请求结果逐位不变的 MINOR 升级可以沿用旧 golden 目录 | `series`/`feedback` 0.4.0 的位置参数结果与 0.3.0 相同 |
-| 10 | §0 | 写明与 MATLAB 的关系：只沿用公开函数名与分类；所有参考数据来自开源实现，没有 MATLAB 生成的数据 | 避免读者以为有 MATLAB 对照数据 |
-| 11 | 10.14、12 | 新示例；开放问题 6、7 更新，新增 13（`test_points` 的边界） | |
-
-`pidtune` 仍不做（A-4）。
-
-**参考实现改动**
-
-| 模块 | 改动 |
-|---|---|
-| `aeoi-control` | `series`/`feedback`/`pid` 升到 0.4.0（G-2 MINOR）：具名角色与冲突检查；PID 冲突补丁只删出现的字段、`Ti = 0` 专门报错；新算子 `loopsens` 0.4.0（内部调用 series/feedback/margin/stepinfo；连续系统带宽用 ω² 偶多项式求根）。位置参数调用的结果与 `output_hash` 不变 |
-| `aeoi-core` | `receipt::claim_of`；`coverage` → `spot_checked`；`guards` → `evidence.unreliable`；envelope / manifest schema 增加可选字段 |
-| `write_manifests.py` | 新的角色描述、L/T 说明、K-6 句子、coverage 与 guards；清理来源说明的 MATLAB 措辞 |
-| `aeoi-bridge` | `LtiSystem` 从不抽样；短收据加 `coverage`、`unreliable_fields`、`result_view`；系统提示词：具名角色、`loopsens`、带宽单位、原样传递、`spot_checked` |
-| `aeoi-web design` | 评测提示词改用 `loopsens`；回合预算（AL-1–AL-3），报告新增 `budget_notices` |
-| 测试与数据 | 新单元测试（K-1 角色、F-8 冲突、E-12/E-13、K-6 不抽样、AL 预算）；`gen_golden_loopsens.py` 12 例与 `tests/parity_loopsens.rs`；`loopsens` 示例；`validate_examples.py` 独立核对 E-12/E-13，并跳过本就应该 schema 报错的示例请求；工具数 18 → 19（网页、CI、MCP 测试） |
-
-`control.analysis.margin`：网格复查每 256 点检查一次协作式截止时间；新增 `tests/margin_no_hang.rs`（看门狗线程，含一个旧构建上挂住过的离散输入和 8 个极端系统）。`loopsens`：闭环不稳定时带宽为 null（K-5）。
-
-真模型重跑（`reports/design-live-v036.md`，同一模型与设置、同 7 题）：通过 0/7 → 0/7，提交 3/7 → 7/7，工具错误 4 → 0，7 题平均分（未提交记 0）26.9 → 56.9；16 次 `loopsens` 调用全部角色正确，4 道题在回合预算提示后提交。仍失败的原因是模型推理（心算展开对象、辨识公式、回路成形）。
-
-### v0.3.5-draft（2026-11-23）
-
-起因：设计试点（`reports/design-pilot.md`）里，模型把步数花在手乘多项式上。要把串联、反馈、PID、阶跃指标和 Padé 写成算子，规范有五处写不干净：返回的系统怎么接到下一次调用、收据能不能嵌套、阈值默认值算不算“编造用户输入”、网格上的时间指标该用哪一档容差、近似误差和舍入误差是不是同一件事。线协议标识保持 `aeoi/0.3`。已发布 12 个算子的 `result` 与 `output_hash` 不变；`receipt.evidence.approximation` 只在近似算子上出现。
-
-| # | 改动 | 原因 |
-|---|---|---|
-| 1 | 新增 3.12（I-1–I-12、A-1–A-4）：`result.system` 可原样再输入；`composition` 带操作数哈希；收据不嵌套，`lineage` 只回显；采样周期必须相同；反馈方程与 `sign` 默认 −1；SISO 用多项式、含 ss 或 MIMO 用块公式且不对消；improper 操作数允许到给定相对阶，分析算子仍拒绝；代数环用尺度无关的 rcond | 否则“把控制器接到对象上”只能手算，或者靠一个规范里不存在的对象句柄 |
-| 2 | F-7：`x-aeoi-provenance` 分为 `user`（引用核对）、`convention`（规范默认值，必须回显）、`supplied`（必填、无默认、不核对引用）。`_user_quote` 仍只覆盖 `user` | 阶跃阈值和 `sign = -1` 是定义，不是测量；Padé 的 θ 常常是算出来的，原话里没有这个数，硬要引用会把正确调用挡掉。阶次也没有安全默认，但不能因此去核对一句不存在的原话 |
-| 3 | I-10–I-12：stepinfo 的时间量是网格定义，量化误差单独报告；不稳定与“窗口内没调节完”分开，后者不得写成 Inf | 把 ≤ dt 的定义差算进 T2，或者把没跑够的仿真说成永不调节，都会让下游误判 |
-| 4 | A-1–A-3：近似算子必须给出 `approximation`（匹配阶、下一阶系数、写明网格的 certificate、没有证明时 bound 为 null）。收据只在有近似时多一个 `evidence.approximation`。Padé 用归一化后的 11.3.1 递推 | 未归一的乘积在 N ≳ 10 时会冲掉 f64 有效位；把逼近误差写进系数舍入界会让收据声称“算准了延迟” |
-| 5 | A-4：不实现 pidtune。将来的整定算子必须声明对象类、指标和唯一性 | 没有这三条，整定只是某个实现的隐藏默认 |
-| 6 | 新算子 `control.lti.series`、`control.lti.parallel`、`control.lti.feedback`（T1 / T1 / T2，B 级）、`control.design.pid`（T1，B）、`control.lti.stepinfo`（T2，时间量为网格定义，B）、`control.lti.pade`（T1 只约束系数，B）。无矩阵输入的 pid 与 pade 在 parity.yaml 声明 memory-order 不适用 | 见 `reports/design-pilot.md`：这四块挡住的设计题最多 |
-| 7 | §0：memory-order 用例只要求输入里真有矩阵的算子 | 给 Padé 硬加一个矩阵参数并不能测出列优先错误 |
-| 8 | 8.4 与 12.2：设计循环改用这些算子；`pidtune`、带宽、控制器离散化、MIMO 裕度留到下一步 | 试点的排序 |
-
-### v0.3.4-draft（2026-11-23）
-
-起因：问答评测只检查"会不会调用对的算子"。设计评测让模型迭代出一个控制器再提交，用独立评分器打分。线协议标识保持 `aeoi/0.3`，不新增算子，已发布示例的 `output_hash` 不变。
-
-| # | 改动 | 原因 |
-|---|---|---|
-| 1 | 8.4 增加设计评测：`aeoi-web design`、`submit_design`、EngDesign（MIT，原文入库）与 ControlEval（无许可证，运行时下载，不入库） | 问答对了不等于能设计 |
-| 2 | 循环有单次请求时限、单题时限、429/5xx 重试预算；每日配额立即停止；报告在每题开始和每个模型回合后落盘。离线路径 `mock:design` 与 `mock:script` | 一次 ControlEval 试跑在空报告上停了约一小时：单次 HTTP 超时 180 秒再重试 6 次，报告却要等整道题结束才写 |
-| 3 | XG_02 按细则给部分分（带宽 40、增益裕度 30、相位裕度 30）；非有限裕度写成 `"Inf"` / `"NaN"` 而不是 JSON null | 试点里一个稳定但带宽不对的控制器被打成 0 分；无穷相位裕度在报告里变成 null，看起来像缺字段，比较时却已经算通过 |
-| 4 | 11 章、12.2 与 `reports/design-pilot.md`：7 道 EngDesign 试点的失败分类，以及按影响排序的缺失能力（串联/反馈、pid、闭环 stepinfo、Padé、带宽、控制器 c2d、MIMO 裕度）。这些算子不在本版实现 | 0/7 通过。多数是模型没交或交错，不是评分器把对的判错；缺的是让模型少做多项式手算的算子 |
-
-### v0.3.3-draft（2026-11-23）
-
-起因：让每个成功结果自带"凭什么可信"的机器可读证据，并能被任何人离线重放复核（想法借鉴 bicmath（MIT）的可验证结果与 matlab-mcp-extensions 的"没有证据不声称成功"，未复制代码）；同时补齐许可证。线协议标识保持 `aeoi/0.3`：`receipt` 是新增的可选信封字段（旧消费者忽略即可），`W.EVIDENCE.POSTCONDITION_FAILED` 是新增 warning；12 个算子的计算与 `result` 不变（所有示例 `output_hash` 不变），manifest 只增加描述性的 `receipt` 块，因此算子版本不变（同 v0.3.1 增加 description 的先例）。
-
-| # | 改动 | 原因 |
-|---|---|---|
-| 1 | 新增 4.3 结果收据（R-1 – R-8）、信封 `receipt`（`$defs/Receipt`）、manifest `receipt` 块；12 个算子都声明了方法 id、前提（含由谁保证）、精确性类与后置条件 | `trust` 只给数值诊断，没有说明前提由谁保证、结果属于哪个请求，也没法复核 |
-| 2 | 两层指纹：request（跨平台、跨编码稳定）与 result（逐位相同才相同）；平台与 build 只写在 `replay` 中 | 原生与 wasm 只有约 3/4 的结果逐位相同；把平台放进指纹会使跨平台复核恒失败 |
-| 3 | `verify` 重放比较（bitwise / 容差类 / 篡改 / 请求不符 / 错误码）；MCP `aeoi_verify`（C-6）、`aeoi-call verify`、wasm `verify`、网页"重放验证"按钮；CI 在 wasm 中重放全部原生示例信封 | 复核不依赖信任算子提供方 |
-| 4 | E-11 没有证据不声称成功；E-7a 框架级码；系统提示词第 6 条与收据短形式（R-7） | 防止 Agent 把"算完了"说成"算对了"，以及把 `caller` 前提当作已检查 |
-| 5 | 许可：代码 MIT OR Apache-2.0，规范与文档 CC-BY-4.0；`THIRD_PARTY_NOTICES.md` | 之前仓库没有许可文件 |
-
-### v0.3.2-draft（2026-11-23）
-
-起因：与 tpt-control 的交叉验证（`reports/parity-tpt-control.md`）发现 `lqr` 0.2.0 在 cond(R) = 1e12 时前向误差 3e-5，并把 7/10 个合法问题误报为 `E.DOMAIN.HAMILTONIAN_IMAG_AXIS_EIG`；离散 `lyap` 在 ρ(A) → 1 时误差 6e-9。线协议标识保持 `aeoi/0.3`；input schema 不变，output 只增加 trust 字段。按 G-2 精度改进为 MINOR：`control.design.lqr` 0.2.0 → 0.3.0，`control.math.lyap` 0.3.0 → 0.4.0；其他算子（含 `dlqr`）不变。
-
-| # | 改动 | 原因 |
-|---|---|---|
-| 1 | `lqr` 虚轴检验在辛对角平衡后的 H̃ 上做，只作怀疑；由 PBH 不可观检验确认，或在求解后由闭环稳定裕度判定（10.3、X-4a 补充） | ‖H‖₁ 被 ‖BR⁻¹Bᵀ‖ 主导，阈值随 R 的尺度变化；复现 A = diag(−0.1, −1)、B = diag(0.1, 1)、Q = I、R = diag(1, 1e-12) 被误报 |
-| 2 | `lqr` 的修正改为 K 形式 Newton–Kleinman 缺陷校正：Cholesky 求 K 并迭代精化、Dot2 补偿残差、Bartels–Stewart 解 ΔX，n ≤ 200、至多 20 步，按 ‖ΔX‖/‖X‖ 停止；输出 K 由 S 加未施加的修正量求得 | 原实现的 S·G·S 残差在 cond(R) 大时到舍入底；Kronecker 形式 O(n⁶) 只能用于 n ≤ 32 |
-| 3 | `lyap` 0.4.0：近奇异时（‖R‖/(sep·‖X‖) > 1e-12）用补偿残差做至多 4 步迭代精化，复用 Schur 分解；trust.convergence 与 `residual.abs_fro_compensated` | 离散 ρ → 1、连续近虚轴时 f64 残差的舍入被 1/sep 放大 |
-| 4 | 新增 V-3a（golden 的版本归属）与高精度参考引擎 `golden/mpmath/`：`gen_golden_mpmath.py` 生成 28 例（lqr 0.3.0：16，lyap 0.4.0：12），`parity_hp.rs` 用 1e-12 容差检验；`lqr` 0.3.0 / `lyap` 0.4.0 的 python-control golden 沿用 0.2.0 / 0.3.0 目录，parity.yaml 写明 | 病态用例上 scipy 本身的误差（最大 3.7e-9）大于本实现，不能再作这类用例的参考 |
-| 5 | 新示例 `lqr/request.ill_conditioned_R.json`（复现例）与 `lyap/request.discrete_near_unit.json`（解析解 X = I/(2⁻²⁰ − 2⁻⁴⁰)） | 回归 |
-| 6 | wasm/原生 parity：lqr 由 35/74 逐位相同（最大差 4.7e-6，1 例 warning 不一致）变为 91/91 逐位相同；CI 的 `AEOI_PARITY_ALLOW_MISMATCH` 由 1 改为 0 | 结果收敛到真值的 f64 舍入后，平台间舍入路径的差异消失 |
-
-实测（50 位真值，`tools/hp_compare.py`，误差 = max|Δ|/max|ref|）：
-
-| 族 | 用例 | 0.2.0 / 0.3.0 | 0.3.0 / 0.4.0 | scipy |
-|---|---|---|---|---|
-| lqr cond(R) 1e10–1e12 | 8 | 2.3e-4，3 例误报错 | ≤ 2.9e-16 | 3.7e-9 |
-| lqr cond(R) 1e6–1e9（同 python-control 病态 R 用例） | 5 | 2.5e-6 | 0 | 3.2e-13 |
-| lqr cond(R) 大 + 交叉项 N | 2 | 8.6e-7 | 0 | 1.1e-11 |
-| lqr 复现例 | 1 | `E.DOMAIN.HAMILTONIAN_IMAG_AXIS_EIG` | 0 | — |
-| lyap 离散 ρ = 1 − 1e-4 … 1 − 1e-8 | 8 | 8.2e-8 | 6.7e-15 | 6.2e-9 |
-| lyap 连续近虚轴 | 3 | 1.8e-10 | 4.4e-15 | 7.5e-9 |
-| lyap 离散非对称 Q | 1 | 1.0e-11 | 0 | 1.6e-12 |
-
-python-control golden 上 `lqr` 的输出普遍有末位变化（修正后的 S、K 是真值的 f64 舍入），最大变化在病态用例上（向真值靠近）；已发布的 lqr success 示例 S、K 逐位不变；`lyap` 未触发精化的用例逐位不变。
-
-### v0.3.1-draft（2026-11-22）
-
-起因：新增 LLM 端到端测试台 `aeoi-web`（8.4），用 Gemini 函数调用实际驱动 12 个算子后，发现规范里有几处对 LLM 不够清楚。线协议标识保持 `aeoi/0.3`，所有改动向后兼容（只增加描述、改进错误详情）；已发布示例的成功响应与 `output_hash` 不变。
-
-| # | 改动 | 原因 |
-|---|---|---|
-| 1 | 新增 3.11 F-1：input schema 每个顶层属性 MUST 有 description（含义、维数、单位、默认值、枚举逐值说明）；12 个算子的 input schema 已补齐（如 `lqr.A` "状态矩阵 A，[n,n]"、`c2d.ts` "用户未给出时必须询问"、`lyap.type` 写出方程） | v0.3 的 `A`、`B`、`Q`、`R`、`system`、`method`、`type` 等没有描述；模型只能从字段名猜维数与方程约定 |
-| 2 | F-2：`x-aeoi-shape-constraints` 等扩展关键字 MUST 同时写进 description | Gemini 的函数参数只接受 OpenAPI 子集，扩展关键字被丢弃，维数约束对模型不可见 |
-| 3 | F-3：`E.VALIDATION.SCHEMA` 的 violations MUST 是叶子级；`oneOf` 失败按判别字段（`kind`/`mode`）或最少违规分支递归诊断；`message` 带首条违规（参考实现 `aeoi_core::schema::diagnose`） | 模型把 tf 的 `ts` 漏掉、把矩阵写成嵌套数组时，原错误只有"is not valid under any of the schemas listed in the 'oneOf' keyword"并附上整段输入，模型无从修正 |
-| 4 | F-4：嵌套数组矩阵 → row-major DenseMatrix 的无损补丁（`modify_input`，`requires_user_confirmation: false`）；一维数组不自动补丁 | 嵌套数组是 LLM 最常见的矩阵写法；补丁可直接应用、数值不变；向量方向有歧义，不能代填 |
-| 5 | F-5：有物理含义且无法安全默认的输入（`ts`、频率单位）MUST 必填，缺失时只给 `ask_user` | 评测中的"缺采样周期"陷阱：算子或绑定层若代填默认值，会把猜测包装成结果 |
-| 6 | F-6 与 8.4：LLM 绑定层可收窄输入面（DenseMatrix only、隐藏 exec 等），MUST 公开有损映射；回传模型的长数组可抽样并标注 `_downsampled`，用户可见信封不变 | 给出 Gemini OpenAPI 子集的完整映射表；控制 token（上千点的时间响应原样回传会占用数千 token） |
-| 7 | Agent 循环：模型返回空回合（如 Gemini `finishReason = MALFORMED_FUNCTION_CALL`）时，最多 2 次追加用户提示要求按 schema 重写调用或向用户提问，计入报告 `nudges_after_empty_turn` | 评测中 `gemini-3.1-flash-lite` 在 ctrb 题上一次生成了不合法的函数调用，原循环直接以空答案结束 |
-| 8 | `ctrb_obsv.system` 描述写明：只判断可控性时 C、D 不影响结果，可取 C = [[1,0,…]]、D = [[0]] | 用户只给 A、B 时，模型因 ss 要求 C、D 而放弃调用 |
-| 9 | 3.11 条款由 M-1 – M-6 改名为 F-1 – F-6 | 与第 2 章 manifest 规则 M-1 – M-6 重号 |
-| 10 | F-5 改写为规范性的四条（a–d）：input schema 用 `x-aeoi-provenance: "user"` 标出不能假设的输入（`c2d.ts`），description 写明"先询问"；绑定层与系统提示词 MUST NOT 代填；绑定层 SHOULD 要求 `_user_quote` 引用并核对；新错误码 `E.VALIDATION.UNGROUNDED_INPUT`（绑定层，remediation 只有 `ask_user`） | 评测中 `gemini-3.1-flash-lite` 遇到缺采样周期的题时自行假设 Ts = 0.1 s 并给出"结果"。另外发现 `c2d.ts` 原有的短描述"采样周期，unit s"挡住了 `write_manifests.py` 里带"必须询问"的描述（只在没有描述时才补），这一句此前从未到达模型 |
-| 11 | `ctrb_obsv` 的 manifest 描述以用途开头（"判断是否可控、是否可观……只给 A、B 时也用本工具"），system 描述给出补零的 C、D 的 DenseMatrix 写法；系统提示词的工具选择表同步 | `ctrb-01` 只给了 A、B，模型构造 C、D 时生成了不合法的函数调用 |
-| 12 | 评测（8.4）：回答评分识别 LaTeX、unicode、`±`、分数与 `√`，容差取相对 2% 与印出精度半个末位中的较大者，去掉一律 1e-3 的绝对容差（会把 0.004 判成 0.0048）；澄清题要求最终消息是一个问题；新增 `aeoi-web rescore` 用当前评分器重算旧报告（重新执行记录的工具请求，不调用模型） | 第一轮的 4 道失败中有 2 道是评分器误判 |
-| 13 | OpenRouter 免费模型的真实评测与每日额度识别（`free-models-per-day` → 立即停止并写 `aborted`） | 第一轮只用 Mock 测过 OpenAI 兼容 provider |
-| 14 | 8.2 管线第 1 步、8.3 绑定表、第 11 章（结构、运行、测试、限制）、12.2 下一步（评测、Tauri）更新 | 反映 `aeoi-web` 与上述改动 |
-| 15 | 新增 8.5 浏览器绑定与 8.3 表中一行：算子与工具桥编译为 WebAssembly，GitHub Pages 发布，BYOK（key 只在浏览器 `localStorage`，直接发给 provider） | 让没有 Rust 工具链的人也能试用测试台 |
-| 16 | 参考实现拆出 `aeoi-bridge`（schema 转换、工具桥、provider 线格式、评分；无 tokio/reqwest），`aeoi-web` 与 `aeoi-wasm` 共用 | 保证浏览器版与本地版的函数声明、F-5 核对、系统提示词是同一份代码 |
-| 17 | 2.1 确定性说明："平台"含 wasm32；wasm 构建的 `platform` 记为 `wasm32-unknown`（`aeoi_core::operator::platform()`，目标三元组无 OS 时补 `unknown`）；`platform_bitwise` 不延伸到 wasm ↔ 原生 | 实测 651 例中 66% 逐位相同，其余末几位不同（Rust `libm` vs glibc、无 AVX/FMA 内核） |
-| 18 | 8.5：基于阈值的 warning 可能跨平台翻转；解不唯一的算子（多输入 `place`）跨平台比较 MUST 用不变量 | parity 中 1 个病态 `lqr` 用例的 `W.NUMERICAL.ILL_CONDITIONED` 只在原生出现；多输入 `place` 的 K 相差 2.4e-2 但闭环极点相同 |
-| 19 | `aeoi-core` 用 `web-time` 代替 `std::time::Instant` | `Instant::now()` 在 `wasm32-unknown-unknown` 上 panic |
-| 20 | Plotly 改为仓库内置（basic 包，MIT），本地版与浏览器版都不走 CDN | BYOK 页面不应加载第三方脚本；离线可用 |
-
-### v0.3-draft（2026-11-21）
-
-新增 9 个控制算子（10.4–10.12），实现过程中暴露的规范缺口与对应修订：
-
-| # | 改动 | 原因 |
-|---|---|---|
-| 1 | spec 标识升为 `aeoi/0.3`，schema `$id` 升为 `/0.3`；新算子版本 0.3.0，v0.2 三个算子保持 0.2.0（行为与输出逐位不变，示例 `output_hash` 未变） | 新增错误码、输出约定与比较规则属实质性改动；信封结构未变 |
-| 2 | 新增 3.10 多输出结果约定（R-1 – R-4）：具名字段、复数集合按集合比较、`"Inf"`/`"NaN"` 与 `null` 的区分、"代表值"必须同时返回全部候选 | `poles_zeros`、`margin`、`ctrb_obsv` 都有多个输出；`margin` 的 GM/PM 选择规则会让 Agent 误解，必须给出全部交越点 |
-| 3 | 返回系统的算子用 `result.system`（完整 LtiSystem，可直接串联）；新增 `realization` 枚举；ss→tf 约定写明（R-5 – R-7） | 状态空间实现不唯一，不写明则 Agent 无法判断两个 ss 是否等价；首项系数的浮点残留曾产生伪前导 0 |
-| 4 | zpk 在 v0.3 只表示 SISO；ss→zpk 的增益取 Markov 参数（R-8） | MIMO 的零极点表示需要逐元素或 Smith–McMillan 形式，v0.3 不定义 |
-| 5 | 零点定义为不变零点；非满法秩 MUST 报 `E.DOMAIN.DEGENERATE_SYSTEM`，不得返回空集（R-9） | 初版对 C = 0 的系统返回空零点集，被 parity 用例发现——"没有零点"与"零点无定义"对 Agent 是完全不同的结论 |
-| 6 | 离散时间约定 D-1 – D-6：频段、DC 增益在 z = 1、脉冲幅值 `discrete_scaling`、D·δ 的处理、c2d 公式、离散 margin 的搜索区间与端点 | v0.2 只有 `step` 一个离散相关约定；脉冲幅值（1/ts 还是 1）与 Nyquist 端点在不同软件间不一致，必须显式 |
-| 7 | 选项枚举 O-1 – O-3：改变数学定义的选项必须是带默认值的枚举并回显；矛盾组合报 `E.VALIDATION.OPTION_CONFLICT`；方程符号写明 | `c2d` 的 `prewarp_frequency` 只对 tustin 有意义，静默忽略会给出错误模型；Lyapunov 方程的符号约定在 scipy 与 python-control 之间不同 |
-| 8 | 登记新错误码 `OPTION_CONFLICT`、`RANK_DEFICIENT`、`MIMO_NOT_SUPPORTED`、`DEGENERATE_SYSTEM`、`NOT_CONTINUOUS`、`NOT_CONTROLLABLE`、`POLE_MULTIPLICITY`、`LYAP_SINGULAR`、`SYMPLECTIC_UNIT_CIRCLE_EIG` 与 11 个 warning（5.1） | 新算子的失败模式；全部是 DOMAIN/VALIDATION，告诉 Agent 调数值参数无效（X-1） |
-| 9 | V-6 增加根、系数、DC 增益、离散化的条件数缩放规则 | 多项式根与由特征值展开的系数天生病态，固定 rtol 会在合法用例上误报，或者被迫放宽到失去意义 |
-| 10 | 新增 V-5a：非唯一设计结果（MIMO `place` 的 K）用参考请求重算 eig(A − BK) 比较 | 初版只比较算子自报的达成极点，column-major 错误请求同样"配置成功"，内存序回归断言失败——这正是第 0 章警告的静默错误 |
-| 11 | 新增 V-9（参考值后处理须写明）与 V-10（参考是局部优化结果时的比较规则） | python-control 无 slycot 时把无穷远零点返回为 ~1e17 的有限数；其离散稳定裕度来自 L-BFGS-B，自身只有 ~1e-4 的频率精度 |
-| 12 | T2/T3 容差类的适用算子表扩充（7.2） | 覆盖新算子 |
-
-实现中发现并修正的问题：
-
-| # | 改动 | 原因（发现过程） |
-|---|---|---|
-| 13 | `c2d` tustin：Dd = D + ½·C·Bd（初版多乘了 T） | parity：D ≠ 0 的 18 个 tustin 用例偏差 ~0.1–1 |
-| 14 | 离散 `margin` 的稳定裕度候选加入 θ = 0、π 端点（D-6） | parity：6 个离散用例 python-control 的最小值在 Nyquist 端点 |
-| 15 | 实 Schur 分解改为带迭代上限与确定性回退的 `schur_robust`，`eigenvalues()` 与 `lyap` 共用 | nalgebra 0.33 的 QR 迭代在偶多项式的伴随矩阵上死循环（`margin` 调用挂起）；v0.2 算子示例输出逐位不变 |
-| 16 | `place` 在 m = n 时直接取酉矩阵 X | 初版的初始向量选择使 X 奇异，1 个 MIMO 用例报 `E.NUMERICAL.SINGULAR` |
-| 17 | `lyap` 的 Schur 不收敛映射为 `E.NUMERICAL.NO_CONVERGENCE`（不再与奇异混为一谈） | 区分 DOMAIN 与 NUMERICAL（X-1） |
-| 18 | `impulse` 与 `step` 共用实现（`control.lti.impulse` 为独立 manifest），warning 文案按算子区分 | 网格、规模限制、ZOH 递推完全相同；`step_info` 文案不适用于冲激响应 |
-| 19 | 示例目录新增 `reference.python-control.json`（示例请求的 python-control/scipy 参考值）；`regen_examples.py` 覆盖全部算子与全部 `request*.json` | 让每个示例都能独立核对，且 MCP 端到端测试按已发布响应的 `output_hash` 比对 |
-
-### v0.2-draft（2026-11-21）
-
-规范性改动（PART A，按需求补充）：
-
-| # | 改动 | 原因 |
-|---|---|---|
-| 1 | spec 标识升为 `aeoi/0.2`，schema `$id` 升为 `/0.2`，三个算子升为 0.2.0 | 以下多项为破坏性改动（G-4） |
-| 2 | 新增第 0 章醒目的内存序规则与 3.4 节；MATLAB 生成 MUST `reshape(A.',1,[])`；parity 集 MUST 含 `memory_order_nonsymmetric` 用例并断言 column-major 请求被检出；修正 `matlab/gen_golden_bode.m`（加 `aeoi_dense` + 往返自检 + 非对称 ss 用例） | v0.1 只说了 row-major，没有警告 MATLAB 侧的静默转置；对称矩阵用例无法发现此错误 |
-| 3 | 新增 `SparseMatrix`（CSR/CSC）与校验规则（3.5）；manifest 新增 `sparse_support`（M-9）；新错误码 `E.VALIDATION.SPARSE_STRUCTURE`、warning `W.PERFORMANCE.SPARSE_DENSIFIED` | 用户要求；工程矩阵常为稀疏 |
-| 4 | 新增 `DenseMatrixB64`、`MatrixRef` 与规模阈值（3.6）、安全规则（3.8）；manifest 新增 `encodings`、`limits`（M-10）；新错误码 `DIGEST_MISMATCH`、`REF_UNSUPPORTED`、`REF_FORBIDDEN`、`E.RESOURCE.INPUT_TOO_LARGE`；`exec.output_encoding` | 用户要求；v0.1 开放问题 1 |
-
-实现中发现并修正的问题（PART B）：
-
-| # | 改动 | 原因（发现过程） |
-|---|---|---|
-| 5 | v0.2 的 `ref` 只支持 data root 下的 `file://`（L-3、L-4） | 实现时确认 MCP resources 是 server→client 方向，客户端无法借此上传大输入；网络 URI 有 SSRF 风险 |
-| 6 | 哈希改为对数组内容摘要计算（3.7、P-2） | 否则同一矩阵用 json/b64/ref 传入会得到不同 `input_hash`，重放与缓存失效 |
-| 7 | 三个算子 `determinism` 由 `bitwise` 改为 `platform_bitwise`；"平台"定义含 CPU 特性；`reproducibility` 新增 `cpu_features`；P-3 允许做不到锁定内核时降级声明 | nalgebra 的 matrixmultiply 在运行时按 CPU 特性分派内核，跨机器不能保证逐位相同 |
-| 8 | 后端由 SLICOT FFI 改为纯 Rust；`lqr` 算法由有序 Schur 改为矩阵符号函数 + Newton–Kleinman（10.3），manifest 的 provenance/backend 相应更新 | nalgebra 没有有序实 Schur 分解；保持纯 Rust、无 Fortran 依赖 |
-| 9 | 阶跃指标明确为网格定义、不插值（10.2）；v0.1 示例的 info 数值作废 | v0.1 示例的 info 来自 python-control 自动网格，与请求的 dt = 0.01 网格不符 |
-| 10 | `step` 规模错误拆分为 `COMPUTE_LIMIT` 与 `OUTPUT_TOO_LARGE`（X-4b） | v0.1 示例对 dt = 1e-7 给出"抽样返回"的 remediation，但抽样不减少计算量，是无效修复 |
-| 11 | `call_operator` remediation MUST 引用已注册算子（X-9）；删除 v0.1 示例中的 `ctrb_decomp` | v0.1 示例引用了不存在的算子，Agent 照做会失败 |
-| 12 | `bode` 显式频点 MUST 严格递增；相位约定明确（`branch_center_deg` + numpy 一致的 unwrap）；`Hz` 输入、`rad/s` 输出 | unwrap 结果依赖频点顺序；v0.1 开放问题 4 |
-| 13 | 多项式前导零由报错改为去除 + warning（T-6） | 前导零常由上游数值计算产生，报错对 Agent 不友好 |
-| 14 | 离散系统 `step` 要求 dt = ts；网格点数公式 N = floor(t_final/dt + 1e-9) + 1 | 避免 t_final/dt 的浮点舍入导致多/少一个点；离散系统没有"任意 dt"的定义 |
-| 15 | golden 目录包含引擎名 `golden/<engine>/<op>/<ver>/`（V-3） | 防止把 python-control 数据误当作 MATLAB ground truth |
-| 16 | `validate()` 返回解析后的 Input（8.2） | 解析（b64 解码、稀疏稠密化）与校验交织，分开会重复解码 |
-| 17 | 信封新增必填 `dry_run` 与 `estimate`（E-9）；`trust`/`reproducibility` 在错误信封中可为 null（E-3） | v0.1 提到 dry_run 但信封中无字段表达；错误时不存在有意义的 trust |
-| 18 | `trust.credentials` 在 L3 以下可为 null；三个算子当前精度等级 B | 尚无 MATLAB golden，不能声称 A 级 |
-| 19 | parity 容差的两种放宽规则（V-6）：cond(S) 缩放与"自报估计 × 10"，且须单独统计 | 近极点频点、病态 R 用例在固定容差下不可能通过，需要有据可查的放宽规则 |
-| 20 | 新增 warning `W.DOMAIN.ZERO_DC_GAIN`（零 DC 增益通道 info 为 null）及其余 v0.2 码（5.1 表） | python-control 对零 DC 增益通道的 step_info 会除零并给出无意义数值 |
-| 21 | `step` 输出 `t`/`y` 可为 null（`return_samples: "none"`），新增 `n_grid_points` | 支持只要指标的调用，配合 `OUTPUT_TOO_LARGE` 的 remediation |
-| 22 | 数值判据 MUST 与尺度无关（X-4a）；`lqr` 虚轴判据由 `1e-8·‖H‖₁` 改为 `10³·u·‖H‖₁`；cond(R) 告警阈值由 1e10 降为 1e8 | parity 测试中 3 个 cond(R) = 10⁸–10⁹ 的合法用例被误报为 `HAMILTONIAN_IMAG_AXIS_EIG`；实测 cond(R) ≥ 10⁸ 时精度已明显下降 |
-| 23 | `trust.checks` 只允许布尔值（E-4），数值诊断移至 `residual` | 实现初版把对称性偏差数值放进 `checks`，被信封 schema 拒绝（示例测试发现） |
-| 24 | 算子 MUST 在 manifest 声明所有 warning（E-7），并由测试断言所有实际返回的 code 已声明 | 实现中发现 `step` 会返回 manifest 未声明的 `E.VALIDATION.RANGE` 与 `W.DOMAIN.ZERO_DC_GAIN` |
-| 25 | `LtiSystem` 的 `ts` 与 `time_unit` 必填 | 避免连续/离散的静默假设（与 U-4 一致） |
-| 26 | MCP 映射：tool result 的 `content` 同时给摘要与信封 JSON 文本（E-8）；`_meta` 增加 `aeoi/spec`、`aeoi/manifest`；协议版本协商（C-5）；JSON-RPC 错误码约定（C-1） | 实现 `aeoi-mcp` 时确定的细节 |
-| 27 | 绑定层：`aeoi-mcp` 为手写最小 stdio 实现，不依赖 `rmcp`（8.3） | 依赖最少、兼容 Rust 1.85；`rmcp` 可在 HTTP 传输时再引入 |
-
-### v0.1（2026-11-21）
-
-初稿：manifest、类型、信封、错误、可复现性、验证凭证、MCP 映射、治理与三个示例算子。原文见 `spec-v0.1.md`。
+见 [`CHANGELOG.md`](CHANGELOG.md)。
 
 ## 附录 A：文件清单
 
 ```
-ai-operator-spec/
-├── spec-v0.4.md                     本文（由 spec-src.md 经 build_spec.py 内联示例文件生成）
-├── spec-v0.3.md                     v0.3.6-draft 的快照（历史版本，不再重新生成）
-├── spec-v0.2.md / spec-v0.1.md      历史版本
-├── spec-src.md                      本文源稿（file / jsonc 占位符）
-├── schemas/                         common / manifest / envelope / error（/0.4）
-├── examples/<id>/                   12 个算子：manifest、input/output schema、request(.error/.nonsymmetric)、
-│                                    response(.success/.error/.nonsymmetric)、parity.yaml；v0.3 算子另有 reference.python-control.json
-├── golden/python-control/<op>/<ver>/<sha256>.json + INDEX.json   264（0.2.0）+ 353（0.3.0）个 python-control 参考用例（NOT MATLAB）
-├── golden/mpmath/<op>/<ver>/<sha256>.json + INDEX.json   28 个 50 位 mpmath 高精度参考用例（lqr 0.3.0：16，lyap 0.4.0：12）
-├── gen_golden_mpmath.py             高精度 golden 生成器（复用 tools/xcheck-tpt/analyze.py 的 50 位求解）
-├── reports/parity-mpmath.json       高精度 parity 报告（cargo test 生成）
-├── reports/receipts.json            收据测试报告（golden 成功/错误数、各算子 claim 分布；cargo test 生成）
-├── reports/receipts-wasm-verify.json  原生示例信封在 wasm 中重放验证的结果（verify_examples.mjs）
-├── rust/aeoi-core/src/receipt.rs    收据构造、指纹、比较与 verify（4.3）
-├── LICENSE-MIT、LICENSE-APACHE、LICENSE-CC-BY-4.0、THIRD_PARTY_NOTICES.md（v0.3.3；tools/gen_third_party.py 重新生成 crate 列表）
-├── tools/xcheck-tpt/ + reports/parity-tpt-control.{json,md}   与 tpt-control 的交叉验证（开发用，不是 workspace 成员）
-├── tools/hp_compare.py              golden_eval 输出与高精度 golden 的逐族对比（新旧版本 before/after）
-├── reports/parity-python-control.json / parity-python-control-b2.json   parity 测试报告（cargo test 生成）
-├── reports/mcp-session.jsonl        脚本化 MCP 会话记录（12 个工具）
-├── rust/                            cargo workspace：aeoi-core、aeoi-control、aeoi-mcp、aeoi-bridge、aeoi-web、aeoi-wasm（第 11 章、8.4、8.5）
-├── pages/                           浏览器版测试台与 build.sh（8.5；工作流在 .github/workflows/pages.yml）
-├── reports/parity-wasm-vs-native.json     wasm 与原生的逐例比较
-├── eval/questions.zh.json + gen_questions.py   LLM 评测题库（29 题）
-├── reports/eval-<model>.json         LLM 评测报告（aeoi-web eval 生成）
-├── matlab/gen_golden_bode.m         MATLAB golden 生成脚本（已修正内存序；未在 MATLAB 中运行）
-├── write_manifests.py               examples/*/manifest 与 schema 的源
-├── gen_golden_pycontrol.py / gen_golden_pycontrol_b2.py   python-control golden 生成器（v0.2 / v0.3 算子）
-├── make_examples_b2.py              v0.3 算子的示例请求、参考值与 parity.yaml
-├── regen_examples.py                用 Rust 输出生成示例响应
-├── conformance/                     跨实现一致性套件 v0.1（9.4）：aeoi_conformance.py（运行器）、aeoi_hash.py、impls/python_scipy/（只含 lyap 的第二实现）、tests/（变异测试）
-├── build_spec.py                    spec-src.md → spec-v0.4.md
-├── eval/gen_questions.py            生成 eval/questions.zh.json（LLM 评测题库）
-├── validate_examples.py             独立 Python jsonschema 校验
-├── mcp_session_demo.py              脚本化 MCP 会话
-├── compute_examples.py / computed_values.json   v0.1 的 python-control 计算（examples 测试仍用其作对照）
-└── legacy/                          v0.1 的 build_examples.py 与 spec 源稿
+spec-src.md / spec-v0.4.md     核心规范（第 0 – 9、12 章）；build_spec.py 由源稿生成，并检查 profiles/ 里的链接
+profiles/10.NN-<op>.md         算子契约（第 10 章，规范性）
+docs/reference-impl.md         参考实现说明（8.2 – 8.5、第 11 章，含 RI-1 – RI-3）
+CHANGELOG.md                   改动历史（原第 13 章）与已解决的开放问题
+roadmap/                       目标函数与内核清单、依赖层（12.3）
+schemas/                       common / manifest / envelope / error（/0.4）
+examples/<op>/                 manifest、input/output schema（write_manifests.py 生成）、示例请求与响应、parity.yaml
+golden/{python-control,mpmath}/<op>/<ver>/  参考用例（参考值来自 python-control / numpy / scipy / mpmath，不是 MATLAB）
+gen_golden_*.py                golden 生成脚本
+regen_examples.py              用参考实现重写示例响应
+validate_examples.py           用 Python jsonschema 校验全部示例与 golden 请求
+conformance/                   跨实现一致性套件（9.4）与 Python 第二实现
+rust/                          参考实现（docs/reference-impl.md）
+reports/                       parity、收据、一致性与评测报告
+spec-v0.1.md – spec-v0.3.md    历史版本
 ```

@@ -3,10 +3,10 @@
 给在本仓库工作的 AI agent（Claude Code、Codex 等）的入口说明。完整流程见 [`.claude/skills/aeoi-operator-workflow/SKILL.md`](.claude/skills/aeoi-operator-workflow/SKILL.md)；本文件只列最要紧的几条。
 
 ## 这是什么
-AEOI（AI Engineering Operator Interface Spec）是叠加在 MCP 之上的工程计算语义层：规范（`spec-src.md` → `spec-v0.4.md`）、Rust 参考实现（`rust/`）、golden 参考数据（`golden/`）、示例（`examples/`）和跨实现一致性套件（`conformance/`）。参考值来自 python-control / numpy / scipy / mpmath，**不是 MATLAB**。
+AEOI（AI Engineering Operator Interface Spec）是叠加在 MCP 之上的工程计算语义层：规范（核心协议 `spec-src.md` → `spec-v0.4.md`，算子契约 `profiles/`，参考实现说明 `docs/reference-impl.md`，历史 `CHANGELOG.md`）、Rust 参考实现（`rust/`）、golden 参考数据（`golden/`）、示例（`examples/`）和跨实现一致性套件（`conformance/`）。参考值来自 python-control / numpy / scipy / mpmath，**不是 MATLAB**。
 
 ## 当前状态从哪里看
-- 规范第 13 章 Changelog 的最新一节（做了什么、为什么、结果数字）和 12.2「下一步」。
+- `CHANGELOG.md` 的最新一节（做了什么、为什么、结果数字）和规范 12.2「下一步」。
 - 有 claude.ai Project 时，另有交接文档 `claude/aeoi-handoff.md`（未提交的改动与待办）。
 
 ## 必须遵守

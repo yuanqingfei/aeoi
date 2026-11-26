@@ -253,6 +253,12 @@ def main():
         out.append(f"| {c} | {a} | {b} |")
     out.append(f"| 合计 | {len(T)} | {done}（{round(100*done/len(T))}%） |")
     open(os.path.join(HERE, "layers.md"), "w").write("\n".join(out) + "\n")
+    # short summary for spec 12.3 (the full tables stay in layers.md)
+    summ = [out[0], "| 类别 | 目标 | 已覆盖 |", "|---|---|---|"]
+    for c, (a, b) in cats.items():
+        summ.append(f"| {c} | {a} | {b} |")
+    summ.append(f"| 合计 | {len(T)} | {done}（{round(100*done/len(T))}%） |")
+    open(os.path.join(HERE, "summary.md"), "w").write("\n".join(summ) + "\n")
 
     # ---- mermaid (kernel graph + operator counts per kernel) ------------
     mm = ["graph BT"]

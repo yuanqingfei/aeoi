@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""spec-src.md → spec-v0.4.md.
+"""spec-src.md → spec-v0.4.md, and a link check over the split documents (profiles/, docs/, CHANGELOG.md).
 {{file:path}}  inlines a file verbatim.
 {{jsonc:path}} inlines a JSON file re-indented, with numeric arrays longer than 16 elements shortened
                for readability (marked "…(+N)…"; the full content is in the file)."""
@@ -30,3 +30,17 @@ def sub(m):
 out = re.sub(r"\{\{(file|jsonc):([^}]+)\}\}", sub, src)
 (root / "spec-v0.4.md").write_text(out)
 print("spec-v0.4.md", len(out.splitlines()), "lines")
+
+# every relative Markdown link in the split documents must point to an existing file
+bad = []
+docs = [root / "spec-v0.4.md", root / "CHANGELOG.md", root / "docs" / "reference-impl.md"] + sorted((root / "profiles").glob("*.md"))
+for d in docs:
+    for target in re.findall(r"\]\(([^)#\s]+)\)", d.read_text()):
+        if "://" in target:
+            continue
+        if not (d.parent / target).exists():
+            bad.append(f"{d.relative_to(root)}: {target}")
+print(len(docs), "documents,", len(bad), "broken links")
+for b in bad:
+    print("  broken:", b)
+raise SystemExit(1 if bad else 0)

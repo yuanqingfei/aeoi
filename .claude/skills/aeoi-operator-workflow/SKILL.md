@@ -9,8 +9,8 @@ AEOI（AI Engineering Operator Interface Spec）是叠加在 MCP 之上的工程
 
 ## 先读当前状态
 - 有 claude.ai Project「面向AI的工程计算」时，动手前读 Project 文档 `claude/aeoi-handoff.md`（最新提交、未提交的改动、待办、作者的路线），每个里程碑后更新它（project_read → 改 → project_write 整篇写回）。
-- 没有 Project 时：`git log`、规范第 13 章 Changelog 的最新一节、12.2「下一步」。
-- 分工：handoff 是易变状态；本文件是不变的做法；历史在规范 Changelog。不要另建 changelog 文件。
+- 没有 Project 时：`git log`、`CHANGELOG.md` 的最新一节、规范 12.2「下一步」。
+- 分工：handoff 是易变状态；本文件是不变的做法；历史在 `CHANGELOG.md`（v0.4.18 从规范移出，作者同意）。
 
 ## 作者的规则（不可违反）
 - **提交、推送不必等作者确认**（作者 2026-11-25 授权）；做完一步就提交并推送，不留未推送的提交。**打 tag / 正式发布仍要作者当次同意。**
@@ -22,7 +22,7 @@ AEOI（AI Engineering Operator Interface Spec）是叠加在 MCP 之上的工程
 - 有真正的设计选择（指标、约定、语法）时用 AskUserQuestion 让作者选，给出推荐项。
 
 ## 仓库结构
-- `spec-src.md` → `python3 build_spec.py` → `spec-v0.4.md`（展开 `{{file:…}}`、`{{jsonc:…}}`；构建后 grep `{{` 必须为 0）。线协议标识 `aeoi/0.4`；每个算子发布一个补丁版本 v0.4.N-draft。
+- 规范拆成四部分（v0.4.18）：核心协议 `spec-src.md` → `python3 build_spec.py` → `spec-v0.4.md`（构建后 grep `{{` 必须为 0，且脚本检查所有相对链接，退出码非 0 即有断链）；算子契约 `profiles/10.NN-<op>.md`（规范性，示例与 parity.yaml 用链接，不内联）；参考实现说明 `docs/reference-impl.md`；历史 `CHANGELOG.md`。核心协议里只放条款与简短理由，测量记录和版本历史写进 CHANGELOG。线协议标识 `aeoi/0.4`；每个算子发布一个补丁版本 v0.4.N-draft。
 - `write_manifests.py`：manifest 与 I/O schema 的唯一来源，生成 `examples/<op>/{manifest,input.schema,output.schema}.json`。
 - `gen_golden_<op>.py`：生成 `golden/<engine>/<op>/<ver>/*.json` 和示例请求、`reference.python-control.json`。参考值来自 python-control / numpy / scipy / mpmath，**不是 MATLAB**，到处都要这样标注。
 - `regen_examples.py`：用 Rust `aeoi-call` 重写 `examples/*/response*.json`。
@@ -48,7 +48,7 @@ AEOI（AI Engineering Operator Interface Spec）是叠加在 MCP 之上的工程
 5. **Rust 测试**：`tests/parity_<op>.rs`，写出 `reports/parity-<op>.json`；在 `tests/examples_<crate>.rs` 里加示例测试（同平台逐位比较 hash、与参考值比较、错误示例的码与 remediation）。
 6. **示例**：`examples/<op>/request.json`、`request.error.json`，再加一两个有教育意义的（例如缺省容差被标为不可依赖）；跑 `regen_examples.py`；写 `parity.yaml`（references、compare、`conformance_compare`、case_families）。
 7. **一致性规则**（`rules_*.py` 的 `RULES` 字典）：容差来自套件，绝不来自实现自报的值（CF-6）；尽量加一项由运行器从请求独立重算的检查（Parseval、L(jωc)、对真值核查 claim 是否属实）。再加 2–3 个代理变异（改错数值、标签错位、虚报 claim），并在 `test_runner_catches_mutants.py` 的 `PROXY_EXPECT` 里写明预期原因。等价答案要能通过。
-8. **规范**：新增 10.x 节（规范性条款编号如 FT-1…、OD-1…；每条说明原因；示例和 parity.yaml 用 `{{…}}` 引入）；跨算子的机制另立第 3 章小节（如 3.15 表达式语言）；新码登记到 5.1 的表格；更新文件头的状态行、版本摘要段、12.2 下一步，以及 Changelog（起因 / 规范改动表 / 已做的改动表 / 开发中发现的错误 / 结果数字）。
+8. **规范**：新建 `profiles/10.NN-<op>.md`（规范性条款编号如 FT-1…、OD-1…；每条说明原因；示例与 parity.yaml 用链接），在 `spec-src.md` 第 10 章索引表加一行；跨算子的机制写进核心协议相应章节（如 3.15 表达式语言）；新码登记到 5.1；更新 12.2；在 `CHANGELOG.md` 顶部加一节（起因 / 规范改动表 / 已做的改动表 / 开发中发现的错误 / 结果数字），并更新规范文件头的版本号。
 9. 更新 `conformance/README.md` 的覆盖率和结果数字。
 
 ## 验证（一律看退出码，不看最后一行）

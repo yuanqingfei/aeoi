@@ -1,6 +1,6 @@
 # AEOI — AI Engineering Operator Interface
 
-面向 AI Agent 的工程计算算子接口规范（v0.4.17-draft）及其 Rust 参考实现，以一个 MCP stdio 服务器提供。每个结果都带容差类、后置条件检查、不可依赖字段的标注、带修复补丁的结构化错误，以及可重放的收据。当前状态与改动历史见规范第 13 章 Changelog；给 AI agent 的入口见 `AGENTS.md`。
+面向 AI Agent 的工程计算算子接口规范（v0.4.18-draft）及其 Rust 参考实现，以一个 MCP stdio 服务器提供。每个结果都带容差类、后置条件检查、不可依赖字段的标注、带修复补丁的结构化错误，以及可重放的收据。改动历史见 `CHANGELOG.md`；给 AI agent 的入口见 `AGENTS.md`。
 
 ## 目标与进度
 
@@ -30,7 +30,10 @@
 
 ## 仓库内容
 
-- `spec-v0.4.md`：规范全文。源稿是 `spec-src.md`，用 `python3 build_spec.py` 生成；`spec-v0.3.md`、`spec-v0.2.md`、`spec-v0.1.md` 是历史版本。
+- `spec-v0.4.md`：核心协议（约定、manifest、类型、信封与收据、错误、可复现性、凭证、绑定、治理与一致性）。源稿是 `spec-src.md`，用 `python3 build_spec.py` 生成；`spec-v0.3.md`、`spec-v0.2.md`、`spec-v0.1.md` 是历史版本。
+- `profiles/`：算子契约（规范第 10 章），每个算子一个文件，与核心协议同样是规范性的。
+- `docs/reference-impl.md`：Rust 参考实现说明（结构、内核复用规则、各绑定的实现、评测结果）。
+- `CHANGELOG.md`：每个版本的起因、改动与结果。
 - `schemas/`：JSON Schema（common / manifest / envelope / error）。
 - `examples/`：每个算子一个目录，含 manifest、输入输出 schema（由 `write_manifests.py` 生成）、示例请求与响应、`parity.yaml`。
 - `golden/`：对照参考用例，共 1188 个。`python-control/` 下的参考值来自 python-control / numpy / scipy，`mpmath/` 下的是高精度真值。**参考值都不是 MATLAB 算的。** 生成脚本是仓库根目录的 `gen_golden_*.py`。
@@ -194,6 +197,6 @@ node aeoi-wasm/parity/parity.mjs /tmp/pkg-node /tmp/cases.json /tmp/native.jsonl
 ## 许可（License）
 
 - 代码（`rust/`、`pages/`、`tools/`、Python 脚本、schemas、examples、golden 数据）：**MIT OR Apache-2.0** 双许可，任选其一——见 [`LICENSE-MIT`](LICENSE-MIT)（Copyright (c) 2026 Qingfei Yuan）与 [`LICENSE-APACHE`](LICENSE-APACHE)。所有 crate 的 `Cargo.toml` 都声明 `license = "MIT OR Apache-2.0"`（workspace 继承）。
-- 规范与文档（`spec-src.md`、`spec-v*.md`、`reports/*.md`、本 README 的文字部分）：**CC-BY-4.0**，见 [`LICENSE-CC-BY-4.0`](LICENSE-CC-BY-4.0)。
+- 规范与文档（`spec-src.md`、`spec-v*.md`、`profiles/`、`docs/`、`CHANGELOG.md`、`reports/*.md`、本 README 的文字部分）：**CC-BY-4.0**，见 [`LICENSE-CC-BY-4.0`](LICENSE-CC-BY-4.0)。
 - 除非另行明确声明，你有意提交给本项目的贡献按上述同样条款许可（Apache-2.0 第 5 条）。
 - 第三方组件（内置的 Plotly.js basic，MIT；编译进二进制的 Rust crate；参考数据来源）见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
